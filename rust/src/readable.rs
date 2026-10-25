@@ -449,27 +449,27 @@ fn render_method(
     line(out, indent, &header);
     line(out, indent, "{");
     if result.status != Status::Decompiled {
-        let reason = result
+        let mut evidence = result
             .text
             .lines()
-            .find_map(|l| {
-                l.strip_prefix("// IL FALLBACK:")
-                    .or_else(|| l.strip_prefix("// FAILED:"))
-            })
-            .unwrap_or("unreadable method body");
+            .skip_while(|l| !l.starts_with("// IL FALLBACK:") && !l.starts_with("// FAILED"));
+        let notice = evidence
+            .next()
+            .unwrap_or("// FAILED: unreadable method body");
         line(
             out,
             indent + 1,
-            &format!(
-                "// {}: {}; see --details for complete evidence.",
-                if result.status == Status::Partial {
-                    "IL fallback"
-                } else {
-                    "Failed"
-                },
-                reason.trim()
-            ),
+            &notice
+                .replacen("IL FALLBACK:", "IL fallback:", 1)
+                .replacen("FAILED", "Failed", 1),
         );
+        // Keep the entire fallback body, including locals/EH/raw undecoded
+        // evidence, without rewriting IL operands as C# variables.
+        for entry in evidence {
+            if !entry.starts_with("// // token ") && !entry.starts_with("// .method-flags ") {
+                line(out, indent + 1, entry);
+            }
+        }
     } else {
         let body = method_body(&result.text, &names);
         let mut nesting = 0usize;

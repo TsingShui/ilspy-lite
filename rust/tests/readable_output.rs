@@ -1,7 +1,10 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{OutputStyle, decompile_type, decompile_type_with_style};
+use ilspy_lite::{
+    OutputStyle, Status, decompile_type, decompile_type_with_style, decompile_with_style,
+    disassemble, list_methods,
+};
 use std::process::Command;
 
 const IMAGE: &[u8] = include_bytes!("fixtures/class-release.bin");
@@ -28,14 +31,25 @@ fn readable_class_view_uses_declarations_without_dumping_diagnostic_records() {
             .text
             .contains("public static string Unsupported(string value)")
     );
-    assert!(readable.text.contains("// IL fallback:") && readable.text.contains("--details"));
+    assert!(readable.text.contains("// IL fallback:"));
+    assert!(!readable.text.contains("see --details"));
+    assert!(readable.text.contains("// IL_0001: callvirt"));
+    assert!(readable.text.contains("// IL_0006: ret"));
+    let good = readable
+        .text
+        .split("Good(int value)")
+        .nth(1)
+        .unwrap()
+        .split("public static string Unsupported")
+        .next()
+        .unwrap();
+    assert!(!good.contains("// IL_"), "{good}");
     for noise in [
         ".type-flags",
         ".method-status",
         "signature-bytes=",
         "parsed=",
         "raw-row-bytes=",
-        "// IL_",
         "public static int @Good",
         "// token ",
     ] {
@@ -49,6 +63,144 @@ fn readable_class_view_uses_declarations_without_dumping_diagnostic_records() {
 }
 
 #[test]
+fn readable_fallback_keeps_complete_il_inside_its_method_and_class_body() {
+    for (bytes, ty, name) in [
+        (IMAGE, "ClassCases.Mixed", "Unsupported"),
+        (
+            include_bytes!("fixtures/class-debug.bin").as_slice(),
+            "ClassCases.Mixed",
+            "Unsupported",
+        ),
+        (
+            include_bytes!("fixtures/release.bin").as_slice(),
+            "LiteSamples.ControlFlowSample",
+            "Divide",
+        ),
+    ] {
+        let token = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == ty && m.simple_name == name)
+            .unwrap()
+            .token;
+        let method = decompile_with_style(bytes, token, OutputStyle::Readable).unwrap();
+        assert_eq!(method.status, Status::Partial);
+        let class = decompile_type_with_style(bytes, ty, OutputStyle::Readable).unwrap();
+        assert_eq!(class.summary.exit_code(), 2);
+        let header = method.text.lines().next().unwrap();
+        let body = method
+            .text
+            .split_once("\n{\n")
+            .unwrap()
+            .1
+            .strip_suffix("}\n")
+            .unwrap();
+        let class_body = class
+            .text
+            .split(header)
+            .nth(1)
+            .unwrap()
+            .split_once("{\n")
+            .unwrap()
+            .1
+            .split("\n    }")
+            .next()
+            .unwrap();
+        let il = disassemble(bytes, token).unwrap();
+        // Disassembly's first two lines identify the method/flags; every body
+        // line (including locals and EH ranges) belongs inside the fallback.
+        for evidence in il.lines().skip(2) {
+            for actual in [body, class_body] {
+                let expected = format!("// {evidence}");
+                assert!(
+                    actual.lines().any(|l| l.trim() == expected.trim()),
+                    "missing {evidence}: {actual}"
+                );
+            }
+        }
+        assert!(!body.contains("see --details"));
+        if name == "Divide" {
+            assert!(body.contains("// .try IL_"), "{body}");
+        }
+    }
+}
+
+#[test]
+fn failed_readable_bodies_keep_raw_bytes_or_the_original_parse_error_inline() {
+    let token = list_methods(IMAGE)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.declaring_type == "ClassCases.Methods" && m.simple_name == "Hidden")
+        .unwrap()
+        .token;
+    let pe = cildec::PeImage::parse(IMAGE).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::MethodDef, token & 0xffffff)
+        .unwrap();
+    let offset = row.as_ptr() as usize - IMAGE.as_ptr() as usize;
+    let body =
+        cildec::MethodBody::from_image(&pe, &md.tables().method_def(token & 0xffffff).unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(body.code, &[0x02, 0x2a]);
+    let code = body.code.as_ptr() as usize - IMAGE.as_ptr() as usize;
+    for failure in ["signature", "instruction", "rva"] {
+        let mut patched = IMAGE.to_vec();
+        match failure {
+            "signature" => {
+                patched[offset + 10..offset + 12].copy_from_slice(&0xffffu16.to_le_bytes())
+            }
+            "instruction" => patched[code] = 0xff,
+            "rva" => patched[offset..offset + 4].copy_from_slice(&u32::MAX.to_le_bytes()),
+            _ => unreachable!(),
+        }
+        let readable =
+            decompile_type_with_style(&patched, "ClassCases.Methods", OutputStyle::Readable)
+                .unwrap();
+        let details = decompile_type(&patched, "ClassCases.Methods").unwrap();
+        assert_eq!(readable.summary, details.summary);
+        assert_eq!(readable.summary.failed, 1);
+        assert_eq!(readable.summary.exit_code(), 1);
+        assert!(readable.text.contains("// Failed"), "{}", readable.text);
+        assert!(
+            readable.text.contains("Pick(long value)"),
+            "{}",
+            readable.text
+        );
+        for entry in details.text.lines().filter(|l| {
+            l.starts_with("// Raw IL bytes")
+                || l.starts_with(&format!("// FAILED token 0x{token:08X}:"))
+        }) {
+            let expected = entry.replacen("FAILED", "Failed", 1);
+            assert!(
+                readable.text.lines().any(|l| l.trim() == expected),
+                "{}",
+                readable.text
+            );
+        }
+        if failure == "signature" {
+            assert!(
+                readable
+                    .text
+                    .contains("// Raw IL bytes (undecoded): [02, 2A]")
+            );
+            assert!(readable.text.contains("// IL_0000: ldarg.0 0"));
+            assert!(readable.text.contains("// IL_0001: ret"));
+        }
+        if failure == "instruction" {
+            assert!(
+                readable
+                    .text
+                    .contains("// Raw IL bytes (undecoded): [FF, 2A]")
+            );
+            assert!(readable.text.contains("// Body evidence decoding failed:"));
+        }
+    }
+}
+
+#[test]
 fn simple_expression_view_removes_constant_argument_copies_and_unused_labels() {
     let result =
         decompile_type_with_style(IMAGE, "ClassCases.Mixed", OutputStyle::Readable).unwrap();
@@ -57,8 +209,16 @@ fn simple_expression_view_removes_constant_argument_copies_and_unused_labels() {
         "{}",
         result.text
     );
-    assert!(!result.text.contains("IL_0000:"), "{}", result.text);
-    assert!(!result.text.contains("int v0 = value;"), "{}", result.text);
+    let good = result
+        .text
+        .split("Good(int value)")
+        .nth(1)
+        .unwrap()
+        .split("public static string Unsupported")
+        .next()
+        .unwrap();
+    assert!(!good.contains("IL_0000:"), "{good}");
+    assert!(!good.contains("int v0 = value;"), "{good}");
 }
 
 #[test]
@@ -354,11 +514,12 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
     assert_eq!(default.status.code(), Some(2));
     assert_eq!(details.status.code(), Some(2));
     assert_eq!(default.stderr, details.stderr);
-    assert!(
-        String::from_utf8(default.stdout)
-            .unwrap()
-            .contains("public static class Mixed")
-    );
+    let text = String::from_utf8(default.stdout).unwrap();
+    assert!(text.contains("public static class Mixed"));
+    let fallback = text.split("Unsupported(string value)").nth(1).unwrap();
+    assert!(fallback.contains("// IL_0001: callvirt"), "{fallback}");
+    assert!(fallback.contains("// IL_0006: ret"), "{fallback}");
+    assert!(!fallback.contains("see --details"));
     assert_eq!(
         String::from_utf8(details.stdout).unwrap(),
         decompile_type(IMAGE, "ClassCases.Mixed").unwrap().text

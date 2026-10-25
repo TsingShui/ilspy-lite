@@ -15,9 +15,11 @@ allocation snapshots, checks and target-runtime numeric operations remain ordere
 not every expression or loop becomes source sugar. Fully qualified type names may
 remain to avoid pretending to have general C# binding.
 
-Unsupported/failed bodies have a concise notice, not an executable empty-body
-replacement. Use `--details` for complete IL, raw evidence, exact scope/token
-identities and interpretation limits. A readable declaration or successful body
+Unsupported bodies show their reason and complete IL as comments inside the
+method body, including locals/EH. Failed bodies retain available raw/decodable
+body evidence or the original parse error inline. These are not executable
+empty-body replacements. Use `--details` for additional raw metadata, exact
+scope/token identities and interpretation limits, not to reveal a hidden fallback. A readable declaration or successful body
 is not evidence that attribute/security/native policies were interpreted, nor
 that dependencies were recovered. Both presentations retain the same statuses and
 exit precedence. The detailed library entry points remain compatible; explicit

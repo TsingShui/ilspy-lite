@@ -39,17 +39,19 @@ Boolean encodings, unused labels and bounded return-only branches are simplified
 field reads, addresses, allocations, exact calls and fault-producing operations
 are not erased or freely inlined. Some temporaries and labeled loops remain.
 
-Unsupported methods keep their declaration and a brief `IL fallback`/`Failed`
-notice pointing to `--details`. A comment-only fallback is not executable
-recovered logic. Properties/events have concise named relationship summaries;
+Unsupported methods keep their declaration, an `IL fallback` reason and the
+complete original IL as comments inside that method body, including locals and
+exception regions. Failed bodies retain available raw/decodable evidence or the
+original body-read error inline. No `--details` option is needed to inspect a
+fallback body. Commented IL is not executable recovered C#. Properties/events have concise named relationship summaries;
 their accessor methods stay visible, without pretending to infer source sugar.
 Exact-call and target-runtime intrinsics remain where ordinary C# would change
 semantics. This is similar in presentation to ILSpy, not equivalent syntax
 coverage, resolver behavior or a promise of compilable source.
 
 Append `--details` to retain the complete analysis format described below,
-including full IL fallback, original tokens, raw metadata, interpretation limits
-and independent statuses. `list` and `il` keep their diagnostic formats. Both
+including original tokens, raw metadata, interpretation limits and independent
+statuses, in addition to the fallback body already visible by default. `list` and `il` keep their diagnostic formats. Both
 views have identical status counts/exit precedence. Evidence-consuming scripts
 must explicitly request `--details` rather than parse the readable view.
 

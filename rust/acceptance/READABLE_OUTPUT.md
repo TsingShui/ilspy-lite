@@ -1,6 +1,7 @@
 # Readable output and complete evidence
 
-Validated production/test revision: `f9ce32653`.
+Readable-body simplification validated at `f9ce32653`; inline fallback-body
+presentation has separate focused validation described below.
 
 The CLI defaults to C#-like class/method presentation. Append `--details` for the
 existing complete metadata/IL analysis. This is a presentation change, not broader
@@ -14,8 +15,10 @@ rust/target/release/ilspy-lite decompile Assembly.dll --type Namespace.Type --de
 The library's existing `decompile` and `decompile_type` retain detailed output.
 `decompile_with_style` and `decompile_type_with_style` expose
 `OutputStyle::{Readable, Details}`. Both styles preserve status/summary precedence;
-unsupported bodies have short notices in readable output and full IL in details.
-No method is counted successful because its fallback notice looks like a body.
+unsupported bodies show their reason and complete commented IL inside the
+method body in both styles. Failed bodies retain available raw/decodable body
+evidence or the original parse error inline. No method is counted successful
+because its fallback comments look like a body.
 
 ## Delivered presentation
 
@@ -26,7 +29,8 @@ No method is counted successful because its fallback notice looks like a body.
 - Property/event names, types and actual accessor relationships have concise
   summaries. Accessor bodies remain explicit methods; no source sugar is guessed.
 - No raw metadata rows, parsed signature structures, per-instruction comments or
-  repeated success banners in ordinary supported bodies.
+  repeated success banners in ordinary supported bodies. Fallback methods show
+  complete original IL, locals and EH ranges in place, not a link to `--details`.
 - Bounded immutable copy/literal elimination, Boolean encoding simplification,
   adjacent pure unchecked expressions, return-only edges and early returns.
   Other CFG edges/loops remain labeled; field reads, managed addresses, calls,
@@ -42,6 +46,16 @@ implementation. The current readable-output tests cover class/method/detail mode
 constants/nested types, safe copies/old field values, Boolean returns, bounded
 branch/indentation, field/argument collisions, unique fallback parameter names,
 out parameters, field aliases and generic accessor-summary owner context.
+
+Inline-fallback presentation is covered through readable method/class APIs and
+actual default CLI output. Debug/Release unsupported-call and EH fixtures retain
+every disassembled body line inside the corresponding method. Corrupted
+signature/opcode/RVA fixtures retain raw/decodable evidence or the original error;
+peer methods, summaries and failure exits remain unchanged. The fallback change
+passed readable/CLI/class-method tests in Debug/Release, fmt, strict all-target
+clippy and the actual readable Wait.Tick behavior gate (193 comparisons).
+Logs: `report/inline-fallback-{red,green,debug,release,clippy,wait-behavior}.log`.
+Its rendering path does not change supported-body compaction or detailed output.
 
 `reference-roundtrip.py --readable --from-class` executes actual readable
 statements. The normalized method view must occur in the actual readable class
