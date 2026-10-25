@@ -20,7 +20,9 @@ The following audit at `cd329d082` found unreadable field names discarding other
 readable metadata; `a0d3d16f4` preserves field name-index/token alias and continues
 flags/signature/constants/layout/RVA evidence. `8c878ac2f` fixes the analogous
 method-name early return, preserving signature/flags/parameters/import/generic
-context. Current validated production/test revision: `8c878ac2f`.
+context. The next audit found unreadable TypeRef names discarding namespace and
+assembly scope; `7739e2fa3` preserves independent raw reference evidence before
+display interpretation. Current validated production/test revision: `7739e2fa3`.
 This acceptance record supplies evidence, not a substitute for the goal completion
 auditor's decision.
 [SEMANTICS.md](../../SEMANTICS.md) defines output notation. Historical baseline,
@@ -133,6 +135,16 @@ records. Focused review returned **OK; no issues found**, also confirming the pr
 marshal-oracle note resolved. Artifact: `reviews/class-member-name-corrections.md`,
 run `d007fd4e-0df2-468e-969c-334ef511697b`.
 
+Type-reference interpretation failures now retain exact row/name/namespace
+indexes, independently readable values, raw/decoded ResolutionScope and scoped
+assembly/module evidence. Assembly name/culture/key failures keep version/flags
+and other readable values; TypeSpec failures retain signature index/bytes. Raw
+context is not returned as successful interpretation or lowering admission.
+Public Debug/Release name/namespace/scope/assembly-field regressions were red
+then green; focused review returned **OK; no issues found**. Artifact:
+`reviews/class-type-reference-evidence.md`, run
+`e8431646-7f46-4492-8250-f79e3062f81f`.
+
 ## Semantic and independent-class evidence
 
 Actual bodies are extracted from public --type output and executed, not
@@ -186,7 +198,7 @@ fresh execution evidence.
 
 ## Final gates
 
-At corrected revision `8c878ac2f`, locked Cargo Debug/Release suites, fmt and
+At corrected revision `7739e2fa3`, locked Cargo Debug/Release suites, fmt and
 strict all-target clippy passed. The metadata checker and its ten
 positive/negative tests passed. The oracle-only fix at `d1f1f7bea` also passed its
 independent snapshot/output regressions; these were rerun after the name fixes. The five frozen class inventories and the
