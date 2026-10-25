@@ -447,16 +447,77 @@ fn delegated_constructor_rejects_ordinary_other_receiver_and_invalid_target_cont
 }
 
 #[test]
-fn other_constructor_calls_remain_visible_when_unsupported() {
+fn local_base_initialization_rejects_other_or_reassigned_receivers_and_ordinary_callers() {
     for bytes in IMAGES {
-        let ctor = method(bytes, ".ctor", 2);
-        let result = decompile(bytes, ctor).unwrap();
+        let methods = list_methods(bytes).unwrap();
+        let target = methods
+            .iter()
+            .find(|m| m.declaring_type == "ConstructorCases.Base" && m.simple_name == ".ctor")
+            .unwrap()
+            .token;
+        let ctor = methods
+            .iter()
+            .find(|m| {
+                m.declaring_type == "ConstructorCases.Cells"
+                    && m.simple_name == ".ctor"
+                    && m.name.contains("class ConstructorCases.Cells")
+            })
+            .unwrap()
+            .token;
+        for prefix in [
+            vec![0x03, 0x04],
+            vec![0x14, 0x04],
+            vec![0x03, 0x10, 0x00, 0x02, 0x04],
+        ] {
+            let mut code = prefix;
+            code.push(0x28);
+            code.extend(target.to_le_bytes());
+            code.push(0x2a);
+            let result = decompile(&patch_body(bytes, ctor, &code), ctor).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(
+                result.text.contains("original this")
+                    || result.text.contains("constructor receiver reassignment"),
+                "{}",
+                result.text
+            );
+        }
+        let ordinary = method(bytes, "Reserved", 1);
+        let mut code = vec![0x02, 0x03, 0x28];
+        code.extend(target.to_le_bytes());
+        code.extend([0x03, 0x2a]);
+        let result = decompile(&patch_body(bytes, ordinary, &code), ordinary).unwrap();
         assert_eq!(result.status, Status::Partial);
         assert!(
-            result.text.contains("base/other contexts need IL fallback"),
+            result.text.contains("outside constructor context"),
             "{}",
             result.text
         );
-        assert!(result.text.contains("IL FALLBACK") && result.text.contains("call"));
+    }
+}
+
+#[test]
+fn local_direct_base_constructor_keeps_call_before_derived_initialization() {
+    for bytes in IMAGES {
+        let target = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "ConstructorCases.Base" && m.simple_name == ".ctor")
+            .unwrap()
+            .token;
+        let ctor = method(bytes, ".ctor", 2);
+        let result = decompile(bytes, ctor).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        let call = result
+            .text
+            .find(&format!("__cil_ctor_call_{target:08X}("))
+            .unwrap();
+        assert!(call < result.text.find(".@Effects = ").unwrap());
+        assert!(call < result.text.find(" = new uint[").unwrap());
+        assert!(
+            result.text.contains("exact direct-base constructor")
+                && result.text.contains("no allocation")
+        );
+        assert!(!result.text.contains("__cil_core_object_ctor_"));
     }
 }
