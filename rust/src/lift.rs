@@ -298,6 +298,21 @@ impl Writer<'_, '_> {
                 name: "null".into(),
                 ty: Ty::Null,
             }),
+            "ldstr" => {
+                let Operand::String(token) = i.operand else {
+                    return Err("missing user-string token".into());
+                };
+                let literal = self.image.string_literal(token)?;
+                self.lines.push(format!(
+                    "// string token 0x{:08X}: UTF-16 literal {literal}",
+                    token.0
+                ));
+                self.lines.push("// __cil_ldstr: load using the original module string-literal policy; exact code units and load position, not a fresh string allocation.".into());
+                self.push(
+                    Ty::String,
+                    format!("__cil_ldstr_{:08X}({literal})", token.0),
+                )?;
+            }
             "ldc.i4" => {
                 let Operand::I32(n) = i.operand else {
                     return Err("bad i4 operand".into());

@@ -81,7 +81,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "clock") Clock(recovered, methods);
+        if (job.Kind == "strings") Strings(recovered, methods);
+        else if (job.Kind == "clock") Clock(recovered, methods);
         else if (job.Kind == "random-state") RandomState(recovered, methods);
         else if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
@@ -102,6 +103,7 @@ internal static class ReferenceRoundtrip
         var code = new List<string>();
         var coreConstructors = new HashSet<int>();
         var clocks = new HashSet<int>();
+        var strings = new HashSet<int>();
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
@@ -142,6 +144,13 @@ internal static class ReferenceRoundtrip
                     || clock.ReturnType != typeof(int) || clock.GetParameters().Length != 0)
                     throw new Exception("Clock intrinsic target mismatch");
                 clocks.Add(token);
+            }
+            foreach (Match match in Regex.Matches(source, @"__cil_ldstr_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                if ((uint)token >> 24 != 0x70) throw new Exception("Invalid string literal token");
+                original.ManifestModule.ResolveString(token); // Validate original identity without executing a selected body.
+                strings.Add(token);
             }
             string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
@@ -191,6 +200,12 @@ internal static class ReferenceRoundtrip
             code.Add("public static global::System.Func<int> TickCount;");
             foreach (int token in clocks)
                 code.Add($"public static int __cil_tick_count_{token:X8}() => TickCount();");
+        }
+        if (strings.Count != 0)
+        {
+            code.Add("public static global::System.Action<int, string> StringLoadObserver;");
+            foreach (int token in strings)
+                code.Add($"public static string __cil_ldstr_{token:X8}(string units) {{ StringLoadObserver?.Invoke({token}, units); return units; }}");
         }
         File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
@@ -252,6 +267,67 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void Strings(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        string[] names = { "Empty", "Ascii", "Escapes", "Units", "Shared", "SharedAgain", "Identity", "Choose", "Null", "Replace", "SetLiteral" };
+        if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
+            throw new Exception("String selection drift");
+        bool SameUnits(object x, object y) => x == null ? y == null : x is string left && y is string right
+            && left.Select(c => (ushort)c).SequenceEqual(right.Select(c => (ushort)c));
+        foreach (string name in new[] { "Empty", "Ascii", "Escapes", "Units", "Shared", "SharedAgain", "Null" })
+            Check(recovered, methods.Values.Single(m => m.Name == name), null, null, Array.Empty<object>(), Array.Empty<object>(), equal: SameUnits);
+        string[] values = { null, "", new string(new[] { 's', 'a', 'm', 'e' }), "\0", "\ud800X\udfff", "\ud83d\ude00" };
+        foreach (string value in values)
+            Check(recovered, methods.Values.Single(m => m.Name == "Identity"), null, null,
+                new object[] { value }, new object[] { value }, equal: (x, y) => ReferenceEquals(x, value) && ReferenceEquals(y, value));
+        foreach (bool first in new[] { false, true })
+        foreach (string left in values)
+        foreach (string right in values)
+            Check(recovered, methods.Values.Single(m => m.Name == "Choose"), null, null,
+                new object[] { first, left, right }, new object[] { first, left, right },
+                equal: (x, y) => ReferenceEquals(x, first ? left : right) && ReferenceEquals(y, first ? left : right));
+        MethodInfo replace = methods.Values.Single(m => m.Name == "Replace");
+        Type cell = replace.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        foreach (string initial in values)
+        foreach (string replacement in values)
+        {
+            object a = New(cell), b = New(clone);
+            Set(a, "Text", initial); Set(b, "Text", initial);
+            Check(recovered, replace, a, b, new object[] { replacement }, new object[] { replacement }, () => {
+                if (!ReferenceEquals(Get(a, "Text"), replacement) || !ReferenceEquals(Get(b, "Text"), replacement))
+                    throw new Exception("String field replacement lost identity");
+            }, (x, y) => ReferenceEquals(x, initial) && ReferenceEquals(y, initial));
+        }
+        int loads = 0;
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            object a = nullReceiver ? null : New(cell), b = nullReceiver ? null : New(clone);
+            int before = loads;
+            recovered.GetType("Recovered")!.GetField("StringLoadObserver")!.SetValue(null, (Action<int, string>)((token, units) => {
+                if (b == null || (int)Get(b, "Effects") != 1) throw new Exception("Literal load moved before its field effect");
+                string original = cell.Module.ResolveString(token);
+                if (!original.Select(c => (ushort)c).SequenceEqual(units.Select(c => (ushort)c)))
+                    throw new Exception("Output literal UTF-16 units differ from metadata");
+                loads++;
+            }));
+            Check(recovered, methods.Values.Single(m => m.Name == "SetLiteral"), a, b,
+                Array.Empty<object>(), Array.Empty<object>(), () => {
+                    if (!nullReceiver) { SameFields(a, b, "Effects"); if (!SameUnits(Get(a, "Text"), Get(b, "Text"))) throw new Exception("String field units mismatch"); }
+                }, nullReceiver ? null : SameUnits);
+            if (loads != before + (nullReceiver ? 0 : 1)) throw new Exception("String load lost exception position");
+        }
+        Check(recovered, replace, null, null, new object[] { null }, new object[] { null });
+        recovered.GetType("Recovered")!.GetField("StringLoadObserver")!.SetValue(null, null);
+        foreach (string name in new[] { "Shared", "SharedAgain", "Units" })
+        {
+            MethodInfo method = methods.Values.Single(m => m.Name == name);
+            MethodInfo body = recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!;
+            object first = body.Invoke(null, Array.Empty<object>()), second = body.Invoke(null, Array.Empty<object>());
+            if (!ReferenceEquals(first, second)) throw new Exception("Literal adapter allocated on each load");
+        }
+        Console.WriteLine("Strings: exact UTF-16 units, embedded null/unpaired surrogates, reference state and owned literal runtime policy checked.");
     }
 
     static void Clock(Assembly recovered, Dictionary<int, MethodInfo> methods)

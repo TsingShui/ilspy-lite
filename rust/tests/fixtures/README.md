@@ -83,6 +83,17 @@ including target/argument/count/order and null/dirty-state cases. Static constru
 generic/value-type constructors remain unsupported. Git pins the snapshots
 without a separate hash manifest.
 
+The string snapshots (`string-release.bin`, `string-debug.bin`) come from
+`../dotnet/StringCases.cs`. Regenerate with `python3 rust/tests/build-string-fixtures.py`
+and execute class output with `reference-roundtrip.py --strings --from-class`.
+Eleven bodies preserve exact UTF-16 units, embedded nulls, unpaired surrogates,
+literal load position, field snapshots and reference selection/replacement.
+Debug/Release passed 124 return/exception/state comparisons per configuration.
+The test adapter uses owned compiled literals; it does not implement every
+original module interning relaxation. The output intrinsic retains that original
+policy explicitly. Invalid heap encodings retain bytes instead of dropping odd
+bytes or converting surrogates lossily. Git pins snapshots without a hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

@@ -107,6 +107,14 @@ retain raw code bytes in a `Failed` result.
   a signed I4 clock read at the original instruction, evaluated once. Test-only
   controlled clocks preserve the full bit pattern; differing real times are not
   compared as if they were equal.
+- `ldstr` retains exact UTF-16 code units, including embedded nulls and unpaired
+  surrogates, using ASCII C# literal escapes. `__cil_ldstr_TOKEN(literal)` means
+  load according to the original module's literal/interning policy, not allocate
+  a fresh string or assume the generated assembly has the same policy. String
+  parameters, locals, fields, returns and same-type joins retain reference
+  identity; string operations and mixed-reference joins remain unsupported.
+  Invalid reachable user-string encoding retains raw bytes and cannot count as
+  successful lowering.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
@@ -181,7 +189,7 @@ bytes, decoded offsets/opcodes/tokens, locals, method/header flags and EH clause
 If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
-Currently unsupported: general/external object types, strings, other array
+Currently unsupported: general/external object types, string operations, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
 floating point, native integer arithmetic/comparisons, general constructor calls, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
@@ -233,6 +241,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --native --fr
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --conversions --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --addresses --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --constructors --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --strings --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root

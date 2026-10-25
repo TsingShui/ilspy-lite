@@ -19,6 +19,7 @@ pub(crate) enum Ty {
     U8,
     Native,
     UNative,
+    String,
     Class(u32),
     I4Array,
     U4Array,
@@ -54,6 +55,7 @@ impl Ty {
             T::U8 => Self::U8,
             T::IntPtr => Self::Native,
             T::UIntPtr => Self::UNative,
+            T::String => Self::String,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
             T::SzArray(mods, element) if mods.is_empty() => match element.as_ref() {
                 T::I4 => Self::I4Array,
@@ -84,6 +86,7 @@ impl Ty {
             Self::U8 => "ulong",
             Self::Native => "nint",
             Self::UNative => "nuint",
+            Self::String => "string",
             Self::Class(t) => return image.class_name(t),
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
@@ -99,13 +102,16 @@ impl Ty {
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
             Self::I4Address | Self::U4Address => StackKind::Address,
-            Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => StackKind::Ref,
+            Self::String | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => {
+                StackKind::Ref
+            }
             _ => StackKind::I4,
         }
     }
     pub fn stack(self) -> Self {
         match self {
             Self::Void
+            | Self::String
             | Self::Class(_)
             | Self::I4Array
             | Self::U4Array
@@ -119,6 +125,7 @@ impl Ty {
     }
     pub fn load(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::String => expression.into(),
             Self::I4
             | Self::I8
             | Self::Native
@@ -135,6 +142,7 @@ impl Ty {
     }
     pub fn store(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::String => expression.into(),
             Self::I4
             | Self::I8
             | Self::Native

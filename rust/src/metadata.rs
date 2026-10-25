@@ -1098,15 +1098,20 @@ impl<'a> Image<'a> {
                     .map(|n| format!("IL_{n:04X}"))
                     .collect::<Vec<_>>()
                     .join(", "),
-                cildec::Operand::String(t) => format!(
-                    "0x{:08X} {:?}",
-                    t.0,
-                    self.md
-                        .user_strings()
-                        .get(*t)?
-                        .code_units()
-                        .collect::<Vec<_>>()
-                ),
+                cildec::Operand::String(t) => {
+                    let body = self.user_string_bytes(*t)?;
+                    let (flag, bytes) = body
+                        .split_last()
+                        .map_or((None, &[][..]), |(flag, bytes)| (Some(*flag), bytes));
+                    let units = bytes
+                        .chunks_exact(2)
+                        .map(|b| u16::from_le_bytes([b[0], b[1]]))
+                        .collect::<Vec<_>>();
+                    format!(
+                        "0x{:08X} {units:?} utf16-bytes={bytes:02X?} terminal-flag={flag:?}",
+                        t.0
+                    )
+                }
                 o => match o.token() {
                     Some(t) => format!(
                         "0x{:08X} {}",
@@ -1154,6 +1159,59 @@ impl<'a> Image<'a> {
             out.push_str(&format!("// diagnostic: {diagnostic}\n"));
         }
         Ok(out)
+    }
+
+    fn user_string_bytes(&self, token: cildec::UserStringToken) -> Result<&'a [u8]> {
+        if !token.has_us_table_byte() || token.offset() == 0 {
+            return Err("expected nonzero user-string token (0x70xxxxxx)".into());
+        }
+        let heap = self
+            .md
+            .stream("#US")
+            .ok_or("missing user-string heap")?
+            .data;
+        let rest = heap
+            .get(token.offset() as usize..)
+            .ok_or("user-string offset out of range")?;
+        let (length, prefix) = cildec::read_compressed_u32(rest)?;
+        let end = prefix
+            .checked_add(length as usize)
+            .ok_or("user-string extent overflow")?;
+        Ok(rest
+            .get(prefix..end)
+            .ok_or("user-string extent out of range")?)
+    }
+
+    pub fn string_literal(&self, token: cildec::UserStringToken) -> Result<String> {
+        let body = self.user_string_bytes(token)?;
+        let (&flag, bytes) = body
+            .split_last()
+            .ok_or("invalid user-string encoding: missing terminal flag")?;
+        if bytes.len() % 2 != 0 {
+            return Err("invalid user-string encoding: incomplete UTF-16 code unit".into());
+        }
+        let units = bytes
+            .chunks_exact(2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]));
+        let mut literal = String::from("\"");
+        let mut special = false;
+        for unit in units {
+            special |=
+                unit > 0xff || matches!(unit, 0x01..=0x08 | 0x0e..=0x1f | 0x27 | 0x2d | 0x7f);
+            match unit {
+                0x22 => literal.push_str("\\\""),
+                0x5c => literal.push_str("\\\\"),
+                0x20..=0x7e => literal.push(char::from(unit as u8)),
+                _ => literal.push_str(&format!("\\u{unit:04X}")),
+            }
+        }
+        if flag != u8::from(special) {
+            return Err(
+                "invalid user-string encoding: terminal flag differs from code units".into(),
+            );
+        }
+        literal.push('"');
+        Ok(literal)
     }
 
     pub fn local_types(&self, body: &MethodBody<'a>) -> Result<Vec<crate::ir::Ty>> {
@@ -1264,7 +1322,11 @@ impl<'a> Image<'a> {
     pub fn assignable(&self, actual: crate::ir::Ty, expected: crate::ir::Ty) -> Result<()> {
         use crate::ir::Ty;
         if actual == expected
-            || (actual == Ty::Null && matches!(expected, Ty::Class(_) | Ty::I4Array | Ty::U4Array))
+            || (actual == Ty::Null
+                && matches!(
+                    expected,
+                    Ty::String | Ty::Class(_) | Ty::I4Array | Ty::U4Array
+                ))
         {
             return Ok(());
         }
