@@ -202,8 +202,9 @@ to an original selected constructor body. `callvirt` is still a fallback.
 Reference identities are metadata tokens scoped to the one input image, not
 strings compared across assemblies. Local ancestor checks stop at external
 bases; no external inheritance compatibility is assumed. Interfaces, value
-types and generic reference types remain unsupported. Reference
-comparisons/conditional tests and mixed-reference joins are not yet lowered.
+types and generic reference types remain unsupported. Reference brtrue/brfalse
+tests use identity null patterns without dereferencing or overloaded equality.
+Reference comparisons and mixed-reference joins are not yet lowered.
 
 Unsupported signatures/instructions/regions cause **whole-method fallback**,
 not a half-rewritten function with missing operations. Fallback includes code

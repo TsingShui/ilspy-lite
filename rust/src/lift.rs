@@ -663,12 +663,24 @@ impl Writer<'_, '_> {
             "br" => {}
             "brtrue" | "brfalse" => {
                 let a = self.pop()?;
-                integer(a.ty)?;
-                self.lines.push(format!(
-                    "{} {} 0",
-                    a.name,
-                    if op == "brtrue" { "!=" } else { "==" }
-                ));
+                if a.ty.kind() == StackKind::Ref {
+                    self.lines.push(format!(
+                        "{} {}",
+                        a.name,
+                        if op == "brtrue" {
+                            "is not null"
+                        } else {
+                            "is null"
+                        }
+                    ));
+                } else {
+                    integer(a.ty)?;
+                    self.lines.push(format!(
+                        "{} {} 0",
+                        a.name,
+                        if op == "brtrue" { "!=" } else { "==" }
+                    ));
+                }
             }
             "beq" | "bne.un" | "bge" | "bge.un" | "bgt" | "bgt.un" | "ble" | "ble.un" | "blt"
             | "blt.un" => {

@@ -40,8 +40,9 @@ construction. [RANDOM_RANGES.md](RANDOM_RANGES.md) closes both range overloads
 and detailed exceptions/state. [RANDOM_FLOAT.md](RANDOM_FLOAT.md) closes NextFloat
 with exact Abs(float) target and bitwise/full-state comparisons.
 [SEMANTIC_MILESTONE.md](SEMANTIC_MILESTONE.md) records the combined seven-method
-gate and retained resource/ammo acceptance. Independent-class delivery gates
-remain pending.
+gate and retained resource/ammo acceptance. [ACTIVITY_QUEUE.md](ACTIVITY_QUEUE.md)
+records the first frozen independent-class behavior gate. Wait and output-only
+reading remain pending.
 
 ## Pinned input and provenance
 

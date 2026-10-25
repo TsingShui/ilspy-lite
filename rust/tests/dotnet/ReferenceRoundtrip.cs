@@ -41,8 +41,16 @@ internal static class ReferenceRoundtrip
         type.IsSZArray ? TypeName(type.GetElementType()!) + "[]" : "global::" + type.FullName;
     static string Alias(FieldInfo field) => Regex.IsMatch(field.Name, @"^[A-Za-z_][A-Za-z0-9_]*$") && !field.Name.StartsWith("__il_field_", StringComparison.Ordinal)
         ? "@" + field.Name : $"__il_field_{field.MetadataToken:X8}";
-    static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-        ?? throw new Exception($"Missing field {type}.{name}");
+    static FieldInfo Field(Type type, string name)
+    {
+        for (Type current = type; current != null; current = current.BaseType)
+        {
+            FieldInfo field = current.GetField(name, BindingFlags.Public | BindingFlags.NonPublic |
+                BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            if (field != null) return field;
+        }
+        throw new Exception($"Missing field {type}.{name}");
+    }
 
     static void Main(string[] args)
     {
@@ -99,7 +107,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "floats") Floats(recovered, methods);
+        if (job.Kind == "activity") ActivityQueue(recovered, methods);
+        else if (job.Kind == "floats") Floats(recovered, methods);
         else if (job.Kind == "exceptions") Exceptions(recovered, methods);
         else if (job.Kind == "strings") Strings(recovered, methods);
         else if (job.Kind == "clock") Clock(recovered, methods);
@@ -337,6 +346,66 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void ActivityQueue(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 1 || methods.Values.Single().Name != "Queue")
+            throw new Exception("Frozen activity method selection drift");
+        MethodInfo queue = methods.Values.Single();
+        Type cell = queue.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        if (cell.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Any(m => m.IsAbstract))
+            throw new Exception("Activity test subtype cannot replace abstract method bodies");
+        // Activity is abstract without abstract methods; a concrete shell adds no behavior.
+        var module = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("ActivityQueueTest"), AssemblyBuilderAccess.RunAndCollect)
+            .DefineDynamicModule("ActivityQueueTest");
+        Type concrete = module.DefineType("ConcreteActivity", TypeAttributes.Public | TypeAttributes.Sealed, cell).CreateType()!;
+        foreach (int existingLength in new[] { 0, 1, 3 })
+        foreach (int suffixLength in new[] { 0, 1, 3 })
+        foreach (bool nullAppend in new[] { false, true })
+        {
+            object[] left = Enumerable.Range(0, existingLength + 1).Select(_ => New(concrete)).ToArray();
+            object[] right = Enumerable.Range(0, existingLength + 1).Select(_ => New(clone)).ToArray();
+            object[] suffixLeft = Enumerable.Range(0, suffixLength + 1).Select(_ => New(concrete)).ToArray();
+            object[] suffixRight = Enumerable.Range(0, suffixLength + 1).Select(_ => New(clone)).ToArray();
+            void Link(object[] nodes)
+            {
+                for (int i = 0; i < nodes.Length; i++) Set(nodes[i], "nextActivity", i + 1 < nodes.Length ? nodes[i + 1] : null);
+            }
+            Link(left); Link(right); Link(suffixLeft); Link(suffixRight);
+            object appendLeft = nullAppend ? null : suffixLeft[0], appendRight = nullAppend ? null : suffixRight[0];
+            // Preserve all non-link original fields; no lifecycle method is executed.
+            var untouched = left.Concat(suffixLeft).Select(node => (Node: node, Fields: cell.GetFields(
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(f => f.Name != "nextActivity").Select(f => (Field: f, Value: f.GetValue(node))).ToArray())).ToArray();
+            Check(recovered, queue, left[0], right[0], new[] { appendLeft }, new[] { appendRight }, () => {
+                for (int i = 0; i < left.Length; i++)
+                {
+                    object expectedLeft = i + 1 < left.Length ? left[i + 1] : appendLeft;
+                    object expectedRight = i + 1 < right.Length ? right[i + 1] : appendRight;
+                    if (!ReferenceEquals(Get(left[i], "nextActivity"), expectedLeft)
+                        || !ReferenceEquals(Get(right[i], "nextActivity"), expectedRight))
+                        throw new Exception("Queue changed an existing link or lost appended identity");
+                }
+                for (int i = 0; i < suffixLeft.Length; i++)
+                    if (!ReferenceEquals(Get(suffixLeft[i], "nextActivity"), i + 1 < suffixLeft.Length ? suffixLeft[i + 1] : null)
+                        || !ReferenceEquals(Get(suffixRight[i], "nextActivity"), i + 1 < suffixRight.Length ? suffixRight[i + 1] : null))
+                        throw new Exception("Queue modified the appended prelinked chain");
+                foreach (var node in untouched)
+                    foreach (var field in node.Fields)
+                        if (!Equals(field.Field.GetValue(node.Node), field.Value))
+                            throw new Exception("Queue modified unrelated activity state");
+            }, (x, y) => x == null && y == null);
+        }
+        foreach (bool nullAppend in new[] { false, true })
+        {
+            object a = nullAppend ? null : New(concrete), b = nullAppend ? null : New(clone);
+            Check(recovered, queue, null, null, new[] { a }, new[] { b }, () => {
+                if (!nullAppend && (Get(a, "nextActivity") != null || Get(b, "nextActivity") != null))
+                    throw new Exception("Failed queue modified append state");
+            }, detailedExceptions: true);
+        }
+        Console.WriteLine("Activity.Queue: finite chains of 0/1/3 successors, null/distinct/prelinked appends, every link and identity; no cyclic chain executed.");
     }
 
     static bool SameFloatBits(object expected, object actual) => expected is float left && actual is float right

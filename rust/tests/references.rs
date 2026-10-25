@@ -42,6 +42,31 @@ fn references_cannot_be_used_as_integer_operands_or_fake_field_receivers() {
 }
 
 #[test]
+fn reference_truth_branches_test_identity_against_null_without_dereferencing() {
+    for (opcode, condition) in [(0x2d, "is not null"), (0x2c, "is null")] {
+        for receiver in [0x02, 0x14] {
+            // Receiver load or explicit null.
+            let (bytes, token) = replace_body(
+                IMAGES[0],
+                "Read",
+                &[receiver, opcode, 2, 0x16, 0x2a, 0x17, 0x2a],
+            );
+            let result = decompile(&bytes, token).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+            assert!(result.text.contains(condition), "{}", result.text);
+        }
+    }
+}
+
+#[test]
+fn reference_truth_branches_do_not_admit_native_or_managed_address_values() {
+    let (bytes, token) = replace_body(IMAGES[0], "Read", &[0x02, 0x0f, 0, 0x2d, 0, 0x16, 0x2a]);
+    let result = decompile(&bytes, token).unwrap();
+    assert_eq!(result.status, Status::Partial);
+    assert!(result.text.contains("IL FALLBACK"));
+}
+
+#[test]
 fn callvirt_is_not_silently_treated_as_direct_call() {
     let methods = list_methods(IMAGES[0]).unwrap();
     let token = methods
