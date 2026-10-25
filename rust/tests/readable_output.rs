@@ -252,6 +252,35 @@ fn backing_field_declarations_and_accessors_use_the_same_token_alias() {
 }
 
 #[test]
+fn property_and_event_relationships_show_names_types_and_accessors_not_tokens() {
+    let properties =
+        decompile_type_with_style(IMAGE, "ClassCases.Properties", OutputStyle::Readable).unwrap();
+    assert!(
+        properties
+            .text
+            .contains("// property int Only { get: get_Only; }"),
+        "{}",
+        properties.text
+    );
+    assert!(
+        properties.text.contains("// property int this[int index0]"),
+        "{}",
+        properties.text
+    );
+    assert!(!properties.text.contains("relationship 0x"));
+    let events =
+        decompile_type_with_style(IMAGE, "ClassCases.Events", OutputStyle::Readable).unwrap();
+    assert!(
+        events.text.contains(
+            "// event System.EventHandler External { add: add_External; remove: remove_External; }"
+        ),
+        "{}",
+        events.text
+    );
+    assert!(!events.text.contains("relationship 0x"));
+}
+
+#[test]
 fn readable_fields_and_nested_types_remain_visible() {
     let fields =
         decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();

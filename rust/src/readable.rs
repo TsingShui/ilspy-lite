@@ -78,13 +78,9 @@ fn render_type(
         .map(|t| (t, "property"))
         .chain(ty.events.iter().map(|t| (t, "event")))
     {
-        line(
-            out,
-            indent + 1,
-            &format!(
-                "// {kind} relationship 0x{token:08X}; accessors shown above, metadata in --details."
-            ),
-        );
+        let relationship = accessor_summary(image, token, ty.token)
+            .unwrap_or_else(|_| format!("// Unreadable {kind} relationship; see --details."));
+        line(out, indent + 1, &relationship);
     }
     for nested in types {
         if image
@@ -100,6 +96,61 @@ fn render_type(
         }
     }
     line(out, indent, "}");
+}
+
+fn accessor_summary(image: &Image<'_>, token: u32, owner: u32) -> Result<String> {
+    let tables = image.md.tables();
+    let event = token >> 24 == 0x14;
+    let (kind, signature) = if event {
+        let row = tables.event(token & 0xffffff)?;
+        (
+            "event",
+            format!(
+                "{} {}",
+                named_type(image, row.event_type)?,
+                ident(image.md.strings().str(row.name)?)
+            ),
+        )
+    } else {
+        let row = tables.property(token & 0xffffff)?;
+        let sig = cildec::PropertySig::parse(image.md.blobs().get(row.type_signature)?)?;
+        let name = if sig.params.is_empty() {
+            ident(image.md.strings().str(row.name)?)
+        } else {
+            format!(
+                "this[{}]",
+                sig.params
+                    .iter()
+                    .enumerate()
+                    .map(|(i, p)| Ok(format!("{} index{i}", cs_param(image, p, owner, 0)?)))
+                    .collect::<Result<Vec<_>>>()?
+                    .join(", ")
+            )
+        };
+        (
+            "property",
+            format!("{} {name}", cs_param(image, &sig.return_type, owner, 0)?),
+        )
+    };
+    let mut methods = Vec::new();
+    for rid in tables.semantics_for(Token(token))? {
+        let row = tables.method_semantics(rid)?;
+        let kind = match (event, row.semantics) {
+            (false, 1) => "set",
+            (false, 2) => "get",
+            (true, 8) => "add",
+            (true, 16) => "remove",
+            (true, 32) => "raise",
+            (_, 4) => "other",
+            _ => "unknown",
+        };
+        let method = image.row(0x06000000 | row.method.get())?;
+        methods.push(format!(
+            "{kind}: {};",
+            ident(image.md.strings().str(method.name)?)
+        ));
+    }
+    Ok(format!("// {kind} {signature} {{ {} }}", methods.join(" ")))
 }
 
 fn type_header(image: &Image<'_>, ty: &SelectedType) -> Result<String> {
