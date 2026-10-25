@@ -219,7 +219,25 @@ impl DependencyContext {
     }
 
     fn append_report(&self, text: &mut String, style: OutputStyle) -> Result<()> {
+        let kind = self.kinds[&0];
+        if style == OutputStyle::Readable {
+            let notice = match kind {
+                AssemblyKind::ReferenceContract => {
+                    "// Reference assembly API contract; body stubs are not runtime implementations.\n"
+                }
+                AssemblyKind::Unclassified => {
+                    "// Input assembly role is unclassified; executable implementation identity is not proven.\n"
+                }
+                AssemblyKind::ImplementationImage => "",
+            };
+            text.insert_str(0, notice);
+        }
         if style == OutputStyle::Details {
+            let (identity, _) = self.identity_source(0)?;
+            text.push_str(&format!(
+                "\n.dependency-main kind={kind:?} identity={:?}\n",
+                identity.to_string()
+            ));
             for evidence in &self.search_evidence {
                 text.push_str(&format!("\n{evidence}\n"));
             }
@@ -242,6 +260,7 @@ impl DependencyContext {
             .chain(self.reference_failures.iter().map(|r| r.token))
             .collect::<Vec<_>>();
         tokens.sort_unstable();
+        let mut missing = Vec::new();
         for token in tokens {
             let (state, evidence, warning) = match self.resolve(token)? {
                 AssemblyResolution::Resolved { identity, source } => {
@@ -311,6 +330,17 @@ impl DependencyContext {
                     "\n.dependency 0x{token:08X} status={state} {evidence}\n"
                 ));
             } else if let Some(warning) = warning {
+                if state == "missing" {
+                    missing.push(warning);
+                } else {
+                    text.push_str(&format!("\n// {warning}\n"));
+                }
+            }
+        }
+        if missing.len() > 3 {
+            text.push_str(&format!("\n// Dependencies unresolved: {}; exact references retained; see --details for identities and provenance.\n", missing.len()));
+        } else {
+            for warning in missing {
                 text.push_str(&format!("\n// {warning}\n"));
             }
         }
