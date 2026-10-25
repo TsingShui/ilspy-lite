@@ -35,7 +35,7 @@ public class Generic<T> { public T Echo(T value) => value; }
 public static class Mixed
 {
     public static int Good(int value) => unchecked(value + 1);
-    public static string Unsupported(string value) => value;
+    public static string Unsupported(string value) => value.ToUpperInvariant();
 }
 public interface IMarker { }
 public abstract class Base : IMarker { }
