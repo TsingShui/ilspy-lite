@@ -81,7 +81,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "strings") Strings(recovered, methods);
+        if (job.Kind == "exceptions") Exceptions(recovered, methods);
+        else if (job.Kind == "strings") Strings(recovered, methods);
         else if (job.Kind == "clock") Clock(recovered, methods);
         else if (job.Kind == "random-state") RandomState(recovered, methods);
         else if (job.Kind == "openra") OpenRa(original, recovered, methods);
@@ -104,6 +105,7 @@ internal static class ReferenceRoundtrip
         var coreConstructors = new HashSet<int>();
         var clocks = new HashSet<int>();
         var strings = new HashSet<int>();
+        var exceptions = new HashSet<int>();
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
@@ -151,6 +153,16 @@ internal static class ReferenceRoundtrip
                 if ((uint)token >> 24 != 0x70) throw new Exception("Invalid string literal token");
                 original.ManifestModule.ResolveString(token); // Validate original identity without executing a selected body.
                 strings.Add(token);
+            }
+            foreach (Match match in Regex.Matches(source, @"__cil_newobj_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if (target is not ConstructorInfo || target.DeclaringType != typeof(ArgumentOutOfRangeException)
+                    || target.IsStatic || !target.GetParameters().Select(p => p.ParameterType)
+                        .SequenceEqual(new[] { typeof(string), typeof(string) }))
+                    throw new Exception("Exception allocation target mismatch");
+                exceptions.Add(token);
             }
             string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
@@ -206,6 +218,12 @@ internal static class ReferenceRoundtrip
             code.Add("public static global::System.Action<int, string> StringLoadObserver;");
             foreach (int token in strings)
                 code.Add($"public static string __cil_ldstr_{token:X8}(string units) {{ StringLoadObserver?.Invoke({token}, units); return units; }}");
+        }
+        if (exceptions.Count != 0)
+        {
+            code.Add("public static global::System.Action<int, string, string> ExceptionAllocationObserver;");
+            foreach (int token in exceptions)
+                code.Add($"public static global::System.ArgumentOutOfRangeException __cil_newobj_{token:X8}(string parameter, string message) {{ ExceptionAllocationObserver?.Invoke({token}, parameter, message); return new global::System.ArgumentOutOfRangeException(parameter, message); }}");
         }
         File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
@@ -267,6 +285,60 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void Exceptions(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        string[] names = { "Make", "Literal", "Null", "Build", "Discard" };
+        if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
+            throw new Exception("Exception object selection drift");
+        bool EqualObject(object x, object y)
+        {
+            if (x == null || y == null) return x == null && y == null;
+            if (x is not ArgumentOutOfRangeException left || y is not ArgumentOutOfRangeException right
+                || ReferenceEquals(left, right)) return false;
+            return left.GetType() == right.GetType() && left.ParamName == right.ParamName
+                && left.Message == right.Message && left.HResult == right.HResult
+                && left.ActualValue == null && right.ActualValue == null
+                && left.InnerException == null && right.InnerException == null;
+        }
+        MethodInfo make = methods.Values.Single(m => m.Name == "Make");
+        string[] values = { null, "", "parameter", "message", "\ud800\0\udfff", new string(new[] { 'p', 'a', 'r', 'a', 'm' }) };
+        foreach (string parameter in values)
+        foreach (string message in values)
+        {
+            Check(recovered, make, null, null, new object[] { parameter, message }, new object[] { parameter, message }, equal: EqualObject);
+            foreach (string name in new[] { "Build", "Discard" })
+            foreach (bool nullReceiver in new[] { false, true })
+            {
+                MethodInfo method = methods.Values.Single(m => m.Name == name);
+                object a = nullReceiver ? null : New(method.DeclaringType!), b = nullReceiver ? null : New(recovered.GetType(method.DeclaringType!.FullName!)!);
+                if (!nullReceiver) { Set(a, "Effects", 7); Set(b, "Effects", 7); }
+                int allocations = 0;
+                recovered.GetType("Recovered")!.GetField("ExceptionAllocationObserver")!.SetValue(null,
+                    (Action<int, string, string>)((token, p, m) => {
+                        if (b == null || (int)Get(b, "Effects") != 1 || !ReferenceEquals(p, parameter) || !ReferenceEquals(m, message))
+                            throw new Exception("Exception constructor arguments or allocation position changed");
+                        allocations++;
+                    }));
+                Check(recovered, method, a, b, new object[] { parameter, message }, new object[] { parameter, message }, () => {
+                    if (!nullReceiver)
+                    {
+                        SameFields(a, b, "Effects");
+                        if ((int)Get(a, "Effects") != 2) throw new Exception("Exception allocation lost following effect");
+                    }
+                    if (allocations != (nullReceiver ? 0 : 1)) throw new Exception("Exception allocation missing or duplicated");
+                }, nullReceiver ? null : EqualObject);
+            }
+            recovered.GetType("Recovered")!.GetField("ExceptionAllocationObserver")!.SetValue(null, null);
+        }
+        foreach (string name in new[] { "Literal", "Null" })
+            Check(recovered, methods.Values.Single(m => m.Name == name), null, null, Array.Empty<object>(), Array.Empty<object>(), equal: EqualObject);
+        MethodInfo body = recovered.GetType("Recovered")!.GetMethod($"M_{make.MetadataToken:X8}")!;
+        object first = body.Invoke(null, new object[] { "parameter", "message" });
+        object second = body.Invoke(null, new object[] { "parameter", "message" });
+        if (ReferenceEquals(first, second)) throw new Exception("Exception allocation reused object identity");
+        Console.WriteLine("Exception objects: exact core constructor, argument order, fresh identity, content and allocation position; throw/EH not included.");
     }
 
     static void Strings(Assembly recovered, Dictionary<int, MethodInfo> methods)

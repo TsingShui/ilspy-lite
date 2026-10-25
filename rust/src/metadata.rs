@@ -1308,6 +1308,29 @@ impl<'a> Image<'a> {
         }
     }
 
+    pub fn core_exception_name(&self, token: u32) -> Result<String> {
+        if self.core_type_name(Token(token))? != "ArgumentOutOfRangeException" {
+            return Err(
+                "exception type needs exact core ArgumentOutOfRangeException identity".into(),
+            );
+        }
+        Ok("global::System.ArgumentOutOfRangeException".into())
+    }
+
+    pub fn exception_constructor(&self, token: Token) -> Result<crate::ir::Ty> {
+        if token.table() != Some(TableId::MemberRef) || token.rid() == 0 {
+            return Err("newobj needs an admitted core exception constructor".into());
+        }
+        let member = self.md.tables().member_ref(token.rid())?;
+        self.core_exception_name(member.class.0)?;
+        if self.md.strings().str(member.name)? != ".ctor"
+            || self.md.blobs().get(member.signature)? != [0x20, 0x02, 0x01, 0x0e, 0x0e]
+        {
+            return Err("newobj needs exact instance void exception .ctor(string, string)".into());
+        }
+        Ok(crate::ir::Ty::CoreException(member.class.0))
+    }
+
     pub fn receiver(&self, method: u32) -> Result<crate::ir::Ty> {
         let owner = self
             .md
@@ -1325,7 +1348,7 @@ impl<'a> Image<'a> {
             || (actual == Ty::Null
                 && matches!(
                     expected,
-                    Ty::String | Ty::Class(_) | Ty::I4Array | Ty::U4Array
+                    Ty::String | Ty::CoreException(_) | Ty::Class(_) | Ty::I4Array | Ty::U4Array
                 ))
         {
             return Ok(());

@@ -383,6 +383,29 @@ impl Writer<'_, '_> {
                 self.lines
                     .push(format!("{dest} = {};", ty.store(&value.name, self.image)?));
             }
+            "newobj" => {
+                let token = i.operand.token().ok_or("missing constructor token")?;
+                let result = self.image.exception_constructor(token)?;
+                let message = self.pop()?;
+                self.image.assignable(message.ty, Ty::String)?;
+                let parameter = self.pop()?;
+                self.image.assignable(parameter.ty, Ty::String)?;
+                self.lines.push(format!(
+                    "// newobj token 0x{:08X}: {}",
+                    token.0,
+                    crate::metadata::escape_line(
+                        &cildec::Names::new(&self.image.md).try_token(token)?
+                    )
+                ));
+                self.lines.push("// __cil_newobj: fresh object; exact constructor; parameter order retained (paramName, message); allocation/constructor effects occur here.".into());
+                self.push(
+                    result,
+                    format!(
+                        "__cil_newobj_{:08X}({}, {})",
+                        token.0, parameter.name, message.name
+                    ),
+                )?;
+            }
             "newarr" => {
                 let token = i.operand.token().ok_or("missing element type token")?;
                 let element = self.image.array_element_type(token)?;

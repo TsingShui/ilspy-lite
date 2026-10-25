@@ -20,6 +20,7 @@ pub(crate) enum Ty {
     Native,
     UNative,
     String,
+    CoreException(u32),
     Class(u32),
     I4Array,
     U4Array,
@@ -57,6 +58,7 @@ impl Ty {
             T::UIntPtr => Self::UNative,
             T::String => Self::String,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
+            T::Class(t) if t.table() == Some(cildec::TableId::TypeRef) => Self::CoreException(t.0),
             T::SzArray(mods, element) if mods.is_empty() => match element.as_ref() {
                 T::I4 => Self::I4Array,
                 T::U4 => Self::U4Array,
@@ -88,6 +90,7 @@ impl Ty {
             Self::UNative => "nuint",
             Self::String => "string",
             Self::Class(t) => return image.class_name(t),
+            Self::CoreException(t) => return image.core_exception_name(t),
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
             Self::I4Address => "ref int",
@@ -102,9 +105,12 @@ impl Ty {
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
             Self::I4Address | Self::U4Address => StackKind::Address,
-            Self::String | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => {
-                StackKind::Ref
-            }
+            Self::String
+            | Self::CoreException(_)
+            | Self::Class(_)
+            | Self::I4Array
+            | Self::U4Array
+            | Self::Null => StackKind::Ref,
             _ => StackKind::I4,
         }
     }
@@ -112,6 +118,7 @@ impl Ty {
         match self {
             Self::Void
             | Self::String
+            | Self::CoreException(_)
             | Self::Class(_)
             | Self::I4Array
             | Self::U4Array
@@ -125,6 +132,10 @@ impl Ty {
     }
     pub fn load(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::CoreException(_) => {
+                self.cs(image)?;
+                expression.into()
+            }
             Self::String => expression.into(),
             Self::I4
             | Self::I8
@@ -142,6 +153,10 @@ impl Ty {
     }
     pub fn store(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::CoreException(_) => {
+                self.cs(image)?;
+                expression.into()
+            }
             Self::String => expression.into(),
             Self::I4
             | Self::I8

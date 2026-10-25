@@ -115,6 +115,13 @@ retain raw code bytes in a `Failed` result.
   identity; string operations and mixed-reference joins remain unsupported.
   Invalid reachable user-string encoding retains raw bytes and cannot count as
   successful lowering.
+- Bounded `newobj` for the exact admitted core
+  `ArgumentOutOfRangeException::.ctor(string, string)` creates a fresh object at
+  the instruction position, keeping `(paramName, message)` order. The output
+  `__cil_newobj_TOKEN(...)` is one allocation/constructor operation, not exception
+  throwing or an ordinary call. That exception type retains its image-scoped
+  TypeRef in signatures/locals/returns; other external types and constructor
+  overloads remain unsupported.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
@@ -242,6 +249,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --conversions
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --addresses --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --constructors --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --strings --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --exceptions --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root
