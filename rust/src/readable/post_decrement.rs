@@ -33,10 +33,10 @@ pub(super) fn rewrite(image: &Image<'_>, caller: u32, body: &str) -> String {
             let only_immediate_use = lines.iter().enumerate().all(|(n, line)| {
                 (i..i + 3).contains(&n) || !super::identifiers(line).iter().any(|id| id == snapshot)
             });
-            if only_immediate_use {
-                if lines.get(i + 2) == Some(&format!("return ({snapshot} == 0);").as_str()) {
-                    return Some((3, format!("return unchecked({location}-- == 0);")));
-                }
+            if only_immediate_use
+                && lines.get(i + 2) == Some(&format!("return ({snapshot} == 0);").as_str())
+            {
+                return Some((3, format!("return unchecked({location}-- == 0);")));
             }
             // Keep the immutable old value at its original position when later
             // reads, calls or control flow still need that snapshot. No EH is

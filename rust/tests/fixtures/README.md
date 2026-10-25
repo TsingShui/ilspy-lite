@@ -111,6 +111,14 @@ carrier repeats the gate; a prefix-decrement mutation must fail. Static output
 checks alone are not execution evidence. Snapshots are pinned by Git without a
 separate hash manifest.
 
+The `property-signature-Property{Consumer,Middle,Payload}.bin` snapshots come
+from `../dotnet/PropertySignatureCases.cs`. Regenerate them with
+`python3 rust/tests/build-property-signature-fixtures.py`. They distinguish an
+exact accessor owner from a version-substituted named return/argument type:
+metadata binding may succeed, but uncertain signature scopes cannot justify
+property source syntax. These are static metadata tests, not runtime-version
+compatibility evidence.
+
 The string snapshots (`string-release.bin`, `string-debug.bin`) come from
 `../dotnet/StringCases.cs`. Regenerate with `python3 rust/tests/build-string-fixtures.py`
 and execute class output with `reference-roundtrip.py --strings --from-class`.

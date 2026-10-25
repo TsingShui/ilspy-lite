@@ -82,6 +82,18 @@ impl DependencyContext {
         {
             return Err("property source accessor shape is not proven".into());
         }
+        let requested_signature = crate::signature_guard::method(&method.reference_signature)?;
+        for (module, signature) in [(0, &requested_signature), (method.module, &signature)] {
+            for parameter in signature
+                .params
+                .iter()
+                .chain(std::iter::once(&signature.return_type))
+            {
+                if !self.property_type_is_exact(module, &parameter.type_)? {
+                    return Err("property source signature requires exact type identities".into());
+                }
+            }
+        }
         let caller_type = self.resolve_type(caller_owner)?;
         let qualifier = if method.module == 0 && property.owner.definition.token == caller_owner {
             if method.flags & 0x40 != 0 {
@@ -188,5 +200,30 @@ impl DependencyContext {
             return Err("source property accessor role is ambiguous".into());
         }
         Ok(Some((property, qualifier)))
+    }
+
+    fn property_type_is_exact(&self, module: usize, ty: &cildec::Type<'_>) -> Result<bool> {
+        match ty {
+            cildec::Type::Class(token) | cildec::Type::ValueType(token) => {
+                let (module, bound) =
+                    self.bind_type_in(module, *token, &mut std::collections::BTreeSet::new())?;
+                Ok(bound.exact_identity
+                    && bound.generic_arguments.is_empty()
+                    && self
+                        .binding_image(module)?
+                        .md
+                        .tables()
+                        .generic_params(Token(bound.definition.token))?
+                        .is_empty())
+            }
+            cildec::Type::SzArray(modifiers, inner) => {
+                if modifiers.is_empty() {
+                    self.property_type_is_exact(module, inner)
+                } else {
+                    Ok(false)
+                }
+            }
+            _ => Ok(crate::ir::Ty::from_sig(ty).is_ok()),
+        }
     }
 }

@@ -121,6 +121,82 @@ fn helper_like_user_member_names_and_string_literals_are_not_property_call_sites
     );
 }
 
+#[test]
+fn substituted_signature_types_cannot_prove_property_source_binding_for_an_exact_owner() {
+    use ilspy_lite::{AssemblyResolution, ReferenceSearchOptions, ReferenceVersionPolicy};
+    let input = include_bytes!("fixtures/property-signature-PropertyConsumer.bin");
+    let middle = include_bytes!("fixtures/property-signature-PropertyMiddle.bin");
+    let payload = include_bytes!("fixtures/property-signature-PropertyPayload.bin");
+    let mut exact = DependencyContext::new(input.to_vec()).unwrap();
+    exact.add_reference("middle", middle.to_vec()).unwrap();
+    exact.add_reference("payload", payload.to_vec()).unwrap();
+    let token = method_token(input, "Read");
+    assert!(
+        exact
+            .decompile(token, OutputStyle::Readable)
+            .unwrap()
+            .text
+            .contains("base.Value")
+    );
+    let md = cildec::PeImage::parse(payload).unwrap().metadata().unwrap();
+    let row = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    assert_eq!(row.len(), 22);
+    let start = row.as_ptr() as usize - payload.as_ptr() as usize;
+    let mut newer = payload.to_vec();
+    newer[start + 10..start + 12].copy_from_slice(&1u16.to_le_bytes());
+    let directory =
+        std::env::temp_dir().join(format!("ilspy-property-signature-{}", std::process::id()));
+    std::fs::create_dir(&directory).unwrap();
+    std::fs::write(directory.join("middle.dll"), middle).unwrap();
+    std::fs::write(directory.join("payload.dll"), newer).unwrap();
+    let mut context = DependencyContext::new(input.to_vec()).unwrap();
+    context
+        .discover_references(
+            &directory.join("consumer.dll"),
+            &ReferenceSearchOptions {
+                automatic: false,
+                files: vec![directory.join("middle.dll"), directory.join("payload.dll")],
+                version_policy: ReferenceVersionPolicy::SameMajor,
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    std::fs::remove_dir_all(directory).unwrap();
+    let request = context
+        .references()
+        .iter()
+        .find(|r| r.identity.name == "PropertyPayload")
+        .unwrap();
+    assert!(matches!(
+        context.resolve(request.token).unwrap(),
+        AssemblyResolution::Substituted { .. }
+    ));
+    let md = cildec::PeImage::parse(input).unwrap().metadata().unwrap();
+    let getter = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Value")
+        .unwrap()
+        .0;
+    let accessor = context
+        .resolve_property_accessor(0x0a000000 | getter)
+        .unwrap()
+        .unwrap();
+    assert!(
+        accessor.owner.exact_identity,
+        "the owner must be exact so this tests signature scope uncertainty"
+    );
+    for name in ["Read", "Write"] {
+        let actual = context
+            .decompile(method_token(input, name), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(actual.status, ilspy_lite::Status::Decompiled);
+        assert!(!actual.text.contains("base.Value"), "{}", actual.text);
+        assert!(actual.text.contains("__cil_memberref_call_"));
+        assert!(actual.text.contains("metadata only"));
+    }
+}
+
 fn patch_body(bytes: &[u8], token: u32, code: &[u8]) -> Vec<u8> {
     let pe = cildec::PeImage::parse(bytes).unwrap();
     let row = pe
