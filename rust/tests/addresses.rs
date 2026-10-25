@@ -89,10 +89,62 @@ fn element_addresses_are_taken_immediately_and_not_read_as_values() {
             );
         }
         let result = decompile_type(bytes, "AddressCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 5);
+        assert_eq!(result.summary.decompiled, 10);
         assert_eq!(result.summary.partial, 3); // Two ref-return anchors and constructor.
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
+    }
+}
+
+#[test]
+fn indirect_u4_reads_snapshot_the_value_at_the_read_instruction() {
+    for bytes in IMAGES {
+        for name in [
+            "ReadUnsigned",
+            "ReadSignedBits",
+            "ReadSnapshot",
+            "ReadAfterWrite",
+            "ReadAfterRetarget",
+        ] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("ldind.u4") && result.text.contains("ref "));
+            let read = result
+                .text
+                .lines()
+                .find(|l| l.contains("int v") && l.contains("unchecked((int)(v"))
+                .unwrap();
+            assert!(
+                !read.contains('['),
+                "Address must be read, not acquired again: {read}"
+            );
+            if name == "ReadSnapshot" {
+                assert!(
+                    result.text.find("ldind.u4").unwrap() < result.text.find("stelem.i4").unwrap()
+                );
+            } else if name == "ReadAfterWrite" {
+                assert!(
+                    result.text.find("ldind.u4").unwrap() > result.text.find("stelem.i4").unwrap()
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn indirect_u4_rejects_ordinary_values_and_empty_stack() {
+    for bytes in IMAGES {
+        let method = token(bytes, "Take");
+        for code in [
+            &[0x17, 0x4b, 0x26, 0x2a][..],
+            &[0x14, 0x4b, 0x26, 0x2a][..],
+            &[0x03, 0x4b, 0x26, 0x2a][..],
+            &[0x4b, 0x26, 0x2a][..],
+        ] {
+            let result = decompile(&patched_body(bytes, method, code), method).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
+        }
     }
 }
 
@@ -107,7 +159,7 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
                 &[0x2b, 0x00, 0x26, 0x2a][..],
                 "managed element address crossing a block",
             ),
-            (&[0x4b, 0x26, 0x2a][..], "unsupported opcode ldind.u4"),
+            (&[0x4a, 0x26, 0x2a][..], "unsupported opcode ldind.i4"),
             (&[0x17, 0x54, 0x2a][..], "unsupported opcode stind.i4"),
             (
                 &[0x25, 0x58, 0x26, 0x2a][..],

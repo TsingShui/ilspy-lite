@@ -365,6 +365,14 @@ impl Writer<'_, '_> {
                 };
                 self.push(address, format!("{}[{}]", array.name, index.name))?;
             }
+            "ldind.u4" => {
+                let address = self.pop()?;
+                if !matches!(address.ty, Ty::I4Address | Ty::U4Address) {
+                    return Err("ldind.u4 needs a stable I4 element address".into());
+                }
+                // Read now, from the already checked location, into canonical I4 bits.
+                self.push(Ty::I4, Ty::U4.load(&address.name, self.image)?)?;
+            }
             "ldelem.i4" | "ldelem.u4" => {
                 let index = self.pop()?;
                 expect(index.ty, Ty::I4)?;

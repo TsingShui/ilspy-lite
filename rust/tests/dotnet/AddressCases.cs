@@ -29,5 +29,10 @@ public class Cells
     public void TakeSigned(int[] values, int index) { Effects = 111; Effects = 112; Effects = 113; Effects = 114; }
     public void Duplicate(uint[] values, int index) { Effects = 121; Effects = 122; Effects = 123; Effects = 124; }
     public void Retarget(uint[] replacement, int index) { Effects = 131; Effects = 132; Effects = 133; Effects = 134; Effects = 135; }
+    public uint ReadUnsigned(uint[] values, int index) { Effects = 141; Effects = 142; Effects = 143; Effects = 144; return 1001; }
+    public uint ReadSignedBits(int[] values, int index) { Effects = 151; Effects = 152; Effects = 153; Effects = 154; return 1002; }
+    public uint ReadSnapshot(uint[] values, int index, uint replacement) { Effects = 161; Effects = 162; Effects = 163; Effects = 164; return 1003; }
+    public uint ReadAfterWrite(uint[] values, int index, uint replacement) { Effects = 171; Effects = 172; Effects = 173; Effects = 174; return 1004; }
+    public uint ReadAfterRetarget(uint[] replacement, int index) { Effects = 181; Effects = 182; Effects = 183; Effects = 184; return 1005; }
     public int Bump() => ++Effects;
 }

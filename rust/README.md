@@ -103,8 +103,10 @@ retain raw code bytes in a `Failed` result.
   `System.Int32` / `System.UInt32` TypeRef matching the array element. It binds a
   typed, stable `ref` immediately: null/bounds checks happen there, not at a
   later read. `dup` copies the address identity without reading or checking it
-  again. Indirect access, byref parameters/locals/returns, prefixes and address
-  values crossing a basic-block edge remain unsupported.
+  again. `ldind.u4` reads this address at its original instruction, into a
+  canonical I4 bit-pattern snapshot; signed I4 storage does not change its bits.
+  Indirect writes, byref parameters/locals/returns, prefixes and address values
+  crossing a basic-block edge remain unsupported.
 - Constant/argument/local loads and stores, `dup`, `pop`, static field loads/stores.
 - Arithmetic, checked arithmetic (signed and unsigned), division/remainder,
   comparisons, bitwise operations and shifts.
@@ -155,7 +157,7 @@ If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
-element types, multidimensional/jagged arrays, `newarr`, indirect element access,
+element types, multidimensional/jagged arrays, `newarr`, indirect element writes,
 floating point, native integer arithmetic/comparisons, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and

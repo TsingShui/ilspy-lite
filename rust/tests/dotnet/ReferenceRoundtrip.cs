@@ -427,9 +427,49 @@ internal static class ReferenceRoundtrip
                     });
             }
         }
-        foreach (string name in new[] { "Take", "TakeSigned", "Duplicate", "Retarget" })
-            Check(recovered, methods.Values.Single(m => m.Name == name), null, null,
-                new object[] { null, 0 }, new object[] { null, 0 });
+        foreach (int length in new[] { -1, 0, 1, 3 })
+        foreach (int index in indices)
+        {
+            foreach (string name in new[] { "ReadUnsigned", "ReadSignedBits", "ReadSnapshot", "ReadAfterWrite" })
+            foreach (uint replacement in new[] { 0u, 1u, 0x80000000u, uint.MaxValue })
+            {
+                object a = New(cell), b = New(clone);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                Array left = length < 0 ? null : name == "ReadSignedBits"
+                    ? new[] { int.MinValue, -1, int.MaxValue }.Take(length).ToArray()
+                    : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                Array right = (Array)left?.Clone();
+                bool writes = name == "ReadSnapshot" || name == "ReadAfterWrite";
+                object[] la = writes ? new object[] { left, index, replacement } : new object[] { left, index };
+                object[] ra = writes ? new object[] { right, index, replacement } : new object[] { right, index };
+                Check(recovered, methods.Values.Single(m => m.Name == name), a, b, la, ra,
+                    () => { SameFields(a, b, "Effects"); SameArray(left, right); });
+            }
+            foreach (bool nullReplacement in new[] { false, true })
+            foreach (bool alias in new[] { false, true })
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = length < 0 ? null : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                uint[] right = (uint[])left?.Clone();
+                uint[] al = nullReplacement ? null : alias ? left : new uint[2];
+                uint[] ar = nullReplacement ? null : alias ? right : new uint[2];
+                Set(a, "Values", left); Set(b, "Values", right);
+                Check(recovered, methods.Values.Single(m => m.Name == "ReadAfterRetarget"), a, b,
+                    new object[] { al, index }, new object[] { ar, index }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right); SameArray(al, ar);
+                        bool valid = length >= 0 && index >= 0 && index < length;
+                        if (!ReferenceEquals(Get(a, "Values"), valid ? al : left)
+                            || !ReferenceEquals(Get(b, "Values"), valid ? ar : right))
+                            throw new Exception("Indirect read changed the addressed array identity");
+                    });
+            }
+        }
+        foreach (string name in new[] { "Take", "TakeSigned", "Duplicate", "Retarget", "ReadUnsigned", "ReadSignedBits", "ReadAfterRetarget", "ReadSnapshot", "ReadAfterWrite" })
+        {
+            object[] values = name == "ReadSnapshot" || name == "ReadAfterWrite"
+                ? new object[] { null, 0, 1u } : new object[] { null, 0 };
+            Check(recovered, methods.Values.Single(m => m.Name == name), null, null, values, values);
+        }
         object ba = New(cell), bb = New(clone);
         Set(ba, "Effects", int.MaxValue); Set(bb, "Effects", int.MaxValue);
         Check(recovered, methods.Values.Single(m => m.Name == "Bump"), ba, bb,
@@ -437,7 +477,7 @@ internal static class ReferenceRoundtrip
         Check(recovered, methods.Values.Single(m => m.Name == "Bump"), null, null,
             Array.Empty<object>(), Array.Empty<object>());
         if (!methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
-            "Take", "TakeSigned", "Duplicate", "Retarget", "Bump"
+            "Take", "TakeSigned", "Duplicate", "Retarget", "Bump", "ReadUnsigned", "ReadSignedBits", "ReadSnapshot", "ReadAfterWrite", "ReadAfterRetarget"
         }.Order())) throw new Exception("Address method selection drift");
     }
 

@@ -55,8 +55,17 @@ for config in ("release", "debug"):
                                   capture_output=True, text=True, timeout=30)
     assert declarations.returncode in (0, 2), declarations.stderr
     values = int(re.search(r"^\.field (0x[0-9A-F]{8}) .*@Values ", declarations.stdout, re.M)[1], 16)
-    bodies["Retarget"] = (prefix + b"\x02\x7b" + pack(values) + b"\x04\x8f" + pack(u4)
-                          + b"\x02\x03\x7d" + pack(values) + finish + b"\x26\x2a")
+    field_address = b"\x02\x7b" + pack(values) + b"\x04\x8f" + pack(u4)
+    retarget = b"\x02\x03\x7d" + pack(values)
+    bodies["Retarget"] = prefix + field_address + retarget + finish + b"\x26\x2a"
+    write = b"\x03\x04\x05\x9e"  # Array/index/replacement, stelem.i4.
+    bodies.update({
+        "ReadUnsigned": prefix + unsigned + b"\x4b" + finish + b"\x2a",
+        "ReadSignedBits": prefix + b"\x03\x04\x8f" + pack(i4) + b"\x4b" + finish + b"\x2a",
+        "ReadSnapshot": prefix + unsigned + b"\x4b" + write + finish + b"\x2a",
+        "ReadAfterWrite": prefix + unsigned + write + b"\x4b" + finish + b"\x2a",
+        "ReadAfterRetarget": prefix + field_address + retarget + b"\x4b" + finish + b"\x2a",
+    })
     for name, code in bodies.items():
         original = bytes(int(byte, 16) for chunk in re.findall(r"^\.code-bytes IL_[0-9A-F]+: \[([^]]*)\]", il(name), re.M)
                          for byte in chunk.split(", "))
@@ -64,8 +73,15 @@ for config in ("release", "debug"):
         start = image.find(original)
         assert start > 0 and image.find(original, start + 1) == -1, name
         header = image[start - 1]
-        assert header & 3 == 2 and header >> 2 == len(original), name
-        image[start - 1] = (len(code) << 2) | 2
+        if header & 3 == 2 and header >> 2 == len(original):
+            assert len(code) < 64
+            image[start - 1] = (len(code) << 2) | 2
+        else:
+            flags = struct.unpack_from("<H", image, start - 12)[0]
+            assert flags & 3 == 3 and flags >> 12 == 3 and flags & 8 == 0, name
+            assert struct.unpack_from("<I", image, start - 8)[0] == len(original), name
+            struct.pack_into("<H", image, start - 10, 8)
+            struct.pack_into("<I", image, start - 8, len(code))
         image[start:start + len(code)] = code
     fixture.write_bytes(image)
     print(f"{config}: reserved bodies replaced with authored ldelema IL")
