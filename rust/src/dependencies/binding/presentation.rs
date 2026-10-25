@@ -82,6 +82,9 @@ impl DependencyContext {
         {
             return Err("property source accessor shape is not proven".into());
         }
+        if !self.property_type_is_exact(method.module, &property_signature.return_type.type_)? {
+            return Err("property source signature requires exact type identities".into());
+        }
         let requested_signature = crate::signature_guard::method(&method.reference_signature)?;
         for (module, signature) in [(0, &requested_signature), (method.module, &signature)] {
             for parameter in signature
@@ -207,8 +210,10 @@ impl DependencyContext {
             cildec::Type::Class(token) | cildec::Type::ValueType(token) => {
                 let (module, bound) =
                     self.bind_type_in(module, *token, &mut std::collections::BTreeSet::new())?;
-                Ok(bound.exact_identity
-                    && bound.generic_arguments.is_empty()
+                if !bound.exact_identity {
+                    return Err(format!("property signature used metadata-only type substitution: selected={} source={:?}; see --details for requested scopes; runtime behavior is not proven", bound.definition.assembly, bound.definition.source).into());
+                }
+                Ok(bound.generic_arguments.is_empty()
                     && self
                         .binding_image(module)?
                         .md

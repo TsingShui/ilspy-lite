@@ -197,6 +197,139 @@ fn substituted_signature_types_cannot_prove_property_source_binding_for_an_exact
     }
 }
 
+#[test]
+fn an_independent_substituted_property_signature_path_cannot_hide_behind_exact_accessors() {
+    use ilspy_lite::{ReferenceSearchOptions, ReferenceVersionPolicy};
+    let consumer = include_bytes!("fixtures/property-signature-PropertyConsumer.bin");
+    let middle = include_bytes!("fixtures/property-signature-PropertyMiddle.bin");
+    let payload = include_bytes!("fixtures/property-signature-PropertyPayload.bin");
+    let set_payload_request = |bytes: &[u8]| {
+        let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+        let rid = md
+            .tables()
+            .iter::<cildec::tables::AssemblyRefRow>()
+            .find(|(_, row)| {
+                md.strings().str(row.as_ref().unwrap().name).unwrap() == "PropertyPayload"
+            })
+            .unwrap()
+            .0;
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::AssemblyRef, rid)
+            .unwrap();
+        assert_eq!(row.len(), 20);
+        let start = row.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut result = bytes.to_vec();
+        result[start + 6..start + 8].copy_from_slice(&1u16.to_le_bytes());
+        result
+    };
+    let input = set_payload_request(consumer);
+    let mut definition = set_payload_request(middle);
+    let md = cildec::PeImage::parse(middle).unwrap().metadata().unwrap();
+    let table = md.tables();
+    let peer = table
+        .iter::<cildec::tables::TypeRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Peer")
+        .unwrap()
+        .0;
+    let alias = table
+        .iter::<cildec::tables::TypeRefRow>()
+        .find(|(_, row)| {
+            md.strings().str(row.as_ref().unwrap().type_name).unwrap()
+                == "CompilationRelaxationsAttribute"
+        })
+        .unwrap()
+        .0;
+    let system = table
+        .iter::<cildec::tables::AssemblyRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "System.Runtime")
+        .unwrap()
+        .0;
+    let namespace =
+        u16::try_from(table.raw_column(cildec::TableId::TypeRef, peer, 2).unwrap()).unwrap();
+    let name = u16::try_from(table.raw_column(cildec::TableId::TypeRef, peer, 1).unwrap()).unwrap();
+    let record = table
+        .row_bytes(cildec::TableId::AssemblyRef, system)
+        .unwrap();
+    assert_eq!(record.len(), 20);
+    let at = record.as_ptr() as usize - middle.as_ptr() as usize;
+    definition[at..at + 20].fill(0);
+    definition[at + 14..at + 16].copy_from_slice(&namespace.to_le_bytes());
+    let record = table.row_bytes(cildec::TableId::TypeRef, alias).unwrap();
+    assert_eq!(record.len(), 6);
+    let at = record.as_ptr() as usize - middle.as_ptr() as usize;
+    definition[at..at + 2].copy_from_slice(&u16::try_from(system << 2 | 2).unwrap().to_le_bytes());
+    definition[at + 2..at + 4].copy_from_slice(&name.to_le_bytes());
+    definition[at + 4..at + 6].copy_from_slice(&namespace.to_le_bytes());
+    let property = table.property(1).unwrap();
+    assert_eq!(md.strings().str(property.name).unwrap(), "Value");
+    let signature = md.blobs().get(property.type_signature).unwrap();
+    assert_eq!(signature.len(), 4);
+    assert_eq!(&signature[..3], &[0x28, 0, 0x12]);
+    let at = signature.as_ptr() as usize - middle.as_ptr() as usize;
+    definition[at + 3] = u8::try_from(alias << 2 | 1).unwrap();
+    let md = cildec::PeImage::parse(payload).unwrap().metadata().unwrap();
+    let record = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let at = record.as_ptr() as usize - payload.as_ptr() as usize;
+    let mut version = payload.to_vec();
+    version[at + 10..at + 12].copy_from_slice(&1u16.to_le_bytes());
+    let directory = std::env::temp_dir().join(format!(
+        "ilspy-property-signature-path-{}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&directory).unwrap();
+    std::fs::write(directory.join("middle.dll"), definition).unwrap();
+    std::fs::write(directory.join("payload.dll"), version).unwrap();
+    let mut context = DependencyContext::new(input.clone()).unwrap();
+    context
+        .discover_references(
+            &directory.join("consumer.dll"),
+            &ReferenceSearchOptions {
+                automatic: false,
+                files: vec![directory.join("middle.dll"), directory.join("payload.dll")],
+                version_policy: ReferenceVersionPolicy::SameMajor,
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    std::fs::remove_dir_all(directory).unwrap();
+    let md = cildec::PeImage::parse(&input).unwrap().metadata().unwrap();
+    let getter = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Value")
+        .unwrap()
+        .0;
+    let bound = context
+        .resolve_property_accessor(0x0a000000 | getter)
+        .unwrap()
+        .unwrap();
+    assert!(bound.owner.exact_identity);
+    assert!(
+        context
+            .references()
+            .iter()
+            .filter(|r| r.identity.name == "PropertyPayload")
+            .all(|r| matches!(
+                context.resolve(r.token).unwrap(),
+                ilspy_lite::AssemblyResolution::Resolved { .. }
+            ))
+    );
+    let actual = context
+        .decompile(method_token(&input, "Read"), OutputStyle::Readable)
+        .unwrap();
+    assert_eq!(actual.status, ilspy_lite::Status::Decompiled);
+    assert!(!actual.text.contains("base.Value"), "{}", actual.text);
+    assert!(actual.text.contains("__cil_memberref_call_"));
+    assert!(
+        actual.text.contains("metadata-only type substitution")
+            && actual.text.contains("source=")
+            && actual.text.contains("0.0.0.1"),
+        "{}",
+        actual.text
+    );
+}
+
 fn patch_body(bytes: &[u8], token: u32, code: &[u8]) -> Vec<u8> {
     let pe = cildec::PeImage::parse(bytes).unwrap();
     let row = pe
