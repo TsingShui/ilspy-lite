@@ -325,6 +325,51 @@ internal static class ReferenceRoundtrip
                 new object[] { a, c, index }, new object[] { b, d, index },
                 () => { SameArray(a, b); SameArray(c, d); });
         }
+        foreach (int length in new[] { -1, 0, 1, 4, 624, 625 })
+        {
+            uint[] state = length < 0 ? null : new uint[length];
+            foreach (string name in new[] { "LengthUnsigned", "WideLength", "CountLoop" })
+            {
+                uint[] left = (uint[])state?.Clone(), right = (uint[])state?.Clone();
+                Check(recovered, methods.Values.Single(m => m.Name == name), null, null,
+                    new object[] { left }, new object[] { right }, () => SameArray(left, right));
+            }
+            int[] sl = length < 0 ? null : new int[length], sr = (int[])sl?.Clone();
+            Check(recovered, methods.Values.Single(m => m.Name == "LengthSigned"), null, null,
+                new object[] { sl }, new object[] { sr }, () => SameArray(sl, sr));
+            foreach (int initial in new[] { 7, int.MaxValue })
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = (uint[])state?.Clone(), right = (uint[])state?.Clone();
+                Set(a, "Values", left); Set(b, "Values", right);
+                Set(a, "Effects", initial); Set(b, "Effects", initial);
+                Check(recovered, methods.Values.Single(m => m.Name == "LengthAfterEffect"), a, b,
+                    Array.Empty<object>(), Array.Empty<object>(), () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right);
+                        if (!ReferenceEquals(Get(a, "Values"), left) || !ReferenceEquals(Get(b, "Values"), right))
+                            throw new Exception("Length read changed array identity");
+                    });
+            }
+            foreach (bool nullReplacement in new[] { false, true })
+            foreach (bool alias in new[] { false, true })
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = (uint[])state?.Clone(), right = (uint[])state?.Clone();
+                uint[] al = nullReplacement ? null : alias ? left : new uint[3];
+                uint[] ar = nullReplacement ? null : alias ? right : new uint[3];
+                Set(a, "Values", left); Set(b, "Values", right);
+                Check(recovered, methods.Values.Single(m => m.Name == "LengthSnapshot"), a, b,
+                    new object[] { al }, new object[] { ar }, () => {
+                        SameArray(left, right); SameArray(al, ar);
+                        if (!ReferenceEquals(Get(a, "Values"), al) || !ReferenceEquals(Get(b, "Values"), ar))
+                            throw new Exception("Length snapshot lost prior field reassignment");
+                    });
+            }
+        }
+        Check(recovered, methods.Values.Single(m => m.Name == "LengthAfterEffect"), null, null,
+            Array.Empty<object>(), Array.Empty<object>());
+        Check(recovered, methods.Values.Single(m => m.Name == "LengthSnapshot"), null, null,
+            new object[] { null }, new object[] { null });
         object ba = New(cell), bb = New(clone);
         Set(ba, "Effects", int.MaxValue); Set(bb, "Effects", int.MaxValue);
         MethodInfo bump = methods.Values.Single(m => m.Name == "Bump");
@@ -332,7 +377,8 @@ internal static class ReferenceRoundtrip
         Check(recovered, bump, null, null, Array.Empty<object>(), Array.Empty<object>());
         Check(recovered, methods.Values.Single(m => m.Name == "Null"), null, null, Array.Empty<object>(), Array.Empty<object>());
         if (methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
-            "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice"
+            "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice",
+            "LengthSigned", "LengthUnsigned", "WideLength", "LengthAfterEffect", "LengthSnapshot", "CountLoop"
         }.Order()) == false) throw new Exception("Array method selection drift");
     }
 

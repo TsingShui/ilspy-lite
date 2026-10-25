@@ -187,6 +187,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         .chain(&writer.locals)
         .chain(std::iter::once(&writer.ret))
         .any(|ty| ty.kind() == StackKind::Native)
+        || instructions
+            .iter()
+            .any(|i| i.opcode.canonical().name() == "ldlen")
     {
         out.push_str(
             "// nint/nuint use the target runtime pointer width, not the analyzer host width.\n",
@@ -316,6 +319,16 @@ impl Writer<'_, '_> {
                 self.image.assignable(value.ty, ty.stack())?;
                 self.lines
                     .push(format!("{dest} = {};", ty.store(&value.name, self.image)?));
+            }
+            "ldlen" => {
+                let array = self.pop()?;
+                array_element(array.ty)?;
+                // Read now: null checking and length evaluation must not be delayed.
+                // The signed native temporary retains the native-unsigned bit pattern.
+                self.push(
+                    Ty::Native,
+                    format!("unchecked((nint)({}.LongLength))", array.name),
+                )?;
             }
             "ldelem.i4" | "ldelem.u4" => {
                 let index = self.pop()?;

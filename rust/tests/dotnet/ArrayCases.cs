@@ -40,4 +40,27 @@ public class Cells
     public void EffectfulStore(int index) => Numbers[index] = Bump();
     public static void Copy(uint[] target, uint[] source, int index) => target[index] = source[index];
     public static uint ReadChoice(bool first, uint[] left, uint[] right, int index) => (first ? left : right)[index];
+    public static int LengthSigned(int[] values) => values.Length;
+    public static int LengthUnsigned(uint[] values) => values.Length;
+    public static long WideLength(uint[] values) => values.LongLength;
+    public int LengthAfterEffect()
+    {
+        Bump();
+        int length = Values.Length;
+        Bump();
+        return length;
+    }
+    public int LengthSnapshot(uint[] replacement)
+    {
+        uint[] old = Values;
+        Values = replacement;
+        return old.Length;
+    }
+    public static int CountLoop(uint[] values)
+    {
+        int count = 0;
+        for (uint i = 0; i < values.Length; i++)
+            count++;
+        return count;
+    }
 }

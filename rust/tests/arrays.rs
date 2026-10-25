@@ -33,6 +33,57 @@ fn with_code(name: &str, code: &[u8]) -> (Vec<u8>, u32) {
 }
 
 #[test]
+fn array_lengths_use_native_stack_values_and_keep_the_conversion_chain() {
+    for bytes in IMAGES {
+        for name in [
+            "LengthSigned",
+            "LengthUnsigned",
+            "WideLength",
+            "LengthAfterEffect",
+            "LengthSnapshot",
+            "CountLoop",
+        ] {
+            let method = list_methods(bytes)
+                .unwrap()
+                .into_iter()
+                .find(|m| m.simple_name == name)
+                .unwrap();
+            let result = decompile(bytes, method.token).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("ldlen"), "{name}: {}", result.text);
+            assert!(
+                result
+                    .text
+                    .lines()
+                    .any(|line| line.trim_start().starts_with("nint v")
+                        && line.contains(".LongLength")),
+                "{name}: {}",
+                result.text
+            );
+            if name == "CountLoop" {
+                for op in ["conv.u8", "conv.i4", "conv.i8"] {
+                    assert!(result.text.contains(op), "missing {op}: {}", result.text);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn ldlen_requires_an_array_and_explicit_fixed_width_conversion() {
+    for code in [
+        &[0x16, 0x8e, 0x69, 0x2a][..], // Numeric value is not an array.
+        &[0x8e, 0x69, 0x2a][..],       // No array on the stack.
+        &[0x02, 0x8e, 0x2a][..],       // Native result cannot silently become I4.
+    ] {
+        let (bytes, token) = with_code("LengthSigned", code);
+        let result = decompile(&bytes, token).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(result.text.contains("IL FALLBACK"));
+    }
+}
+
+#[test]
 fn invalid_array_operands_and_element_addresses_remain_fallback() {
     for (name, code) in [
         ("ReadSigned", vec![0x16, 0x03, 0x94, 0x2a]), // numeric receiver

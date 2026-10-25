@@ -96,6 +96,9 @@ retain raw code bytes in a `Failed` result.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
   fields, locals and returns; `ldelem.i4` / `ldelem.u4` and `stelem.i4` with
   I4 indices. Array loads and stores stay at their original IL position.
+- `ldlen` for these arrays produces a native-sized bit pattern, read immediately
+  with its original null check. Explicit `conv.i4` / `conv.i8` / `conv.u8` retain
+  the original conversion chain; native length is not silently an I4 value.
 - Constant/argument/local loads and stores, `dup`, `pop`, static field loads/stores.
 - Arithmetic, checked arithmetic (signed and unsigned), division/remainder,
   comparisons, bitwise operations and shifts.
@@ -146,7 +149,7 @@ If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
-element types, multidimensional/jagged arrays, `newarr`, `ldlen`, `ldelema`,
+element types, multidimensional/jagged arrays, `newarr`, `ldelema`,
 floating point, native integer operations/conversions, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, managed references,
 value types, prefixes, exception regions and
