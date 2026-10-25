@@ -885,6 +885,16 @@ fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
                 }
             }
             let word = &text[start..end];
+            let member_slot =
+                text[..start].trim_end().ends_with('.') || text[..start].trim_end().ends_with("::");
+            if member_slot {
+                out.push_str(
+                    word.strip_prefix('@')
+                        .filter(|s| !keyword(s))
+                        .unwrap_or(word),
+                );
+                continue;
+            }
             if word == "global" && text[end..].starts_with("::") {
                 chars.next();
                 chars.next();

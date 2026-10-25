@@ -178,6 +178,23 @@ fn field_old_value_is_not_delayed_until_after_a_store() {
 }
 
 #[test]
+fn argument_renaming_does_not_rewrite_a_field_named_like_a_generated_argument() {
+    let bytes = include_bytes!("fixtures/reference-release.bin");
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let field = md.tables().field(1).unwrap();
+    let raw = md.strings().str(field.name).unwrap().as_bytes();
+    assert_eq!(raw, b"Value");
+    let offset = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset..offset + raw.len()].copy_from_slice(b"a0\0\0\0");
+    let result =
+        decompile_type_with_style(&patched, "ReferenceCases.Cell", OutputStyle::Readable).unwrap();
+    assert!(result.text.contains("public int a0;"));
+    assert!(result.text.contains("= this.a0;"), "{}", result.text);
+    assert!(!result.text.contains("this.this"), "{}", result.text);
+}
+
+#[test]
 fn readable_fields_and_nested_types_remain_visible() {
     let fields =
         decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();
