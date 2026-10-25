@@ -40,3 +40,14 @@ for config in ("release", "debug"):
         ]))
         subprocess.run([str(dotnet / "dotnet"), str(sdk / "Roslyn/bincore/csc.dll"), f"@{response}"], check=True)
         shutil.copyfile(facade, root / f"tests/fixtures/binding-facade-{config}.bin")
+        contract_dir = Path(directory) / "contract"
+        contract_dir.mkdir()
+        contract = contract_dir / "BindingLibrary.dll"
+        response = Path(directory) / "contract.rsp"
+        response.write_text("\n".join([
+            "-nologo", "-target:library", "-refonly", "-define:DEPENDENCY", "-langversion:14", "-warnaserror+", "-deterministic+",
+            f'-out:"{contract}"', *[f'-r:"{p}"' for p in sorted(ref.glob("*.dll"))],
+            f'"{root / "tests/dotnet/BindingCases.cs"}"',
+        ]))
+        subprocess.run([str(dotnet / "dotnet"), str(sdk / "Roslyn/bincore/csc.dll"), f"@{response}"], check=True)
+        shutil.copyfile(contract, root / f"tests/fixtures/binding-contract-{config}.bin")

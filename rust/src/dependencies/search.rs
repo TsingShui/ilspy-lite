@@ -121,18 +121,33 @@ impl DependencyContext {
             return;
         }
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-        if !seen.insert(canonical.clone()) {
-            return;
-        }
         let source = canonical
             .to_str()
             .map(str::to_string)
             .unwrap_or_else(|| format!("{canonical:?}"));
+        if !seen.insert(canonical.clone()) {
+            if origin == "ReferencePack" {
+                if let Some(index) = self.sources.get(&source) {
+                    self.kinds
+                        .insert(index + 1, super::AssemblyKind::ReferenceContract);
+                    self.search_evidence.push(format!(
+                        ".dependency-probe source={source:?} origin={origin}"
+                    ));
+                }
+            }
+            return;
+        }
         let read = (|| -> Result<()> {
             self.add_reference_reader(&source, std::fs::File::open(&canonical)?)
         })();
         match read {
             Ok(()) => {
+                if origin == "ReferencePack" {
+                    if let Some(index) = self.sources.get(&source) {
+                        self.kinds
+                            .insert(index + 1, super::AssemblyKind::ReferenceContract);
+                    }
+                }
                 self.search_evidence.push(format!(
                     ".dependency-probe source={source:?} origin={origin}"
                 ));
@@ -219,7 +234,7 @@ impl DependencyContext {
     }
 }
 
-fn core_contract(identity: &super::AssemblyIdentity) -> bool {
+pub(super) fn core_contract(identity: &super::AssemblyIdentity) -> bool {
     identity.culture.is_empty()
         && identity.content_type == 0
         && match identity.name.as_str() {

@@ -137,6 +137,42 @@ fn target_framework_comes_from_static_attribute_evidence_not_the_host_runtime() 
 }
 
 #[test]
+fn reference_pack_origin_never_claims_a_runtime_implementation() {
+    let root = std::env::temp_dir().join(format!(
+        "ilspy-reference-contract-search-{}",
+        std::process::id()
+    ));
+    let contract = root.join("dotnet/packs/Microsoft.NETCore.App.Ref/10.0.12/ref/net10.0");
+    std::fs::create_dir_all(&contract).unwrap();
+    let main = include_bytes!("fixtures/external-release.bin");
+    std::fs::write(
+        contract.join("ExternalLibrary.dll"),
+        include_bytes!("fixtures/external-library-release.bin"),
+    )
+    .unwrap();
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .discover_references(
+            &root.join("input.dll"),
+            &ReferenceSearchOptions {
+                environment: DiscoveryEnvironment {
+                    dotnet_roots: vec![root.join("dotnet")],
+                    ..DiscoveryEnvironment::default()
+                },
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    let output = context
+        .decompile_type("ExternalCases.Cells", ilspy_lite::OutputStyle::Details)
+        .unwrap()
+        .text;
+    assert!(output.contains("kind=ReferenceContract"), "{output}");
+    assert!(output.contains("origin=ReferencePack"));
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn installed_layout_candidates_are_identity_checked_without_requiring_a_dotnet_process() {
     let root = std::env::temp_dir().join(format!("ilspy-reference-search-{}", std::process::id()));
     let app = root.join("app");

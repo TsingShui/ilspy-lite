@@ -18,6 +18,7 @@ pub struct DefinitionLocation {
     pub assembly: AssemblyIdentity,
     pub source: String,
     pub token: u32,
+    pub kind: super::AssemblyKind,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -289,6 +290,7 @@ impl DependencyContext {
                     assembly,
                     source,
                     token: key.1,
+                    kind: self.kinds[&module],
                 },
             );
             Ok((definition, bound))
@@ -324,6 +326,7 @@ impl DependencyContext {
                 assembly,
                 source,
                 token: 0x02000000 | rid,
+                kind: self.kinds[&module],
             },
             name: if namespace.is_empty() {
                 name

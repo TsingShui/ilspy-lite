@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: MIT
 
 mod binding;
+mod classification;
 mod search;
 pub use binding::{
     DefinitionLocation, PropertyAccessor, ResolvedField, ResolvedMethod, ResolvedType,
 };
+pub use classification::AssemblyKind;
 pub use search::ReferenceSearchOptions;
 
 use crate::{DecompiledMethod, DecompiledType, OutputStyle, Result, metadata::Image};
@@ -141,6 +143,7 @@ pub struct DependencyContext {
     search_evidence: Vec<String>,
     search_diagnostics: Vec<String>,
     version_policy: ReferenceVersionPolicy,
+    kinds: BTreeMap<usize, AssemblyKind>,
 }
 
 impl DependencyContext {
@@ -175,6 +178,15 @@ impl DependencyContext {
                 }),
             }
         }
+        let (kind, diagnostic) = match classification::classify(&image) {
+            Ok(kind) => (kind, None),
+            Err(error) => (
+                AssemblyKind::Unclassified,
+                Some(format!(
+                    "main reference classification unavailable: {error}"
+                )),
+            ),
+        };
         Ok(Self {
             main: bytes,
             references,
@@ -183,8 +195,9 @@ impl DependencyContext {
             sources: BTreeMap::new(),
             limits,
             search_evidence: Vec::new(),
-            search_diagnostics: Vec::new(),
+            search_diagnostics: diagnostic.into_iter().collect(),
             version_policy: ReferenceVersionPolicy::Exact,
+            kinds: BTreeMap::from([(0, kind)]),
         })
     }
 
@@ -213,8 +226,9 @@ impl DependencyContext {
             for (source, index) in &self.sources {
                 let identity = &self.candidates[*index].2;
                 text.push_str(&format!(
-                    "\n.dependency-candidate source={source:?} identity={:?}\n",
-                    identity.to_string()
+                    "\n.dependency-candidate source={source:?} identity={:?} kind={:?}\n",
+                    identity.to_string(),
+                    self.kinds[&(index + 1)]
                 ));
             }
         }
@@ -359,6 +373,16 @@ impl DependencyContext {
         let image = Image::parse(&bytes)?;
         reference_count(&image, self.limits)?;
         let identity = assembly_identity(&image)?;
+        let kind = match classification::classify(&image) {
+            Ok(kind) => kind,
+            Err(error) => {
+                self.search_diagnostics.push(format!(
+                    "reference classification unavailable for {source:?}: {error}"
+                ));
+                AssemblyKind::Unclassified
+            }
+        };
+        self.kinds.insert(self.candidates.len() + 1, kind);
         self.sources
             .insert(source.to_string(), self.candidates.len());
         self.candidates.push((source.to_string(), bytes, identity));

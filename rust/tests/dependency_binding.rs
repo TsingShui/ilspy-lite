@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::DependencyContext;
+use ilspy_lite::{AssemblyKind, DependencyContext};
 
 const MAIN: &[u8] = include_bytes!("fixtures/external-release.bin");
 const DEPENDENCY: &[u8] = include_bytes!("fixtures/external-library-release.bin");
@@ -418,6 +418,44 @@ fn type_forwarders_reach_the_defining_assembly_and_cycles_remain_unresolved() {
             .to_string()
             .contains("cyclic")
     );
+}
+
+#[test]
+fn reference_contract_definitions_are_not_reported_as_runtime_implementations() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let getter = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap()
+        .0;
+    for (bytes, kind) in [
+        (
+            include_bytes!("fixtures/binding-library-release.bin").as_slice(),
+            AssemblyKind::ImplementationImage,
+        ),
+        (
+            include_bytes!("fixtures/binding-contract-release.bin").as_slice(),
+            AssemblyKind::ReferenceContract,
+        ),
+    ] {
+        let mut context = DependencyContext::new(main.to_vec()).unwrap();
+        context
+            .add_reference("BindingLibrary.dll", bytes.to_vec())
+            .unwrap();
+        let accessor = context
+            .resolve_property_accessor(0x0a000000 | getter)
+            .unwrap()
+            .unwrap();
+        assert_eq!(accessor.definition.kind, kind);
+        assert_eq!(accessor.method.definition.kind, kind);
+        let details = context
+            .decompile_type("BindingCases.Derived", ilspy_lite::OutputStyle::Details)
+            .unwrap()
+            .text;
+        assert!(details.contains(&format!("kind={kind:?}")), "{details}");
+    }
 }
 
 #[test]
