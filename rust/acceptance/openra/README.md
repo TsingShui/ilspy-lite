@@ -22,11 +22,16 @@ executing the input, running Rust lowering, or rehashing unchanged files:
 
 ```sh
 python3 rust/acceptance/openra/inventory.py
+python3 rust/acceptance/openra/test_inventory.py
+python3 rust/acceptance/openra/inventory.py --check-cli
 ```
 
 Its reader is `tests/dotnet/ClassInventory.cs`. Full metadata snapshots stay in
 ignored `report/openra/class-inventory/`; only identities/contracts are tracked.
-Matching inventory is not successful decompilation or a behavior gate.
+`--check-cli` compares the public class output with the frozen independent
+metadata, including ownership, signatures, accessor relationships and status/exit
+accounting. Matching inventory is not successful semantic decompilation or a
+behavior gate. Results: [CLASS_MILESTONE.md](CLASS_MILESTONE.md).
 
 ## Pinned input and provenance
 

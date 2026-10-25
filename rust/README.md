@@ -36,8 +36,7 @@ or unreadable method does not suppress peers. Generic type/method parameters
 retain their owner token, number, variance/special flags and exact constraints;
 nested generic types keep their own parameter rows, including inherited type
 parameter positions. These are metadata context, not generic-body lowering.
-Event records
-retain their delegate type identity and add/remove/fire/other relationships, even
+Event records retain their delegate type identity and add/remove/fire/other relationships, even
 when the corresponding delegate body cannot be lowered. Property records
 retain signatures (including index parameters), flags, defaults and exact
 getter/setter/other MethodSemantics relationships. Accessor bodies stay visible as
@@ -201,9 +200,12 @@ also lowers after the first array step, but its `Generate` call dependency is
 still unsupported and it has no behavioral acceptance yet. The other five
 primary candidates remain IL fallbacks. The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
-separate `tests/reference-roundtrip.py --openra` gate executes only the selected
-bodies. Details and limitations: [stage 1 results](acceptance/openra/STAGE1.md)
-and [first array step](acceptance/openra/ARRAY_STEP.md).
+separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
+the selected bodies extracted from class output. This gate reuses verified local
+inputs; `--verify-inputs` explicitly rechecks hashes when needed.
+Details: [class milestone](acceptance/openra/CLASS_MILESTONE.md),
+[stage 1 results](acceptance/openra/STAGE1.md) and
+[first array step](acceptance/openra/ARRAY_STEP.md).
 License/dependencies: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Deliberate next steps

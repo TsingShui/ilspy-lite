@@ -119,8 +119,9 @@ With the verified DMG mounted read-only as described in README.md, additionally:
 
 Then unmount the DMG. The local setup copied 189 DLLs without running anything.
 They are ignored analysis dependencies, not shipped runtime dependencies of our
-Rust tool. The two OpenRA assemblies are hash-checked against manifest.json before
-the gate runs. Other dependencies must come from that verified package; the gate
+Rust tool. At stage-1 validation the two OpenRA assemblies were hash-checked
+against manifest.json. Subsequent unchanged-input runs reuse that provenance;
+`reference-roundtrip.py --openra --verify-inputs` explicitly rechecks it. Other dependencies must come from that verified package; the gate
 does not independently hash every dependency. Generated sources and logs are in
 rust/report/reference-roundtrip/ and rust/report/openra/.
 
