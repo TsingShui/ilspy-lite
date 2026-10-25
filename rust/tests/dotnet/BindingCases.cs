@@ -16,6 +16,8 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+[assembly: System.Runtime.Versioning.TargetFramework(".NETCoreApp,Version=v10.0")]
+
 #if DEPENDENCY
 namespace BindingLibrary;
 public class Peer { }

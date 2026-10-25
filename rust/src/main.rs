@@ -1,8 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{AssemblyResolution, DependencyContext, OutputStyle, Result, Summary};
-use std::collections::BTreeSet;
+use ilspy_lite::{DependencyContext, OutputStyle, ReferenceSearchOptions, Result, Summary};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
@@ -15,30 +14,6 @@ fn main() -> std::process::ExitCode {
             eprintln!("error: {e}");
             std::process::ExitCode::from(1)
         }
-    }
-}
-
-fn load_reference(
-    context: &mut DependencyContext,
-    path: &Path,
-    seen: &mut BTreeSet<PathBuf>,
-    warnings: &mut Vec<String>,
-) {
-    let path = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
-    if !seen.insert(path.clone()) {
-        return;
-    }
-    let source = path
-        .to_str()
-        .map(str::to_string)
-        .unwrap_or_else(|| format!("{path:?}"));
-    let loaded =
-        (|| -> Result<()> { context.add_reference_reader(&source, std::fs::File::open(&path)?) })();
-    if let Err(error) = loaded {
-        warnings.push(format!(
-            "{source:?}: {}",
-            error.to_string().escape_default()
-        ));
     }
 }
 
@@ -104,46 +79,31 @@ fn run() -> Result<u8> {
         None
     } else {
         let mut context = DependencyContext::new(std::mem::take(&mut bytes))?;
-        let mut seen = BTreeSet::new();
-        for reference in references {
-            load_reference(&mut context, &reference, &mut seen, &mut reference_warnings);
-        }
-        if automatic {
-            let directory = Path::new(&args[1])
-                .parent()
-                .filter(|p| !p.as_os_str().is_empty())
-                .unwrap_or(Path::new("."));
-            reference_dirs.push(directory.to_path_buf());
-        }
-        for directory in &reference_dirs {
-            if !directory.is_dir() {
-                reference_warnings.push(format!("{directory:?}: reference directory unavailable"));
-            }
-        }
-        for reference in context.references().to_vec() {
-            let name = &reference.identity.name;
-            if name.is_empty()
-                || matches!(name.as_str(), "." | "..")
-                || name.contains(['/', '\\', ':', '\0'])
-            {
-                reference_warnings.push(format!("unsafe assembly filename: {name:?}"));
-                continue;
-            }
-            'search: for directory in &reference_dirs {
-                for extension in ["dll", "exe"] {
-                    if !matches!(
-                        context.resolve(reference.token)?,
-                        AssemblyResolution::Missing { .. }
-                    ) {
-                        break 'search;
-                    }
-                    let path = directory.join(format!("{name}.{extension}"));
-                    if path.is_file() {
-                        load_reference(&mut context, &path, &mut seen, &mut reference_warnings);
-                    }
-                }
-            }
-        }
+        let environment = if automatic {
+            ilspy_lite::discovery_paths::environment_from_host()
+        } else {
+            ilspy_lite::discovery_paths::DiscoveryEnvironment::default()
+        };
+        context.discover_references(
+            Path::new(&args[1]),
+            &ReferenceSearchOptions {
+                automatic,
+                files: references,
+                directories: reference_dirs,
+                environment,
+            },
+        )?;
+        reference_warnings.extend(
+            context
+                .search_diagnostics()
+                .iter()
+                .filter(|s| {
+                    s.starts_with("Dependency input rejected:")
+                        || s.starts_with("unsafe assembly filename:")
+                        || s.starts_with("reference directory unavailable:")
+                })
+                .cloned(),
+        );
         Some(context)
     };
     let value = args[3].to_str().ok_or("selector must be UTF-8")?;
@@ -192,7 +152,7 @@ fn run() -> Result<u8> {
         summary
     };
     for warning in reference_warnings {
-        writeln!(out, "\n// Dependency input rejected: {warning}")?;
+        writeln!(out, "\n// {warning}")?;
         eprintln!("dependency warning: {warning}");
     }
     out.flush()?;

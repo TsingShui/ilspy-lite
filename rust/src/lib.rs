@@ -3,6 +3,7 @@
 
 mod cfg;
 mod dependencies;
+pub mod discovery_paths;
 mod ir;
 mod lift;
 mod metadata;
@@ -10,7 +11,8 @@ mod readable;
 
 pub use dependencies::{
     AssemblyIdentity, AssemblyReference, AssemblyResolution, DefinitionLocation, DependencyContext,
-    DependencyLimits, PropertyAccessor, ReferenceFailure, ResolvedMethod, ResolvedType,
+    DependencyLimits, PropertyAccessor, ReferenceFailure, ReferenceSearchOptions, ResolvedMethod,
+    ResolvedType,
 };
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.

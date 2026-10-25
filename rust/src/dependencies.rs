@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: MIT
 
 mod binding;
+mod search;
 pub use binding::{DefinitionLocation, PropertyAccessor, ResolvedMethod, ResolvedType};
+pub use search::ReferenceSearchOptions;
 
 use crate::{DecompiledMethod, DecompiledType, OutputStyle, Result, metadata::Image};
 use cildec::TableId;
@@ -116,6 +118,8 @@ pub struct DependencyContext {
     candidates: Vec<(String, Vec<u8>, AssemblyIdentity)>,
     sources: BTreeMap<String, usize>,
     limits: DependencyLimits,
+    search_evidence: Vec<String>,
+    search_diagnostics: Vec<String>,
 }
 
 impl DependencyContext {
@@ -157,6 +161,8 @@ impl DependencyContext {
             candidates: Vec::new(),
             sources: BTreeMap::new(),
             limits,
+            search_evidence: Vec::new(),
+            search_diagnostics: Vec::new(),
         })
     }
 
@@ -176,6 +182,12 @@ impl DependencyContext {
 
     fn append_report(&self, text: &mut String, style: OutputStyle) -> Result<()> {
         if style == OutputStyle::Details {
+            for evidence in &self.search_evidence {
+                text.push_str(&format!("\n{evidence}\n"));
+            }
+            for diagnostic in &self.search_diagnostics {
+                text.push_str(&format!("\n.dependency-search-diagnostic {diagnostic:?}\n"));
+            }
             for (source, index) in &self.sources {
                 let identity = &self.candidates[*index].2;
                 text.push_str(&format!(
