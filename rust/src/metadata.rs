@@ -281,18 +281,30 @@ impl<'a> Image<'a> {
         }
         for layout_rid in 1..=tables.row_count(TableId::ClassLayout) {
             let layout = tables.class_layout(layout_rid)?;
-            let parent = Token::new(TableId::TypeDef, layout.parent.get());
-            let valid_owner = self.metadata_token_exists(parent);
-            if valid_owner && parent.0 != token {
+            let parent_rid = tables.raw_column(TableId::ClassLayout, layout_rid, 2)?;
+            let valid_owner = parent_rid != 0
+                && parent_rid <= Token::RID_MASK
+                && parent_rid <= tables.row_count(TableId::TypeDef);
+            if valid_owner && Token::new(TableId::TypeDef, parent_rid).0 != token {
                 continue;
             }
             let raw = self
                 .md
                 .tables()
                 .row_bytes(TableId::ClassLayout, layout_rid)?;
+            let parent = if valid_owner {
+                format!(
+                    "parent=0x{:08X}",
+                    Token::new(TableId::TypeDef, parent_rid).0
+                )
+            } else {
+                format!("parent-rid=0x{parent_rid:08X}")
+            };
             text.push_str(&format!(
-                ".class-layout 0x{:08X} parent=0x{:08X} packing={} size={} raw-row-bytes={raw:02X?}\n",
-                0x0f000000 | layout_rid, parent.0, layout.packing_size, layout.class_size
+                ".class-layout 0x{:08X} {parent} packing={} size={} raw-row-bytes={raw:02X?}\n",
+                0x0f000000 | layout_rid,
+                layout.packing_size,
+                layout.class_size
             ));
             text.push_str("// size=0 means runtime-computed; packing=0 means default; full target layout/ancestry validation is not performed.\n");
             if !valid_owner {
@@ -320,6 +332,13 @@ impl<'a> Image<'a> {
             }
         }
         Ok((text, failures))
+    }
+
+    fn metadata_coded_token(&self, kind: cildec::CodedIndex, encoded: u32) -> Result<Token> {
+        if encoded >> kind.tag_bits() > Token::RID_MASK {
+            return Err("coded-index RID exceeds metadata token width".into());
+        }
+        Ok(kind.decode(encoded, 0)?)
     }
 
     fn metadata_token_exists(&self, token: Token) -> bool {
@@ -397,9 +416,10 @@ impl<'a> Image<'a> {
         let mut failures = 0;
         for rid in 1..=tables.row_count(TableId::MethodImpl) {
             let class = tables.raw_column(TableId::MethodImpl, rid, 0)?;
-            let owner = Token::new(TableId::TypeDef, class);
-            let valid_owner = self.metadata_token_exists(owner);
-            if valid_owner && owner.0 != ty.token {
+            let valid_owner = class != 0
+                && class <= Token::RID_MASK
+                && class <= tables.row_count(TableId::TypeDef);
+            if valid_owner && Token::new(TableId::TypeDef, class).0 != ty.token {
                 continue;
             }
             let body = tables.raw_column(TableId::MethodImpl, rid, 1)?;
@@ -407,13 +427,15 @@ impl<'a> Image<'a> {
             let raw = tables.row_bytes(TableId::MethodImpl, rid)?;
             // Decode endpoints independently; an invalid declaration cannot conceal
             // the implementing body or turn it into an absent mapping.
-            let body = cildec::CodedIndex::MethodDefOrRef.decode(body, 0);
-            let declaration = cildec::CodedIndex::MethodDefOrRef.decode(declaration, 0);
-            text.push_str(&format!(
-                ".method-impl 0x{:08X} class=0x{:08X} ",
-                0x19000000 | rid,
-                0x02000000 | class
-            ));
+            let body = self.metadata_coded_token(cildec::CodedIndex::MethodDefOrRef, body);
+            let declaration =
+                self.metadata_coded_token(cildec::CodedIndex::MethodDefOrRef, declaration);
+            let owner = if valid_owner {
+                format!("class=0x{:08X}", Token::new(TableId::TypeDef, class).0)
+            } else {
+                format!("class-rid=0x{class:08X}")
+            };
+            text.push_str(&format!(".method-impl 0x{:08X} {owner} ", 0x19000000 | rid));
             for (kind, token, column) in [("body", &body, 1), ("declaration", &declaration, 2)] {
                 match token {
                     Ok(token) => text.push_str(&format!("{kind}=0x{:08X} ", token.0)),
@@ -429,10 +451,7 @@ impl<'a> Image<'a> {
                 text.push_str("// FAILED metadata: ownership=unowned-invalid; MethodImpl owner is null/out-of-range; record is image context, not attached to this type\n");
             }
             for (kind, token) in [("body", body), ("declaration", declaration)] {
-                match token
-                    .map_err(Into::into)
-                    .and_then(|token| self.metadata_method_identity(token))
-                {
+                match token.and_then(|token| self.metadata_method_identity(token)) {
                     Ok((identity, errors)) => {
                         failures += errors;
                         text.push_str(&format!(".method-impl-{kind} {identity}\n"));
@@ -460,7 +479,7 @@ impl<'a> Image<'a> {
         let mut failures = 0;
         for rid in 1..=tables.row_count(TableId::DeclSecurity) {
             let encoded = tables.raw_column(TableId::DeclSecurity, rid, 1)?;
-            let parent = cildec::CodedIndex::HasDeclSecurity.decode(encoded, 0);
+            let parent = self.metadata_coded_token(cildec::CodedIndex::HasDeclSecurity, encoded);
             if parent
                 .as_ref()
                 .is_ok_and(|p| self.metadata_token_exists(*p) && !parents.contains(&p.0))
@@ -482,7 +501,7 @@ impl<'a> Image<'a> {
                 Err(error) => {
                     failures += 1;
                     text.push_str(&format!(
-                        "parent-encoded=0x{encoded:08X} // FAILED metadata: {} ",
+                        "parent-encoded=0x{encoded:08X} // FAILED metadata: ownership=unowned-invalid; {} ",
                         escape_line(&error.to_string())
                     ));
                 }
@@ -514,7 +533,8 @@ impl<'a> Image<'a> {
         // not hide its parent, payload or later attached records.
         for rid in 1..=tables.row_count(TableId::CustomAttribute) {
             let raw_parent = tables.raw_column(TableId::CustomAttribute, rid, 0)?;
-            let parent = cildec::CodedIndex::HasCustomAttribute.decode(raw_parent, 0);
+            let parent =
+                self.metadata_coded_token(cildec::CodedIndex::HasCustomAttribute, raw_parent);
             if parent.as_ref().is_ok_and(|parent| {
                 self.metadata_token_exists(*parent) && !parents.contains(&parent.0)
             }) {
@@ -535,12 +555,13 @@ impl<'a> Image<'a> {
                 Err(error) => {
                     failures += 1;
                     text.push_str(&format!(
-                        "parent-encoded=0x{raw_parent:08X} // FAILED metadata: {} ",
+                        "parent-encoded=0x{raw_parent:08X} // FAILED metadata: ownership=unowned-invalid; {} ",
                         escape_line(&error.to_string())
                     ));
                 }
             }
-            let constructor = cildec::CodedIndex::CustomAttributeType.decode(constructor, 0);
+            let constructor =
+                self.metadata_coded_token(cildec::CodedIndex::CustomAttributeType, constructor);
             match &constructor {
                 Ok(token) => text.push_str(&format!("constructor=0x{:08X} ", token.0)),
                 Err(_) => text.push_str(&format!(
@@ -560,10 +581,7 @@ impl<'a> Image<'a> {
                 }
             }
             text.push_str(&format!("raw-row-bytes={raw:02X?} payload=uninterpreted; attribute arguments and runtime effects are not decoded or executed\n"));
-            match constructor
-                .map_err(Into::into)
-                .and_then(|token| self.metadata_method_identity(token))
-            {
+            match constructor.and_then(|token| self.metadata_method_identity(token)) {
                 Ok((identity, errors)) => {
                     failures += errors;
                     text.push_str(&format!(".attribute-constructor {identity}\n"));
@@ -611,9 +629,7 @@ impl<'a> Image<'a> {
             (
                 tables.raw_column(table, token.rid(), 1)?,
                 tables.raw_column(table, token.rid(), 2)?,
-                cildec::CodedIndex::MemberRefParent
-                    .decode(encoded, 0)
-                    .map_err(Into::into),
+                self.metadata_coded_token(cildec::CodedIndex::MemberRefParent, encoded),
                 format!("owner-encoded=0x{encoded:08X}"),
             )
         };
