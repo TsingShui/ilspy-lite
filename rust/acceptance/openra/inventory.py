@@ -85,6 +85,16 @@ def check_output(snapshot, text, stderr, code):
                              ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
                             for layout in ty["class_layout"]]
         require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
+        security = members(block, "decl-security", ty["security_declarations"])
+        for record in ty["security_declarations"]:
+            line = security[record["token"]]
+            payload = ", ".join(record["permission_set"][i:i + 2] for i in range(0, len(record["permission_set"]), 2))
+            row_bytes = ", ".join(record["raw_row"][i:i + 2] for i in range(0, len(record["raw_row"]), 2))
+            require(f"parent={record['parent']} action=0x{record['action']:04X} " in line
+                    and f"permission-set-blob-index=0x{record['permission_set_blob_index']:08X} " in line
+                    and f"permission-set-bytes=[{payload}] " in line and f"raw-row-bytes=[{row_bytes}] " in line
+                    and "payload=uninterpreted" in line and "security enforcement is runtime-owned" in line,
+                    f"Security declaration mismatch: {record['token']}")
         attributes = members(block, "custom-attribute", ty["custom_attributes"])
         for attribute in ty["custom_attributes"]:
             line = attributes[attribute["token"]]

@@ -16,6 +16,8 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+#pragma warning disable SYSLIB0003, CS0618
+[assembly: System.Security.Permissions.SecurityPermission(System.Security.Permissions.SecurityAction.RequestMinimum, Execution = true)]
 namespace ClassCases;
 
 public static class Empty { }
@@ -104,6 +106,12 @@ public class Constrained<T> where T : class, IMarker, new()
     public class Nested<U> where U : struct { public U Value; }
 }
 public interface IVariance<in T, out R> { }
+[System.Security.Permissions.SecurityPermission(System.Security.Permissions.SecurityAction.Demand, UnmanagedCode = true)]
+public class Secured
+{
+    [System.Security.Permissions.SecurityPermission(System.Security.Permissions.SecurityAction.LinkDemand, SkipVerification = true)]
+    public int Read() => 19;
+}
 [System.AttributeUsage(System.AttributeTargets.All, AllowMultiple = true)]
 public sealed class EvidenceAttribute : System.Attribute
 {

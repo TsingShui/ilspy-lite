@@ -71,6 +71,19 @@ internal static class ClassInventory
                 flags = (int)parameter.Attributes, constraints = parameter.GetConstraints().Select(c =>
                     Token(md.GetGenericParameterConstraint(c).Type)).ToArray() };
         }).ToArray();
+        object[] Security(TypeDefinitionHandle handle)
+        {
+            var type = md.GetTypeDefinition(handle);
+            var parents = new HashSet<EntityHandle> { handle };
+            foreach (var method in type.GetMethods()) parents.Add(method);
+            if (md.IsAssembly) parents.Add(MetadataTokens.EntityHandle(0x20000001));
+            return md.DeclarativeSecurityAttributes.Where(h => parents.Contains(md.GetDeclarativeSecurityAttribute(h).Parent)).Select(h => {
+                var record = md.GetDeclarativeSecurityAttribute(h);
+                return (object)new { token = Token(h), parent = Token(record.Parent), action = (int)record.Action,
+                    permission_set_blob_index = MetadataTokens.GetHeapOffset(record.PermissionSet), permission_set = Blob(record.PermissionSet),
+                    raw_row = Convert.ToHexString(Row(TableIndex.DeclSecurity, MetadataTokens.GetRowNumber(h))) };
+            }).ToArray();
+        }
         object[] Attributes(TypeDefinitionHandle handle)
         {
             var type = md.GetTypeDefinition(handle);
@@ -125,6 +138,7 @@ internal static class ClassInventory
                 interfaces = type.GetInterfaceImplementations().Select(i => Token(md.GetInterfaceImplementation(i).Interface)).ToArray(),
                 class_layout = Layouts(handle),
                 custom_attributes = Attributes(handle),
+                security_declarations = Security(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);

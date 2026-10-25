@@ -13,7 +13,7 @@ class ClassOutputGate(unittest.TestCase):
         self.snapshot = {"root": "0x02000001", "types": [{
             "token": "0x02000001", "name": "Example", "flags": 1,
             "parent": "0x00000000", "base_type": "0x00000000", "interfaces": [],
-            "class_layout": [], "custom_attributes": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
+            "class_layout": [], "custom_attributes": [], "security_declarations": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
             "methods": [{"token": "0x06000001", "name": "Read", "flags": 22,
                          "impl_flags": 0, "signature": "000008", "has_rva": True,
                          "generic_parameters": [], "parameters": []}]
@@ -65,6 +65,22 @@ class ClassOutputGate(unittest.TestCase):
                         text.replace("value-bytes=[01", "value-bytes=[00"),
                         text.replace("payload=uninterpreted", "payload=decoded"),
                         text.replace("signature-bytes=[20, 00, 01]", "signature-bytes=[20, 01, 01]")]:
+            with self.assertRaises(ValueError):
+                self.check(text=invalid, snapshot=snapshot)
+
+    def test_security_scope_action_payload_and_limitation_are_required(self):
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot["types"][0]["security_declarations"] = [{"token": "0x0E000001", "parent": "0x02000001",
+            "action": 2, "permission_set_blob_index": 9, "permission_set": "2E00", "raw_row": "020004000900"}]
+        record = (".decl-security 0x0E000001 parent=0x02000001 action=0x0002 permission-set-blob-index=0x00000009 "
+                  "permission-set-bytes=[2E, 00] raw-row-bytes=[02, 00, 04, 00, 09, 00] "
+                  "payload=uninterpreted; security enforcement is runtime-owned\n")
+        text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
+        self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
+        for invalid in [self.text, text.replace("parent=0x02000001", "parent=0x02000002"),
+                        text.replace("action=0x0002", "action=0x0003"), text.replace("[2E, 00]", "[2E, 01]"),
+                        text.replace("payload=uninterpreted", "payload=decoded"),
+                        text.replace("security enforcement is runtime-owned", "security ignored")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 

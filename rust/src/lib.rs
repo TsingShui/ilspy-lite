@@ -138,6 +138,20 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
+        match image.security_declarations(&ty) {
+            Ok((security, failures)) => {
+                text.push_str(&security);
+                summary.metadata_failed += failures;
+            }
+            Err(error) => {
+                summary.metadata_failed += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata security for type 0x{:08X}: {}\n",
+                    ty.token,
+                    metadata::escape_line(&error.to_string())
+                ));
+            }
+        }
         match image.custom_attributes(&ty) {
             Ok((attributes, failures)) => {
                 text.push_str(&attributes);

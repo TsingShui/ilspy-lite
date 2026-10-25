@@ -378,6 +378,52 @@ impl<'a> Image<'a> {
         Ok(parents)
     }
 
+    pub fn security_declarations(&self, ty: &SelectedType) -> Result<(String, usize)> {
+        let tables = self.md.tables();
+        let parents = std::iter::once(ty.token)
+            .chain(ty.methods.iter().copied())
+            .chain((1..=tables.row_count(TableId::Assembly)).map(|rid| 0x20000000 | rid))
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut text = String::new();
+        let mut failures = 0;
+        for rid in 1..=tables.row_count(TableId::DeclSecurity) {
+            let encoded = tables.raw_column(TableId::DeclSecurity, rid, 1)?;
+            let parent = cildec::CodedIndex::HasDeclSecurity.decode(encoded, 0);
+            if parent.as_ref().is_ok_and(|p| !parents.contains(&p.0)) {
+                continue;
+            }
+            let action = tables.raw_column(TableId::DeclSecurity, rid, 0)?;
+            let blob = tables.raw_column(TableId::DeclSecurity, rid, 2)?;
+            let raw = tables.row_bytes(TableId::DeclSecurity, rid)?;
+            text.push_str(&format!(".decl-security 0x{:08X} ", 0x0e000000 | rid));
+            match parent {
+                Ok(parent) => text.push_str(&format!("parent=0x{:08X} ", parent.0)),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "parent-encoded=0x{encoded:08X} // FAILED metadata: {} ",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            text.push_str(&format!(
+                "action=0x{action:04X} permission-set-blob-index=0x{blob:08X} "
+            ));
+            match self.md.blobs().get(cildec::BlobIndex(blob)) {
+                Ok(bytes) => text.push_str(&format!("permission-set-bytes={bytes:02X?} ")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "// FAILED metadata: {} ",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            text.push_str(&format!("raw-row-bytes={raw:02X?} payload=uninterpreted; permission-set format/action policy are not interpreted; security enforcement is runtime-owned, not a property of the recovered body\n"));
+        }
+        Ok((text, failures))
+    }
+
     pub fn custom_attributes(&self, ty: &SelectedType) -> Result<(String, usize)> {
         let parents = self.attached_parents(ty)?;
         let tables = self.md.tables();
