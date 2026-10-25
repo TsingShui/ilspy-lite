@@ -22,6 +22,8 @@ pub(crate) enum Ty {
     Class(u32),
     I4Array,
     U4Array,
+    I4Address,
+    U4Address,
     Null,
 }
 
@@ -32,6 +34,7 @@ pub(crate) enum StackKind {
     I8,
     Native,
     Ref,
+    Address,
 }
 
 impl Ty {
@@ -84,6 +87,8 @@ impl Ty {
             Self::Class(t) => return image.class_name(t),
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
+            Self::I4Address => "ref int",
+            Self::U4Address => "ref uint",
             Self::Null => "object",
         }
         .into())
@@ -93,13 +98,20 @@ impl Ty {
             Self::Void => StackKind::Void,
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
+            Self::I4Address | Self::U4Address => StackKind::Address,
             Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => StackKind::Ref,
             _ => StackKind::I4,
         }
     }
     pub fn stack(self) -> Self {
         match self {
-            Self::Void | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => self,
+            Self::Void
+            | Self::Class(_)
+            | Self::I4Array
+            | Self::U4Array
+            | Self::I4Address
+            | Self::U4Address
+            | Self::Null => self,
             Self::I8 | Self::U8 => Self::I8,
             Self::Native | Self::UNative => Self::Native,
             _ => Self::I4,
@@ -114,6 +126,9 @@ impl Ty {
             | Self::I4Array
             | Self::U4Array
             | Self::Null => expression.into(),
+            Self::I4Address | Self::U4Address => {
+                return Err("managed element address is not an ordinary load".into());
+            }
             Self::Bool => format!("({expression} ? 1 : 0)"),
             _ => format!("unchecked(({})({expression}))", self.stack().cs(image)?),
         })
@@ -127,6 +142,9 @@ impl Ty {
             | Self::I4Array
             | Self::U4Array
             | Self::Null => expression.into(),
+            Self::I4Address | Self::U4Address => {
+                return Err("managed element address cannot be stored as a value".into());
+            }
             Self::Bool => format!("({expression} != 0)"),
             _ => format!("unchecked(({})({expression}))", self.cs(image)?),
         })

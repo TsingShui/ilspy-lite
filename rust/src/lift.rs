@@ -86,6 +86,10 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             }
         }
         let exit: Vec<_> = w.stack.iter().map(|v| v.ty).collect();
+        if !blocks[n].successors.is_empty() && exit.iter().any(|ty| ty.kind() == StackKind::Address)
+        {
+            return Err("managed element address crossing a block needs IL fallback".into());
+        }
         for &s in &blocks[n].successors {
             if let Some(existing) = &entries[s] {
                 if existing != &exit {
@@ -239,8 +243,15 @@ impl Writer<'_, '_> {
     fn push(&mut self, ty: Ty, expression: String) -> Result<()> {
         let name = format!("v{}", self.next);
         self.next += 1;
-        self.lines
-            .push(format!("{} {name} = {expression};", ty.cs(self.image)?));
+        let binding = if ty.kind() == StackKind::Address {
+            "ref "
+        } else {
+            ""
+        };
+        self.lines.push(format!(
+            "{} {name} = {binding}{expression};",
+            ty.cs(self.image)?
+        ));
         self.stack.push(Value { name, ty });
         Ok(())
     }
@@ -329,6 +340,30 @@ impl Writer<'_, '_> {
                     Ty::Native,
                     format!("unchecked((nint)({}.LongLength))", array.name),
                 )?;
+            }
+            "ldelema" => {
+                let token = i.operand.token().ok_or("missing element type token")?;
+                let element = self.image.array_element_type(token)?;
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                if array_element(array.ty)? != element {
+                    return Err("ldelema token does not match the array element type".into());
+                }
+                self.lines.push(format!(
+                    "// element type token 0x{:08X}: {}",
+                    token.0,
+                    crate::metadata::escape_line(
+                        &cildec::Names::new(&self.image.md).try_token(token)?
+                    )
+                ));
+                self.lines.push("// Stable managed element address; null/bounds checks occur here, without reading its value.".into());
+                let address = if element == Ty::I4 {
+                    Ty::I4Address
+                } else {
+                    Ty::U4Address
+                };
+                self.push(address, format!("{}[{}]", array.name, index.name))?;
             }
             "ldelem.i4" | "ldelem.u4" => {
                 let index = self.pop()?;

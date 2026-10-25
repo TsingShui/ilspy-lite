@@ -1211,6 +1211,41 @@ impl<'a> Image<'a> {
         Err("reference hierarchy depth exceeded".into())
     }
 
+    /// Recognize only the exact core TypeRef used by primitive array operations.
+    /// No dependency is loaded and a locally named System type is not a core type.
+    pub fn array_element_type(&self, token: Token) -> Result<crate::ir::Ty> {
+        use crate::ir::Ty;
+        if token.table() != Some(TableId::TypeRef) || token.rid() == 0 {
+            return Err("array element token needs a core TypeRef".into());
+        }
+        let row = self.md.tables().type_ref(token.rid())?;
+        if row.resolution_scope.table() != Some(TableId::AssemblyRef)
+            || row.resolution_scope.rid() == 0
+            || self.md.strings().str(row.type_namespace)? != "System"
+        {
+            return Err("unresolved array element type identity".into());
+        }
+        let assembly = self.md.tables().assembly_ref(row.resolution_scope.rid())?;
+        let name = self.md.strings().str(assembly.name)?;
+        let key = self.md.blobs().get(assembly.public_key_or_token)?;
+        let core = match name {
+            "System.Runtime" => key == [0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a],
+            "System.Private.CoreLib" => key == [0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e],
+            "mscorlib" => key == [0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89],
+            "netstandard" => key == [0xcc, 0x7b, 0x13, 0xff, 0xcd, 0x2d, 0xdd, 0x51],
+            _ => false,
+        };
+        if !core || assembly.flags & 1 != 0 || !self.md.strings().str(assembly.culture)?.is_empty()
+        {
+            return Err("array element scope is not an admitted core identity".into());
+        }
+        match self.md.strings().str(row.type_name)? {
+            "Int32" => Ok(Ty::I4),
+            "UInt32" => Ok(Ty::U4),
+            _ => Err("array element type needs IL fallback".into()),
+        }
+    }
+
     pub fn receiver(&self, method: u32) -> Result<crate::ir::Ty> {
         let owner = self
             .md

@@ -43,6 +43,19 @@ with `python3 rust/tests/build-conversion-fixtures.py` and execute actual class
 output with `reference-roundtrip.py --conversions --from-class`. Only local
 64-bit runtime execution is verified; snapshots are pinned by Git.
 
+The element-address snapshots (`address-release.bin`, `address-debug.bin`) come
+from `../dotnet/AddressCases.cs` and the authored IL in
+`../build-address-fixtures.py`. Core TypeRef operands are obtained from ref-return
+anchors, not guessed from token order. Reserved tiny bodies are replaced without
+executing them. Five recovered bodies exercise immediate null/bounds checks,
+address duplication across a call and field rebinding; the anchors retain
+unsupported byref signatures. Regenerate with
+`python3 rust/tests/build-address-fixtures.py` and execute public class output
+with `reference-roundtrip.py --addresses --from-class`. The Debug/Release gate
+passed 202 return/exception/state comparisons per configuration. Indirect access
+and cross-block address propagation are separate unsupported cases. Git pins the
+snapshots without a separate hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

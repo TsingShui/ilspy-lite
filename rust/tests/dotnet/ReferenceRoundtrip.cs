@@ -66,6 +66,7 @@ internal static class ReferenceRoundtrip
         else if (job.Kind == "arrays") Arrays(recovered, methods);
         else if (job.Kind == "native") Native(recovered, methods);
         else if (job.Kind == "conversions") Conversions(recovered, methods);
+        else if (job.Kind == "addresses") Addresses(recovered, methods);
         else if (job.Kind == "references") References(original, recovered, methods);
         else throw new Exception("Unknown corpus kind");
         Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
@@ -380,6 +381,64 @@ internal static class ReferenceRoundtrip
             "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice",
             "LengthSigned", "LengthUnsigned", "WideLength", "LengthAfterEffect", "LengthSnapshot", "CountLoop"
         }.Order()) == false) throw new Exception("Array method selection drift");
+    }
+
+    static void Addresses(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        Type cell = methods.Values.First().DeclaringType!;
+        Type clone = recovered.GetType(cell.FullName!)!;
+        int[] indices = { int.MinValue, -1, 0, 1, 2, 3, int.MaxValue };
+        foreach (int length in new[] { -1, 0, 1, 3 })
+        foreach (int index in indices)
+        {
+            bool valid = length >= 0 && index >= 0 && index < length;
+            foreach (string name in new[] { "Take", "TakeSigned", "Duplicate" })
+            {
+                object a = New(cell), b = New(clone);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                Array left = length < 0 ? null : name == "TakeSigned"
+                    ? new[] { int.MinValue, -1, int.MaxValue }.Take(length).ToArray()
+                    : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                Array right = (Array)left?.Clone();
+                Check(recovered, methods.Values.Single(m => m.Name == name), a, b,
+                    new object[] { left, index }, new object[] { right, index }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right);
+                        if ((int)Get(a, "Effects") != (valid ? 2 : 1))
+                            throw new Exception("Address acquisition or intervening call changed effect timing");
+                    });
+            }
+            foreach (bool nullReplacement in new[] { false, true })
+            foreach (bool alias in new[] { false, true })
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = length < 0 ? null : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                uint[] right = (uint[])left?.Clone();
+                uint[] al = nullReplacement ? null : alias ? left : new uint[2];
+                uint[] ar = nullReplacement ? null : alias ? right : new uint[2];
+                Set(a, "Values", left); Set(b, "Values", right);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                Check(recovered, methods.Values.Single(m => m.Name == "Retarget"), a, b,
+                    new object[] { al, index }, new object[] { ar, index }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right); SameArray(al, ar);
+                        if ((int)Get(a, "Effects") != (valid ? 2 : 1)
+                            || !ReferenceEquals(Get(a, "Values"), valid ? al : left)
+                            || !ReferenceEquals(Get(b, "Values"), valid ? ar : right))
+                            throw new Exception("Address checks were delayed past field reassignment");
+                    });
+            }
+        }
+        foreach (string name in new[] { "Take", "TakeSigned", "Duplicate", "Retarget" })
+            Check(recovered, methods.Values.Single(m => m.Name == name), null, null,
+                new object[] { null, 0 }, new object[] { null, 0 });
+        object ba = New(cell), bb = New(clone);
+        Set(ba, "Effects", int.MaxValue); Set(bb, "Effects", int.MaxValue);
+        Check(recovered, methods.Values.Single(m => m.Name == "Bump"), ba, bb,
+            Array.Empty<object>(), Array.Empty<object>(), () => SameFields(ba, bb, "Effects"));
+        Check(recovered, methods.Values.Single(m => m.Name == "Bump"), null, null,
+            Array.Empty<object>(), Array.Empty<object>());
+        if (!methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
+            "Take", "TakeSigned", "Duplicate", "Retarget", "Bump"
+        }.Order())) throw new Exception("Address method selection drift");
     }
 
     static void Conversions(Assembly recovered, Dictionary<int, MethodInfo> methods)

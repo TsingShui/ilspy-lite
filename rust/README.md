@@ -99,6 +99,12 @@ retain raw code bytes in a `Failed` result.
 - `ldlen` for these arrays produces a native-sized bit pattern, read immediately
   with its original null check. Explicit `conv.i4` / `conv.i8` / `conv.u8` retain
   the original conversion chain; native length is not silently an I4 value.
+- `ldelema` for these arrays with an I4 index and an exact admitted core
+  `System.Int32` / `System.UInt32` TypeRef matching the array element. It binds a
+  typed, stable `ref` immediately: null/bounds checks happen there, not at a
+  later read. `dup` copies the address identity without reading or checking it
+  again. Indirect access, byref parameters/locals/returns, prefixes and address
+  values crossing a basic-block edge remain unsupported.
 - Constant/argument/local loads and stores, `dup`, `pop`, static field loads/stores.
 - Arithmetic, checked arithmetic (signed and unsigned), division/remainder,
   comparisons, bitwise operations and shifts.
@@ -149,9 +155,9 @@ If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
-element types, multidimensional/jagged arrays, `newarr`, `ldelema`,
-floating point, native integer operations/conversions, constructors, external instance calls,
-callvirt, indirect calls, generic method instantiation, managed references,
+element types, multidimensional/jagged arrays, `newarr`, indirect element access,
+floating point, native integer arithmetic/comparisons, constructors, external instance calls,
+callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
 locals and unreachable blocks also fall back. Metadata pointer tables are
@@ -198,6 +204,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --arrays
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --native --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --conversions --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --addresses --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root
