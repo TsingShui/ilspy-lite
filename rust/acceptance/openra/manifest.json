@@ -1,0 +1,274 @@
+{
+  "schema": 1,
+  "release": "release-20250330",
+  "commit": "b4f3d8ae02b6bd6f4a3a5441e6d0daf7c5073787",
+  "license": "GPL-3.0-or-later; externally downloaded input/oracle only",
+  "artifacts": [
+    {
+      "name": "OpenRA-release-20250330.dmg",
+      "url": "https://github.com/OpenRA/OpenRA/releases/download/release-20250330/OpenRA-release-20250330.dmg",
+      "sha256": "2a78cd58603fd06ed6006ae5916065455a7ac7c1290dba1d06c0292bad4238ab"
+    },
+    {
+      "name": "OpenRA-release-20250330-source.tar.bz2",
+      "url": "https://github.com/OpenRA/OpenRA/releases/download/release-20250330/OpenRA-release-20250330-source.tar.bz2",
+      "sha256": "496a3d0b457dd8d5f53807e740e984278167292882e0ec3566d5add2d3fdf05f"
+    }
+  ],
+  "package_directory": "OpenRA - Red Alert.app/Contents/MacOS/arm64",
+  "assemblies": {
+    "OpenRA.Game.dll": {
+      "sha256": "5e46384b508c57538fd6a2e7129676f9c5b75e64276d9c9b9ac7bb39c2ee078d",
+      "method_count": 5259
+    },
+    "OpenRA.Mods.Common.dll": {
+      "sha256": "2880df39887a989be1ce71eda4ca01c785295cff11eaa43cd59b6eafdae233b3",
+      "method_count": 18767
+    }
+  },
+  "sources": {
+    "OpenRA.Mods.Common/Traits/Player/PlayerResources.cs": "aae6ffbec8907cf6b9dc6f0dbf50c150684643579f1012d8b41efc6c67a40861",
+    "OpenRA.Mods.Common/Traits/AmmoPool.cs": "7e64332497f184eae201e1e9198cb5cf7ca55b1e3dca86910d4eb2d1395c88b1",
+    "OpenRA.Game/Support/MersenneTwister.cs": "a237b97eeb16964eb6d9f4c1866406977eab9a34582cc930629abd6b7d8f61f1",
+    "OpenRA.Game/Primitives/RingBuffer.cs": "00caebfb000db2685ceeafd564800e5b56a300d44e810b1cb0b243e86c32de80"
+  },
+  "methods": [
+    {
+      "id": "resources-total",
+      "stage": 1,
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x06001941",
+      "signature": "instance int32 OpenRA.Mods.Common.Traits.PlayerResources::GetCashAndResources()",
+      "source": "OpenRA.Mods.Common/Traits/Player/PlayerResources.cs",
+      "source_line": 223,
+      "instruction_count": 6,
+      "capabilities": [
+        "reference-type instance receiver",
+        "instance integer field reads"
+      ],
+      "acceptance": [
+        "Return matches Cash + Resources, including unchecked overflow.",
+        "Cash and Resources remain unchanged."
+      ]
+    },
+    {
+      "id": "resources-credit",
+      "stage": 1,
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x0600193B",
+      "signature": "instance void OpenRA.Mods.Common.Traits.PlayerResources::GiveResources(int32)",
+      "source": "OpenRA.Mods.Common/Traits/Player/PlayerResources.cs",
+      "source_line": 130,
+      "instruction_count": 32,
+      "capabilities": [
+        "instance field reads/writes",
+        "conditional control flow"
+      ],
+      "acceptance": [
+        "Compare Resources and Earned after credits below, at, and above capacity.",
+        "Include negative and boundary integers; preserve actual program behavior rather than correcting it."
+      ]
+    },
+    {
+      "id": "resources-debit",
+      "stage": 1,
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x0600193C",
+      "signature": "instance bool OpenRA.Mods.Common.Traits.PlayerResources::TakeResources(int32)",
+      "source": "OpenRA.Mods.Common/Traits/Player/PlayerResources.cs",
+      "source_line": 142,
+      "instruction_count": 20,
+      "capabilities": [
+        "instance field reads/writes",
+        "early return"
+      ],
+      "acceptance": [
+        "Insufficient resources return false without modifying Resources or Spent.",
+        "Successful debit updates both fields; compare boundary and negative inputs too."
+      ]
+    },
+    {
+      "id": "ammo-full",
+      "stage": 1,
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x06000FB7",
+      "signature": "instance bool OpenRA.Mods.Common.Traits.AmmoPool::get_HasFullAmmo()",
+      "source": "OpenRA.Mods.Common/Traits/AmmoPool.cs",
+      "source_line": 63,
+      "instruction_count": 7,
+      "capabilities": [
+        "direct instance call",
+        "nested reference field read"
+      ],
+      "acceptance": [
+        "Compare partial, exactly full, and overfull ammunition states.",
+        "Retain the count getter call and null behavior for Info."
+      ]
+    },
+    {
+      "id": "random-seed",
+      "stage": 2,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x0600079E",
+      "signature": "instance void OpenRA.Support.MersenneTwister::.ctor(int32)",
+      "source": "OpenRA.Game/Support/MersenneTwister.cs",
+      "source_line": 28,
+      "instruction_count": 50,
+      "capabilities": [
+        "constructor initialization order",
+        "newarr uint32",
+        "array reads/writes",
+        "integer conversions",
+        "native-length category"
+      ],
+      "acceptance": [
+        "Compare all 624 state words for seeds 0, 1, -1, int.MinValue and int.MaxValue.",
+        "Retain zero initialization and constructor/base-call ordering."
+      ]
+    },
+    {
+      "id": "random-next",
+      "stage": 2,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x0600079F",
+      "signature": "instance int32 OpenRA.Support.MersenneTwister::Next()",
+      "source": "OpenRA.Game/Support/MersenneTwister.cs",
+      "source_line": 35,
+      "instruction_count": 61,
+      "capabilities": [
+        "instance call",
+        "uint32 array read",
+        "unsigned arithmetic",
+        "field updates"
+      ],
+      "acceptance": [
+        "Compare seeded sequences for at least 1250 draws, spanning more than two 624-word blocks.",
+        "Compare Last, TotalCount, index and state mutations, not just returned numbers."
+      ]
+    },
+    {
+      "id": "random-generate",
+      "stage": 2,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x060007A3",
+      "signature": "instance void OpenRA.Support.MersenneTwister::Generate()",
+      "source": "OpenRA.Game/Support/MersenneTwister.cs",
+      "source_line": 73,
+      "instruction_count": 64,
+      "capabilities": [
+        "uint32 array writes",
+        "ldelema managed element reference",
+        "ldind.u4/stind.i4",
+        "dup stable address",
+        "integer conversions"
+      ],
+      "acceptance": [
+        "Compare all state words, including the conditional xor path.",
+        "Do not rewrite an element address into a delayed array lookup without proving ordering and alias safety."
+      ]
+    },
+    {
+      "id": "ring-read",
+      "stage": 3,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x06000BDB",
+      "signature": "instance !0 OpenRA.Primitives.RingBuffer`1::get_Item(int32)",
+      "source": "OpenRA.Game/Primitives/RingBuffer.cs",
+      "source_line": 104,
+      "instruction_count": 13,
+      "capabilities": [
+        "type generic parameter !0",
+        "MemberRef field on constructed declaring type",
+        "ldelem TypeSpec",
+        "array length/conversion"
+      ],
+      "acceptance": [
+        "Compare wraparound reads for RingBuffer<int> and RingBuffer<string>.",
+        "Retain reference identity and existing exception behavior, including zero capacity."
+      ]
+    },
+    {
+      "id": "ring-add",
+      "stage": 3,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x06000BD6",
+      "signature": "instance void OpenRA.Primitives.RingBuffer`1::Add(!0)",
+      "source": "OpenRA.Game/Primitives/RingBuffer.cs",
+      "source_line": 39,
+      "instruction_count": 42,
+      "capabilities": [
+        "stelem TypeSpec",
+        "MemberRef instance getter/setter",
+        "generic value parameter"
+      ],
+      "acceptance": [
+        "Compare backing array, start and Count before and after capacity wraparound.",
+        "Exercise both value and reference instantiations; do not specialize the decompiler to int."
+      ]
+    },
+    {
+      "id": "ring-contains",
+      "stage": 3,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x06000BD8",
+      "signature": "instance bool OpenRA.Primitives.RingBuffer`1::Contains(!0)",
+      "source": "OpenRA.Game/Primitives/RingBuffer.cs",
+      "source_line": 55,
+      "instruction_count": 37,
+      "capabilities": [
+        "generic interface callvirt",
+        "generic array read",
+        "loop/early return"
+      ],
+      "acceptance": [
+        "Compare results and comparer invocation order for hit, miss and wrapped buffers.",
+        "Use a custom comparer and compare exceptions; do not replace callvirt with a plain nonvirtual call."
+      ]
+    }
+  ],
+  "support_methods": [
+    {
+      "id": "ammo-count",
+      "stage": 1,
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x06000FB4",
+      "signature": "instance int32 OpenRA.Mods.Common.Traits.AmmoPool::get_CurrentAmmoCount()"
+    },
+    {
+      "id": "ring-count-get",
+      "stage": 3,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x06000BD1",
+      "signature": "instance int32 OpenRA.Primitives.RingBuffer`1::get_Count()"
+    },
+    {
+      "id": "ring-count-set",
+      "stage": 3,
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x06000BD2",
+      "signature": "instance void OpenRA.Primitives.RingBuffer`1::set_Count(int32)"
+    }
+  ],
+  "fallback_sentinels": [
+    {
+      "id": "sentinel-eh",
+      "assembly": "OpenRA.Mods.Common.dll",
+      "token": "0x0600193D",
+      "signature": "instance void OpenRA.Mods.Common.Traits.PlayerResources::GiveCash(int32)",
+      "required_il": [
+        ".try ",
+        "add.ovf",
+        "leave"
+      ]
+    },
+    {
+      "id": "sentinel-iterator",
+      "assembly": "OpenRA.Game.dll",
+      "token": "0x060012D7",
+      "signature": "instance bool OpenRA.Primitives.RingBuffer`1/<GetEnumerator>d__23::MoveNext()",
+      "required_il": [
+        "IL_0000:"
+      ]
+    }
+  ]
+}

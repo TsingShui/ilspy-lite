@@ -1,0 +1,268 @@
+// Copyright (c) 2026 Tsingshui
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this
+// software and associated documentation files (the "Software"), to deal in the Software
+// without restriction, including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+// to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
+using System.Runtime.Loader;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+
+// Test-only: original methods are invoked with an exact IL call. Recovered bodies
+// execute on separately generated state shells, never delegated to the original.
+internal static class ReferenceRoundtrip
+{
+    record Entry(int Token, string Source);
+    record Job(string Kind, string Assembly, string Dependencies, Entry[] Methods);
+    static readonly Dictionary<int, Func<object, object[], object>> OriginalCalls = new();
+    static int checks;
+    static string TypeName(Type type) => type == typeof(void) ? "void" : type == typeof(int) ? "int" :
+        type == typeof(bool) ? "bool" : type == typeof(long) ? "long" : type == typeof(uint) ? "uint" :
+        type == typeof(ulong) ? "ulong" : "global::" + type.FullName;
+    static string Alias(FieldInfo field) => Regex.IsMatch(field.Name, @"^[A-Za-z_][A-Za-z0-9_]*$") && !field.Name.StartsWith("__il_field_", StringComparison.Ordinal)
+        ? "@" + field.Name : $"__il_field_{field.MetadataToken:X8}";
+    static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+        ?? throw new Exception($"Missing field {type}.{name}");
+
+    static void Main(string[] args)
+    {
+        Job job = JsonSerializer.Deserialize<Job>(File.ReadAllText(args[1]), new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        var originalContext = new AssemblyLoadContext("original", isCollectible: true);
+        originalContext.Resolving += (context, name) => {
+            string path = Path.Combine(job.Dependencies, name.Name + ".dll");
+            return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
+        };
+        Assembly original = originalContext.LoadFromAssemblyPath(job.Assembly);
+        var methods = job.Methods.ToDictionary(e => e.Token, e => (MethodInfo)original.ManifestModule.ResolveMethod(e.Token)!);
+        if (args[0] == "prepare")
+        {
+            Prepare(job, original, methods, args[2]);
+            Console.WriteLine($"Prepared {methods.Count} recovered bodies; no original method executed.");
+            return;
+        }
+        if (args[0] != "run") throw new Exception("Unknown mode");
+        Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        if (job.Kind == "openra") OpenRa(original, recovered, methods);
+        else References(original, recovered, methods);
+        Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
+    }
+
+    static void Prepare(Job job, Assembly original, Dictionary<int, MethodInfo> methods, string output)
+    {
+        var fields = new Dictionary<int, FieldInfo>();
+        var types = new HashSet<Type>();
+        var code = new List<string>();
+        foreach (Entry entry in job.Methods)
+        {
+            MethodInfo method = methods[entry.Token];
+            types.Add(method.DeclaringType!);
+            string source = File.ReadAllText(entry.Source);
+            foreach (Match match in Regex.Matches(source, @"// field token 0x([0-9A-F]{8})"))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                FieldInfo field = original.ManifestModule.ResolveField(token)!;
+                fields[token] = field;
+                types.Add(field.DeclaringType!);
+                if (field.FieldType.Assembly == original) types.Add(field.FieldType);
+            }
+            foreach (Match match in Regex.Matches(source, @"__cil_direct_([0-9A-F]{8})\("))
+                if (!methods.ContainsKey(Convert.ToInt32(match.Groups[1].Value, 16)))
+                    throw new Exception("A direct-call dependency was not recovered");
+            string declaration = "@" + method.Name + "(";
+            if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
+            code.Add(source.Replace(declaration, $"M_{entry.Token:X8}("));
+        }
+        var shells = new List<string>();
+        foreach (Type type in types)
+        {
+            if (type.IsGenericType || type.IsNested || type.IsValueType) throw new Exception("Unsupported test shell shape");
+            string parent = type.BaseType != null && types.Contains(type.BaseType) ? " : " + TypeName(type.BaseType) : "";
+            string members = string.Join("\n", fields.Values.Where(f => f.DeclaringType == type).Select(f =>
+                $"public {(f.IsStatic ? "static " : "")}{TypeName(f.FieldType)} {Alias(f)};"));
+            shells.Add($"namespace {type.Namespace} {{ public class {type.Name}{parent} {{ {members} }} }}");
+        }
+        foreach (var pair in methods)
+        {
+            MethodInfo method = pair.Value;
+            if (method.IsStatic) continue;
+            var parameters = new[] { TypeName(method.DeclaringType!) + " self" }
+                .Concat(method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
+            string arguments = string.Join(", ", new[] { "self" }.Concat(method.GetParameters().Select((p, i) => "a" + i)));
+            code.Add($"public static {TypeName(method.ReturnType)} __cil_direct_{pair.Key:X8}({string.Join(", ", parameters)}) => M_{pair.Key:X8}({arguments});");
+        }
+        File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
+    }
+
+    static object Original(MethodInfo method, object receiver, object[] args)
+    {
+        if (!OriginalCalls.TryGetValue(method.MetadataToken, out var invoke))
+        {
+            var dm = new DynamicMethod("ExactCall", typeof(object), new[] { typeof(object), typeof(object[]) }, method.Module, true);
+            ILGenerator il = dm.GetILGenerator();
+            if (!method.IsStatic) { il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Castclass, method.DeclaringType!); }
+            foreach (var p in method.GetParameters())
+            {
+                il.Emit(OpCodes.Ldarg_1); il.Emit(OpCodes.Ldc_I4, p.Position); il.Emit(OpCodes.Ldelem_Ref);
+                il.Emit(p.ParameterType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, p.ParameterType);
+            }
+            il.Emit(OpCodes.Call, method);
+            if (method.ReturnType == typeof(void)) il.Emit(OpCodes.Ldnull);
+            else if (method.ReturnType.IsValueType) il.Emit(OpCodes.Box, method.ReturnType);
+            il.Emit(OpCodes.Ret);
+            invoke = (Func<object, object[], object>)dm.CreateDelegate(typeof(Func<object, object[], object>));
+            OriginalCalls.Add(method.MetadataToken, invoke);
+        }
+        return invoke(receiver, args);
+    }
+
+    static object Outcome(Func<object> action)
+    {
+        try { return action(); }
+        catch (Exception e) { return (e is TargetInvocationException t ? t.InnerException! : e).GetType().FullName; }
+    }
+    static void Check(Assembly recovered, MethodInfo method, object left, object right, object[] leftArgs, object[] rightArgs,
+        Action stateCheck = null, Func<object, object, bool> equal = null)
+    {
+        object expected = Outcome(() => Original(method, left, leftArgs));
+        object actual = Outcome(() => recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!
+            .Invoke(null, method.IsStatic ? rightArgs : new[] { right }.Concat(rightArgs).ToArray()));
+        if (!(equal?.Invoke(expected, actual) ?? Equals(expected, actual)))
+            throw new Exception($"{method.DeclaringType}.{method.Name}: expected {expected}, got {actual}");
+        stateCheck?.Invoke();
+        checks++;
+    }
+    static object New(Type type) => RuntimeHelpers.GetUninitializedObject(type);
+    static void Set(object target, string name, object value) => Field(target.GetType(), name).SetValue(target, value);
+    static object Get(object target, string name) => Field(target.GetType(), name).GetValue(target);
+    static void SameFields(object left, object right, params string[] names)
+    {
+        foreach (string name in names)
+            if (!Equals(Get(left, name), Get(right, name))) throw new Exception($"Field mismatch: {name}");
+    }
+
+    static void OpenRa(Assembly original, Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        const string resources = "OpenRA.Mods.Common.Traits.PlayerResources";
+        int[] values = { int.MinValue, -1, 0, 1, 9, 10, 11, int.MaxValue };
+        foreach (MethodInfo method in methods.Values.Where(m => m.DeclaringType!.FullName == resources))
+        {
+            foreach (int amount in values)
+            foreach (int balance in values)
+            foreach (int capacity in new[] { 0, 10, int.MaxValue })
+            {
+                object a = New(original.GetType(resources)!); object b = New(recovered.GetType(resources)!);
+                var fields = new Dictionary<string, int> { ["Cash"] = -7, ["Resources"] = balance, ["ResourceCapacity"] = capacity, ["Earned"] = int.MaxValue - 1, ["Spent"] = -3 };
+                foreach (var f in fields)
+                {
+                    Set(a, f.Key, f.Value);
+                    // Only fields actually accessed by the recovered bodies exist in the shell.
+                    Set(b, f.Key, f.Value);
+                }
+                object[] args = method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { amount };
+                Check(recovered, method, a, b, args, args, () => SameFields(a, b, fields.Keys.ToArray()));
+            }
+            Check(recovered, method, null, null, method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { 1 },
+                method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { 1 });
+        }
+        const string ammo = "OpenRA.Mods.Common.Traits.AmmoPool";
+        const string info = "OpenRA.Mods.Common.Traits.AmmoPoolInfo";
+        foreach (MethodInfo method in methods.Values.Where(m => m.DeclaringType!.FullName == ammo))
+        {
+            foreach (int count in values)
+            foreach (int capacity in values)
+            foreach (bool nullInfo in new[] { false, true })
+            {
+                object a = New(original.GetType(ammo)!); object b = New(recovered.GetType(ammo)!);
+                FieldInfo backing = Field(a.GetType(), "<CurrentAmmoCount>k__BackingField");
+                backing.SetValue(a, count); Set(b, Alias(backing).TrimStart('@'), count);
+                object ai = nullInfo ? null : New(original.GetType(info)!);
+                object bi = nullInfo ? null : New(recovered.GetType(info)!);
+                if (!nullInfo) { Set(ai, "Ammo", capacity); Set(bi, "Ammo", capacity); }
+                Set(a, "Info", ai); Set(b, "Info", bi);
+                Check(recovered, method, a, b, Array.Empty<object>(), Array.Empty<object>(), () => {
+                    if (!Equals(backing.GetValue(a), Get(b, Alias(backing).TrimStart('@')))) throw new Exception("Ammo mutated");
+                    if (!ReferenceEquals(Get(a, "Info"), ai) || !ReferenceEquals(Get(b, "Info"), bi)) throw new Exception("Info identity changed");
+                    if (!nullInfo) SameFields(ai, bi, "Ammo");
+                });
+            }
+            Check(recovered, method, null, null, Array.Empty<object>(), Array.Empty<object>());
+        }
+    }
+
+    static void References(Assembly original, Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        Type cell = original.GetType("ReferenceCases.Cell")!;
+        Type clone = recovered.GetType(cell.FullName!)!;
+        int[] values = { int.MinValue, -1, 0, 1, int.MaxValue };
+        foreach (MethodInfo method in methods.Values.Where(m => !m.IsStatic))
+        {
+            foreach (int initial in values)
+            foreach (int delta in values)
+            foreach (bool nullOther in new[] { false, true })
+            {
+                object a = New(method.DeclaringType!); object b = New(recovered.GetType(method.DeclaringType!.FullName!)!);
+                if (cell.IsAssignableFrom(method.DeclaringType))
+                {
+                    Set(a, "Value", initial); Set(b, "Value", initial);
+                    Set(a, "Other", nullOther ? null : a); Set(b, "Other", nullOther ? null : b);
+                    FieldInfo backing = Field(cell, "<Count>k__BackingField");
+                    backing.SetValue(a, initial); Set(b, Alias(backing).TrimStart('@'), initial);
+                }
+                else { Set(a, "Number", initial); Set(b, "Number", initial); }
+                object[] args = method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { delta };
+                Check(recovered, method, a, b, args, args, () => {
+                    if (cell.IsAssignableFrom(method.DeclaringType)) {
+                        SameFields(a, b, "Value");
+                        FieldInfo f = Field(cell, "<Count>k__BackingField");
+                        if (!Equals(f.GetValue(a), Get(b, Alias(f).TrimStart('@')))) throw new Exception("Count differs");
+                    } else SameFields(a, b, "Number");
+                });
+            }
+            object[] nilArgs = method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { 1 };
+            Check(recovered, method, null, null, nilArgs, nilArgs);
+        }
+        MethodInfo store = methods.Values.Single(m => m.Name == "StoreAfterRead");
+        foreach (bool nullTarget in new[] { false, true })
+        foreach (bool nullSource in new[] { false, true })
+        foreach (bool alias in new[] { false, true })
+        {
+            object a = New(cell), b = New(clone), c = alias ? a : New(cell), d = alias ? b : New(clone);
+            Set(a, "Value", 3); Set(b, "Value", 3); Set(c, "Value", 17); Set(d, "Value", 17);
+            Check(recovered, store, null, null, new[] { nullTarget ? null : a, nullSource ? null : c },
+                new[] { nullTarget ? null : b, nullSource ? null : d }, () => { SameFields(a, b, "Value"); SameFields(c, d, "Value"); });
+        }
+        MethodInfo clear = methods.Values.Single(m => m.Name == "ClearOther");
+        object ca = New(cell), cb = New(clone);
+        Set(ca, "Other", ca); Set(cb, "Other", cb);
+        Check(recovered, clear, null, null, new[] { ca }, new[] { cb },
+            () => SameFields(ca, cb, "Other"), (x, y) => ReferenceEquals(x, ca) && ReferenceEquals(y, cb));
+        MethodInfo nil = methods.Values.Single(m => m.Name == "Null");
+        Check(recovered, nil, null, null, Array.Empty<object>(), Array.Empty<object>());
+        MethodInfo choose = methods.Values.Single(m => m.Name == "Choose");
+        foreach (bool first in new[] { false, true })
+        {
+            object a = New(cell), b = New(clone), c = New(cell), d = New(clone);
+            Check(recovered, choose, null, null, new[] { (object)first, a, c }, new[] { (object)first, b, d },
+                equal: (x, y) => ReferenceEquals(x, first ? a : c) && ReferenceEquals(y, first ? b : d));
+        }
+    }
+}
