@@ -113,8 +113,10 @@ internal static class ClassInventory
         {
             var methods = md.GetTypeDefinition(handle).GetMethods().Select(h => (EntityHandle)h).ToHashSet();
             bool wide = Math.Max(md.GetTableRowCount(TableIndex.Field), md.GetTableRowCount(TableIndex.MethodDef)) >= 32768;
-            bool stringsWide = (md.GetHeapSize(HeapIndex.String) > ushort.MaxValue);
             bool modulesWide = md.GetTableRowCount(TableIndex.ModuleRef) >= 65536;
+            int stringsWidth = md.GetTableRowSize(TableIndex.ImplMap) - 2 - (wide ? 4 : 2) - (modulesWide ? 4 : 2);
+            if (stringsWidth != 2 && stringsWidth != 4) throw new BadImageFormatException("Invalid ImplMap string-index width");
+            bool stringsWide = stringsWidth == 4;
             return Enumerable.Range(1, md.GetTableRowCount(TableIndex.ImplMap)).Select(rid => {
                 byte[] row = Row(TableIndex.ImplMap, rid);
                 uint encoded = wide ? BitConverter.ToUInt32(row, 2) : BitConverter.ToUInt16(row, 2);
