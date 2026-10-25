@@ -26,6 +26,35 @@ fn field(bytes: &[u8], name: &str) -> (u32, usize, cildec::tables::FieldRow) {
 }
 
 #[test]
+fn unreadable_field_name_keeps_flags_signature_constant_and_peers() {
+    for bytes in IMAGES {
+        let (token, offset, _) = field(bytes, "Limit");
+        let mut patched = bytes.to_vec();
+        patched[offset + 2..offset + 4].copy_from_slice(&0xffffu16.to_le_bytes());
+        let result = decompile_type(&patched, "ClassCases.Fields").unwrap();
+        assert_eq!(result.summary.metadata_failed, 1, "{}", result.text);
+        assert_eq!(result.summary.exit_code(), 1);
+        let line = result
+            .text
+            .lines()
+            .find(|l| l.starts_with(&format!(".field 0x{token:08X} ")))
+            .unwrap();
+        assert!(line.contains("flags=0x8056"), "{line}");
+        assert!(
+            line.contains("name-index=0x0000FFFF") && line.contains("signature-bytes=[06, 08]"),
+            "{line}"
+        );
+        assert!(line.contains(&format!("__il_field_{token:08X}")), "{line}");
+        assert!(
+            result
+                .text
+                .contains("type=0x0008 value=int32(-7) bytes=[F9, FF, FF, FF]")
+        );
+        assert!(result.text.contains("static uint32 @Counter") && result.text.contains("@Read("));
+    }
+}
+
+#[test]
 fn unreadable_field_signature_keeps_header_constant_and_peers() {
     let bytes = IMAGES[0];
     let (token, offset, _) = field(bytes, "Limit");

@@ -909,15 +909,31 @@ impl<'a> Image<'a> {
 
     pub fn field_declaration(&self, token: u32) -> Result<(String, usize)> {
         let row = self.md.tables().field(token & 0xffffff)?;
-        let name = self.md.strings().str(row.name)?;
-        let alias = field_name(token, name);
+        let mut failures = 0;
+        let mut name_diagnostic = String::new();
+        let (alias, name_evidence) = match self.md.strings().str(row.name) {
+            Ok(name) => (
+                field_name(token, name),
+                format!("name={}", escape_line(name)),
+            ),
+            Err(error) => {
+                failures += 1;
+                name_diagnostic = format!(
+                    "// FAILED metadata field name: {}\n",
+                    escape_line(&error.to_string())
+                );
+                (
+                    format!("__il_field_{token:08X}"),
+                    format!("name-index=0x{:08X}", row.name.get()),
+                )
+            }
+        };
         let flags = field_flags(row.flags);
         let blob = self.md.blobs().get(row.signature);
         let raw_signature = match &blob {
             Ok(bytes) => format!("signature-bytes={bytes:02X?}"),
             Err(_) => format!("signature-blob-index=0x{:08X}", row.signature.get()),
         };
-        let mut failures = 0;
         let signature = (|| -> Result<String> {
             let sig = cildec::FieldSig::parse(blob?)?;
             let mut references = Vec::new();
@@ -926,9 +942,8 @@ impl<'a> Image<'a> {
                 references.push(self.type_reference(modifier.type_token, 0)?);
             }
             Ok(format!(
-                "{} {alias} // name={} {raw_signature} parsed={:?} references=[{}]",
+                "{} {alias} // {name_evidence} {raw_signature} parsed={:?} references=[{}]",
                 Names::new(&self.md).field_sig(&sig),
-                escape_line(name),
                 sig,
                 references.join("; ")
             ))
@@ -941,13 +956,13 @@ impl<'a> Image<'a> {
             Err(error) => {
                 failures += 1;
                 format!(
-                    ".field 0x{token:08X} flags=0x{:04X} {flags} <unresolved-signature> {alias} // name={} {raw_signature}\n// FAILED metadata: {}\n",
+                    ".field 0x{token:08X} flags=0x{:04X} {flags} <unresolved-signature> {alias} // {name_evidence} {raw_signature}\n// FAILED metadata: {}\n",
                     row.flags,
-                    escape_line(name),
                     escape_line(&error.to_string())
                 )
             }
         };
+        text.push_str(&name_diagnostic);
         let (constants, errors) = self.constant_metadata(token, row.flags & 0x8000 != 0)?;
         text.push_str(&constants);
         failures += errors;
