@@ -1,18 +1,18 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use crate::{Result, metadata::Image};
+use crate::{Result, ir::Ty, metadata::Image};
 use cildec::{Operand, Rid};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) fn rewrite(image: &Image<'_>, caller: u32, body: &str) -> String {
-    if !body.contains(" - 1);") || !body.contains("return (") {
+    if !body.contains(" - 1);") {
         return body.into();
     }
-    let Ok(fields) = original_this_i4_fields(image, caller) else {
+    let Ok(locations) = stable_i4_locations(image, caller) else {
         return body.into();
     };
-    if fields.is_empty() {
+    if locations.is_empty() {
         return body.into();
     }
     let lines = body.lines().collect::<Vec<_>>();
@@ -25,22 +25,28 @@ pub(super) fn rewrite(image: &Image<'_>, caller: u32, body: &str) -> String {
                 return None;
             }
             let location = location.strip_suffix(';')?;
-            if !fields.contains(location)
+            if !locations.contains(location)
                 || *lines.get(i + 1)? != format!("{location} = unchecked({snapshot} - 1);")
-                || *lines.get(i + 2)? != format!("return ({snapshot} == 0);")
-                || lines.iter().enumerate().any(|(n, line)| {
-                    !(i..i + 3).contains(&n)
-                        && super::identifiers(line).iter().any(|id| id == snapshot)
-                })
             {
                 return None;
             }
-            Some(format!("return unchecked({location}-- == 0);"))
+            let only_immediate_use = lines.iter().enumerate().all(|(n, line)| {
+                (i..i + 3).contains(&n) || !super::identifiers(line).iter().any(|id| id == snapshot)
+            });
+            if only_immediate_use {
+                if lines.get(i + 2) == Some(&format!("return ({snapshot} == 0);").as_str()) {
+                    return Some((3, format!("return unchecked({location}-- == 0);")));
+                }
+            }
+            // Keep the immutable old value at its original position when later
+            // reads, calls or control flow still need that snapshot. No EH is
+            // admitted by lowering, so a failed store cannot expose its local.
+            Some((2, format!("int {snapshot} = unchecked({location}--);")))
         })();
-        if let Some(replacement) = candidate {
+        if let Some((consumed, replacement)) = candidate {
             out.push_str(&replacement);
             out.push('\n');
-            i += 3;
+            i += consumed;
         } else {
             out.push_str(lines[i]);
             out.push('\n');
@@ -50,22 +56,33 @@ pub(super) fn rewrite(image: &Image<'_>, caller: u32, body: &str) -> String {
     out
 }
 
-// Field-only, signed I4, no receiver/address mutation, and no ambiguous alias.
+// Signed I4 locals without address exposure and unambiguous owned-this fields.
 // Property calls are still exact helper calls at this presentation stage.
-fn original_this_i4_fields(image: &Image<'_>, caller: u32) -> Result<BTreeSet<String>> {
-    if image.row(caller)?.is_static() {
-        return Ok(BTreeSet::new());
-    }
+fn stable_i4_locations(image: &Image<'_>, caller: u32) -> Result<BTreeSet<String>> {
     let body = image
         .body(caller)?
         .ok_or("post-decrement caller has no body")?;
-    for instruction in body.instructions() {
-        let instruction = instruction?;
-        if matches!(instruction.opcode.canonical().name(), "starg" | "ldarga")
-            && matches!(instruction.operand, Operand::Var(0))
+    let instructions = body
+        .instructions()
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    let mut eligible = BTreeSet::new();
+    for (index, ty) in image.local_types(&body)?.into_iter().enumerate() {
+        if ty == Ty::I4
+            && !instructions.iter().any(|i| {
+                i.opcode.canonical().name() == "ldloca"
+                    && matches!(i.operand, Operand::Var(slot) if usize::from(slot) == index)
+            })
         {
-            return Ok(BTreeSet::new());
+            eligible.insert(format!("l{index}"));
         }
+    }
+    if image.row(caller)?.is_static()
+        || instructions.iter().any(|i| {
+            matches!(i.opcode.canonical().name(), "starg" | "ldarga")
+                && matches!(i.operand, Operand::Var(0))
+        })
+    {
+        return Ok(eligible);
     }
     let owner = image
         .md
@@ -73,7 +90,6 @@ fn original_this_i4_fields(image: &Image<'_>, caller: u32) -> Result<BTreeSet<St
         .type_of_method(Rid::new(caller & 0xffffff))?
         .ok_or("post-decrement caller has no owner")?;
     let mut names = BTreeMap::new();
-    let mut eligible = BTreeSet::new();
     for (rid, row) in image.md.tables().iter::<cildec::tables::FieldRow>() {
         if image.md.tables().type_of_field(Rid::new(rid))? != Some(owner) {
             continue;
@@ -93,6 +109,6 @@ fn original_this_i4_fields(image: &Image<'_>, caller: u32) -> Result<BTreeSet<St
             eligible.insert(location);
         }
     }
-    eligible.retain(|name| names.get(name) == Some(&1));
+    eligible.retain(|name| !name.starts_with("this.") || names.get(name) == Some(&1));
     Ok(eligible)
 }

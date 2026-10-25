@@ -50,6 +50,20 @@ public class Cell : BindingLibrary.Base
         return Counter == old;
     }
     public bool UnsignedDecrement() => unchecked(UnsignedCounter-- == 0);
+    public bool LocalDecrement(int value)
+    {
+        int current = value;
+        bool wasZero = unchecked(current-- == 0);
+        Calls = current;
+        return wasZero;
+    }
+    public bool EffectBetweenReadAndWrite()
+    {
+        int old = Counter;
+        Calls = unchecked(Calls + 1);
+        Counter = unchecked(old - 1);
+        return old == 0;
+    }
     public bool ReadBase() => base.Enabled;
     public bool Collision()
     {

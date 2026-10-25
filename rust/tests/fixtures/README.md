@@ -104,8 +104,9 @@ metadata/IL to check keyword escaping, lexical call-site roles and receiver
 provenance. The same source includes signed/unsigned and checked decrement,
 changed/effectful receivers, aliasing, extra reads and preserved-old-value cases.
 The `reference-roundtrip.py --post-decrement --readable --from-class` gate
-executes nine recovered bodies (including the recovered receiver helper) on
-boundary, null and aliased states: 768 comparisons per configuration. A checked
+executes eleven recovered bodies (including the recovered receiver helper) on
+boundary, null and aliased states: 960 comparisons per configuration. Local I4
+postfix and old snapshots retained across later effects/reads are included. A checked
 carrier repeats the gate; a prefix-decrement mutation must fail. Static output
 checks alone are not execution evidence. Snapshots are pinned by Git without a
 separate hash manifest.

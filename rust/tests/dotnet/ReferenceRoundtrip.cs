@@ -700,7 +700,7 @@ internal static class ReferenceRoundtrip
 
     static void PostDecrement(Assembly recovered, Dictionary<int, MethodInfo> methods)
     {
-        if (methods.Count != 9 || methods.Values.Count(m => m.Name == "Fetch") != 1)
+        if (methods.Count != 11 || methods.Values.Count(m => m.Name == "Fetch") != 1)
             throw new Exception("Post-decrement selection drift");
         Type owner = methods.Values.First().DeclaringType!, shell = recovered.GetType(owner.FullName!)!;
         if (!methods.Values.Any(m => m.Name == "Decrement" && m.ReturnType == typeof(bool)) || methods.Values.Any(m => m.DeclaringType != owner))
@@ -728,15 +728,15 @@ internal static class ReferenceRoundtrip
                 int before = a == null ? 0 : (int)Get(a, "Counter");
                 int calls = a == null ? 0 : (int)Get(a, "Calls");
                 uint unsigned = a == null ? 0 : (uint)Get(a, "UnsignedCounter");
-                object[] argumentsA = method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherA };
-                object[] argumentsB = method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherB };
+                object[] argumentsA = method.Name == "LocalDecrement" ? new object[] { initial } : method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherA };
+                object[] argumentsB = method.Name == "LocalDecrement" ? new object[] { initial } : method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherB };
                 Check(recovered, method, a, b, argumentsA, argumentsB, () => {
                     if (a != null)
                     {
                         SameFields(a, b, "Counter", "Calls", "UnsignedCounter");
                         if (!ReferenceEquals(Get(a, "Other"), otherA) || !ReferenceEquals(Get(b, "Other"), otherB))
                             throw new Exception("Post-decrement rebound its captured receiver");
-                        int expectedCalls = method.Name is "EffectfulReceiver" or "KeepOldAcrossEffect" ? unchecked(calls + 1) : calls;
+                        int expectedCalls = method.Name == "LocalDecrement" ? unchecked(initial - 1) : method.Name is "EffectfulReceiver" or "KeepOldAcrossEffect" or "EffectBetweenReadAndWrite" ? unchecked(calls + 1) : calls;
                         if ((int)Get(b, "Calls") != expectedCalls) throw new Exception("Post-decrement lost or moved receiver effects");
                         if (method.Name == "CheckedDecrement" && before == int.MinValue && (int)Get(b, "Counter") != before)
                             throw new Exception("Checked post-decrement wrote before overflow");

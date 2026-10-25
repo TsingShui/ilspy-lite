@@ -46,15 +46,40 @@ fn adjacent_original_this_i4_decrement_compares_the_old_value_under_unchecked() 
 }
 
 #[test]
+fn local_and_field_postfix_keep_old_snapshots_before_later_reads_and_effects() {
+    let debug = IMAGES[1];
+    let local =
+        decompile_with_style(debug, token(debug, "LocalDecrement"), OutputStyle::Readable).unwrap();
+    assert_eq!(local.status, Status::Decompiled);
+    assert!(local.text.contains("unchecked(l0--)"), "{}", local.text);
+    for bytes in IMAGES {
+        for name in ["KeepOldAcrossEffect", "TwoReads"] {
+            let actual =
+                decompile_with_style(bytes, token(bytes, name), OutputStyle::Readable).unwrap();
+            assert_eq!(actual.status, Status::Decompiled);
+            assert!(
+                actual.text.contains("= unchecked(this.Counter--);"),
+                "{name}: {}",
+                actual.text
+            );
+            assert!(
+                !actual.text.contains("return unchecked(this.Counter--"),
+                "old snapshot must stay before subsequent operations: {}",
+                actual.text
+            );
+        }
+    }
+}
+
+#[test]
 fn effectful_or_different_receivers_checks_and_extra_reads_keep_explicit_snapshots() {
     for bytes in IMAGES {
         for name in [
             "CheckedDecrement",
             "OtherDecrement",
             "EffectfulReceiver",
-            "KeepOldAcrossEffect",
+            "EffectBetweenReadAndWrite",
             "DifferentLocation",
-            "TwoReads",
             "UnsignedDecrement",
         ] {
             let actual =

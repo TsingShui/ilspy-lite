@@ -272,7 +272,7 @@ def main():
         jobs.append((name, assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
     elif args.properties or args.post_decrement:
         for config in ("release", "debug"):
-            specifications = [("property", "PropertyCases.Cell", ("Decrement", "CheckedDecrement", "OtherDecrement", "Fetch", "EffectfulReceiver", "KeepOldAcrossEffect", "DifferentLocation", "TwoReads", "UnsignedDecrement"))] if args.post_decrement else [
+            specifications = [("property", "PropertyCases.Cell", ("Decrement", "CheckedDecrement", "OtherDecrement", "Fetch", "EffectfulReceiver", "KeepOldAcrossEffect", "DifferentLocation", "TwoReads", "UnsignedDecrement", "LocalDecrement", "EffectBetweenReadAndWrite"))] if args.post_decrement else [
                 ("binding", "BindingCases.Derived", ("Read", "Write", "ReadConstant", "ReadVirtual", "get_VirtualFlag")),
                 ("property", "PropertyCases.Cell", ("ReadBase", "get_Enabled")),
             ]
@@ -373,6 +373,8 @@ def main():
                 readable = readable_method(readable)
                 if args.post_decrement and "::Decrement()" in signature and "this.Counter--" not in readable:
                     raise ValueError("Postfix gate lost its actual recovered expression")
+                if args.post_decrement and "::LocalDecrement(" in signature and name.endswith("debug") and "l0--" not in readable:
+                    raise ValueError("Local postfix gate lost its actual recovered local expression")
                 normalized = "\n".join(line.strip() for line in readable.rstrip().splitlines())
                 if args.from_class and not any(normalized in text for text in readable_classes.values()):
                     raise ValueError("Selected method view differs from actual readable class body")
@@ -401,10 +403,10 @@ def main():
             recovered = directory / "Recovered-negative.dll"
         if args.mutate_post_value and name == "post-decrement-release":
             text = source.read_text()
-            if text.count("a0.Counter--") != 1:
+            if text.count("return unchecked(a0.Counter-- == 0);") != 1:
                 raise ValueError("Postfix mutation control lost its actual recovered expression")
             mutant = directory / "Recovered-negative.cs"
-            mutant.write_text(text.replace("a0.Counter--", "--a0.Counter"))
+            mutant.write_text(text.replace("return unchecked(a0.Counter-- == 0);", "return unchecked(--a0.Counter == 0);"))
             sources[0] = mutant
             recovered = directory / "Recovered-negative.dll"
         # The pinned Wait leaf targets .NET 6; this optional gate intentionally
