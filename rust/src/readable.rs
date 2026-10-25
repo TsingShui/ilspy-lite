@@ -407,8 +407,16 @@ fn render_method(
         );
     } else {
         let body = method_body(&result.text, &names);
+        let mut nesting = 0usize;
         for statement in body.lines() {
-            line(out, indent + 1, statement);
+            let leading = statement.chars().take_while(|c| *c == '}').count();
+            nesting = nesting.saturating_sub(leading);
+            line(out, indent + 1 + nesting, statement);
+            let braces = lexical_braces(statement);
+            let remaining_closes = braces.1.saturating_sub(leading);
+            nesting = nesting
+                .saturating_add(braces.0)
+                .saturating_sub(remaining_closes);
         }
     }
     line(out, indent, "}");
@@ -427,6 +435,27 @@ pub(crate) fn method_view(image: &Image<'_>, token: u32, result: &DecompiledMeth
     out
 }
 
+fn lexical_braces(text: &str) -> (usize, usize) {
+    let mut braces = (0, 0);
+    let mut chars = text.chars();
+    while let Some(c) = chars.next() {
+        if c == '\"' || c == '\'' {
+            while let Some(ch) = chars.next() {
+                if ch == '\\' {
+                    chars.next();
+                } else if ch == c {
+                    break;
+                }
+            }
+        } else if c == '{' {
+            braces.0 += 1;
+        } else if c == '}' {
+            braces.1 += 1;
+        }
+    }
+    braces
+}
+
 fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
     let Some((_, body)) = text.split_once("\n{\n") else {
         return "// Unreadable rendered body; see --details.".into();
@@ -438,7 +467,10 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         .filter(|line| !line.starts_with("//"))
         .map(str::to_owned)
         .collect();
-    compact_lines(lines)
+    let mut lines = compact_lines(lines);
+    // Edge structuring can expose further adjacent immutable copy chains.
+    lines = compact_lines(lines);
+    lines
         .into_iter()
         .map(|line| rewrite(&line, names) + "\n")
         .collect()

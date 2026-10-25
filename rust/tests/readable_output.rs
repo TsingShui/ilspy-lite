@@ -62,6 +62,40 @@ fn simple_expression_view_removes_constant_argument_copies_and_unused_labels() {
 }
 
 #[test]
+fn compacted_copy_chains_and_nested_indentation_stay_readable() {
+    let bytes = include_bytes!("fixtures/reference-release.bin");
+    let result =
+        decompile_type_with_style(bytes, "ReferenceCases.Cell", OutputStyle::Readable).unwrap();
+    let credit = result
+        .text
+        .split("public int Credit(int delta)")
+        .nth(1)
+        .unwrap()
+        .split("public int Nested()")
+        .next()
+        .unwrap();
+    assert!(
+        !credit.lines().any(|line| line.trim().starts_with("int v")
+            && line.trim().split_once(" = ").is_some_and(|(_, value)| value
+                .strip_prefix('v')
+                .is_some_and(|s| s.trim_end_matches(';').bytes().all(|b| b.is_ascii_digit())))),
+        "{credit}"
+    );
+    let choose = result
+        .text
+        .split("Choose(")
+        .nth(1)
+        .unwrap()
+        .split("public static ")
+        .next()
+        .unwrap();
+    assert!(
+        choose.lines().any(|line| line.starts_with("            ")),
+        "{choose}"
+    );
+}
+
+#[test]
 fn boolean_comparison_returns_do_not_roundtrip_through_integer_temporaries() {
     let bytes = include_bytes!("fixtures/integer-release.bin");
     let result =
