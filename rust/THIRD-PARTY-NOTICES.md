@@ -1,9 +1,17 @@
 # Third-party notices
 
-The normal Cargo dependency closure contains one crate: `cildec 0.1.0`,
-published at <https://crates.io/crates/cildec/0.1.0>. It supplies the PE/CLI,
-metadata/signature and IL decoder. Its default `std` feature introduces no other
-normal dependencies. Include this notice with redistributed binaries.
+Direct dependencies are pinned `cildec 0.1.0` and `sha1 0.10.7`.
+`cildec` supplies the PE/CLI, metadata/signature and IL decoder; its default `std`
+feature introduces no other normal dependencies. `sha1` implements the legacy
+ECMA-335 public-key-token identity calculation, not signature authentication or
+new cryptographic security. All versions are pinned by Cargo.lock.
+
+The SHA-1 closure also contains block-buffer, cfg-if, cpufeatures, crypto-common,
+digest, generic-array, libc (on applicable targets), typenum and version_check.
+Their exact versions, original copyright notices and full MIT license texts are
+retained in [licenses/dependency-licenses.txt](licenses/dependency-licenses.txt).
+Where dual-licensed, this distribution selects the MIT license. Include this
+notice and that license file with redistributed binaries.
 
 ## cildec 0.1.0
 

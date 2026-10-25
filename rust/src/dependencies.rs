@@ -3,6 +3,7 @@
 
 use crate::{Result, metadata::Image};
 use cildec::TableId;
+use sha1::Digest;
 use std::collections::BTreeMap;
 
 /// Metadata identity, not verification of a publisher or strong-name signature.
@@ -152,6 +153,10 @@ impl DependencyContext {
             return Err("dependency needs exactly one Assembly definition".into());
         }
         let row = image.md.tables().assembly(1)?;
+        let public_key = image.md.blobs().get(row.public_key)?;
+        if !public_key.is_empty() && row.flags & 1 == 0 {
+            return Err("Assembly definition key requires the full-public-key flag".into());
+        }
         let identity = AssemblyIdentity {
             name: image.md.strings().str(row.name)?.to_string(),
             version: [
@@ -161,7 +166,7 @@ impl DependencyContext {
                 row.revision_number,
             ],
             culture: image.md.strings().str(row.culture)?.to_string(),
-            public_key_token: key_token(image.md.blobs().get(row.public_key)?, row.flags & 1 != 0)?,
+            public_key_token: key_token(public_key, row.flags & 1 != 0)?,
             content_type: row.flags & 0x0e00,
         };
         self.sources
@@ -202,10 +207,21 @@ impl DependencyContext {
 
 fn key_token(bytes: &[u8], full_key: bool) -> Result<Vec<u8>> {
     if bytes.is_empty() {
-        return Ok(Vec::new());
+        return if full_key {
+            Err("full-public-key flag without a key".into())
+        } else {
+            Ok(Vec::new())
+        };
     }
     if full_key {
-        return Err("full public-key identity is not yet supported".into());
+        // ECMA-335 assembly identity uses the reversed final eight SHA-1 bytes.
+        // This is a legacy identifier calculation, not signature authentication.
+        return Ok(sha1::Sha1::digest(bytes)
+            .iter()
+            .rev()
+            .take(8)
+            .copied()
+            .collect());
     }
     if bytes.len() != 8 {
         return Err("assembly public-key token must contain eight bytes".into());

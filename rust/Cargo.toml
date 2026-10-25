@@ -8,6 +8,7 @@ description = "A small, conservative CIL-to-C#-like decompiler"
 
 [dependencies]
 cildec = "=0.1.0"
+sha1 = "=0.10.7"
 
 [profile.release]
 strip = true

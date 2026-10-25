@@ -4,7 +4,9 @@ A small, independent CIL-to-C#-like decompiler with exact named-type selection
 and complete class-level metadata/member results. It is not a complete .NET
 decompiler or a port of ILSpy's pass pipeline.
 It does not link to ILSpy, invoke a .NET process, load dependencies from the GAC,
-or execute input assemblies. The only Cargo dependency is pinned `cildec 0.1.0`.
+or execute input assemblies. The PE/metadata/IL decoder remains pinned
+`cildec 0.1.0`; `sha1 0.10.7` supplies ECMA-335 assembly public-key-token identities
+(not signature authentication). See [third-party notices](THIRD-PARTY-NOTICES.md).
 
 ## Build and use
 
