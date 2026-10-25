@@ -121,6 +121,147 @@ fn helper_like_user_member_names_and_string_literals_are_not_property_call_sites
     );
 }
 
+fn patch_body(bytes: &[u8], token: u32, code: &[u8]) -> Vec<u8> {
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let row = pe
+        .metadata()
+        .unwrap()
+        .tables()
+        .method_def(token & 0xffffff)
+        .unwrap();
+    let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+    assert!(code.len() <= body.code.len());
+    let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut result = bytes.to_vec();
+    match body.kind {
+        cildec::HeaderKind::Tiny => result[start - 1] = ((code.len() as u8) << 2) | 2,
+        cildec::HeaderKind::Fat => {
+            let flags = u16::from_le_bytes(bytes[start - 12..start - 10].try_into().unwrap());
+            assert_eq!(flags >> 12, 3);
+            result[start - 8..start - 4].copy_from_slice(&(code.len() as u32).to_le_bytes());
+        }
+    }
+    result[start..start + code.len()].copy_from_slice(code);
+    result
+}
+
+#[test]
+fn changed_this_and_other_receivers_keep_exact_calls_instead_of_property_syntax() {
+    for (bytes, library) in [
+        (
+            include_bytes!("fixtures/property-release.bin").as_slice(),
+            LIBRARY,
+        ),
+        (
+            include_bytes!("fixtures/property-debug.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-debug.bin").as_slice(),
+        ),
+    ] {
+        let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+        let getter = md
+            .tables()
+            .iter::<cildec::tables::MemberRefRow>()
+            .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+            .unwrap()
+            .0;
+        let mut code = vec![0x03, 0x10, 0x00, 0x02, 0x28];
+        code.extend((0x0a000000 | getter).to_le_bytes());
+        code.push(0x2a);
+        let changed = method_token(bytes, "ReassignReceiver");
+        let mut context = DependencyContext::new(patch_body(bytes, changed, &code)).unwrap();
+        context
+            .add_reference("receiver library", library.to_vec())
+            .unwrap();
+        let result = context.decompile(changed, OutputStyle::Readable).unwrap();
+        assert_eq!(
+            result.status,
+            ilspy_lite::Status::Decompiled,
+            "{}",
+            result.text
+        );
+        assert!(!result.text.contains("base.Enabled"));
+        assert!(
+            result.text.contains("this = other;") && result.text.contains("__cil_memberref_call_"),
+            "{}",
+            result.text
+        );
+
+        let other = method_token(bytes, "ReadConstantReceiver");
+        let row = md.tables().method_def(other & 0xffffff).unwrap();
+        let body = cildec::MethodBody::from_image(&cildec::PeImage::parse(bytes).unwrap(), &row)
+            .unwrap()
+            .unwrap();
+        let mut code = body.code.to_vec();
+        let call = body
+            .instructions()
+            .map(|i| i.unwrap())
+            .find(|i| i.opcode.name() == "callvirt")
+            .unwrap();
+        code[call.offset as usize] = 0x28;
+        let mut context = DependencyContext::new(patch_body(bytes, other, &code)).unwrap();
+        context
+            .add_reference("other library", library.to_vec())
+            .unwrap();
+        let result = context.decompile(other, OutputStyle::Readable).unwrap();
+        assert_eq!(
+            result.status,
+            ilspy_lite::Status::Decompiled,
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("__cil_memberref_call_"));
+        assert!(
+            !result.text.contains("base.ConstantFlag")
+                && !result.text.contains("other.ConstantFlag")
+        );
+    }
+}
+
+#[test]
+fn a_real_property_relationship_does_not_override_a_conflicting_source_field_name() {
+    let md = cildec::PeImage::parse(LIBRARY).unwrap().metadata().unwrap();
+    let field = md
+        .tables()
+        .iter::<cildec::tables::FieldRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "Ready")
+        .unwrap()
+        .0;
+    let property = md
+        .tables()
+        .iter::<cildec::tables::PropertyRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "Enabled")
+        .unwrap()
+        .0;
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::Field, field)
+        .unwrap();
+    assert_eq!(row.len(), 6);
+    let start = row.as_ptr() as usize - LIBRARY.as_ptr() as usize;
+    let name = u16::try_from(
+        md.tables()
+            .raw_column(cildec::TableId::Property, property, 1)
+            .unwrap(),
+    )
+    .unwrap();
+    let mut library = LIBRARY.to_vec();
+    library[start + 2..start + 4].copy_from_slice(&name.to_le_bytes());
+    let mut context = DependencyContext::new(INPUT.to_vec()).unwrap();
+    context
+        .add_reference("conflicting source name", library)
+        .unwrap();
+    let result = context
+        .decompile(method_token(INPUT, "Read"), OutputStyle::Readable)
+        .unwrap();
+    assert_eq!(result.status, ilspy_lite::Status::Decompiled);
+    assert!(!result.text.contains("base.Enabled"));
+    assert!(
+        result.text.contains("field hides the source property name"),
+        "{}",
+        result.text
+    );
+}
+
 #[test]
 fn exact_base_property_relationships_render_reads_and_writes_without_losing_dispatch() {
     let mut context = DependencyContext::new(INPUT.to_vec()).unwrap();

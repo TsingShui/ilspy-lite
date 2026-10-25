@@ -47,6 +47,23 @@ class ReadableAdapter(unittest.TestCase):
         with self.assertRaises(ValueError):
             roundtrip.adapt_readable_body(readable, ambiguous)
 
+    def test_base_property_leaves_compile_the_actual_source_access_without_borrowed_logic(self):
+        readable = ('public bool Read(bool value)\n{\n    base.Enabled = !value;\n'
+                    '    string text = "base.Enabled";\n    return base.Enabled;\n}\n')
+        details = ('// call token 0x0A000001: [Library]Owned.Base::get_Enabled\n'
+                   '// call token 0x0A000002: [Library]Owned.Base::set_Enabled\n'
+                   'public static bool @Read(global::Owned.Child a0, bool a1)\n{\n'
+                   '    throw new System.Exception("do not borrow these statements");\n}\n')
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('__cil_memberref_call_0A000002(a0, !a1);', adapted)
+        self.assertIn('return __cil_memberref_call_0A000001(a0);', adapted)
+        self.assertIn('// source property token 0x0A000001: get base.Enabled', adapted)
+        self.assertIn('// source property token 0x0A000002: set base.Enabled', adapted)
+        self.assertIn('"base.Enabled"', adapted)
+        self.assertNotIn('do not borrow', adapted)
+        with self.assertRaises(ValueError):
+            roundtrip.adapt_readable_body(readable, details.replace('::get_Enabled', '::get_Other'))
+
     def test_ambiguous_parameter_bindings_fail_instead_of_merging_values(self):
         details = 'public static int @Difference(int a0, int a1)\n{\n}\n'
         readable = 'public static int Difference(int value, int value)\n{\n    return value - value;\n}\n'

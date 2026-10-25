@@ -126,6 +126,7 @@ internal static class ReferenceRoundtrip
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
         if (job.Kind == "wait") WaitTick(recovered, methods);
+        else if (job.Kind == "properties") Properties(recovered, methods);
         else if (job.Kind == "external") ExternalReferences(recovered, methods);
         else if (job.Kind == "activity") ActivityQueue(recovered, methods);
         else if (job.Kind == "floats") Floats(recovered, methods);
@@ -158,12 +159,28 @@ internal static class ReferenceRoundtrip
         var absoluteCalls = new HashSet<int>();
         var externalTypes = new Dictionary<int, Type>();
         var memberCalls = new Dictionary<int, MethodInfo>();
+        var sourceProperties = new Dictionary<int, (Type Caller, string Role, string Name)>();
         bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
             types.Add(method.DeclaringType!);
             string source = File.ReadAllText(entry.Source);
+            foreach (Match match in Regex.Matches(source, @"// source property token 0x([0-9A-F]{8}): (get|set) base\.(@?[A-Za-z_][A-Za-z_0-9]*)"))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                string role = match.Groups[2].Value, name = match.Groups[3].Value;
+                MethodInfo target = (MethodInfo)original.ManifestModule.ResolveMethod(token)!;
+                PropertyInfo property = target.DeclaringType!.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                    .Single(p => p.Name == name.TrimStart('@') && (role == "get" ? p.GetMethod : p.SetMethod) == target);
+                if (target.IsStatic || !target.IsSpecialName || target.DeclaringType != method.DeclaringType!.BaseType
+                    || target.DeclaringType.Assembly == original || property.GetIndexParameters().Length != 0)
+                    throw new Exception("Source property leaf must be an independent exact immediate-base accessor");
+                var description = (method.DeclaringType!, role, name);
+                if (sourceProperties.TryGetValue(token, out var previous) && previous != description)
+                    throw new Exception("Source property leaf has ambiguous caller context");
+                sourceProperties[token] = description;
+            }
             hasFloat |= source.Contains("__cil_F", StringComparison.Ordinal);
             foreach (Match match in Regex.Matches(source, @"\b__cil_type_([0-9A-F]{8})\b"))
             {
@@ -255,6 +272,8 @@ internal static class ReferenceRoundtrip
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
             code.Add(source.Replace(declaration, $"M_{entry.Token:X8}("));
         }
+        if (job.Kind == "properties" && sourceProperties.Count == 0)
+            throw new Exception("Property behavior gate requires actual source property accesses");
         var shells = new List<string>();
         foreach (Type type in types)
         {
@@ -270,6 +289,24 @@ internal static class ReferenceRoundtrip
                 string parameters = string.Join(", ", method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
                 string arguments = string.Join(", ", method.GetParameters().Select((p, i) => "a" + i));
                 members += $"\npublic static {TypeName(method.ReturnType)} @{method.Name}({parameters}) => global::Recovered.M_{method.MetadataToken:X8}({arguments});";
+            }
+            foreach (var pair in sourceProperties.Where(p => p.Value.Caller == type))
+            {
+                MethodInfo accessor = memberCalls[pair.Key];
+                string expression = "base." + pair.Value.Name;
+                members += pair.Value.Role == "get"
+                    ? $"\npublic {TypeName(accessor.ReturnType)} __cil_source_property_{pair.Key:X8}() => {expression};"
+                    : $"\npublic void __cil_source_property_{pair.Key:X8}({TypeName(accessor.GetParameters().Single().ParameterType)} value) {{ {expression} = value; }}";
+            }
+            if (job.Kind == "properties")
+            {
+                foreach (MethodInfo getter in methods.Values.OfType<MethodInfo>().Where(m => m.DeclaringType == type && m.IsSpecialName && m.Name.StartsWith("get_", StringComparison.Ordinal)))
+                {
+                    PropertyInfo property = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly).Single(p => p.GetMethod == getter);
+                    if (property.GetIndexParameters().Length != 0 || !getter.IsPublic) throw new Exception("Unsupported recovered property shell");
+                    string modifier = getter.GetBaseDefinition() != getter ? "override " : type.BaseType!.GetProperty(property.Name) != null ? "new " : "";
+                    members += $"\npublic {modifier}{TypeName(property.PropertyType)} @{property.Name} => global::Recovered.M_{getter.MetadataToken:X8}(this);";
+                }
             }
             shells.Add($"namespace {type.Namespace} {{ public class {type.Name}{parent} {{ {members} }} }}");
         }
@@ -377,11 +414,46 @@ internal static class ReferenceRoundtrip
             MethodInfo target = (MethodInfo)original.ManifestModule.ResolveMethod(token)!;
             Module module = ExternalType(recovered, target.DeclaringType!).Module;
             MethodInfo mapped = (MethodInfo)module.ResolveMethod(target.MetadataToken)!;
-            if (mapped.Name != target.Name || mapped.DeclaringType!.FullName != target.DeclaringType.FullName)
-                throw new Exception("External exact-call mapping changed identity");
+            if (mapped.Name != target.Name || mapped.DeclaringType!.FullName != target.DeclaringType.FullName
+                || mapped.Module.ModuleVersionId != target.Module.ModuleVersionId
+                || !mapped.GetMethodBody()!.GetILAsByteArray()!.SequenceEqual(target.GetMethodBody()!.GetILAsByteArray()!))
+                throw new Exception("External exact-call mapping changed identity or implementation");
+            var sources = job.Methods.SelectMany(entry => Regex.Matches(File.ReadAllText(entry.Source),
+                $@"// source property token 0x{token:X8}: (get|set) base\.(@?[A-Za-z_][A-Za-z_0-9]*)").Cast<Match>()
+                .Select(match => (Caller: original.ManifestModule.ResolveMethod(entry.Token)!.DeclaringType!, Role: match.Groups[1].Value))).Distinct().ToArray();
+            MethodInfo actual = mapped;
+            if (sources.Length != 0)
+            {
+                if (sources.Length != 1) throw new Exception("Ambiguous compiled source property leaf");
+                Type shell = recovered.GetType(sources[0].Caller.FullName!)!;
+                actual = shell.GetMethod($"__cil_source_property_{token:X8}", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!;
+                VerifySourcePropertyCall(actual, mapped, sources[0].Role);
+            }
+            MethodInfo invoked = actual;
             recovered.GetType("Recovered")!.GetField($"MemberCall_{token:X8}")!.SetValue(null,
-                (Func<object, object[], object>)((self, values) => Original(mapped, self, values)));
+                (Func<object, object[], object>)((self, values) => Original(invoked, self, values)));
         }
+    }
+
+    static void VerifySourcePropertyCall(MethodInfo source, MethodInfo target, string role)
+    {
+        byte[] il = source.GetMethodBody()!.GetILAsByteArray()!;
+        int offset = 0;
+        byte Next()
+        {
+            while (offset < il.Length && il[offset] == 0) offset++;
+            if (offset == il.Length) throw new Exception("Incomplete compiled property leaf");
+            return il[offset++];
+        }
+        if (Next() != 0x02 || role == "set" && Next() != 0x03 || Next() != 0x28)
+            throw new Exception("Compiled source property changed receiver or exact call dispatch");
+        if (offset + 4 > il.Length) throw new Exception("Compiled property leaf lost its target");
+        int token = BitConverter.ToInt32(il, offset); offset += 4;
+        MethodBase called = source.Module.ResolveMethod(token)!;
+        if (called.Module.ModuleVersionId != target.Module.ModuleVersionId || called.MetadataToken != target.MetadataToken
+            || called.DeclaringType!.FullName != target.DeclaringType!.FullName
+            || Next() != 0x2a || offset != il.Length)
+            throw new Exception("Compiled source property did not call the exact expected accessor");
     }
 
     static object Original(MethodBase method, object receiver, object[] args)
@@ -623,6 +695,47 @@ internal static class ReferenceRoundtrip
         }
         observer.SetValue(null, null);
         Console.WriteLine("Wait constructors: fresh/dirty receivers, exact independent base initialization, interruptibility, boundary countdowns and subsequent Tick; no selected-body proxy or copied initialized state.");
+    }
+
+    static void Properties(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        Type owner = methods.Values.First().DeclaringType!, shell = recovered.GetType(owner.FullName!)!;
+        if (methods.Values.Any(m => m.DeclaringType != owner)) throw new Exception("Property selection mixed owners");
+        if (!methods.Values.Any(m => m.IsSpecialName && m.Name.StartsWith("get_", StringComparison.Ordinal)))
+            throw new Exception("Property hiding/override negative is missing");
+        var leaves = recovered.GetType("Recovered")!.GetFields().Where(f => f.Name.StartsWith("MemberCall_", StringComparison.Ordinal))
+            .ToDictionary(f => f, f => (Func<object, object[], object>)f.GetValue(null)!);
+        foreach (MethodInfo method in methods.Values)
+        foreach (bool ready in new[] { false, true })
+        foreach (bool nullReceiver in new[] { false, true })
+        foreach (bool argument in method.GetParameters().Length == 0 ? new[] { false } : new[] { false, true })
+        {
+            object a = nullReceiver ? null : New(owner), b = nullReceiver ? null : New(shell);
+            if (!nullReceiver) { Set(a, "Ready", ready); Set(b, "Ready", ready); }
+            int calls = 0;
+            foreach (var pair in leaves)
+            {
+                var leaf = pair.Value;
+                pair.Key.SetValue(null, (Func<object, object[], object>)((self, values) => {
+                    if (!ReferenceEquals(self, b) || !nullReceiver && (bool)Get(b, "Ready") != ready)
+                        throw new Exception("Source property call changed receiver or write position");
+                    calls++;
+                    return leaf(self, values);
+                }));
+            }
+            object[] values = method.GetParameters().Length == 0 ? Array.Empty<object>() : new object[] { argument };
+            Check(recovered, method, a, b, values, values, () => {
+                if (calls != (method.IsSpecialName ? 0 : 1)) throw new Exception("Property call/check timing changed");
+                if (!nullReceiver)
+                {
+                    bool expected = method.Name == "Write" ? argument : ready;
+                    if ((bool)Get(a, "Ready") != expected || (bool)Get(b, "Ready") != expected)
+                        throw new Exception("Property state mismatch");
+                }
+            }, detailedExceptions: true);
+        }
+        foreach (var pair in leaves) pair.Key.SetValue(null, pair.Value);
+        Console.WriteLine("Properties: actual compiled base getter/setter leaves, exact call opcode/target, hiding and override negatives, dirty state and null call timing; no selected-body proxy.");
     }
 
     static void WaitTick(Assembly recovered, Dictionary<int, MethodInfo> methods)

@@ -35,6 +35,42 @@ def readable_method(text):
     return text[:end + 3]
 
 
+def adapt_source_properties(statements, details):
+    """Reify actual base accesses as instance-shell leaves, not borrowed bodies.
+
+    The C# harness compiles each recorded base.Property expression, then requires
+    its emitted call opcode/target to match the original direct accessor. The
+    static carrier delegates only this independently checked external leaf.
+    """
+    calls = re.findall(r'^\s*// call token 0x([0-9A-F]{8}): .+::(get|set)_([A-Za-z_][A-Za-z_0-9]*)$', details, re.M)
+    directives = set()
+    def target(role, name):
+        found = {token for token, actual_role, actual_name in calls
+                 if role == actual_role and name.lstrip('@') == actual_name}
+        if len(found) != 1:
+            raise ValueError('Source property target metadata is missing or ambiguous')
+        token = found.pop()
+        directives.add(f'// source property token 0x{token}: {role} base.{name}')
+        return token
+    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|\bbase\.(@?[A-Za-z_][A-Za-z_0-9]*)')
+    def getters(text):
+        def replace(match):
+            if match[1] is None:
+                return match[0]
+            return f'__cil_memberref_call_{target("get", match[1])}(this)'
+        return lexical.sub(replace, text)
+    lines = []
+    for line in statements.splitlines(keepends=True):
+        setter = re.fullmatch(r'([ \t]*)base\.(@?[A-Za-z_][A-Za-z_0-9]*) = (.+);[ \t]*\n?', line)
+        if setter:
+            space, name, value = setter.groups()
+            token = target('set', name)
+            lines.append(f'{space}__cil_memberref_call_{token}(this, {getters(value)});\n')
+        else:
+            lines.append(getters(line))
+    return ''.join(lines), sorted(directives)
+
+
 def adapt_readable_body(readable, details):
     """Execute readable statements, using only unchanged detailed header/identity evidence.
 
@@ -79,10 +115,11 @@ def adapt_readable_body(readable, details):
     else:
         raise ValueError("Readable parameter shape differs from detailed signature")
     statements = initializer + readable[rendered.end():-2]
+    statements, property_directives = adapt_source_properties(statements, details)
     lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|@?[A-Za-z_][A-Za-z_0-9]*')
     statements = lexical.sub(lambda m: m.group(0) if statements[:m.start()].rstrip().endswith((".", "::"))
                              else mapping.get(m.group(0), m.group(0)), statements)
-    comments = "\n".join(line for line in details.splitlines() if line.strip().startswith("// field token "))
+    comments = "\n".join([line for line in details.splitlines() if line.strip().startswith("// field token ")] + property_directives)
     return comments + "\n" + original_header + statements + "}\n"
 
 
@@ -104,6 +141,7 @@ def main():
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
     corpus_choice.add_argument("--addresses", action="store_true", help="execute the owned managed-element-address corpus")
     corpus_choice.add_argument("--constructors", action="store_true", help="execute owned core-base constructor bodies")
+    corpus_choice.add_argument("--properties", action="store_true", help="execute actual source base-property leaves with hiding, virtual dispatch, and null receivers")
     corpus_choice.add_argument("--base-constructors", action="store_true", help="execute local/external base construction with parameter side effects and base exceptions")
     corpus_choice.add_argument("--clock", action="store_true", help="execute an exact core clock read with a controlled test clock")
     corpus_choice.add_argument("--delegated", action="store_true", help="validate owned delegated constructor with a controlled clock")
@@ -113,9 +151,14 @@ def main():
     corpus_choice.add_argument("--external", action="store_true", help="execute owned opaque external-reference identity bodies")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--readable", action="store_true", help="execute actual readable bodies; detailed metadata supplies test shell identities only")
+    parser.add_argument("--mutate-property-dispatch", action="store_true", help="negative control: change a compiled base-property leaf to virtual this lookup; must fail")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
     wait_family = args.wait or args.wait_constructors
+    if args.mutate_property_dispatch and not args.properties:
+        parser.error("--mutate-property-dispatch requires --properties")
+    if args.properties and not (args.readable and args.from_class):
+        parser.error("--properties requires actual --readable --from-class output")
     if args.random_class and not args.from_class:
         parser.error("--random-class requires --from-class")
     if args.verify_inputs and not (args.openra or args.activity or wait_family or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class):
@@ -219,6 +262,23 @@ def main():
             selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
             name = "openra"
         jobs.append((name, assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
+    elif args.properties:
+        for config in ("release", "debug"):
+            for prefix, owner, names in [
+                ("binding", "BindingCases.Derived", ("Read", "Write", "ReadConstant", "ReadVirtual", "get_VirtualFlag")),
+                ("property", "PropertyCases.Cell", ("ReadBase", "get_Enabled")),
+            ]:
+                assembly = ROOT / f"tests/fixtures/{prefix}-{config}.bin"
+                listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
+                selected = [tuple(line.split(" ", 1)) for line in listing
+                            if any(f" {owner}::{name}(" in line for name in names)]
+                if len(selected) != len(names):
+                    raise ValueError("Owned property selection drift")
+                name = f"properties-{prefix}-{config}"
+                dependencies = out / name / "dependencies"
+                dependencies.mkdir(parents=True, exist_ok=True)
+                (dependencies / "BindingLibrary.dll").write_bytes((ROOT / f"tests/fixtures/binding-library-{config}.bin").read_bytes())
+                jobs.append((name, assembly, dependencies, selected))
     else:
         corpus_name = "base-constructor" if args.base_constructors else "external" if args.external else "float" if args.floats else "exception" if args.exceptions else "string" if args.strings else "constructor" if args.constructors or args.clock or args.delegated else "address" if args.addresses else "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
         for config in ("release", "debug"):
@@ -262,18 +322,19 @@ def main():
         directory = ROOT / "report/openra" / name if wait_family or args.activity or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class else out / name
         directory.mkdir(parents=True, exist_ok=True)
         entries = []
+        reference_options = ["--reference-dir", str(dependencies)] if args.properties else []
         class_bodies = {}
         readable_classes = {}
         if args.from_class:
             owners = sorted({s.split("::", 1)[0].split()[-1] for _, s in selected})
             for owner in owners:
-                result = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner, "--details"],
+                result = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner, "--details", *reference_options],
                                         capture_output=True, text=True, timeout=120)
                 if result.returncode not in (0, 2) or (args.random_class and result.returncode != 0):
                     raise ValueError(f"Class selection failed: {owner}: {result.stderr}")
                 (directory / f"{owner}.class.txt").write_text(result.stdout)
                 if args.readable:
-                    readable = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner],
+                    readable = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner, *reference_options],
                                               capture_output=True, text=True, timeout=120)
                     if readable.returncode != result.returncode or readable.stderr != result.stderr:
                         raise ValueError("Readable presentation changed method admission/summary")
@@ -292,13 +353,13 @@ def main():
                 if status != "Decompiled":
                     raise ValueError(f"Not a decompiled class method: {signature}: {status}")
             else:
-                result = run(cli, "decompile", assembly, "--method", token, "--details", capture_output=True)
+                result = run(cli, "decompile", assembly, "--method", token, "--details", *reference_options, capture_output=True)
                 if "decompiled=1 declarations=0 partial=0 failed=0" != result.stderr.strip():
                     raise ValueError(f"Not a decompiled method: {signature}")
                 body = result.stdout
             body = detailed_method(body)
             if args.readable:
-                readable = run(cli, "decompile", assembly, "--method", token, capture_output=True).stdout
+                readable = run(cli, "decompile", assembly, "--method", token, *reference_options, capture_output=True).stdout
                 (directory / f"{token}.readable.txt").write_text(readable)
                 readable = readable_method(readable)
                 normalized = "\n".join(line.strip() for line in readable.rstrip().splitlines())
@@ -309,7 +370,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "base-constructors" if args.base_constructors else "wait-constructors" if args.wait_constructors else "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "properties" if args.properties else "base-constructors" if args.base_constructors else "wait-constructors" if args.wait_constructors else "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
@@ -319,6 +380,14 @@ def main():
         if "__cil_F" in source.read_text():
             sources.append(ROOT / "tests/dotnet/FloatSemantics.cs")
         references = json.loads(source.with_suffix(".references.json").read_text())
+        if args.mutate_property_dispatch and name == "properties-binding-release":
+            text = source.read_text()
+            if text.count("=> base.VirtualFlag;") != 1:
+                raise ValueError("Property mutation control lost its exact source leaf")
+            mutant = directory / "Recovered-negative.cs"
+            mutant.write_text(text.replace("=> base.VirtualFlag;", "=> this.VirtualFlag;"))
+            sources[0] = mutant
+            recovered = directory / "Recovered-negative.dll"
         # The pinned Wait leaf targets .NET 6; this optional gate intentionally
         # uses the installed .NET 10 runtime's framework-reference unification.
         compile_cs(recovered, sources, references=references, runtime_unification=wait_family)
