@@ -43,3 +43,28 @@ public sealed class Derived : Base { public int Read() => 17; }
 public sealed class ExternalBase : System.Exception { }
 public abstract class GenericBase<T> { }
 public sealed class GenericDerived : GenericBase<int> { }
+public class Fields
+{
+    private int storage = 3;
+    public static uint Counter;
+    public readonly string Label = "label";
+    public const int Limit = -7;
+    public const ulong Mask = ulong.MaxValue;
+    public const string Text = "A\0\uD800";
+    public object Item;
+    public int Auto { get; set; }
+    public int Read() => storage;
+    public class Inner { public int Nested; }
+}
+public class FieldHolder<T> { public T Stored; }
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 8)]
+public struct LayoutFields
+{
+    [System.Runtime.InteropServices.FieldOffset(0)] public int Number;
+    [System.Runtime.InteropServices.FieldOffset(4)]
+    [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)] public bool Ready;
+}
+public static class DataFields
+{
+    public static int[] Values() => new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+}

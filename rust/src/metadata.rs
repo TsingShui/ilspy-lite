@@ -67,6 +67,15 @@ impl<'a> Image<'a> {
             }
             prior = start;
         }
+        let field_limit = tables.row_count(TableId::Field) + 1;
+        let mut prior = 1;
+        for row in &rows {
+            let start = row.field_list.get();
+            if start < prior || start > field_limit {
+                return Err("invalid or overlapping type field ownership ranges".into());
+            }
+            prior = start;
+        }
         let mut parents = vec![None; rows.len()];
         for (_, row) in tables.iter::<NestedClassRow>() {
             let row = row?;
@@ -136,6 +145,12 @@ impl<'a> Image<'a> {
                 token: 0x02000000 | rid,
                 name: names[(rid - 1) as usize].clone(),
                 methods: (start..end).map(|m| 0x06000000 | m).collect(),
+                fields: (row.field_list.get()
+                    ..rows
+                        .get(rid as usize)
+                        .map_or(field_limit, |next| next.field_list.get()))
+                    .map(|f| 0x04000000 | f)
+                    .collect(),
             });
             for (index, parent) in parents.iter().enumerate().rev() {
                 if *parent == Some(rid) {
@@ -327,6 +342,189 @@ impl<'a> Image<'a> {
             _ => {}
         }
         Ok(())
+    }
+
+    pub fn field_declaration(&self, token: u32) -> Result<(String, usize)> {
+        let row = self.md.tables().field(token & 0xffffff)?;
+        let name = self.md.strings().str(row.name)?;
+        let alias = field_name(token, name);
+        let flags = field_flags(row.flags);
+        let blob = self.md.blobs().get(row.signature);
+        let raw_signature = match &blob {
+            Ok(bytes) => format!("signature-bytes={bytes:02X?}"),
+            Err(_) => format!("signature-blob-index=0x{:08X}", row.signature.get()),
+        };
+        let mut failures = 0;
+        let signature = (|| -> Result<String> {
+            let sig = cildec::FieldSig::parse(blob?)?;
+            let mut references = Vec::new();
+            self.signature_references(&sig.type_, 0, &mut references)?;
+            for modifier in &sig.custom_mods {
+                references.push(self.type_reference(modifier.type_token, 0)?);
+            }
+            Ok(format!(
+                "{} {alias} // name={} {raw_signature} parsed={:?} references=[{}]",
+                Names::new(&self.md).field_sig(&sig),
+                escape_line(name),
+                sig,
+                references.join("; ")
+            ))
+        })();
+        let mut text = match signature {
+            Ok(signature) => format!(
+                ".field 0x{token:08X} flags=0x{:04X} {flags} {signature}\n",
+                row.flags
+            ),
+            Err(error) => {
+                failures += 1;
+                format!(
+                    ".field 0x{token:08X} flags=0x{:04X} {flags} <unresolved-signature> {alias} // name={} {raw_signature}\n// FAILED metadata: {}\n",
+                    row.flags,
+                    escape_line(name),
+                    escape_line(&error.to_string())
+                )
+            }
+        };
+        let constants = self
+            .md
+            .tables()
+            .rows_for_parent(TableId::Constant, Token(token))?;
+        if constants.len() > 1 || (row.flags & 0x8000 != 0) != !constants.is_empty() {
+            failures += 1;
+            text.push_str("// FAILED metadata: inconsistent field constant association\n");
+        }
+        for rid in constants {
+            let constant = self.md.tables().row::<cildec::tables::ConstantRow>(rid)?;
+            let raw = self.md.blobs().get(constant.value);
+            let evidence = match &raw {
+                Ok(bytes) => format!("bytes={bytes:02X?}"),
+                Err(_) => format!("value-blob-index=0x{:08X}", constant.value.get()),
+            };
+            let value = raw
+                .map_err(Into::into)
+                .and_then(|raw| constant_value(constant.type_raw, raw));
+            match value {
+                Ok(value) => text.push_str(&format!(
+                    ".constant 0x{:08X} parent=0x{token:08X} type=0x{:04X} value={value} {evidence}\n",
+                    0x0b000000 | rid, constant.type_raw
+                )),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        ".constant 0x{:08X} parent=0x{token:08X} type=0x{:04X} {evidence}\n// FAILED metadata: {}\n",
+                        0x0b000000 | rid, constant.type_raw, escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        for rid in self
+            .md
+            .tables()
+            .rows_for_parent(TableId::FieldLayout, Token(token))?
+        {
+            let layout = self
+                .md
+                .tables()
+                .row::<cildec::tables::FieldLayoutRow>(rid)?;
+            text.push_str(&format!(
+                ".field-layout 0x{:08X} parent=0x{token:08X} offset={}\n",
+                0x10000000 | rid,
+                layout.offset
+            ));
+        }
+        let marshals = self
+            .md
+            .tables()
+            .rows_for_parent(TableId::FieldMarshal, Token(token))?;
+        if marshals.len() > 1 || (row.flags & 0x1000 != 0) != !marshals.is_empty() {
+            failures += 1;
+            text.push_str("// FAILED metadata: inconsistent field marshal association\n");
+        }
+        for rid in marshals {
+            let marshal = self
+                .md
+                .tables()
+                .row::<cildec::tables::FieldMarshalRow>(rid)?;
+            text.push_str(&format!(
+                ".field-marshal 0x{:08X} parent=0x{token:08X} ",
+                0x0d000000 | rid
+            ));
+            match self.md.blobs().get(marshal.native_type) {
+                Ok(bytes) => text.push_str(&format!("bytes={bytes:02X?}\n")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "blob-index=0x{:08X}\n// FAILED metadata: {}\n",
+                        marshal.native_type.get(),
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        let initial_data = self
+            .md
+            .tables()
+            .rows_for_parent(TableId::FieldRva, Token(token))?;
+        if initial_data.len() > 1 || (row.flags & 0x100 != 0) != !initial_data.is_empty() {
+            failures += 1;
+            text.push_str("// FAILED metadata: inconsistent field RVA association\n");
+        }
+        for rid in initial_data {
+            let data = self.md.tables().row::<cildec::tables::FieldRvaRow>(rid)?;
+            text.push_str(&format!(
+                ".field-rva 0x{:08X} parent=0x{token:08X} rva=0x{:08X} ",
+                0x1d000000 | rid,
+                data.rva
+            ));
+            let extent = self.field_data_size(row.signature);
+            match extent.and_then(|size| {
+                size.map(|size| self.pe.rva_slice(data.rva, size).map_err(Into::into))
+                    .transpose()
+            }) {
+                Ok(Some(bytes)) => text.push_str(&format!("bytes={bytes:02X?}\n")),
+                Ok(None) => text.push_str("// data extent unresolved; no bytes guessed\n"),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "\n// FAILED metadata: {}\n",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        text.push('\n');
+        Ok((text, failures))
+    }
+
+    fn field_data_size(&self, signature: cildec::BlobIndex) -> Result<Option<usize>> {
+        use cildec::Type as T;
+        let sig = cildec::FieldSig::parse(self.md.blobs().get(signature)?)?;
+        Ok(match sig.type_ {
+            T::Boolean | T::I1 | T::U1 => Some(1),
+            T::Char | T::I2 | T::U2 => Some(2),
+            T::I4 | T::U4 | T::R4 => Some(4),
+            T::I8 | T::U8 | T::R8 => Some(8),
+            T::ValueType(token) if token.table() == Some(TableId::TypeDef) => {
+                let row = self.md.tables().type_def(token.rid())?;
+                // Only a fieldless explicit-layout value type has a proven data extent.
+                if row.layout_kind() == 2
+                    && self
+                        .md
+                        .tables()
+                        .field_range(Rid::new(token.rid()))?
+                        .is_empty()
+                {
+                    self.md
+                        .tables()
+                        .class_layout_of(Rid::new(token.rid()))?
+                        .filter(|layout| layout.class_size != 0)
+                        .map(|layout| layout.class_size as usize)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        })
     }
 
     pub fn row(&self, token: u32) -> Result<MethodDefRow> {
@@ -576,11 +774,7 @@ impl<'a> Image<'a> {
         let ty = crate::ir::Ty::from_sig(&sig.type_)?;
         ty.cs(self)?;
         let original = self.md.strings().str(row.name)?;
-        let name = if identifier(original).is_ok() && !original.starts_with("__il_field_") {
-            format!("@{original}")
-        } else {
-            format!("__il_field_{:08X}", t.0)
-        };
+        let name = field_name(t.0, original);
         Ok(FieldRef {
             token: t.0,
             owner,
@@ -687,6 +881,7 @@ pub(crate) struct SelectedType {
     pub token: u32,
     pub name: String,
     pub methods: Vec<u32>,
+    pub fields: Vec<u32>,
 }
 
 pub(crate) struct FieldRef {
@@ -704,6 +899,82 @@ pub(crate) struct MethodRef {
     pub target: String,
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
+}
+
+fn constant_value(kind: u16, bytes: &[u8]) -> Result<String> {
+    let invalid = || "invalid constant type or encoded value".into();
+    Ok(match kind {
+        0x02 if bytes.len() == 1 && bytes[0] <= 1 => format!("bool({})", bytes[0] != 0),
+        0x03 if bytes.len() == 2 => {
+            format!("char(0x{:04X})", u16::from_le_bytes(bytes.try_into()?))
+        }
+        0x04 if bytes.len() == 1 => format!("int8({})", bytes[0] as i8),
+        0x05 if bytes.len() == 1 => format!("uint8({})", bytes[0]),
+        0x06 if bytes.len() == 2 => format!("int16({})", i16::from_le_bytes(bytes.try_into()?)),
+        0x07 if bytes.len() == 2 => format!("uint16({})", u16::from_le_bytes(bytes.try_into()?)),
+        0x08 if bytes.len() == 4 => format!("int32({})", i32::from_le_bytes(bytes.try_into()?)),
+        0x09 if bytes.len() == 4 => format!("uint32({})", u32::from_le_bytes(bytes.try_into()?)),
+        0x0a if bytes.len() == 8 => format!("int64({})", i64::from_le_bytes(bytes.try_into()?)),
+        0x0b if bytes.len() == 8 => format!("uint64({})", u64::from_le_bytes(bytes.try_into()?)),
+        0x0c if bytes.len() == 4 => format!(
+            "float32-bits(0x{:08X})",
+            u32::from_le_bytes(bytes.try_into()?)
+        ),
+        0x0d if bytes.len() == 8 => format!(
+            "float64-bits(0x{:016X})",
+            u64::from_le_bytes(bytes.try_into()?)
+        ),
+        0x0e if bytes.len() % 2 == 0 => format!(
+            "utf16[{}]",
+            bytes
+                .chunks_exact(2)
+                .map(|b| format!("{:04X}", u16::from_le_bytes([b[0], b[1]])))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ),
+        0x12 if bytes == [0, 0, 0, 0] => "null".into(),
+        _ => return Err(invalid()),
+    })
+}
+
+fn field_name(token: u32, original: &str) -> String {
+    if identifier(original).is_ok() && !original.starts_with("__il_field_") {
+        format!("@{original}")
+    } else {
+        format!("__il_field_{token:08X}")
+    }
+}
+
+fn field_flags(flags: u16) -> String {
+    let mut names = vec![
+        [
+            "privatescope",
+            "private",
+            "famandassem",
+            "assembly",
+            "family",
+            "famorassem",
+            "public",
+            "reserved-access",
+        ][(flags & 7) as usize],
+    ];
+    for (bit, name) in [
+        (0x10, "static"),
+        (0x20, "initonly"),
+        (0x40, "literal"),
+        (0x80, "notserialized"),
+        (0x100, "hasrva"),
+        (0x200, "specialname"),
+        (0x400, "rtspecialname"),
+        (0x1000, "hasmarshal"),
+        (0x2000, "pinvokeimpl"),
+        (0x8000, "hasdefault"),
+    ] {
+        if flags & bit != 0 {
+            names.push(name);
+        }
+    }
+    names.join(" ")
 }
 
 fn type_flags(flags: u32) -> String {

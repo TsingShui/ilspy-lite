@@ -33,8 +33,13 @@ base/interface identities, individual method results and a status summary.
 TypeRefs retain their assembly/module scope; TypeSpecs retain raw signature bytes
 and named-reference identities. No dependency assembly is loaded. One unsupported
 or unreadable method does not suppress peers. This is **not yet complete class
-context**: fields, properties, events and generic constraints are still being
-added. Output is not a compilable class or project.
+context**: properties, events and generic constraints are still being added.
+All owned fields are listed with names/aliases, types, raw signatures and flags.
+Constants preserve decoded values and original bytes (strings as UTF-16 units,
+floating constants as bits). Field layout and marshalling descriptors are retained;
+RVA data is read only for a known primitive or fieldless explicit-layout extent,
+otherwise its location and unresolved extent are shown without guessing.
+Output is not a compilable class or project.
 
 Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 
