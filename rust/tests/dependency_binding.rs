@@ -542,6 +542,57 @@ fn base_and_interface_relations_keep_resolved_and_missing_evidence_separate() {
 }
 
 #[test]
+fn declared_generic_and_concrete_overloads_do_not_collapse_after_instantiation() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let (rid, row) = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| {
+            let row = row.as_ref().unwrap();
+            md.strings().str(row.name).unwrap() == "Echo"
+                && row.class.table() == Some(cildec::TableId::TypeSpec)
+        })
+        .unwrap();
+    let raw = md.blobs().get(row.unwrap().signature).unwrap();
+    assert_eq!(raw, &[0x20, 1, 8, 8]);
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    let method = context.resolve_method(0x0a000000 | rid).unwrap();
+    assert_eq!(method.reference_signature, raw);
+    assert_eq!(method.definition_signature, raw);
+    assert_eq!(method.owner.generic_arguments, ["I4"]);
+}
+
+#[test]
+fn a_dependency_source_label_cannot_redirect_main_image_property_lookup() {
+    let bytes = include_bytes!("fixtures/binding-library-release.bin");
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let getter = md
+        .tables()
+        .iter::<cildec::tables::MethodDefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap()
+        .0;
+    let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+    context
+        .add_reference("<main>", DEPENDENCY.to_vec())
+        .unwrap();
+    let property = context
+        .resolve_property_accessor(0x06000000 | getter)
+        .unwrap()
+        .unwrap();
+    assert_eq!(property.name, "Enabled");
+    assert_eq!(property.owner.name, "BindingLibrary.Base");
+    assert_eq!(property.definition.assembly.name, "BindingLibrary");
+}
+
+#[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     let reference = type_reference(MAIN, "ExternalLibrary", "Base");

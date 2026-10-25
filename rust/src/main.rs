@@ -102,6 +102,7 @@ fn run() -> Result<u8> {
                 directories: reference_dirs,
                 environment,
                 version_policy,
+                ..ReferenceSearchOptions::default()
             },
         )?;
         reference_warnings.extend(

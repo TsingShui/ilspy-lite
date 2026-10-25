@@ -36,6 +36,7 @@ public class Generic<T>
     public T Field;
     public T Item { get => Field; set => Field = value; }
     public T Echo(T value) => value;
+    public int Echo(int value) => unchecked(value + 1);
     public U Convert<U>(U value) => value;
 }
 public interface IFlag { bool VirtualFlag { get; } }

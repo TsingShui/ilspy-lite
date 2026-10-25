@@ -55,6 +55,8 @@ pub struct CandidatePath {
 pub struct DiscoveryResult {
     pub candidates: Vec<CandidatePath>,
     pub diagnostics: Vec<String>,
+    /// True when errors or bounds prevented exhaustive candidate inspection.
+    pub incomplete: bool,
 }
 
 const MAX_DIRECTORY_READS: usize = 512;
@@ -78,6 +80,11 @@ struct Search {
 
 impl Search {
     fn diagnostic(&mut self, message: impl Into<String>) {
+        self.result.incomplete = true;
+        self.information(message);
+    }
+
+    fn information(&mut self, message: impl Into<String>) {
         let message = message.into();
         if self.result.diagnostics.contains(&message) {
             return;
@@ -116,7 +123,7 @@ impl Search {
                     .seen
                     .insert((canonical, origin == CandidateOrigin::ReferencePack))
                 {
-                    self.diagnostic(format!(
+                    self.information(format!(
                         "duplicate canonical candidate omitted: {}",
                         path.display()
                     ));
@@ -217,7 +224,11 @@ impl Search {
         let bytes = match bounded_read(&path, MAX_DEPS_BYTES) {
             Ok(bytes) => bytes,
             Err(error) => {
-                self.diagnostic(format!("deps {}: {error}", path.display()));
+                if error.kind() == std::io::ErrorKind::NotFound {
+                    self.information(format!("deps {}: {error}", path.display()));
+                } else {
+                    self.diagnostic(format!("deps {}: {error}", path.display()));
+                }
                 return;
             }
         };
@@ -330,19 +341,19 @@ impl Search {
     }
 }
 
-fn bounded_read(path: &Path, limit: u64) -> Result<Vec<u8>, String> {
-    let metadata = std::fs::metadata(path).map_err(|e| e.to_string())?;
+fn bounded_read(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
+    let metadata = std::fs::metadata(path)?;
     if !metadata.is_file() || metadata.len() > limit {
-        return Err(format!("not a regular file or exceeds {limit} byte limit"));
+        return Err(std::io::Error::other(format!(
+            "not a regular file or exceeds {limit} byte limit"
+        )));
     }
     let mut bytes = Vec::new();
-    std::fs::File::open(path)
-        .map_err(|e| e.to_string())?
+    std::fs::File::open(path)?
         .take(limit + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|e| e.to_string())?;
+        .read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limit {
-        return Err(format!("exceeds {limit} byte limit"));
+        return Err(std::io::Error::other(format!("exceeds {limit} byte limit")));
     }
     Ok(bytes)
 }

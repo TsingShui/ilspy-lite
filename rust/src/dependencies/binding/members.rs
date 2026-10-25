@@ -8,6 +8,7 @@ use std::collections::BTreeSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ResolvedMethod {
+    pub(crate) module: usize,
     pub definition: DefinitionLocation,
     pub owner: ResolvedType,
     pub name: String,
@@ -80,14 +81,16 @@ impl DependencyContext {
             _ => return Err("field binding needs a Field or MemberRef".into()),
         };
         let signature = crate::signature_guard::field(raw)?;
-        let signature_key = |module, signature: &cildec::FieldSig<'_>| -> Result<String> {
-            Ok(format!(
-                "{:?}:{:?}",
-                self.modifier_keys(module, &signature.custom_mods, &owner.generic_arguments, 0)?,
-                self.type_key(module, &signature.type_, &owner.generic_arguments, 0)?
-            ))
-        };
-        let requested = signature_key(0, &signature)?;
+        let signature_key =
+            |module, signature: &cildec::FieldSig<'_>, args: &[String]| -> Result<String> {
+                Ok(format!(
+                    "{:?}:{:?}",
+                    self.modifier_keys(module, &signature.custom_mods, args, 0)?,
+                    self.type_key(module, &signature.type_, args, 0)?
+                ))
+            };
+        let requested = signature_key(0, &signature, &[])?;
+        let instantiated = signature_key(0, &signature, &owner.generic_arguments)?;
         let target = self.binding_image(module)?;
         let selected = target.selected_types(&owner.name)?;
         let root = selected.first().ok_or("field owner selection is empty")?;
@@ -101,7 +104,7 @@ impl DependencyContext {
                 continue;
             }
             let bytes = target.md.blobs().get(row.signature)?;
-            if signature_key(module, &crate::signature_guard::field(bytes)?)? != requested {
+            if signature_key(module, &crate::signature_guard::field(bytes)?, &[])? != requested {
                 continue;
             }
             if found.is_some() {
@@ -117,7 +120,7 @@ impl DependencyContext {
                 flags: row.flags,
                 reference_signature: raw.to_vec(),
                 definition_signature: bytes.to_vec(),
-                signature_identity: requested.clone(),
+                signature_identity: instantiated.clone(),
             });
         }
         found.ok_or_else(|| "field definition missing for exact name and scoped signature".into())
@@ -125,10 +128,7 @@ impl DependencyContext {
 
     pub fn resolve_property_accessor(&self, token: u32) -> Result<Option<PropertyAccessor>> {
         let method = self.resolve_method(token)?;
-        let module = self
-            .sources
-            .get(&method.definition.source)
-            .map_or(0, |index| index + 1);
+        let module = method.module;
         let image = self.binding_image(module)?;
         let types = image.selected_types(&method.owner.name)?;
         let owner = types.first().ok_or("property owner selection is empty")?;
@@ -175,7 +175,9 @@ impl DependencyContext {
             {
                 return Err("property/accessor flags or calling convention conflict".into());
             }
-            let args = &method.owner.generic_arguments;
+            // Validate declared positions before instantiation can conflate a
+            // property VAR with a distinct concrete accessor type.
+            let args = &[];
             let params = property_sig
                 .params
                 .iter()
@@ -285,7 +287,10 @@ impl DependencyContext {
         };
         let signature = crate::signature_guard::method(raw)
             .map_err(|e| format!("method reference signature {raw:02X?}: {e}"))?;
-        let requested = self.method_signature_key(0, &signature, &owner.generic_arguments, 0)?;
+        // Selection uses the declared signature. Substituting first would merge
+        // Echo(!0) with Echo(int32) when the owner's argument is int32.
+        let requested = self.method_signature_key(0, &signature, &[], 0)?;
+        let instantiated = self.method_signature_key(0, &signature, &owner.generic_arguments, 0)?;
         let target = self.binding_image(module)?;
         let selected = target.selected_types(&owner.name)?;
         let root = selected.first().ok_or("method owner selection is empty")?;
@@ -301,9 +306,7 @@ impl DependencyContext {
             let bytes = target.md.blobs().get(row.signature)?;
             let definition = crate::signature_guard::method(bytes)
                 .map_err(|e| format!("method definition signature {bytes:02X?}: {e}"))?;
-            if self.method_signature_key(module, &definition, &owner.generic_arguments, 0)?
-                != requested
-            {
+            if self.method_signature_key(module, &definition, &[], 0)? != requested {
                 continue;
             }
             if row.is_static() == definition.has_this {
@@ -313,6 +316,7 @@ impl DependencyContext {
                 return Err("ambiguous method definition in resolved type".into());
             }
             found = Some(ResolvedMethod {
+                module,
                 definition: DefinitionLocation {
                     token: candidate,
                     ..owner.definition.clone()
@@ -322,7 +326,7 @@ impl DependencyContext {
                 flags: row.flags,
                 reference_signature: raw.to_vec(),
                 definition_signature: bytes.to_vec(),
-                signature_identity: requested.clone(),
+                signature_identity: instantiated.clone(),
                 method_arguments: Vec::new(),
                 instantiation_signature: Vec::new(),
             });

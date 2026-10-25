@@ -123,6 +123,126 @@ fn exact_identity_beats_version_alternatives_and_substitution_requires_explicit_
     std::fs::remove_dir_all(root).unwrap();
 }
 
+#[cfg(unix)]
+#[test]
+fn an_unreadable_named_candidate_cannot_authorize_version_substitution() {
+    use std::os::unix::fs::PermissionsExt;
+    let main = include_bytes!("fixtures/external-release.bin");
+    let dependency = include_bytes!("fixtures/external-library-release.bin");
+    let md = cildec::PeImage::parse(dependency)
+        .unwrap()
+        .metadata()
+        .unwrap();
+    let row = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let at = row.as_ptr() as usize - dependency.as_ptr() as usize;
+    let mut newer = dependency.to_vec();
+    newer[at + 10..at + 12].copy_from_slice(&1u16.to_le_bytes());
+    let root =
+        std::env::temp_dir().join(format!("ilspy-unreadable-reference-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let exact = root.join("ExternalLibrary.dll");
+    let explicit = root.join("newer.bin");
+    std::fs::write(&exact, dependency).unwrap();
+    std::fs::write(&explicit, newer).unwrap();
+    std::fs::set_permissions(&exact, std::fs::Permissions::from_mode(0o0)).unwrap();
+    let denied = std::fs::File::open(&exact).is_err();
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    let reference = context
+        .references()
+        .iter()
+        .find(|r| r.identity.name == "ExternalLibrary")
+        .unwrap()
+        .token;
+    let search = context.discover_references(
+        &root.join("input.dll"),
+        &ReferenceSearchOptions {
+            automatic: false,
+            files: vec![explicit],
+            directories: vec![root.clone()],
+            version_policy: ReferenceVersionPolicy::SameMajor,
+            ..ReferenceSearchOptions::default()
+        },
+    );
+    std::fs::set_permissions(&exact, std::fs::Permissions::from_mode(0o600)).unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    assert!(
+        denied,
+        "owned permission fixture must actually deny reading on this host"
+    );
+    search.unwrap();
+    assert!(
+        context
+            .search_diagnostics()
+            .iter()
+            .any(|s| s.contains("Dependency input rejected"))
+    );
+    assert!(
+        matches!(
+            context.resolve(reference).unwrap(),
+            AssemblyResolution::Missing { .. }
+        ),
+        "incomplete exact search cannot prove substitution is warranted"
+    );
+}
+
+#[test]
+fn missing_candidate_attempts_consume_the_configured_probe_budget() {
+    let root = std::env::temp_dir().join(format!("ilspy-probe-budget-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let mut context =
+        DependencyContext::new(include_bytes!("fixtures/external-release.bin").to_vec()).unwrap();
+    context
+        .discover_references(
+            &root.join("input.dll"),
+            &ReferenceSearchOptions {
+                automatic: false,
+                directories: vec![root.clone(); 5000],
+                max_probes: 3,
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    assert!(
+        context
+            .search_diagnostics()
+            .iter()
+            .any(|s| s.contains("probe limit")),
+        "missing files still require bounded inspection"
+    );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn discovery_completeness_is_structured_not_inferred_from_warning_words() {
+    use ilspy_lite::discovery_paths::candidates_for;
+    let root = std::env::temp_dir().join(format!(
+        "ilspy-discovery-completeness-{}",
+        std::process::id()
+    ));
+    std::fs::create_dir(&root).unwrap();
+    let input = root.join("owned.dll");
+    let context =
+        DependencyContext::new(include_bytes!("fixtures/external-release.bin").to_vec()).unwrap();
+    let identity = &context
+        .references()
+        .iter()
+        .find(|r| r.identity.name == "ExternalLibrary")
+        .unwrap()
+        .identity;
+    let absent_optional = candidates_for(&input, identity, None, &DiscoveryEnvironment::default());
+    assert!(!absent_optional.incomplete);
+    std::fs::write(input.with_extension("deps.json"), b"not JSON").unwrap();
+    let malformed = candidates_for(&input, identity, None, &DiscoveryEnvironment::default());
+    assert!(malformed.incomplete);
+    assert!(
+        malformed
+            .diagnostics
+            .iter()
+            .any(|d| d.contains("malformed deps"))
+    );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
 #[test]
 fn target_framework_comes_from_static_attribute_evidence_not_the_host_runtime() {
     let context =

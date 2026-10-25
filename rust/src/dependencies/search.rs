@@ -20,6 +20,8 @@ pub struct ReferenceSearchOptions {
     pub directories: Vec<PathBuf>,
     pub environment: DiscoveryEnvironment,
     pub version_policy: ReferenceVersionPolicy,
+    /// Candidate inspection attempts, including absent files and supplied dirs.
+    pub max_probes: usize,
 }
 
 impl Default for ReferenceSearchOptions {
@@ -30,6 +32,22 @@ impl Default for ReferenceSearchOptions {
             directories: Vec::new(),
             environment: DiscoveryEnvironment::default(),
             version_policy: ReferenceVersionPolicy::Exact,
+            max_probes: 4096,
+        }
+    }
+}
+
+struct ProbeBudget {
+    used: usize,
+    limit: usize,
+}
+impl ProbeBudget {
+    fn take(&mut self) -> bool {
+        if self.used >= self.limit {
+            false
+        } else {
+            self.used += 1;
+            true
         }
     }
 }
@@ -44,18 +62,32 @@ impl DependencyContext {
     ) -> Result<()> {
         self.version_policy = options.version_policy;
         let mut seen = BTreeSet::new();
+        let mut budget = ProbeBudget {
+            used: 0,
+            limit: options.max_probes.min(4096),
+        };
         for path in &options.files {
-            self.search_file(path, "ExplicitFile", &mut seen);
+            if !self.search_file(path, "ExplicitFile", &mut seen, &mut budget) {
+                return Ok(());
+            }
         }
         for directory in &options.directories {
-            if !directory.is_dir() {
-                self.search_note(format!("reference directory unavailable: {directory:?}"));
+            if !budget.take() {
+                self.search_failure("dependency file probe limit exceeded".into());
+                return Ok(());
+            }
+            match std::fs::metadata(directory) {
+                Ok(meta) if meta.is_dir() => {}
+                Err(error) if error.kind() != std::io::ErrorKind::NotFound => self.search_failure(
+                    format!("cannot inspect reference directory {directory:?}: {error}"),
+                ),
+                _ => self.search_note(format!("reference directory unavailable: {directory:?}")),
             }
         }
         let framework = match self.target_framework_hint() {
             Ok(hint) => hint,
             Err(error) => {
-                self.search_note(format!("target framework hint unavailable: {error}"));
+                self.search_failure(format!("target framework hint unavailable: {error}"));
                 None
             }
         };
@@ -67,14 +99,14 @@ impl DependencyContext {
                 continue;
             }
             if depth > 32 {
-                self.search_note("dependency closure depth limit exceeded".into());
+                self.search_failure("dependency closure depth limit exceeded".into());
                 continue;
             }
             let image = self.binding_image(module)?;
             let count = super::reference_count(&image, self.limits)?;
             if work + count as usize > 4096 {
                 drop(image);
-                self.search_note("dependency closure request limit exceeded".into());
+                self.search_failure("dependency closure request limit exceeded".into());
                 break 'closure;
             }
             work += count as usize;
@@ -101,7 +133,7 @@ impl DependencyContext {
             }
             for (rid, identity) in requests {
                 if !safe_name(&identity.name) {
-                    self.search_note(format!(
+                    self.search_failure(format!(
                         "unsafe assembly filename in {referrer:?}: {:?}",
                         identity.name
                     ));
@@ -124,6 +156,7 @@ impl DependencyContext {
                             framework.as_deref(),
                             &options.environment,
                         );
+                        self.discovery_incomplete |= found.incomplete;
                         for diagnostic in found.diagnostics {
                             self.search_note(diagnostic);
                         }
@@ -138,12 +171,8 @@ impl DependencyContext {
                         if !self.exact_matching_modules(&identity).is_empty() {
                             break;
                         }
-                        if seen.len() >= 4096 {
-                            self.search_note("dependency file probe limit exceeded".into());
+                        if !self.search_file(&path, &origin, &mut seen, &mut budget) {
                             break 'closure;
-                        }
-                        if path.is_file() {
-                            self.search_file(&path, &origin, &mut seen);
                         }
                     }
                 }
@@ -178,10 +207,34 @@ impl DependencyContext {
         Ok(())
     }
 
-    fn search_file(&mut self, path: &Path, origin: &str, seen: &mut BTreeSet<PathBuf>) {
-        if seen.len() >= 4096 {
-            self.search_note("dependency file probe limit exceeded".into());
-            return;
+    fn search_file(
+        &mut self,
+        path: &Path,
+        origin: &str,
+        seen: &mut BTreeSet<PathBuf>,
+        budget: &mut ProbeBudget,
+    ) -> bool {
+        if !budget.take() {
+            self.search_failure("dependency file probe limit exceeded".into());
+            return false;
+        }
+        match std::fs::metadata(path) {
+            Ok(meta) if meta.is_file() => {}
+            Err(error)
+                if error.kind() == std::io::ErrorKind::NotFound && origin != "ExplicitFile" =>
+            {
+                return true;
+            }
+            Err(error) => {
+                self.search_failure(format!("Dependency input rejected: {path:?}: {error}"));
+                return true;
+            }
+            _ => {
+                self.search_failure(format!(
+                    "Dependency input rejected: {path:?}: not a regular file"
+                ));
+                return true;
+            }
         }
         let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
         let source = canonical
@@ -198,7 +251,7 @@ impl DependencyContext {
                     ));
                 }
             }
-            return;
+            return true;
         }
         let read = (|| -> Result<()> {
             self.add_reference_reader(&source, std::fs::File::open(&canonical)?)
@@ -215,17 +268,20 @@ impl DependencyContext {
                     ".dependency-probe source={source:?} origin={origin}"
                 ));
             }
-            Err(error) => self.search_note(format!(
+            Err(error) => self.search_failure(format!(
                 "Dependency input rejected: {source:?}: {}",
                 error.to_string().escape_default()
             )),
         }
+        true
+    }
+
+    fn search_failure(&mut self, note: String) {
+        self.discovery_incomplete = true;
+        self.search_note(note);
     }
 
     fn search_note(&mut self, note: String) {
-        if note.contains("limit") || note.contains("truncat") {
-            self.discovery_incomplete = true;
-        }
         if self.search_diagnostics.len() < 128 && !self.search_diagnostics.contains(&note) {
             self.search_diagnostics.push(note);
         }
