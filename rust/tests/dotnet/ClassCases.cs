@@ -98,3 +98,9 @@ public class GenericEvents<T>
 {
     public event System.Action<T> Updated { add { } remove { } }
 }
+public class Constrained<T> where T : class, IMarker, new()
+{
+    public U Echo<U>(U value) where U : Base, new() => value;
+    public class Nested<U> where U : struct { public U Value; }
+}
+public interface IVariance<in T, out R> { }

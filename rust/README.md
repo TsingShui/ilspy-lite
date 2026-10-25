@@ -32,8 +32,11 @@ type-token/name sections, raw type flags with named meanings, enclosing type,
 base/interface identities, individual method results and a status summary.
 TypeRefs retain their assembly/module scope; TypeSpecs retain raw signature bytes
 and named-reference identities. No dependency assembly is loaded. One unsupported
-or unreadable method does not suppress peers. This is **not yet complete class
-context**: generic parameters and constraints are still being added. Event records
+or unreadable method does not suppress peers. Generic type/method parameters
+retain their owner token, number, variance/special flags and exact constraints;
+nested generic types keep their own parameter rows, including inherited type
+parameter positions. These are metadata context, not generic-body lowering.
+Event records
 retain their delegate type identity and add/remove/fire/other relationships, even
 when the corresponding delegate body cannot be lowered. Property records
 retain signatures (including index parameters), flags, defaults and exact

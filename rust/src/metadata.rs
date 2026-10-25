@@ -273,6 +273,19 @@ impl<'a> Image<'a> {
                 }
             }
         }
+        match self.generic_metadata(token, None) {
+            Ok((generics, errors)) => {
+                text.push_str(&generics);
+                failures += errors;
+            }
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata: {}\n",
+                    escape_line(&error.to_string())
+                ));
+            }
+        }
         Ok((text, failures))
     }
 
@@ -870,6 +883,83 @@ impl<'a> Image<'a> {
                 }
             }
         }
+        let arity = signature
+            .as_ref()
+            .ok()
+            .map(|sig| sig.calling_convention.generic_param_count());
+        match self.generic_metadata(token, arity) {
+            Ok((generics, errors)) => {
+                text.push_str(&generics);
+                failures += errors;
+            }
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata: {}\n",
+                    escape_line(&error.to_string())
+                ));
+            }
+        }
+        Ok((text, failures))
+    }
+
+    fn generic_metadata(&self, owner: u32, expected: Option<u32>) -> Result<(String, usize)> {
+        let tables = self.md.tables();
+        let parameters = tables.generic_params(Token(owner))?;
+        let mut text = String::new();
+        let mut failures = 0;
+        if expected.is_some_and(|arity| arity as usize != parameters.len()) {
+            failures += 1;
+            text.push_str(
+                "// FAILED metadata: generic parameter count differs from method signature\n",
+            );
+        }
+        for (number, rid) in parameters.into_iter().enumerate() {
+            let row = tables.generic_param(rid)?;
+            text.push_str(&format!(
+                ".generic 0x{:08X} owner=0x{owner:08X} number={} flags=0x{:04X} {} ",
+                0x2a000000 | rid,
+                row.number,
+                row.flags,
+                generic_flags(row.flags)
+            ));
+            match self.md.strings().str(row.name) {
+                Ok(name) => text.push_str(&format!("name={}\n", escape_line(name))),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "name-index=0x{:08X}\n// FAILED metadata: {}\n",
+                        row.name.get(),
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            if usize::from(row.number) != number {
+                failures += 1;
+                text.push_str(
+                    "// FAILED metadata: invalid or duplicate generic parameter number\n",
+                );
+            }
+            for constraint in tables.generic_param_constraints(Rid::new(rid))? {
+                let row = tables.generic_param_constraint(constraint)?;
+                text.push_str(&format!(
+                    ".constraint 0x{:08X} owner=0x{:08X} type=",
+                    0x2c000000 | constraint,
+                    0x2a000000 | rid
+                ));
+                match self.type_reference(row.constraint, 0) {
+                    Ok(description) => text.push_str(&format!("{description}\n")),
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!(
+                            "0x{:08X}\n// FAILED metadata: {}\n",
+                            row.constraint.0,
+                            escape_line(&error.to_string())
+                        ));
+                    }
+                }
+            }
+        }
         Ok((text, failures))
     }
 
@@ -1292,6 +1382,26 @@ pub(crate) struct MethodRef {
     pub target: String,
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
+}
+
+fn generic_flags(flags: u16) -> String {
+    let mut names = vec![match flags & 3 {
+        0 => "invariant",
+        1 => "covariant",
+        2 => "contravariant",
+        _ => "reserved-variance",
+    }];
+    for (bit, name) in [
+        (4, "reference-type"),
+        (8, "nonnullable-value-type"),
+        (16, "default-constructor"),
+        (32, "allow-byref-like"),
+    ] {
+        if flags & bit != 0 {
+            names.push(name);
+        }
+    }
+    names.join(" ")
 }
 
 fn method_flags(flags: u16) -> String {
