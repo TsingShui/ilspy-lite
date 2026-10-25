@@ -16,8 +16,13 @@ records. `b538ca77f` adds uniform field/ordinary-parameter/return-parameter nati
 descriptor evidence, local limits and independent inventory checks. Final
 corrected production/test revision: `b538ca77f`; `d1f1f7bea` fixes the independent
 oracle's unrelated-blob filtering and adds reproducible owned oracle checks.
-This acceptance record
-supplies evidence, not a substitute for the goal completion auditor's decision.
+The following audit at `cd329d082` found unreadable field names discarding other
+readable metadata; `a0d3d16f4` preserves field name-index/token alias and continues
+flags/signature/constants/layout/RVA evidence. `8c878ac2f` fixes the analogous
+method-name early return, preserving signature/flags/parameters/import/generic
+context. Current validated production/test revision: `8c878ac2f`.
+This acceptance record supplies evidence, not a substitute for the goal completion
+auditor's decision.
 [SEMANTICS.md](../../SEMANTICS.md) defines output notation. Historical baseline,
 stage and first delivery evidence are retained rather than rewritten as broader
 success claims.
@@ -119,6 +124,15 @@ oracle with `inventory.py`. Review artifact: `reviews/class-marshalling-correcti
 run `599198f0-6390-422e-a7e6-024434738f10`. Parent execution, not reviewer statements,
 supplies the validation evidence.
 
+The field/method name-error corrections have Debug/Release public regressions
+that were red before implementation: invalid Fields::Limit name keeps flags,
+signature/default bytes and peers; invalid Methods::Optional name keeps original
+index, full method/parameter/default evidence and independent body status.
+Property/event/parameter/generic name diagnostics already retain their independent
+records. Focused review returned **OK; no issues found**, also confirming the prior
+marshal-oracle note resolved. Artifact: `reviews/class-member-name-corrections.md`,
+run `d007fd4e-0df2-468e-969c-334ef511697b`.
+
 ## Semantic and independent-class evidence
 
 Actual bodies are extracted from public --type output and executed, not
@@ -172,11 +186,10 @@ fresh execution evidence.
 
 ## Final gates
 
-At corrected revision `b538ca77f`, locked Cargo Debug/Release suites, fmt and
+At corrected revision `8c878ac2f`, locked Cargo Debug/Release suites, fmt and
 strict all-target clippy passed. The metadata checker and its ten
-positive/negative tests passed. The subsequent oracle-only fix at `d1f1f7bea`
-passed its independent snapshot/output regressions and checker; unchanged Rust
-production uses the already passing final results. The five frozen class inventories and the
+positive/negative tests passed. The oracle-only fix at `d1f1f7bea` also passed its
+independent snapshot/output regressions; these were rerun after the name fixes. The five frozen class inventories and the
 random-class, resource/ammo, Activity and Wait behavior gates passed again from
 current public output. The lowering engine and remaining owned behavior inputs
 are unchanged; their previous final-gate evidence is reused. Owned comparisons per
