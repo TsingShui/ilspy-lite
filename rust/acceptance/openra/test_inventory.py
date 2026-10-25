@@ -13,7 +13,7 @@ class ClassOutputGate(unittest.TestCase):
         self.snapshot = {"root": "0x02000001", "types": [{
             "token": "0x02000001", "name": "Example", "flags": 1,
             "parent": "0x00000000", "base_type": "0x00000000", "interfaces": [],
-            "class_layout": [], "custom_attributes": [], "security_declarations": [], "method_implementations": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
+            "class_layout": [], "custom_attributes": [], "security_declarations": [], "method_implementations": [], "marshalling": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
             "methods": [{"token": "0x06000001", "name": "Read", "flags": 22,
                          "impl_flags": 0, "signature": "000008", "has_rva": True,
                          "generic_parameters": [], "parameters": []}]
@@ -108,6 +108,21 @@ class ClassOutputGate(unittest.TestCase):
                         text.replace("Interface::Read", "Unrelated::Different"),
                         text.replace("owner=0x02000001", "owner=0x02000000"),
                         text.replace("owner=0x01000001", "owner=0x02000000")]:
+            with self.assertRaises(ValueError):
+                self.check(text=invalid, snapshot=snapshot)
+
+    def test_parameter_marshalling_parent_blob_row_and_runtime_limit_are_required(self):
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot["types"][0]["marshalling"] = [{"token": "0x0D000001", "parent": "0x08000001",
+            "native_type_blob_index": 7, "native_type": "02", "raw_row": "03000700"}]
+        record = (".field-marshal 0x0D000001 parent=0x08000001 native-type-blob-index=0x00000007 "
+                  "bytes=[02] raw-row-bytes=[03, 00, 07, 00] payload=uninterpreted; interop marshaling is runtime-owned\n")
+        text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
+        self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
+        for invalid in [self.text, text.replace("parent=0x08000001", "parent=0x08000002"),
+                        text.replace("bytes=[02]", "bytes=[03]"), text.replace("[03, 00, 07, 00]", "[00, 00]"),
+                        text.replace("payload=uninterpreted", "payload=decoded"),
+                        text.replace("interop marshaling is runtime-owned", "marshaling ignored")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 

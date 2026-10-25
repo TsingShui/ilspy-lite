@@ -410,6 +410,68 @@ impl<'a> Image<'a> {
         Ok(parents)
     }
 
+    pub fn marshalling(&self, ty: &SelectedType) -> Result<(String, usize)> {
+        let tables = self.md.tables();
+        let parents = self.attached_parents(ty)?;
+        let mut counts = std::collections::BTreeMap::<u32, usize>::new();
+        let mut text = String::new();
+        let mut failures = 0;
+        for rid in 1..=tables.row_count(TableId::FieldMarshal) {
+            let encoded = tables.raw_column(TableId::FieldMarshal, rid, 0)?;
+            let parent = self.metadata_coded_token(cildec::CodedIndex::HasFieldMarshal, encoded);
+            if parent
+                .as_ref()
+                .is_ok_and(|p| self.metadata_token_exists(*p) && !parents.contains(&p.0))
+            {
+                continue;
+            }
+            let blob = tables.raw_column(TableId::FieldMarshal, rid, 1)?;
+            let raw = tables.row_bytes(TableId::FieldMarshal, rid)?;
+            text.push_str(&format!(".field-marshal 0x{:08X} ", 0x0d000000 | rid));
+            match parent {
+                Ok(parent) => {
+                    text.push_str(&format!("parent=0x{:08X} ", parent.0));
+                    if self.metadata_token_exists(parent) {
+                        *counts.entry(parent.0).or_default() += 1;
+                    } else {
+                        failures += 1;
+                        text.push_str("// FAILED metadata: ownership=unowned-invalid; null/out-of-range marshal parent; record is image context ");
+                    }
+                }
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!("parent-encoded=0x{encoded:08X} // FAILED metadata: ownership=unowned-invalid; {} ", escape_line(&error.to_string())));
+                }
+            }
+            text.push_str(&format!("native-type-blob-index=0x{blob:08X} "));
+            match self.md.blobs().get(cildec::BlobIndex(blob)) {
+                Ok(bytes) => text.push_str(&format!("bytes={bytes:02X?} ")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "// FAILED metadata: {} ",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            text.push_str(&format!("raw-row-bytes={raw:02X?} payload=uninterpreted; interop marshaling is runtime-owned; native conversions, allocation and cleanup are not recovered body operations\n"));
+        }
+        for parent in parents {
+            let token = Token(parent);
+            let flag = match token.table() {
+                Some(TableId::Field) => tables.field(token.rid())?.flags & 0x1000 != 0,
+                Some(TableId::Param) => tables.param(token.rid())?.flags & 0x2000 != 0,
+                _ => continue,
+            };
+            let count = counts.get(&parent).copied().unwrap_or(0);
+            if count > 1 || flag != (count != 0) {
+                failures += 1;
+                text.push_str(&format!("// FAILED metadata: inconsistent marshal association parent=0x{parent:08X} flag={flag} records={count}\n"));
+            }
+        }
+        Ok((text, failures))
+    }
+
     pub fn method_implementations(&self, ty: &SelectedType) -> Result<(String, usize)> {
         let tables = self.md.tables();
         let mut text = String::new();
@@ -903,35 +965,6 @@ impl<'a> Image<'a> {
                 0x10000000 | rid,
                 layout.offset
             ));
-        }
-        let marshals = self
-            .md
-            .tables()
-            .rows_for_parent(TableId::FieldMarshal, Token(token))?;
-        if marshals.len() > 1 || (row.flags & 0x1000 != 0) != !marshals.is_empty() {
-            failures += 1;
-            text.push_str("// FAILED metadata: inconsistent field marshal association\n");
-        }
-        for rid in marshals {
-            let marshal = self
-                .md
-                .tables()
-                .row::<cildec::tables::FieldMarshalRow>(rid)?;
-            text.push_str(&format!(
-                ".field-marshal 0x{:08X} parent=0x{token:08X} ",
-                0x0d000000 | rid
-            ));
-            match self.md.blobs().get(marshal.native_type) {
-                Ok(bytes) => text.push_str(&format!("bytes={bytes:02X?}\n")),
-                Err(error) => {
-                    failures += 1;
-                    text.push_str(&format!(
-                        "blob-index=0x{:08X}\n// FAILED metadata: {}\n",
-                        marshal.native_type.get(),
-                        escape_line(&error.to_string())
-                    ));
-                }
-            }
         }
         let initial_data = self
             .md

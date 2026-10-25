@@ -141,3 +141,10 @@ public class Attached<[Evidence("generic")] T> where T : IMarker
     [Evidence("event")] public event Changed Updated { add { } remove { } }
     [Evidence("nested")] public class Nested { public int Read() => 3; }
 }
+public static class MarshalMethods
+{
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    public static bool Copy([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.I1)] bool value) => value;
+    [System.Runtime.InteropServices.DllImport("fixture-native", EntryPoint = "copy_array")]
+    public static extern void Native([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPArray, SizeParamIndex = 1)] int[] values, int length);
+}

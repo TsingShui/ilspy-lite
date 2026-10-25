@@ -89,6 +89,25 @@ internal static class ClassInventory
                 declaration_name = MethodName(record.MethodDeclaration), declaration_owner = MethodOwner(record.MethodDeclaration),
                 raw_row = Convert.ToHexString(Row(TableIndex.MethodImpl, MetadataTokens.GetRowNumber(h))) };
         }).ToArray();
+        object[] Marshals(TypeDefinitionHandle handle)
+        {
+            var type = md.GetTypeDefinition(handle);
+            var parents = new HashSet<EntityHandle>();
+            foreach (var field in type.GetFields()) parents.Add(field);
+            foreach (var method in type.GetMethods())
+                foreach (var parameter in md.GetMethodDefinition(method).GetParameters()) parents.Add(parameter);
+            bool wide = Math.Max(md.GetTableRowCount(TableIndex.Field), md.GetTableRowCount(TableIndex.Param)) >= 32768;
+            return Enumerable.Range(1, md.GetTableRowCount(TableIndex.FieldMarshal)).Select(rid => {
+                byte[] row = Row(TableIndex.FieldMarshal, rid);
+                uint encoded = wide ? BitConverter.ToUInt32(row, 0) : BitConverter.ToUInt16(row, 0);
+                EntityHandle parent = MetadataTokens.EntityHandle((encoded & 1) == 0 ? TableIndex.Field : TableIndex.Param, (int)(encoded >> 1));
+                int blobOffset = wide ? 4 : 2;
+                int blob = row.Length - blobOffset == 4 ? (int)BitConverter.ToUInt32(row, blobOffset) : BitConverter.ToUInt16(row, blobOffset);
+                return new { token = $"0x{0x0d000000 | rid:X8}", parent_handle = parent, parent = Token(parent),
+                    native_type_blob_index = blob, native_type = Blob(MetadataTokens.BlobHandle(blob)), raw_row = Convert.ToHexString(row) };
+            }).Where(record => parents.Contains(record.parent_handle)).Select(record => (object)new {
+                record.token, record.parent, record.native_type_blob_index, record.native_type, record.raw_row }).ToArray();
+        }
         object[] Security(TypeDefinitionHandle handle)
         {
             var type = md.GetTypeDefinition(handle);
@@ -159,6 +178,7 @@ internal static class ClassInventory
                 custom_attributes = Attributes(handle),
                 security_declarations = Security(handle),
                 method_implementations = Implementations(handle),
+                marshalling = Marshals(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);

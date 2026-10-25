@@ -93,6 +93,15 @@ def check_output(snapshot, text, stderr, code):
                              ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
                             for layout in ty["class_layout"]]
         require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
+        marshals = members(block, "field-marshal", ty["marshalling"])
+        for record in ty["marshalling"]:
+            line = marshals[record["token"]]
+            payload = ", ".join(record["native_type"][i:i + 2] for i in range(0, len(record["native_type"]), 2))
+            row_bytes = ", ".join(record["raw_row"][i:i + 2] for i in range(0, len(record["raw_row"]), 2))
+            require(f"parent={record['parent']} native-type-blob-index=0x{record['native_type_blob_index']:08X} " in line
+                    and f"bytes=[{payload}] " in line and f"raw-row-bytes=[{row_bytes}] " in line
+                    and "payload=uninterpreted" in line and "interop marshaling is runtime-owned" in line,
+                    f"Marshalling record mismatch: {record['token']}")
         mappings = members(block, "method-impl", ty["method_implementations"])
         for record in ty["method_implementations"]:
             line = mappings[record["token"]]
