@@ -41,8 +41,9 @@ and detailed exceptions/state. [RANDOM_FLOAT.md](RANDOM_FLOAT.md) closes NextFlo
 with exact Abs(float) target and bitwise/full-state comparisons.
 [SEMANTIC_MILESTONE.md](SEMANTIC_MILESTONE.md) records the combined seven-method
 gate and retained resource/ammo acceptance. [ACTIVITY_QUEUE.md](ACTIVITY_QUEUE.md)
-records the first frozen independent-class behavior gate. Wait and output-only
-reading remain pending.
+records the first frozen independent-class behavior gate;
+[WAIT_TICK.md](WAIT_TICK.md) records the second, retaining its exact unchanged
+external getter. Output-only reading and final delivery gates remain pending.
 
 ## Pinned input and provenance
 

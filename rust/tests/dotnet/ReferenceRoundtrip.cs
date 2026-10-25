@@ -113,7 +113,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "external") ExternalReferences(recovered, methods);
+        if (job.Kind == "wait") WaitTick(recovered, methods);
+        else if (job.Kind == "external") ExternalReferences(recovered, methods);
         else if (job.Kind == "activity") ActivityQueue(recovered, methods);
         else if (job.Kind == "floats") Floats(recovered, methods);
         else if (job.Kind == "exceptions") Exceptions(recovered, methods);
@@ -451,6 +452,68 @@ internal static class ReferenceRoundtrip
             }, name == "DirectVirtual" ? (x, y) => Equals(x, 41) && Equals(y, 41) : null);
         }
         Console.WriteLine("External references/calls: token aliases, exact runtime leaves, null receiver without added checks, side effects and direct virtual target; no external hierarchy inferred.");
+    }
+
+    static void WaitTick(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 1 || methods.Values.Single().Name != "Tick")
+            throw new Exception("Frozen Wait selection drift");
+        MethodInfo tick = methods.Values.Single();
+        Type cell = tick.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        Type originalBase = cell.BaseType!, recoveredBase = clone.BaseType!;
+        if (originalBase.FullName != "OpenRA.Activities.Activity" || recoveredBase.FullName != originalBase.FullName)
+            throw new Exception("Wait external base identity drift");
+        FieldInfo originalState = Field(originalBase, "<State>k__BackingField");
+        FieldInfo recoveredState = Field(recoveredBase, "<State>k__BackingField");
+        MethodInfo getter = originalBase.GetProperty("IsCanceling")!.GetMethod!;
+        if (getter.IsVirtual || getter.ReturnType != typeof(bool) || getter.GetParameters().Length != 0)
+            throw new Exception("Wait getter leaf contract drift");
+        FieldInfo memberCall = recovered.GetType("Recovered")!.GetFields().Single(f => f.Name.StartsWith("MemberCall_", StringComparison.Ordinal));
+        var exact = (Func<object, object[], object>)memberCall.GetValue(null)!;
+        Type actor = tick.GetParameters().Single().ParameterType;
+        object[] noActor = new object[] { null };
+        foreach (int state in new[] { 0, 1, 2, 3 })
+        foreach (int initial in new[] { int.MinValue, -1, 0, 1, 2, int.MaxValue })
+        foreach (bool nonnullActor in new[] { false, true })
+        {
+            object a = New(cell), b = New(clone);
+            object aa = nonnullActor ? New(actor) : null;
+            object ab = nonnullActor ? New(ExternalType(recovered, actor)) : null;
+            originalState.SetValue(a, Enum.ToObject(originalState.FieldType, state));
+            recoveredState.SetValue(b, Enum.ToObject(recoveredState.FieldType, state));
+            Set(a, "remainingTicks", initial); Set(b, "remainingTicks", initial);
+            FieldInfo[] baseFields = originalBase.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            object[] beforeBase = baseFields.Select(f => f.GetValue(a)).ToArray();
+            for (int repeat = 0; repeat < 4; repeat++)
+            {
+                int old = (int)Get(a, "remainingTicks");
+                int calls = 0;
+                memberCall.SetValue(null, (Func<object, object[], object>)((self, values) => {
+                    if (!ReferenceEquals(self, b) || values.Length != 0 || (int)Get(b, "remainingTicks") != old)
+                        throw new Exception("Wait getter moved after countdown mutation or changed receiver");
+                    calls++; return exact(self, values);
+                }));
+                bool canceling = state == 2;
+                Check(recovered, tick, a, b, new[] { aa }, new[] { ab }, () => {
+                    if (calls != 1 || (int)Get(a, "remainingTicks") != (canceling ? old : unchecked(old - 1))
+                        || (int)Get(b, "remainingTicks") != (int)Get(a, "remainingTicks"))
+                        throw new Exception("Wait countdown lost old-value or wraparound semantics");
+                    for (int i = 0; i < baseFields.Length; i++)
+                    {
+                        object originalValue = baseFields[i].GetValue(a);
+                        object recoveredValue = Field(recoveredBase, baseFields[i].Name).GetValue(b);
+                        if (!Equals(originalValue, beforeBase[i]) || !Equals(originalValue?.ToString(), recoveredValue?.ToString()))
+                            throw new Exception("Wait Tick mutated its external base state");
+                    }
+                }, (x, y) => Equals(x, canceling || old == 0) && Equals(y, x));
+            }
+        }
+        int nullCalls = 0;
+        memberCall.SetValue(null, (Func<object, object[], object>)((self, values) => { nullCalls++; return exact(self, values); }));
+        Check(recovered, tick, null, null, noActor, noActor, detailedExceptions: true);
+        if (nullCalls != 1) throw new Exception("Wait inserted a null check before its exact getter call");
+        memberCall.SetValue(null, exact);
+        Console.WriteLine("Wait.Tick: exact unchanged external base getter, canceling/countdown boundaries, repeated old-value mutation, unused Actor and null receiver; no selected-body proxy.");
     }
 
     static void ActivityQueue(Assembly recovered, Dictionary<int, MethodInfo> methods)
