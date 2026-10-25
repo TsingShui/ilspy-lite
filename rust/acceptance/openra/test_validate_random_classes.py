@@ -63,7 +63,8 @@ data = json.loads((root / 'data.json').read_text())
 args = sys.argv[1:]
 if args[0] == 'il':
     row = data[(root / 'active-name.txt').read_text()]
-    print(row['il'].replace('0x06000001', args[args.index('--method') + 1]), end='')
+    token = args[args.index('--method') + 1]
+    print(row.get('ils', {}).get(token, row['il'].replace('0x06000001', token)), end='')
     sys.exit(0)
 row = data[args[args.index('--type') + 1]]
 print(row['details' if '--details' in args else 'readable'], end='')
@@ -265,6 +266,52 @@ print(json.dumps(data[sys.argv[-1]]['snapshot']))
         self.assertEqual(result.returncode, 1)
         self.assertEqual(report["static_pass_count"], 19)
 
+    def add_constructor_and_following_fallback(self):
+        row = self.data[self.entry["name"]]
+        root = row["snapshot"]["types"][0]
+        following = copy.deepcopy(root["methods"][0])
+        following["token"] = "0x06000002"
+        root["methods"][0].update(name=".ctor", flags=6278, signature="200001")
+        root["methods"].append(following)
+        constructor_il = ("// token 0x06000001 instance void Owned::.ctor()\n"
+            ".method-flags 0x1886 .impl-flags 0x0000\n.maxstack 8\n.initlocals false\n"
+            ".code-bytes IL_0000: [00, 2A]\nIL_0000: nop \nIL_0001: ret \n")
+        following_il = row["il"].replace("0x06000001", "0x06000002")
+        row["ils"] = {"0x06000001": constructor_il, "0x06000002": following_il}
+        row["details"] = row["details"].split(".method 0x06000001", 1)[0]
+        for method, il, signature, declaration in (
+            (root["methods"][0], constructor_il, "20, 00, 01", "public instance void Owned::.ctor()"),
+            (following, following_il, "00, 00, 08", "public static int32 Owned::Read()")):
+            row["details"] += (f".method {method['token']} flags=0x{method['flags']:04X} "
+                f"impl-flags=0x0000 rva=0x00002000 {declaration} // signature-bytes=[{signature}]\n"
+                f".method-status {method['token']} Partial\n// IL FALLBACK: owned unsupported\n" +
+                "".join("// " + line + "\n" for line in il.splitlines()))
+        alias = row["readable"].splitlines()[0].rsplit(" ", 1)[-1]
+        row["readable"] = f"public class {alias}\n{{\n"
+        for header, il in ((f"public {alias}()", constructor_il), ("public static int Read()", following_il)):
+            row["readable"] += (f"    {header}\n    {{\n        // IL fallback: owned unsupported\n" +
+                "".join("        // " + line + "\n" for line in il.splitlines()[2:]) + "    }\n")
+        row["readable"] += "}\n"
+        row["summary"] = "decompiled=0 declarations=0 partial=2 failed=0\n"
+        return row, "".join("        // " + line + "\n" for line in constructor_il.splitlines()[2:])
+
+    def test_constructor_and_following_fallback_keep_their_own_il(self):
+        self.add_constructor_and_following_fallback()
+        result, report = self.run_collector()
+        self.assertEqual(result.returncode, 0, result.stderr + json.dumps(report))
+        self.assertEqual(report["static_pass_count"], 20)
+
+    def test_default_only_constructor_il_relocated_to_following_method_fails(self):
+        row, evidence = self.add_constructor_and_following_fallback()
+        self.assertEqual(row["readable"].count(evidence), 1)
+        row["readable"] = row["readable"].replace(evidence, "", 1)
+        following_body = "    public static int Read()\n    {\n"
+        row["readable"] = row["readable"].replace(following_body, following_body + evidence, 1)
+        result, report = self.run_collector()
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(report["static_pass_count"], 19)
+        self.assertIn("fallback", json.dumps(report).lower())
+
     def test_lost_original_il_fails(self):
         for row in self.data.values():
             row["il"] = row["il"].replace(".code-bytes IL_0000: [17, 2A]\n", "")
@@ -356,6 +403,70 @@ class ReadableDeclarationInventory(unittest.TestCase):
         for blob in ("", "20", "2080", "20E0"):
             with self.subTest(blob=blob), self.assertRaises(ValueError):
                 signature_counts(blob)
+
+
+class ReadableFallbackOwnership(unittest.TestCase):
+    def setUp(self):
+        self.methods = [
+            {"token": "0x06000001", "name": "Read", "flags": 22, "signature": "00010808",
+             "generic_parameters": [], "has_rva": True},
+            {"token": "0x06000002", "name": "Read", "flags": 22, "signature": "0001080E",
+             "generic_parameters": [], "has_rva": True}]
+        self.snapshot = {"root": "0x02000001", "types": [{"token": "0x02000001",
+            "name": "Owned", "parent": "0x00000000", "generic_parameters": [],
+            "methods": self.methods, "fields": [], "properties": [], "events": []}]}
+        self.evidence, self.bodies = {}, []
+        for method, byte, value in zip(self.methods, ("17", "18"), (1, 2)):
+            il = (f"// token {method['token']} int32 Owned::Read()\n"
+                ".method-flags 0x0016 .impl-flags 0x0000\n.maxstack 8\n.initlocals false\n"
+                f".code-bytes IL_0000: [{byte}, 2A]\nIL_0000: ldc.i4.{value} \nIL_0001: ret \n")
+            self.evidence[method["token"]] = {"status": "Partial", "il": il,
+                "block": "// IL FALLBACK: owned unsupported\n" +
+                         "".join("// " + line + "\n" for line in il.splitlines())}
+            self.bodies.append("        // IL fallback: owned unsupported\n" +
+                "".join("        // " + line + "\n" for line in il.splitlines()[2:]))
+
+    def text(self, bodies=None):
+        return "public class Owned\n{\n" + "".join(
+            "    public static int Read(" + ty + " value)\n    {\n" + body + "    }\n"
+            for ty, body in zip(("int", "string"), bodies or self.bodies)) + "}\n"
+
+    def check(self, text):
+        from validate_random_classes import check_readable_inventory
+        return check_readable_inventory(self.snapshot, text, self.evidence)
+
+    def test_same_shape_overloads_consume_reordered_bodies_by_complete_il(self):
+        text = self.text(list(reversed(self.bodies)))
+        report = self.check(text)
+        methods = report["types"][0]["observed_methods"]
+        self.assertEqual([method["matched_catalog_token"] for method in methods],
+                         ["0x06000002", "0x06000001"])
+        lines = text.splitlines()
+        for method, body in zip(methods, reversed(self.bodies)):
+            span = "\n".join(lines[method["body_start_line"] - 1:method["body_end_line_exclusive"] - 1]) + "\n"
+            self.assertEqual(span, body)
+
+    def test_identical_il_cannot_satisfy_two_overloads_from_one_body(self):
+        first, second = (self.evidence[method["token"]] for method in self.methods)
+        second["il"] = first["il"].replace("0x06000001", "0x06000002")
+        second["block"] = first["block"].replace("0x06000001", "0x06000002")
+        self.check(self.text([self.bodies[0], self.bodies[0]]))
+        marker_only = "        // IL fallback: owned unsupported\n"
+        with self.assertRaises(ValueError):
+            self.check(self.text([self.bodies[0], marker_only]))
+
+    def test_failed_error_and_available_raw_evidence_are_method_local(self):
+        raw = ("// Raw IL bytes (undecoded): [18, 2A]\n"
+               "// Header: maxstack=8 flags=owned locals=none\n"
+               "// .code-bytes IL_0000: [18, 2A]\n")
+        self.evidence["0x06000002"].update(status="Failed", block="// FAILED: owned decode error\n" + raw)
+        failed_body = "        // Failed: owned decode error\n" + "".join("        " + line + "\n" for line in raw.splitlines())
+        self.check(self.text([self.bodies[0], failed_body]))
+        relocated = "".join("        " + line + "\n" for line in raw.splitlines())
+        with self.assertRaises(ValueError):
+            self.check(self.text([relocated + self.bodies[0], "        // Failed: owned decode error\n"]))
+        with self.assertRaises(ValueError):
+            self.check(self.text([self.bodies[0], failed_body.replace("owned decode error", "unrelated error")]))
 
 
 if __name__ == "__main__":

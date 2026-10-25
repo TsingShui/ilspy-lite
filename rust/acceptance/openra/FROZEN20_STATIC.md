@@ -55,6 +55,14 @@ Method parameter counts come from the independent raw signature prefix, not Para
 row counts; generic arity, static shape and body/declaration boundaries must match.
 Indexer counts and accessor names/roles also match the independent catalog.
 
+Each observed method retains its declaration line and body span (one-based line
+numbers; body end is exclusive). Fallback IL is checked inside a distinct matched
+body of the correct owner and method shape, never against the whole class output.
+Same-shape overloads consume bodies as a multiset using their complete available
+fallback evidence; one body cannot satisfy multiple methods. Every Partial body
+must retain its own fallback notice and original IL. Failed bodies must retain
+their own error and all available detailed raw evidence; they still fail the gate.
+
 Names are predicted from catalog metadata, never learned from actual output:
 invalid ASCII identifiers use `__name_<uppercase UTF-8 hex>`; invalid/reserved-prefix
 field names use `__il_field_<eight-digit token>`. Leading `@` keyword escapes are

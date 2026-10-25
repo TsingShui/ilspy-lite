@@ -202,20 +202,24 @@ def readable_declarations(text):
             method = re.search(r"(@?[A-Za-z_][A-Za-z_0-9]*)(?:<([^<>]*)>)?\(([^()]*)\)", masked)
             if method:
                 body = not value.endswith(";")
-                node["methods"].append({"name": method[1].lstrip("@"),
+                declaration = {"name": method[1].lstrip("@"),
                     "parameters": declaration_arity(method[3]), "generic_arity": declaration_arity(method[2] or ""),
-                    "static": "static" in masked[:method.start()].split(), "body_present": body})
+                    "static": "static" in masked[:method.start()].split(), "body_present": body,
+                    "declaration_line": index + 1, "body_start_line": None, "body_end_line_exclusive": None}
+                node["methods"].append(declaration)
                 index += 1
                 if body:
                     if not at(index, indent + 4):
                         raise ValueError("Readable method opening brace missing")
                     index += 1
+                    declaration["body_start_line"] = index + 1
                     while index < len(lines) and lines[index] != " " * (indent + 4) + "}":
                         if lines[index].strip() and len(lines[index]) - len(lines[index].lstrip(" ")) <= indent + 4:
                             raise ValueError("Readable method body/owner boundary mismatch")
                         index += 1
                     if index == len(lines):
                         raise ValueError("Readable method closing brace missing")
+                    declaration["body_end_line_exclusive"] = index + 1
                     index += 1
                 continue
             field = re.search(r" (@?[A-Za-z_][A-Za-z_0-9]*)$", value.split(" = ", 1)[0].rstrip(";"))
@@ -238,10 +242,11 @@ def readable_declarations(text):
     return roots
 
 
-def check_readable_inventory(snapshot, text):
-    """Require a per-owner declaration multiset; method overload types stay details-only."""
+def check_readable_inventory(snapshot, text, method_evidence=None):
+    """Require per-owner declarations and distinct method-local fallback evidence."""
     types = snapshot["types"]
     roots = readable_declarations(text)
+    lines = text.splitlines()
     output = {"scope": "static declaration presence/tree only; no semantic C# parsing", "types": []}
 
     def compare(node, ty, parent):
@@ -252,16 +257,32 @@ def check_readable_inventory(snapshot, text):
         if not marker and (node["name"] != expected_name or node["generic_arity"] != len(ty["generic_parameters"])):
             raise ValueError(f"Readable type name/generic arity mismatch: {token}")
 
-        def consume(kind, expected, key):
-            actual = list(node[kind])
-            for member in expected:
-                marker = next((value for value in actual if value.get("token_marker") == member["token"]), None)
-                match = marker or next((value for value in actual if key(value) == key(member)), None)
-                if match is None:
-                    raise ValueError(f"Readable {kind} missing/mismatched in owner {token}: {member['token']}")
-                actual.remove(match)
-            if actual:
+        def consume(kind, expected, key, compatible=lambda member, value: True):
+            actual = node[kind]
+            assigned = {}
+
+            def assign(member_index, visited):
+                member = expected[member_index]
+                for index, value in enumerate(actual):
+                    identity = (value["token_marker"] == member["token"] if "token_marker" in value
+                                else key(value) == key(member))
+                    if index in visited or not identity or not compatible(member, value):
+                        continue
+                    visited.add(index)
+                    if index not in assigned or assign(assigned[index], visited):
+                        assigned[index] = member_index
+                        return True
+                return False
+
+            # Distinct bodies must satisfy the multiset, even when overload shapes coincide.
+            for index, member in enumerate(expected):
+                if not assign(index, set()):
+                    raise ValueError(f"Readable {kind}/fallback missing or mismatched in owner {token}: {member['token']}")
+            if len(actual) != len(expected):
                 raise ValueError(f"Extra/duplicate readable {kind} in owner {token}")
+            if kind == "methods":
+                for index, member_index in assigned.items():
+                    actual[index]["matched_catalog_token"] = expected[member_index]["token"]
             record[kind] = [member["token"] for member in expected]
 
         fields = []
@@ -285,7 +306,30 @@ def check_readable_inventory(snapshot, text):
                 expected = next((m for m in methods if m["token"] == actual["token_marker"]), None)
                 if expected and actual["body_present"] != expected["body_present"]:
                     raise ValueError("Unreadable method marker lost its body/declaration boundary")
-        consume("methods", methods, lambda value: tuple(value.get(k) for k in ("name", "parameters", "generic_arity", "static", "body_present")))
+        requirements = {}
+        if method_evidence is not None:
+            for method in methods:
+                evidence = method_evidence.get(method["token"])
+                if evidence is None:
+                    raise ValueError(f"Missing method-local fallback evidence: {method['token']}")
+                requirements[method["token"]] = readable_fallback_requirements(evidence["status"], evidence["block"], evidence["il"])
+
+        def complete_body(method, actual):
+            if method_evidence is None:
+                return True
+            start, end = actual["body_start_line"], actual["body_end_line_exclusive"]
+            body = normalized("\n".join(lines[start - 1:end - 1])) if start is not None else ""
+            status = method_evidence[method["token"]]["status"]
+            notices = re.findall(r"^// (IL fallback:|Failed(?:[ :]))", body, re.M)
+            expected_notice = "IL fallback:" if status == "Partial" else None
+            if status == "Failed":
+                if len(notices) != 1 or not notices[0].startswith("Failed"):
+                    return False
+            elif notices != ([expected_notice] if expected_notice else []):
+                return False
+            return all(required in body for required in requirements[method["token"]])
+
+        consume("methods", methods, lambda value: tuple(value.get(k) for k in ("name", "parameters", "generic_arity", "static", "body_present")), complete_body)
         record["observed_fields"] = node["fields"]
         record["observed_methods"] = node["methods"]
         record["unreadable_type_token_marker"] = marker
@@ -351,18 +395,37 @@ def check_original_il(method, record, text, stderr):
             raise ValueError(f"Original IL instructions missing: {token}")
 
 
-def check_fallback(method, status, block, readable, il):
+def readable_fallback_requirements(status, block, il):
+    """Retain the method's complete available notice/raw evidence inside its own body."""
+    if status not in ("Partial", "Failed"):
+        return []
+    lines = block.splitlines()
+    prefix = "// IL FALLBACK:" if status == "Partial" else "// FAILED"
+    start = next((index for index, line in enumerate(lines) if line.startswith(prefix)), None)
+    if start is None:
+        raise ValueError("Missing detailed fallback/error notice for readable method body")
+    retained = [lines[start].replace("IL FALLBACK:", "IL fallback:", 1).replace("FAILED", "Failed", 1)]
+    for line in lines[start + 1:]:
+        if not line.startswith("//"):
+            break
+        if not line.startswith("// // token ") and not line.startswith("// .method-flags "):
+            retained.append(line)
+    required = [normalized("\n".join(retained))]
+    if status == "Partial":
+        original = ["// " + line for line in il.splitlines()
+                    if not line.startswith("// token ") and not line.startswith(".method-flags ")]
+        if not original:
+            raise ValueError("Missing original IL for readable fallback body")
+        required.append(normalized("\n".join(original)))
+    return required
+
+
+def check_fallback(method, status, block, il):
     token = method["token"]
     if status == "Partial":
         evidence = "\n".join("// " + line for line in il.splitlines())
         if normalized(evidence) not in normalized(block):
             raise ValueError(f"Incomplete detailed fallback IL: {token}")
-        # The readable contract omits only the token/signature and flag headers.
-        lines = [line for line in il.splitlines()
-                 if not line.startswith("// token ") and not line.startswith(".method-flags ")]
-        evidence = "\n".join("// " + line for line in lines)
-        if not evidence or normalized(evidence) not in normalized(readable):
-            raise ValueError(f"Incomplete readable fallback IL: {token}")
     elif status == "Declaration" and method["has_rva"]:
         raise ValueError(f"IL body hidden as declaration: {token}")
 
@@ -461,8 +524,6 @@ def inspect_class(args, oracle, manifest, entry, index):
                 counts = counts_from_process(process, stderr)
                 if style == "readable":
                     config["counts"] = counts
-                    if snapshot:
-                        config["readable_inventory"] = check_readable_inventory(snapshot, stdout)
                 elif counts != config["counts"]:
                     raise ValueError("Readable/details status discrepancy")
                 if style == "details" and snapshot:
@@ -479,18 +540,25 @@ def inspect_class(args, oracle, manifest, entry, index):
         if not re.search(r"\b(class|interface|struct|enum)\s+", readable):
             config["errors"].append("Readable class declaration missing")
         blocks = method_blocks(outputs["details"])
+        method_evidence = {}
         for token, (method, il, item) in originals.items():
             block = blocks.get(token, "")
             matches = re.findall(r"^\.method-status " + token + r" (\w+)$", block, re.M)
             status = matches[0] if len(matches) == 1 else None
             item["statuses"][name] = status
+            method_evidence[token] = {"status": status, "block": block, "il": il}
             try:
                 if status not in ("Decompiled", "Declaration", "Partial", "Failed"):
                     raise ValueError(f"Missing/invalid method status: {token}")
-                check_fallback(method, status, block, readable, il)
+                check_fallback(method, status, block, il)
             except ValueError as error:
                 config["errors"].append(str(error))
             item.setdefault("diagnostics", {})[name] = re.findall(r"^// (?:IL FALLBACK:|FAILED)[^\n]*", block, re.M)
+        if snapshot:
+            try:
+                config["readable_inventory"] = check_readable_inventory(snapshot, readable, method_evidence)
+            except ValueError as error:
+                config["errors"].append(f"readable: {error}")
     for token, (method, il, item) in originals.items():
         supported = [name for name, status in item["statuses"].items() if status == "Decompiled"]
         if supported:
