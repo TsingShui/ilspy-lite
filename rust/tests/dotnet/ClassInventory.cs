@@ -101,12 +101,13 @@ internal static class ClassInventory
                 byte[] row = Row(TableIndex.FieldMarshal, rid);
                 uint encoded = wide ? BitConverter.ToUInt32(row, 0) : BitConverter.ToUInt16(row, 0);
                 EntityHandle parent = MetadataTokens.EntityHandle((encoded & 1) == 0 ? TableIndex.Field : TableIndex.Param, (int)(encoded >> 1));
+                return new { rid, row, parent };
+            }).Where(record => parents.Contains(record.parent)).Select(record => {
                 int blobOffset = wide ? 4 : 2;
-                int blob = row.Length - blobOffset == 4 ? (int)BitConverter.ToUInt32(row, blobOffset) : BitConverter.ToUInt16(row, blobOffset);
-                return new { token = $"0x{0x0d000000 | rid:X8}", parent_handle = parent, parent = Token(parent),
-                    native_type_blob_index = blob, native_type = Blob(MetadataTokens.BlobHandle(blob)), raw_row = Convert.ToHexString(row) };
-            }).Where(record => parents.Contains(record.parent_handle)).Select(record => (object)new {
-                record.token, record.parent, record.native_type_blob_index, record.native_type, record.raw_row }).ToArray();
+                int blob = record.row.Length - blobOffset == 4 ? (int)BitConverter.ToUInt32(record.row, blobOffset) : BitConverter.ToUInt16(record.row, blobOffset);
+                return (object)new { token = $"0x{0x0d000000 | record.rid:X8}", parent = Token(record.parent),
+                    native_type_blob_index = blob, native_type = Blob(MetadataTokens.BlobHandle(blob)), raw_row = Convert.ToHexString(record.row) };
+            }).ToArray();
         }
         object[] Security(TypeDefinitionHandle handle)
         {
