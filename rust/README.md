@@ -1,7 +1,8 @@
 # ilspy-lite (Rust)
 
-A small, independent CIL-to-C#-like decompiler. This is a working **first vertical
-slice**, not a complete .NET decompiler or a port of ILSpy's pass pipeline.
+A small, independent CIL-to-C#-like decompiler with exact named-type selection
+and complete class-level metadata/member results. It is not a complete .NET
+decompiler or a port of ILSpy's pass pipeline.
 It does not link to ILSpy, invoke a .NET process, load dependencies from the GAC,
 or execute input assemblies. The only Cargo dependency is pinned `cildec 0.1.0`.
 
@@ -51,7 +52,9 @@ flags, parameter rows/defaults and an explicit lowering status. P/Invoke mapping
 retain the exact entry name and module identity without loading the library.
 If a method signature is unreadable but its body can be parsed, failed output
 keeps raw body bytes and all independently decodable IL evidence.
-Output is not a compilable class or project.
+Output is not a compilable class or project. Stable values, exact-call intrinsics
+and runtime-dependent operations are defined in [SEMANTICS.md](SEMANTICS.md).
+Acceptance results and remaining limits: [class delivery](acceptance/openra/DELIVERY.md).
 
 Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 
@@ -299,9 +302,10 @@ original state. Default construction also passes its controlled-clock/delegation
 gate. Both range overloads also pass their return/detailed-exception/full-state
 gate, including original unchecked boundary behavior. NextFloat also passes
 1,250 bitwise results per seed with full state and exact Abs(float) call checks.
-The combined seven-method semantic milestone passed; frozen independent-class
-Queue/Tick bodies also pass their frozen independent-class behavior gates;
-output-only reading and final delivery gates remain pending. See
+The combined seven-method semantic milestone, frozen independent Queue/Tick
+behavior gates, output-only reading and final regressions passed. These are
+bounded contracts, not full-game or all-method support. See
+[class delivery](acceptance/openra/DELIVERY.md) and
 [semantic milestone](acceptance/openra/SEMANTIC_MILESTONE.md),
 [Activity.Queue](acceptance/openra/ACTIVITY_QUEUE.md),
 [Wait.Tick](acceptance/openra/WAIT_TICK.md) and

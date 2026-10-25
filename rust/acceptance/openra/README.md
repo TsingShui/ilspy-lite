@@ -43,7 +43,8 @@ with exact Abs(float) target and bitwise/full-state comparisons.
 gate and retained resource/ammo acceptance. [ACTIVITY_QUEUE.md](ACTIVITY_QUEUE.md)
 records the first frozen independent-class behavior gate;
 [WAIT_TICK.md](WAIT_TICK.md) records the second, retaining its exact unchanged
-external getter. Output-only reading and final delivery gates remain pending.
+external getter. [DELIVERY.md](DELIVERY.md) records passed output-only reading,
+final regressions and the complete bounded class-level delivery contract.
 
 ## Pinned input and provenance
 

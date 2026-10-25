@@ -1,8 +1,10 @@
 # First Rust slice: measured results (historical)
 
-This records the integer-only slice. For the current reference/instance-method
-implementation, test counts and source size, see
-[OpenRA stage 1 results](acceptance/openra/STAGE1.md).
+This records the historical integer-only slice, not current coverage or size.
+Current class-level acceptance and remaining limits are in
+[DELIVERY.md](acceptance/openra/DELIVERY.md); operation definitions are in
+[SEMANTICS.md](SEMANTICS.md). The separate historical
+[OpenRA stage 1 results](acceptance/openra/STAGE1.md) retain their original evidence.
 
 Environment: macOS arm64, Rust/Cargo 1.98.0, .NET SDK 10.0.401,
 Microsoft.NETCore.App 10.0.12. Results concern this bounded implementation and
