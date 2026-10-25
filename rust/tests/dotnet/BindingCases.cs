@@ -36,6 +36,7 @@ public class Generic<T>
     public T Field;
     public T Item { get => Field; set => Field = value; }
     public T Echo(T value) => value;
+    public U Convert<U>(U value) => value;
 }
 public class Outer<T>
 {
@@ -64,5 +65,6 @@ public static class GenericCases
     public static int Echo(BindingLibrary.Generic<int> value, int argument) => value.Echo(argument);
     public static string Right(BindingLibrary.Outer<int>.Inner<string> value) => value.Right;
     public static int Left(BindingLibrary.Outer<int>.Inner<string> value) => value.Read();
+    public static string Convert(BindingLibrary.Generic<int> value, string argument) => value.Convert(argument);
 }
 #endif

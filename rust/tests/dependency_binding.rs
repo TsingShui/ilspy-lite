@@ -293,7 +293,7 @@ fn constructed_generic_member_owners_keep_type_arguments_and_nested_positions() 
         for (rid, row) in md.tables().iter::<cildec::tables::MemberRefRow>() {
             let row = row.unwrap();
             if row.class.table() != Some(cildec::TableId::TypeSpec)
-                || md.strings().str(row.name).unwrap() == "Right"
+                || matches!(md.strings().str(row.name).unwrap(), "Right" | "Convert")
             {
                 continue;
             }
@@ -456,6 +456,66 @@ fn reference_contract_definitions_are_not_reported_as_runtime_implementations() 
             .text;
         assert!(details.contains(&format!("kind={kind:?}")), "{details}");
     }
+}
+
+#[test]
+fn method_binding_does_not_ignore_signature_suffix_bytes() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let (rid, row) = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap();
+    let signature = md.blobs().get(row.unwrap().signature).unwrap();
+    assert_eq!(signature, &[0x20, 0, 2]);
+    let payload = md
+        .tables()
+        .iter::<cildec::tables::CustomAttributeRow>()
+        .map(|(_, row)| md.blobs().get(row.unwrap().value).unwrap())
+        .find(|bytes| bytes.len() > 5)
+        .unwrap();
+    let at = payload.as_ptr() as usize - main.as_ptr() as usize;
+    let index = payload.as_ptr() as usize - md.stream("#Blob").unwrap().data.as_ptr() as usize;
+    let raw = md
+        .tables()
+        .row_bytes(cildec::TableId::MemberRef, rid)
+        .unwrap();
+    assert_eq!(raw.len(), 6);
+    let row_at = raw.as_ptr() as usize - main.as_ptr() as usize;
+    let mut patched = main.to_vec();
+    patched[at..at + 5].copy_from_slice(&[4, 0x20, 0, 2, 0]);
+    patched[row_at + 4..row_at + 6].copy_from_slice(&(index as u16).to_le_bytes());
+    let mut context = DependencyContext::new(patched).unwrap();
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    assert!(
+        context.resolve_method(0x0a000000 | rid).is_err(),
+        "suffix bytes cannot be part of a successful exact signature match"
+    );
+}
+
+#[test]
+fn generic_method_instantiations_preserve_method_argument_context() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    assert_eq!(md.tables().row_count(cildec::TableId::MethodSpec), 1);
+    let method = context.resolve_method(0x2b000001).unwrap();
+    assert_eq!(method.name, "Convert");
+    assert_eq!(method.owner.generic_arguments, ["I4"]);
+    assert_eq!(method.method_arguments, ["String"]);
+    assert!(!method.instantiation_signature.is_empty());
 }
 
 #[test]

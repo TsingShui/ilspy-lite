@@ -16,6 +16,8 @@ pub struct ResolvedMethod {
     pub definition_signature: Vec<u8>,
     /// Fully scoped signature identity; this is metadata notation, not C#.
     pub signature_identity: String,
+    pub method_arguments: Vec<String>,
+    pub instantiation_signature: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,7 +79,7 @@ impl DependencyContext {
             }
             _ => return Err("field binding needs a Field or MemberRef".into()),
         };
-        let signature = cildec::FieldSig::parse(raw)?;
+        let signature = crate::signature_guard::field(raw)?;
         let signature_key = |module, signature: &cildec::FieldSig<'_>| -> Result<String> {
             Ok(format!(
                 "{:?}:{:?}",
@@ -99,7 +101,7 @@ impl DependencyContext {
                 continue;
             }
             let bytes = target.md.blobs().get(row.signature)?;
-            if signature_key(module, &cildec::FieldSig::parse(bytes)?)? != requested {
+            if signature_key(module, &crate::signature_guard::field(bytes)?)? != requested {
                 continue;
             }
             if found.is_some() {
@@ -133,7 +135,7 @@ impl DependencyContext {
         if owner.token != method.owner.definition.token {
             return Err("property owner identity changed".into());
         }
-        let signature = MethodSig::parse(&method.definition_signature)?;
+        let signature = crate::signature_guard::method(&method.definition_signature)?;
         let mut found = None;
         for (rid, row) in image
             .md
@@ -164,7 +166,7 @@ impl DependencyContext {
             };
             let property = image.md.tables().property(association.rid())?;
             let bytes = image.md.blobs().get(property.type_signature)?;
-            let property_sig = cildec::PropertySig::parse(bytes)?;
+            let property_sig = crate::signature_guard::property(bytes)?;
             if property_sig.has_this != signature.has_this
                 || signature.explicit_this
                 || signature.calling_convention != cildec::CallConv::Default
@@ -218,6 +220,34 @@ impl DependencyContext {
 
     pub fn resolve_method(&self, token: u32) -> Result<ResolvedMethod> {
         let token = Token(token);
+        if token.table() == Some(TableId::MethodSpec) {
+            let image = self.binding_image(0)?;
+            let row = image.md.tables().method_spec(token.rid())?;
+            let target = image.metadata_coded_token(
+                CodedIndex::MethodDefOrRef,
+                image
+                    .md
+                    .tables()
+                    .raw_column(TableId::MethodSpec, token.rid(), 0)?,
+            )?;
+            let raw = image.md.blobs().get(row.instantiation)?;
+            let instantiation = crate::signature_guard::method_spec(raw)?;
+            let mut method = self.resolve_method(target.0)?;
+            let definition = crate::signature_guard::method(&method.definition_signature)?;
+            let cildec::CallConv::Generic(count) = definition.calling_convention else {
+                return Err("method instantiation target is not generic".into());
+            };
+            if instantiation.args.len() != count as usize {
+                return Err("generic method argument count differs from signature".into());
+            }
+            method.method_arguments = instantiation
+                .args
+                .iter()
+                .map(|a| self.type_key(0, a, &[], 0))
+                .collect::<Result<Vec<_>>>()?;
+            method.instantiation_signature = raw.to_vec();
+            return Ok(method);
+        }
         let image = self.binding_image(0)?;
         let (module, owner, name, raw) = match token.table() {
             Some(TableId::MethodDef) => {
@@ -253,7 +283,7 @@ impl DependencyContext {
             }
             _ => return Err("method binding needs a MethodDef or MemberRef".into()),
         };
-        let signature = MethodSig::parse(raw)
+        let signature = crate::signature_guard::method(raw)
             .map_err(|e| format!("method reference signature {raw:02X?}: {e}"))?;
         let requested = self.method_signature_key(0, &signature, &owner.generic_arguments, 0)?;
         let target = self.binding_image(module)?;
@@ -269,7 +299,7 @@ impl DependencyContext {
                 continue;
             }
             let bytes = target.md.blobs().get(row.signature)?;
-            let definition = MethodSig::parse(bytes)
+            let definition = crate::signature_guard::method(bytes)
                 .map_err(|e| format!("method definition signature {bytes:02X?}: {e}"))?;
             if self.method_signature_key(module, &definition, &owner.generic_arguments, 0)?
                 != requested
@@ -293,6 +323,8 @@ impl DependencyContext {
                 reference_signature: raw.to_vec(),
                 definition_signature: bytes.to_vec(),
                 signature_identity: requested.clone(),
+                method_arguments: Vec::new(),
+                instantiation_signature: Vec::new(),
             });
         }
         found.ok_or_else(|| "method definition missing for exact name and scoped signature".into())
@@ -372,7 +404,8 @@ impl DependencyContext {
                 if token.table() == Some(TableId::TypeSpec) {
                     let image = self.binding_image(module)?;
                     let row = image.md.tables().type_spec(token.rid())?;
-                    let sig = cildec::TypeSpecSig::parse(image.md.blobs().get(row.signature)?)?;
+                    let sig =
+                        crate::signature_guard::type_spec(image.md.blobs().get(row.signature)?)?;
                     return self.type_key(module, &sig.type_, arguments, depth + 1);
                 }
                 let (_, bound) = self.bind_type_in(module, *token, &mut BTreeSet::new())?;

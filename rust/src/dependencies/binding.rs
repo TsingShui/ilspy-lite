@@ -183,7 +183,7 @@ impl DependencyContext {
                 Some(TableId::TypeSpec) => {
                     let row = image.md.tables().type_spec(token.rid())?;
                     let signature =
-                        cildec::TypeSpecSig::parse(image.md.blobs().get(row.signature)?)?;
+                        crate::signature_guard::type_spec(image.md.blobs().get(row.signature)?)?;
                     let cildec::Type::GenericInst { def, args, .. } = signature.type_ else {
                         return Err("type owner binding needs a named generic TypeSpec".into());
                     };
