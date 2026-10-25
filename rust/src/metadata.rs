@@ -273,26 +273,32 @@ impl<'a> Image<'a> {
                 }
             }
         }
-        let layouts = self
-            .md
-            .tables()
-            .rows_for_parent(TableId::ClassLayout, Token(token))?;
-        if layouts.len() > 1 {
+        let tables = self.md.tables();
+        let owned_layouts = tables.rows_for_parent(TableId::ClassLayout, Token(token))?;
+        if owned_layouts.len() > 1 {
             failures += 1;
             text.push_str("// FAILED metadata: duplicate class layout records\n");
         }
-        for layout_rid in layouts {
-            let layout = self.md.tables().class_layout(layout_rid)?;
+        for layout_rid in 1..=tables.row_count(TableId::ClassLayout) {
+            let layout = tables.class_layout(layout_rid)?;
+            let parent = Token::new(TableId::TypeDef, layout.parent.get());
+            let valid_owner = self.metadata_token_exists(parent);
+            if valid_owner && parent.0 != token {
+                continue;
+            }
             let raw = self
                 .md
                 .tables()
                 .row_bytes(TableId::ClassLayout, layout_rid)?;
             text.push_str(&format!(
-                ".class-layout 0x{:08X} parent=0x{token:08X} packing={} size={} raw-row-bytes={raw:02X?}\n",
-                0x0f000000 | layout_rid, layout.packing_size, layout.class_size
+                ".class-layout 0x{:08X} parent=0x{:08X} packing={} size={} raw-row-bytes={raw:02X?}\n",
+                0x0f000000 | layout_rid, parent.0, layout.packing_size, layout.class_size
             ));
             text.push_str("// size=0 means runtime-computed; packing=0 means default; full target layout/ancestry validation is not performed.\n");
-            if row.flags & 0x20 != 0
+            if !valid_owner {
+                failures += 1;
+                text.push_str("// FAILED metadata: ownership=unowned-invalid; ClassLayout owner is null/out-of-range; record is image context, not attached to this type\n");
+            } else if row.flags & 0x20 != 0
                 || !matches!(row.layout_kind(), 1 | 2)
                 || !matches!(layout.packing_size, 0 | 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128)
             {
@@ -314,6 +320,13 @@ impl<'a> Image<'a> {
             }
         }
         Ok((text, failures))
+    }
+
+    fn metadata_token_exists(&self, token: Token) -> bool {
+        token.rid() != 0
+            && token
+                .table()
+                .is_some_and(|table| token.rid() <= self.md.tables().row_count(table))
     }
 
     /// The selected type's member and relation tokens that can own attached records.
@@ -382,8 +395,13 @@ impl<'a> Image<'a> {
         let tables = self.md.tables();
         let mut text = String::new();
         let mut failures = 0;
-        for rid in tables.rows_for_parent(TableId::MethodImpl, Token(ty.token))? {
+        for rid in 1..=tables.row_count(TableId::MethodImpl) {
             let class = tables.raw_column(TableId::MethodImpl, rid, 0)?;
+            let owner = Token::new(TableId::TypeDef, class);
+            let valid_owner = self.metadata_token_exists(owner);
+            if valid_owner && owner.0 != ty.token {
+                continue;
+            }
             let body = tables.raw_column(TableId::MethodImpl, rid, 1)?;
             let declaration = tables.raw_column(TableId::MethodImpl, rid, 2)?;
             let raw = tables.row_bytes(TableId::MethodImpl, rid)?;
@@ -406,6 +424,10 @@ impl<'a> Image<'a> {
                 }
             }
             text.push_str(&format!("raw-row-bytes={raw:02X?}; explicit metadata mapping, not a name-based override guess; dispatch/access/ancestry validation is not performed\n"));
+            if !valid_owner {
+                failures += 1;
+                text.push_str("// FAILED metadata: ownership=unowned-invalid; MethodImpl owner is null/out-of-range; record is image context, not attached to this type\n");
+            }
             for (kind, token) in [("body", body), ("declaration", declaration)] {
                 match token
                     .map_err(Into::into)
@@ -436,7 +458,10 @@ impl<'a> Image<'a> {
         for rid in 1..=tables.row_count(TableId::DeclSecurity) {
             let encoded = tables.raw_column(TableId::DeclSecurity, rid, 1)?;
             let parent = cildec::CodedIndex::HasDeclSecurity.decode(encoded, 0);
-            if parent.as_ref().is_ok_and(|p| !parents.contains(&p.0)) {
+            if parent
+                .as_ref()
+                .is_ok_and(|p| self.metadata_token_exists(*p) && !parents.contains(&p.0))
+            {
                 continue;
             }
             let action = tables.raw_column(TableId::DeclSecurity, rid, 0)?;
@@ -444,7 +469,13 @@ impl<'a> Image<'a> {
             let raw = tables.row_bytes(TableId::DeclSecurity, rid)?;
             text.push_str(&format!(".decl-security 0x{:08X} ", 0x0e000000 | rid));
             match parent {
-                Ok(parent) => text.push_str(&format!("parent=0x{:08X} ", parent.0)),
+                Ok(parent) => {
+                    text.push_str(&format!("parent=0x{:08X} ", parent.0));
+                    if !self.metadata_token_exists(parent) {
+                        failures += 1;
+                        text.push_str("// FAILED metadata: ownership=unowned-invalid; null/out-of-range parent; record is image context ");
+                    }
+                }
                 Err(error) => {
                     failures += 1;
                     text.push_str(&format!(
@@ -481,10 +512,9 @@ impl<'a> Image<'a> {
         for rid in 1..=tables.row_count(TableId::CustomAttribute) {
             let raw_parent = tables.raw_column(TableId::CustomAttribute, rid, 0)?;
             let parent = cildec::CodedIndex::HasCustomAttribute.decode(raw_parent, 0);
-            if parent
-                .as_ref()
-                .is_ok_and(|parent| !parents.contains(&parent.0))
-            {
+            if parent.as_ref().is_ok_and(|parent| {
+                self.metadata_token_exists(*parent) && !parents.contains(&parent.0)
+            }) {
                 continue;
             }
             let raw = tables.row_bytes(TableId::CustomAttribute, rid)?;
@@ -492,7 +522,13 @@ impl<'a> Image<'a> {
             let blob = tables.raw_column(TableId::CustomAttribute, rid, 2)?;
             text.push_str(&format!(".custom-attribute 0x{:08X} ", 0x0c000000 | rid));
             match parent {
-                Ok(parent) => text.push_str(&format!("parent=0x{:08X} ", parent.0)),
+                Ok(parent) => {
+                    text.push_str(&format!("parent=0x{:08X} ", parent.0));
+                    if !self.metadata_token_exists(parent) {
+                        failures += 1;
+                        text.push_str("// FAILED metadata: ownership=unowned-invalid; null/out-of-range parent; record is image context ");
+                    }
+                }
                 Err(error) => {
                     failures += 1;
                     text.push_str(&format!(
