@@ -46,8 +46,29 @@ process has raw stdout/stderr byte files, argv and exit code, including failures
 The independent comparison reuses `inventory.check_output`; additional checks
 cover exact names, frozen MVID/root identity, original IL presence, complete
 detailed/readable fallback IL, readable markers and status/exit/style counts.
-Readable output does not expose token inventories: independent member/ownership
-comparison is performed against **details**, not a claimed C# semantic parse.
+
+Default/readable output is independently checked as a declaration tree using the
+renderer's four-space indentation, header/open/close lines and member lists.
+Each selected owner must retain its fields, methods/constructors (including
+fallbacks), property/event relationship comments and directly owned nested types.
+Method parameter counts come from the independent raw signature prefix, not Param
+row counts; generic arity, static shape and body/declaration boundaries must match.
+Indexer counts and accessor names/roles also match the independent catalog.
+
+Names are predicted from catalog metadata, never learned from actual output:
+invalid ASCII identifiers use `__name_<uppercase UTF-8 hex>`; invalid/reserved-prefix
+field names use `__il_field_<eight-digit token>`. Leading `@` keyword escapes are
+normalized. Type names drop namespace/ownership and the metadata backtick suffix.
+Explicit `__type_<token>`, `__method_<token>` and `// Unreadable field 0x<token>`
+markers can preserve declaration identity; method marker parameter/generic/static
+shape is unavailable, not certified. These markers remain visible in the report.
+Unidentifiable unreadable declarations fail rather than being skipped.
+
+This is **static declaration presence/tree checking**, not semantic C# parsing.
+Readable tokens in the report map catalog identities to matched declarations;
+same-name/same-arity overloads are counted as a multiset, not type-bound to tokens.
+Exact signatures and full metadata ownership are additionally compared against
+**details**. Method operations, type binding and body semantics are not certified.
 
 Exit 0 means all twenty **static** checks passed; marked unsupported CLR/body
 partials are allowed and counted. Inventory disagreement, missing classes,

@@ -94,6 +94,235 @@ def check_names(snapshot, text):
                     raise ValueError(f"{kind} name mismatch: {member['token']}")
 
 
+def readable_alias(name):
+    """The public readable spelling: ASCII identifier or UTF-8 hexadecimal alias."""
+    return name if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) else "__name_" + name.encode("utf-8").hex().upper()
+
+
+def readable_type_alias(ty):
+    name = ty["name"].rsplit("/", 1)[-1] if "/" in ty["name"] else ty["name"].rsplit(".", 1)[-1]
+    return readable_alias(name.split("`", 1)[0])
+
+
+def signature_counts(blob):
+    """Read only the ECMA-335 signature prefix, not parameter types or bindings."""
+    data = bytes.fromhex(blob)
+    offset = 1
+
+    def compressed():
+        nonlocal offset
+        first = data[offset]
+        offset += 1
+        if first < 0x80:
+            return first
+        width = 1 if first < 0xC0 else 3 if first < 0xE0 else 0
+        if not width or offset + width > len(data):
+            raise ValueError("Invalid signature count encoding")
+        value = first & (0x3F if width == 1 else 0x1F)
+        for _ in range(width):
+            value = (value << 8) | data[offset]
+            offset += 1
+        return value
+
+    try:
+        generic = compressed() if data[0] & 0x10 else 0
+        return compressed(), generic
+    except IndexError as error:
+        raise ValueError("Truncated signature count prefix") from error
+
+
+def declaration_arity(text):
+    # Ignore commas in literals, generic arguments, array ranks and nested defaults.
+    masked = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '""', text)
+    stack, count = [], 1 if masked.strip() else 0
+    for char in masked:
+        if char in "<([":
+            stack.append(char)
+        elif char in ">)]":
+            if not stack or stack.pop() != {">": "<", ")": "(", "]": "["}[char]:
+                raise ValueError("Unbalanced readable declaration list")
+        elif char == "," and not stack:
+            count += 1
+    if stack:
+        raise ValueError("Unclosed readable declaration list")
+    return count
+
+
+def readable_declarations(text):
+    """Extract only the renderer's line/indentation declaration tree, not C# semantics."""
+    lines = text.splitlines()
+    type_pattern = r"^(?:(?:public|private|protected|internal|static|abstract|sealed) )*(?:class|struct|interface|enum) (@?[A-Za-z_][A-Za-z_0-9]*)(?:<([^>]*)>)?"
+
+    def at(index, indent):
+        return index < len(lines) and lines[index] == " " * indent + "{"
+
+    def parse_type(index, indent):
+        header = re.search(type_pattern, lines[index].strip())
+        if not header or not at(index + 1, indent):
+            raise ValueError("Readable type header/opening brace missing")
+        node = {"name": header[1].lstrip("@"), "generic_arity": declaration_arity(header[2] or ""),
+                "fields": [], "methods": [], "properties": [], "events": [], "children": []}
+        index += 2
+        while index < len(lines):
+            raw = lines[index]
+            value = raw.strip()
+            if not value:
+                index += 1
+                continue
+            depth = len(raw) - len(raw.lstrip(" "))
+            if value == "}" and depth == indent:
+                return node, index + 1
+            if depth != indent + 4:
+                raise ValueError(f"Readable owner indentation mismatch at line {index + 1}")
+            if value.startswith("//"):
+                unreadable = re.fullmatch(r"// Unreadable field (0x04[0-9A-F]{6}); see --details\.", value)
+                relation = re.fullmatch(r"// (property|event) (.*?) \{ (.*) \}", value)
+                if unreadable:
+                    node["fields"].append({"token_marker": unreadable[1]})
+                elif relation:
+                    declaration, endpoints = relation[2], relation[3]
+                    indexer = re.search(r"\bthis\[(.*)\]$", declaration)
+                    name = "this" if indexer else declaration.rsplit(" ", 1)[-1].lstrip("@")
+                    matches = re.findall(r"(get|set|add|remove|raise|other): (@?[A-Za-z_][A-Za-z_0-9]*);", endpoints)
+                    if " ".join(f"{kind}: {alias};" for kind, alias in matches) != endpoints:
+                        raise ValueError("Unreadable accessor relationship endpoints")
+                    node["properties" if relation[1] == "property" else "events"].append({
+                        "name": name, "index_parameters": declaration_arity(indexer[1]) if indexer else 0,
+                        "endpoints": sorted((kind, alias.lstrip("@")) for kind, alias in matches)})
+                elif "Unreadable" in value:
+                    raise ValueError("Unreadable declaration lacks an identifying token marker")
+                index += 1
+                continue
+            if re.search(type_pattern, value):
+                child, index = parse_type(index, indent + 4)
+                node["children"].append(child)
+                continue
+            # A field can contain '(' in a quoted constant; mask literals before finding a method header.
+            masked = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', '""', value)
+            method = re.search(r"(@?[A-Za-z_][A-Za-z_0-9]*)(?:<([^<>]*)>)?\(([^()]*)\)", masked)
+            if method:
+                body = not value.endswith(";")
+                node["methods"].append({"name": method[1].lstrip("@"),
+                    "parameters": declaration_arity(method[3]), "generic_arity": declaration_arity(method[2] or ""),
+                    "static": "static" in masked[:method.start()].split(), "body_present": body})
+                index += 1
+                if body:
+                    if not at(index, indent + 4):
+                        raise ValueError("Readable method opening brace missing")
+                    index += 1
+                    while index < len(lines) and lines[index] != " " * (indent + 4) + "}":
+                        if lines[index].strip() and len(lines[index]) - len(lines[index].lstrip(" ")) <= indent + 4:
+                            raise ValueError("Readable method body/owner boundary mismatch")
+                        index += 1
+                    if index == len(lines):
+                        raise ValueError("Readable method closing brace missing")
+                    index += 1
+                continue
+            field = re.search(r" (@?[A-Za-z_][A-Za-z_0-9]*)$", value.split(" = ", 1)[0].rstrip(";"))
+            if not value.endswith(";") or not field:
+                raise ValueError(f"Unrecognized readable declaration: {value}")
+            node["fields"].append({"name": field[1].lstrip("@")})
+            index += 1
+        raise ValueError("Readable type closing brace missing")
+
+    roots, index = [], 0
+    while index < len(lines):
+        value = lines[index].strip()
+        if not value or value.startswith("//") or value.startswith("namespace "):
+            index += 1
+            continue
+        if lines[index].startswith(" "):
+            raise ValueError("Readable root is incorrectly nested")
+        root, index = parse_type(index, 0)
+        roots.append(root)
+    return roots
+
+
+def check_readable_inventory(snapshot, text):
+    """Require a per-owner declaration multiset; method overload types stay details-only."""
+    types = snapshot["types"]
+    roots = readable_declarations(text)
+    output = {"scope": "static declaration presence/tree only; no semantic C# parsing", "types": []}
+
+    def compare(node, ty, parent):
+        token = ty["token"]
+        record = {"token": token, "parent": parent, "name": node["name"]}
+        expected_name = readable_type_alias(ty)
+        marker = node["name"] != expected_name and node["name"] == "__type_" + token[2:]
+        if not marker and (node["name"] != expected_name or node["generic_arity"] != len(ty["generic_parameters"])):
+            raise ValueError(f"Readable type name/generic arity mismatch: {token}")
+
+        def consume(kind, expected, key):
+            actual = list(node[kind])
+            for member in expected:
+                marker = next((value for value in actual if value.get("token_marker") == member["token"]), None)
+                match = marker or next((value for value in actual if key(value) == key(member)), None)
+                if match is None:
+                    raise ValueError(f"Readable {kind} missing/mismatched in owner {token}: {member['token']}")
+                actual.remove(match)
+            if actual:
+                raise ValueError(f"Extra/duplicate readable {kind} in owner {token}")
+            record[kind] = [member["token"] for member in expected]
+
+        fields = []
+        for field in ty["fields"]:
+            name = field["name"]
+            alias = "__il_field_" + field["token"][2:] if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) or name.startswith("__il_field_") else name
+            fields.append({"token": field["token"], "name": alias})
+        consume("fields", fields, lambda value: value.get("name"))
+        methods = []
+        for method in ty["methods"]:
+            parameters, generic = signature_counts(method["signature"])
+            if generic != len(method["generic_parameters"]):
+                raise ValueError(f"Independent method generic arity inconsistent: {method['token']}")
+            methods.append({"token": method["token"], "name": expected_name if method["name"] in (".ctor", ".cctor") else readable_alias(method["name"]),
+                "parameters": parameters, "generic_arity": generic, "static": bool(method["flags"] & 0x10),
+                "body_present": method["has_rva"]})
+        for actual in node["methods"]:
+            placeholder = re.fullmatch(r"__method_(06[0-9A-F]{6})", actual["name"])
+            if placeholder and not any(method["name"] == actual["name"] for method in methods):
+                actual["token_marker"] = "0x" + placeholder[1]
+                expected = next((m for m in methods if m["token"] == actual["token_marker"]), None)
+                if expected and actual["body_present"] != expected["body_present"]:
+                    raise ValueError("Unreadable method marker lost its body/declaration boundary")
+        consume("methods", methods, lambda value: tuple(value.get(k) for k in ("name", "parameters", "generic_arity", "static", "body_present")))
+        record["observed_fields"] = node["fields"]
+        record["observed_methods"] = node["methods"]
+        record["unreadable_type_token_marker"] = marker
+        method_names = {method["token"]: readable_alias(method["name"]) for method in ty["methods"]}
+        for kind in ("properties", "events"):
+            expected = []
+            for member in ty[kind]:
+                targets = (("get", "getter"), ("set", "setter")) if kind == "properties" else (("add", "adder"), ("remove", "remover"), ("raise", "raiser"))
+                endpoints = [(label, method_names[member[key]]) for label, key in targets if member[key] != "0x00000000"]
+                endpoints += [("other", method_names[target]) for target in member["others"]]
+                count = signature_counts(member["signature"])[0] if kind == "properties" else 0
+                expected.append({"token": member["token"], "name": "this" if count else readable_alias(member["name"]),
+                                 "index_parameters": count, "endpoints": sorted(endpoints)})
+            consume(kind, expected, lambda value: (value["name"], value["index_parameters"], value["endpoints"]))
+        record["observed_relationships"] = {kind: node[kind] for kind in ("properties", "events")}
+        output["types"].append(record)
+        children = [child for child in types if child["parent"] == token]
+        if len(children) != len(node["children"]):
+            raise ValueError(f"Readable owned nested type count mismatch: {token}")
+        remaining = list(children)
+        for child in node["children"]:
+            candidates = [entry for entry in remaining if child["name"] in (
+                readable_type_alias(entry), "__type_" + entry["token"][2:])]
+            if len(candidates) != 1:
+                raise ValueError(f"Readable child name/parent mismatch: {token}")
+            remaining.remove(candidates[0])
+            compare(child, candidates[0], token)
+
+    if len(roots) != 1:
+        raise ValueError("Readable selected root count mismatch")
+    root = next(ty for ty in types if ty["token"] == snapshot["root"])
+    compare(roots[0], root, root["parent"])
+    if len(output["types"]) != len(types):
+        raise ValueError("Readable declaration tree lost selected types")
+    return output
+
+
 def method_blocks(text):
     result = {}
     for block in re.split(r"^// type token .*\n", text, flags=re.M)[1:]:
@@ -232,6 +461,8 @@ def inspect_class(args, oracle, manifest, entry, index):
                 counts = counts_from_process(process, stderr)
                 if style == "readable":
                     config["counts"] = counts
+                    if snapshot:
+                        config["readable_inventory"] = check_readable_inventory(snapshot, stdout)
                 elif counts != config["counts"]:
                     raise ValueError("Readable/details status discrepancy")
                 if style == "details" and snapshot:
