@@ -85,6 +85,41 @@ fn boolean_comparison_returns_do_not_roundtrip_through_integer_temporaries() {
 }
 
 #[test]
+fn return_only_branch_targets_can_replace_gotos_without_reordering_operations() {
+    let bytes = include_bytes!("fixtures/reference-release.bin");
+    let result =
+        decompile_type_with_style(bytes, "ReferenceCases.Cell", OutputStyle::Readable).unwrap();
+    let read = result
+        .text
+        .split("public int Read()")
+        .nth(1)
+        .unwrap()
+        .split("public int Credit(")
+        .next()
+        .unwrap();
+    assert!(!read.contains("IL_"), "{read}");
+    // Return-only switch successors can shed goto scaffolding; loops cannot.
+    let integer = include_bytes!("fixtures/release.bin");
+    let result = decompile_type_with_style(
+        integer,
+        "LiteSamples.ControlFlowSample",
+        OutputStyle::Readable,
+    )
+    .unwrap();
+    let select = result
+        .text
+        .split("Select(")
+        .nth(1)
+        .unwrap()
+        .split("public static ")
+        .next()
+        .unwrap();
+    assert!(!select.contains("goto IL_"), "{select}");
+    assert_eq!(select.matches("return 7;").count(), 1, "{select}");
+    assert_eq!(select.matches("return -1;").count(), 1, "{select}");
+}
+
+#[test]
 fn field_old_value_is_not_delayed_until_after_a_store() {
     for bytes in [
         include_bytes!("fixtures/reference-release.bin").as_slice(),

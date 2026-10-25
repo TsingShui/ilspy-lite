@@ -692,6 +692,111 @@ fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
         }
         i += 1;
     }
+    // Replace an edge to a return-only block with that return. No stack copies,
+    // field/call effects or block-local values may be pulled through the edge.
+    loop {
+        let mut replacements = BTreeMap::new();
+        for (index, label) in lines.iter().enumerate() {
+            let Some(label) = label.strip_suffix(": ;") else {
+                continue;
+            };
+            let end = lines[index + 1..]
+                .iter()
+                .position(|l| l.ends_with(": ;"))
+                .map_or(lines.len(), |n| index + 1 + n);
+            if end == index + 2 && lines[index + 1].starts_with("return ") {
+                let expression = &lines[index + 1];
+                if identifiers(expression).iter().all(|w| {
+                    w == "return"
+                        || w == "true"
+                        || w == "false"
+                        || w == "null"
+                        || w.strip_prefix('a')
+                            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+                }) {
+                    replacements.insert(format!("goto {label};"), expression.clone());
+                }
+            }
+        }
+        let mut changed = false;
+        for line in &mut lines {
+            if let Some(replacement) = replacements.get(line) {
+                *line = replacement.clone();
+                changed = true;
+            }
+        }
+        if changed {
+            let targets = lines
+                .iter()
+                .filter_map(|l| l.strip_prefix("goto ").and_then(|s| s.strip_suffix(';')))
+                .collect::<BTreeSet<_>>();
+            let mut remove = Vec::new();
+            for (index, line) in lines.iter().enumerate() {
+                if let Some(label) = line.strip_suffix(": ;") {
+                    let previous = index.checked_sub(1).and_then(|n| lines.get(n));
+                    let no_fallthrough = previous.is_some_and(|l| {
+                        l.starts_with("return ")
+                            || l.starts_with("goto ")
+                            || l.starts_with("throw ")
+                            || l == "} }"
+                            || l == "}"
+                    });
+                    if !targets.contains(label)
+                        && no_fallthrough
+                        && lines
+                            .get(index + 1)
+                            .is_some_and(|l| l.starts_with("return "))
+                    {
+                        remove.push(index);
+                        remove.push(index + 1);
+                    }
+                }
+            }
+            for index in remove.into_iter().rev() {
+                lines.remove(index);
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    // A two-way edge with one return arm and one immediate continuation is an
+    // early-return if. This only removes edge syntax, never moves instructions.
+    let mut i = 0;
+    while i + 6 < lines.len() {
+        let condition = lines[i]
+            .strip_prefix("if (")
+            .and_then(|s| s.strip_suffix(") {"));
+        if let Some(condition) = condition {
+            let target = lines[i + 1]
+                .strip_prefix("goto ")
+                .and_then(|s| s.strip_suffix(';'));
+            if let Some(target) = target
+                && lines[i + 2] == "} else {"
+                && lines[i + 3].starts_with("return ")
+                && lines[i + 4] == "}"
+                && lines[i + 5] == format!("{target}: ;")
+                && lines
+                    .iter()
+                    .filter(|l| *l == &format!("goto {target};"))
+                    .count()
+                    == 1
+            {
+                let condition = condition
+                    .strip_prefix("!(")
+                    .and_then(|s| s.strip_suffix(')'))
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| format!("!({condition})"));
+                let returned = lines[i + 3].clone();
+                lines.splice(
+                    i..i + 6,
+                    [format!("if ({condition}) {{"), returned, "}".into()],
+                );
+                continue;
+            }
+        }
+        i += 1;
+    }
     // A goto immediately followed by its target is just fall-through. Keep all
     // other labels and edges; no control-flow or loop reconstruction is assumed.
     let mut i = 0;
