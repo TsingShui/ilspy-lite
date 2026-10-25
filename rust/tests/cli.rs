@@ -13,6 +13,69 @@ fn fixture() -> &'static str {
 }
 
 #[test]
+fn type_selection_accepts_empty_and_generic_types_without_methods() {
+    let fixture = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/class-release.bin"
+    );
+    for name in [
+        "ClassCases.Empty",
+        "ClassCases.EmptyGeneric`1",
+        "ClassCases.Outer/EmptyNested",
+    ] {
+        let out = run(&["decompile", fixture, "--type", name]);
+        assert_eq!(
+            out.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(String::from_utf8_lossy(&out.stdout).contains(name));
+        assert_eq!(
+            String::from_utf8_lossy(&out.stderr).trim(),
+            "decompiled=0 declarations=0 partial=0 failed=0"
+        );
+    }
+}
+
+#[test]
+fn class_cli_reports_one_method_failure_without_hiding_other_bodies() {
+    let source = include_bytes!("fixtures/class-release.bin");
+    let token = ilspy_lite::list_methods(source)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.declaring_type == "ClassCases.Mixed" && m.simple_name == "Unsupported")
+        .unwrap()
+        .token;
+    let pe = cildec::PeImage::parse(source).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::MethodDef, token & 0xffffff)
+        .unwrap();
+    let offset = row.as_ptr() as usize - source.as_ptr() as usize;
+    let mut patched = source.to_vec();
+    patched[offset..offset + 4].copy_from_slice(&0u32.to_le_bytes());
+    let path = std::env::temp_dir().join(format!("ilspy-class-cli-{}.bin", std::process::id()));
+    std::fs::write(&path, patched).unwrap();
+    let out = run(&[
+        "decompile",
+        path.to_str().unwrap(),
+        "--type",
+        "ClassCases.Mixed",
+    ]);
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(text.contains("@Good("));
+    assert!(text.contains(&format!("FAILED token 0x{token:08X}")));
+    assert_eq!(
+        String::from_utf8(out.stderr).unwrap().trim(),
+        "decompiled=1 declarations=0 partial=0 failed=1"
+    );
+}
+
+#[test]
 fn inventory_and_token_cli_work_without_dotnet() {
     let out = run(&["list", fixture()]);
     assert!(

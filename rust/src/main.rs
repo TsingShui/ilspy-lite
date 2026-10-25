@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{Result, Status};
+use ilspy_lite::{Result, Summary};
 use std::io::{Read, Write};
 
 const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --type <Namespace.Type>\n\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
@@ -44,7 +44,11 @@ fn run() -> Result<u8> {
         return Ok(0);
     }
     let value = args[3].to_str().ok_or("selector must be UTF-8")?;
-    let tokens = if args[2] == "--method" {
+    let summary = if args[2] == "--type" {
+        let result = ilspy_lite::decompile_type(&bytes, value)?;
+        write!(out, "{}", result.text)?;
+        result.summary
+    } else {
         let token = if let Some(s) = value
             .strip_prefix("0x")
             .or_else(|| value.strip_prefix("0X"))
@@ -53,54 +57,32 @@ fn run() -> Result<u8> {
         } else {
             value.parse()?
         };
-        vec![token]
-    } else {
-        let tokens: Vec<_> = ilspy_lite::list_methods(&bytes)?
-            .into_iter()
-            .filter(|m| {
-                m.declaring_type == value || m.declaring_type.starts_with(&format!("{value}/"))
-            })
-            .map(|m| m.token)
-            .collect();
-        if tokens.is_empty() {
-            return Err("no methods match the declaring type or its nested types".into());
+        if args[0] == "il" {
+            write!(out, "{}", ilspy_lite::disassemble(&bytes, token)?)?;
+            out.flush()?;
+            return Ok(0);
         }
-        tokens
-    };
-    if args[0] == "il" {
-        write!(out, "{}", ilspy_lite::disassemble(&bytes, tokens[0])?)?;
-        out.flush()?;
-        return Ok(0);
-    }
-    let (mut done, mut declarations, mut partial, mut failed) = (0, 0, 0, 0);
-    for token in tokens {
+        let mut summary = Summary::default();
         match ilspy_lite::decompile(&bytes, token) {
             Ok(result) => {
-                match result.status {
-                    Status::Decompiled => done += 1,
-                    Status::Declaration => declarations += 1,
-                    Status::Partial => partial += 1,
-                    Status::Failed => failed += 1,
-                }
+                summary.record(&result.status);
                 writeln!(out, "{}", result.text)?;
             }
-            Err(e) => {
-                failed += 1;
+            Err(error) => {
+                summary.failed += 1;
                 writeln!(
                     out,
                     "// FAILED token 0x{token:08X}: {}",
-                    e.to_string().escape_default()
+                    error.to_string().escape_default()
                 )?;
             }
         }
-    }
+        summary
+    };
     out.flush()?;
-    eprintln!("decompiled={done} declarations={declarations} partial={partial} failed={failed}");
-    Ok(if failed > 0 {
-        1
-    } else if partial > 0 {
-        2
-    } else {
-        0
-    })
+    eprintln!(
+        "decompiled={} declarations={} partial={} failed={}",
+        summary.decompiled, summary.declarations, summary.partial, summary.failed
+    );
+    Ok(summary.exit_code())
 }

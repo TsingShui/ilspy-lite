@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use crate::{MethodInfo, Result};
-use cildec::tables::MethodDefRow;
+use cildec::tables::{MethodDefRow, NestedClassRow, TypeDefRow};
 use cildec::{Metadata, MethodBody, MethodSig, Names, PeImage, Rid, Strictness, TableId, Token};
 
 pub(crate) struct Image<'a> {
@@ -50,6 +50,91 @@ impl<'a> Image<'a> {
                 })
             })
             .collect()
+    }
+
+    pub fn selected_types(&self, name: &str) -> Result<Vec<SelectedType>> {
+        let tables = self.md.tables();
+        let rows = tables
+            .iter::<TypeDefRow>()
+            .map(|(_, row)| row.map_err(Into::into))
+            .collect::<Result<Vec<_>>>()?;
+        let mut parents = vec![None; rows.len()];
+        for (_, row) in tables.iter::<NestedClassRow>() {
+            let row = row?;
+            let nested = row.nested_class.get();
+            let parent = row.enclosing_class.get();
+            if nested == 0 || parent == 0 || parent as usize > rows.len() {
+                return Err("invalid nested type ownership".into());
+            }
+            let slot = parents
+                .get_mut((nested - 1) as usize)
+                .ok_or("invalid nested type token")?;
+            if slot.replace(parent).is_some() {
+                return Err("duplicate nested type ownership".into());
+            }
+        }
+        let mut names = Vec::with_capacity(rows.len());
+        for (index, row) in rows.iter().enumerate() {
+            if row.is_nested() != parents[index].is_some() {
+                return Err("inconsistent nested type visibility/ownership".into());
+            }
+            let mut parts = Vec::new();
+            let mut path = Vec::new();
+            let mut current = Some(index as u32 + 1);
+            while let Some(rid) = current {
+                if path.len() == 64 || path.contains(&rid) {
+                    return Err("cyclic or excessive nested type hierarchy".into());
+                }
+                path.push(rid);
+                let row = rows[(rid - 1) as usize];
+                let ns = self.md.strings().str(row.type_namespace)?;
+                let local = self.md.strings().str(row.type_name)?;
+                parts.push(if ns.is_empty() {
+                    local.to_string()
+                } else {
+                    format!("{ns}.{local}")
+                });
+                current = parents[(rid - 1) as usize];
+            }
+            parts.reverse();
+            names.push(parts.join("/"));
+        }
+        let mut matches = names.iter().enumerate().filter(|(_, n)| n.as_str() == name);
+        let root = matches
+            .next()
+            .ok_or("no type matches the exact metadata name")?
+            .0 as u32
+            + 1;
+        if matches.next().is_some() {
+            return Err("ambiguous metadata type name".into());
+        }
+        let mut selected = Vec::new();
+        let mut pending = vec![root];
+        while let Some(rid) = pending.pop() {
+            let row = rows[(rid - 1) as usize];
+            let end = rows
+                .get(rid as usize)
+                .map_or(tables.row_count(TableId::MethodDef) + 1, |next| {
+                    next.method_list.get()
+                });
+            let start = row.method_list.get();
+            // cildec's display-oriented list_range clamps invalid list columns.
+            // Selection must fail instead of silently losing malformed members.
+            if start == 0 || start > end || end > tables.row_count(TableId::MethodDef) + 1 {
+                return Err("invalid selected type method range".into());
+            }
+            selected.push(SelectedType {
+                token: 0x02000000 | rid,
+                name: names[(rid - 1) as usize].clone(),
+                methods: (start..end).map(|m| 0x06000000 | m).collect(),
+            });
+            for (index, parent) in parents.iter().enumerate().rev() {
+                if *parent == Some(rid) {
+                    pending.push(index as u32 + 1);
+                }
+            }
+        }
+        Ok(selected)
     }
 
     pub fn row(&self, token: u32) -> Result<MethodDefRow> {
@@ -404,6 +489,12 @@ impl<'a> Image<'a> {
             crate::ir::Ty::from_sig(&sig.type_)?,
         ))
     }
+}
+
+pub(crate) struct SelectedType {
+    pub token: u32,
+    pub name: String,
+    pub methods: Vec<u32>,
 }
 
 pub(crate) struct FieldRef {

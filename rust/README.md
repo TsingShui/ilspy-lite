@@ -20,12 +20,19 @@ The last example deliberately exits **2**: nine methods decompile, but `Divide`
 uses exception handling and retains an IL fallback. Tokens are assembly-specific;
 use `list` to find them. Decimal tokens are also accepted.
 
-`--type` selects the exact qualified type name and all of its nested types.
-Nested names use `/`, as shown by `list`. Compiler-generated methods are never
-hidden; an async type selection includes its nested state machine, not just the
-kickoff method. Type output is a **method collection**, not a compilable class or
-project: fields, properties, attributes, access modifiers, and type declarations
-are not reconstructed.
+`--type` selects the exact metadata TypeDef name and all of its owned nested
+types, independently of method signatures or lowering support. Empty and generic
+types can be selected; generic names include the metadata arity suffix (for
+example ``Namespace.Type`1``). Nested names use `/`, as shown by `list`.
+Compiler-generated methods are never hidden; an async type selection includes
+its nested state machine, not just the kickoff method.
+
+The library entry `decompile_type(bytes, name)` parses the image once and returns
+type-token/name sections, individual method results and a status summary. One
+unsupported or unreadable method does not suppress peers. This is the initial
+class-level entry, **not yet complete class context**: fields, base/interface
+information, properties, events and generic constraints are still being added.
+Output is not a compilable class or project.
 
 Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 
@@ -35,7 +42,10 @@ Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 | 2 | At least one method has an explicitly marked IL fallback; none failed |
 | 1 | Invalid request/input, decode failure, or output I/O failure |
 
-Library entry points in `src/lib.rs` accept assembly bytes and method tokens.
+Library entry points in `src/lib.rs` accept assembly bytes and method tokens or
+an exact metadata type name. `DecompiledType.summary` counts each selected method;
+its `exit_code()` uses the same status precedence as the CLI. A valid type with no
+methods returns an empty method summary, not a missing-selector error.
 `Status::{Decompiled, Declaration, Partial, Failed}` separates successful lowering
 from unsupported semantics and decoding failures. Errors that prevent identifying
 or parsing the method are returned as `Err`. Parsed bodies with undecodable IL

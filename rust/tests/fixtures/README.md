@@ -20,6 +20,14 @@ locals, joins, aliasing and side-effect/exception order. Regenerate with
 `python3 rust/tests/reference-roundtrip.py --arrays`. Snapshot revisions are
 pinned by Git; their regeneration does not require a separate hash manifest.
 
+The class-selection snapshots (`class-release.bin`, `class-debug.bin`) come from
+`../dotnet/ClassCases.cs`. They contain empty/empty-generic types, nested types,
+a distinct similarly named sibling, and supported/unsupported methods in one
+type. Regenerate with `python3 rust/tests/build-class-fixtures.py`; tests mutate
+only owned metadata to check failure isolation and invalid ownership/ranges.
+They are parser/selection fixtures, not a semantic decompilation coverage claim.
+Snapshot revisions are pinned by Git without a separate hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

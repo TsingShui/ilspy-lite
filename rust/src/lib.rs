@@ -20,7 +20,10 @@ pub fn disassemble(bytes: &[u8], token: u32) -> Result<String> {
 
 /// Lower a supported method, or return a marked IL fallback without a fabricated body.
 pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
-    let image = metadata::Image::parse(bytes)?;
+    decompile_method(&metadata::Image::parse(bytes)?, token)
+}
+
+fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<DecompiledMethod> {
     let name = image.name(token)?;
     let Some(body) = image.body(token)? else {
         return Ok(DecompiledMethod {
@@ -32,7 +35,7 @@ pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
         "// C#-like reverse-engineering output; not guaranteed to compile.\n// token 0x{token:08X} {}\n",
         metadata::escape_line(&name)
     );
-    match lift::emit(&image, token, &body) {
+    match lift::emit(image, token, &body) {
         Ok(source) => Ok(DecompiledMethod {
             status: Status::Decompiled,
             text: format!("{banner}{source}"),
@@ -63,6 +66,73 @@ pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
                     metadata::escape_line(&error.to_string())
                 ),
             })
+        }
+    }
+}
+
+/// Decompile an exact metadata type and its owned nested types using one image.
+/// Each unsupported or failed method remains visible; it does not suppress peers.
+pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
+    let image = metadata::Image::parse(bytes)?;
+    let types = image.selected_types(name)?;
+    let mut text =
+        String::from("// Class-level C#-like analysis; not a compilable type declaration.\n");
+    let mut summary = Summary::default();
+    for ty in types {
+        text.push_str(&format!(
+            "// type token 0x{:08X} {}\n",
+            ty.token,
+            metadata::escape_line(&ty.name)
+        ));
+        for token in ty.methods {
+            let result = match decompile_method(&image, token) {
+                Ok(result) => result,
+                Err(error) => DecompiledMethod {
+                    status: Status::Failed,
+                    text: format!(
+                        "// FAILED token 0x{token:08X}: {}\n",
+                        metadata::escape_line(&error.to_string())
+                    ),
+                },
+            };
+            summary.record(&result.status);
+            text.push_str(&result.text);
+            text.push('\n');
+        }
+    }
+    Ok(DecompiledType { text, summary })
+}
+
+pub struct DecompiledType {
+    pub text: String,
+    pub summary: Summary,
+}
+
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Summary {
+    pub decompiled: usize,
+    pub declarations: usize,
+    pub partial: usize,
+    pub failed: usize,
+}
+
+impl Summary {
+    pub fn record(&mut self, status: &Status) {
+        match status {
+            Status::Decompiled => self.decompiled += 1,
+            Status::Declaration => self.declarations += 1,
+            Status::Partial => self.partial += 1,
+            Status::Failed => self.failed += 1,
+        }
+    }
+
+    pub fn exit_code(&self) -> u8 {
+        if self.failed > 0 {
+            1
+        } else if self.partial > 0 {
+            2
+        } else {
+            0
         }
     }
 }
