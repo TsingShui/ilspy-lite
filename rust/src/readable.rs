@@ -5,6 +5,7 @@ use crate::{
     DecompiledMethod, Result, Status,
     metadata::{Image, SelectedType},
 };
+mod post_decrement;
 mod property;
 
 use cildec::{Param, Rid, TableId, Token, Type};
@@ -461,6 +462,9 @@ fn render_method(
     } else {
         String::new()
     };
+    if result.status == Status::Decompiled {
+        body = post_decrement::rewrite(image, token, &body);
+    }
     if let Some(context) = view.dependencies {
         body = property::rewrite(context, token, &body);
     }

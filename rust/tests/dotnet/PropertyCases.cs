@@ -21,6 +21,35 @@ namespace PropertyCases;
 public class Cell : BindingLibrary.Base
 {
     public new bool Enabled => false;
+    public int Counter;
+    public int Calls;
+    public uint UnsignedCounter;
+    public Cell Other;
+    public bool Decrement() => unchecked(Counter-- == 0);
+    public bool CheckedDecrement() => checked(Counter-- == 0);
+    public bool OtherDecrement(Cell other) => unchecked(other.Counter-- == 0);
+    public Cell Fetch() { Calls = unchecked(Calls + 1); return Other; }
+    public bool EffectfulReceiver() => unchecked(Fetch().Counter-- == 0);
+    public bool KeepOldAcrossEffect()
+    {
+        int old = Counter;
+        Counter = unchecked(old - 1);
+        Calls = unchecked(Calls + 1);
+        return old == 0;
+    }
+    public bool DifferentLocation(Cell other)
+    {
+        int old = Counter;
+        other.Counter = unchecked(old - 1);
+        return old == 0;
+    }
+    public bool TwoReads()
+    {
+        int old = Counter;
+        Counter = unchecked(old - 1);
+        return Counter == old;
+    }
+    public bool UnsignedDecrement() => unchecked(UnsignedCounter-- == 0);
     public bool ReadBase() => base.Enabled;
     public bool Collision()
     {

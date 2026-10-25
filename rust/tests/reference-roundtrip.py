@@ -141,6 +141,7 @@ def main():
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
     corpus_choice.add_argument("--addresses", action="store_true", help="execute the owned managed-element-address corpus")
     corpus_choice.add_argument("--constructors", action="store_true", help="execute owned core-base constructor bodies")
+    corpus_choice.add_argument("--post-decrement", action="store_true", help="execute actual postfix output and explicit checked/effectful/aliasing negative cases")
     corpus_choice.add_argument("--properties", action="store_true", help="execute actual source base-property leaves with hiding, virtual dispatch, and null receivers")
     corpus_choice.add_argument("--base-constructors", action="store_true", help="execute local/external base construction with parameter side effects and base exceptions")
     corpus_choice.add_argument("--clock", action="store_true", help="execute an exact core clock read with a controlled test clock")
@@ -151,10 +152,16 @@ def main():
     corpus_choice.add_argument("--external", action="store_true", help="execute owned opaque external-reference identity bodies")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--readable", action="store_true", help="execute actual readable bodies; detailed metadata supplies test shell identities only")
+    parser.add_argument("--mutate-post-value", action="store_true", help="negative control: replace recovered postfix with prefix decrement; must fail")
+    parser.add_argument("--checked-carrier", action="store_true", help="compile postfix test carriers in a checked arithmetic context")
     parser.add_argument("--mutate-property-dispatch", action="store_true", help="negative control: change a compiled base-property leaf to virtual this lookup; must fail")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
     wait_family = args.wait or args.wait_constructors
+    if (args.mutate_post_value or args.checked_carrier) and not args.post_decrement:
+        parser.error("Postfix controls require --post-decrement")
+    if args.post_decrement and not (args.readable and args.from_class):
+        parser.error("--post-decrement requires actual --readable --from-class output")
     if args.mutate_property_dispatch and not args.properties:
         parser.error("--mutate-property-dispatch requires --properties")
     if args.properties and not (args.readable and args.from_class):
@@ -173,13 +180,14 @@ def main():
     out = ROOT / "report/reference-roundtrip"
     out.mkdir(parents=True, exist_ok=True)
 
-    def compile_cs(output, sources, executable=False, references=(), runtime_unification=False):
+    def compile_cs(output, sources, executable=False, references=(), runtime_unification=False, checked_math=False):
         response = output.with_suffix(".rsp")
         response.write_text("\n".join([
             "-nologo", "-langversion:14", "-warnaserror+", "-nowarn:0164,0219", "-target:exe" if executable else "-target:library",
             f'-out:"{output}"', *[f'-r:"{p}"' for p in sorted(ref.glob("*.dll"))],
             *[f'-r:"{p}"' for p in references],
             *(["-nowarn:1701"] if runtime_unification else []),
+            *(["-checked+"] if checked_math else []),
             *[f'"{p}"' for p in sources],
         ]))
         run(dotnet / "dotnet", sdk / "Roslyn/bincore/csc.dll", f"@{response}")
@@ -262,19 +270,20 @@ def main():
             selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
             name = "openra"
         jobs.append((name, assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
-    elif args.properties:
+    elif args.properties or args.post_decrement:
         for config in ("release", "debug"):
-            for prefix, owner, names in [
+            specifications = [("property", "PropertyCases.Cell", ("Decrement", "CheckedDecrement", "OtherDecrement", "Fetch", "EffectfulReceiver", "KeepOldAcrossEffect", "DifferentLocation", "TwoReads", "UnsignedDecrement"))] if args.post_decrement else [
                 ("binding", "BindingCases.Derived", ("Read", "Write", "ReadConstant", "ReadVirtual", "get_VirtualFlag")),
                 ("property", "PropertyCases.Cell", ("ReadBase", "get_Enabled")),
-            ]:
+            ]
+            for prefix, owner, names in specifications:
                 assembly = ROOT / f"tests/fixtures/{prefix}-{config}.bin"
                 listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
                 selected = [tuple(line.split(" ", 1)) for line in listing
                             if any(f" {owner}::{name}(" in line for name in names)]
                 if len(selected) != len(names):
                     raise ValueError("Owned property selection drift")
-                name = f"properties-{prefix}-{config}"
+                name = f"post-decrement-{config}" if args.post_decrement else f"properties-{prefix}-{config}"
                 dependencies = out / name / "dependencies"
                 dependencies.mkdir(parents=True, exist_ok=True)
                 (dependencies / "BindingLibrary.dll").write_bytes((ROOT / f"tests/fixtures/binding-library-{config}.bin").read_bytes())
@@ -322,7 +331,7 @@ def main():
         directory = ROOT / "report/openra" / name if wait_family or args.activity or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class else out / name
         directory.mkdir(parents=True, exist_ok=True)
         entries = []
-        reference_options = ["--reference-dir", str(dependencies)] if args.properties else []
+        reference_options = ["--reference-dir", str(dependencies)] if args.properties or args.post_decrement else []
         class_bodies = {}
         readable_classes = {}
         if args.from_class:
@@ -362,6 +371,8 @@ def main():
                 readable = run(cli, "decompile", assembly, "--method", token, *reference_options, capture_output=True).stdout
                 (directory / f"{token}.readable.txt").write_text(readable)
                 readable = readable_method(readable)
+                if args.post_decrement and "::Decrement()" in signature and "this.Counter--" not in readable:
+                    raise ValueError("Postfix gate lost its actual recovered expression")
                 normalized = "\n".join(line.strip() for line in readable.rstrip().splitlines())
                 if args.from_class and not any(normalized in text for text in readable_classes.values()):
                     raise ValueError("Selected method view differs from actual readable class body")
@@ -370,7 +381,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "properties" if args.properties else "base-constructors" if args.base_constructors else "wait-constructors" if args.wait_constructors else "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "post-decrement" if args.post_decrement else "properties" if args.properties else "base-constructors" if args.base_constructors else "wait-constructors" if args.wait_constructors else "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
@@ -388,9 +399,17 @@ def main():
             mutant.write_text(text.replace("=> base.VirtualFlag;", "=> this.VirtualFlag;"))
             sources[0] = mutant
             recovered = directory / "Recovered-negative.dll"
+        if args.mutate_post_value and name == "post-decrement-release":
+            text = source.read_text()
+            if text.count("a0.Counter--") != 1:
+                raise ValueError("Postfix mutation control lost its actual recovered expression")
+            mutant = directory / "Recovered-negative.cs"
+            mutant.write_text(text.replace("a0.Counter--", "--a0.Counter"))
+            sources[0] = mutant
+            recovered = directory / "Recovered-negative.dll"
         # The pinned Wait leaf targets .NET 6; this optional gate intentionally
         # uses the installed .NET 10 runtime's framework-reference unification.
-        compile_cs(recovered, sources, references=references, runtime_unification=wait_family)
+        compile_cs(recovered, sources, references=references, runtime_unification=wait_family, checked_math=args.checked_carrier)
         run(dotnet / "dotnet", harness, "run", job, recovered)
 
 

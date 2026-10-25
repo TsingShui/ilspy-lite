@@ -127,6 +127,7 @@ internal static class ReferenceRoundtrip
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
         if (job.Kind == "wait") WaitTick(recovered, methods);
         else if (job.Kind == "properties") Properties(recovered, methods);
+        else if (job.Kind == "post-decrement") PostDecrement(recovered, methods);
         else if (job.Kind == "external") ExternalReferences(recovered, methods);
         else if (job.Kind == "activity") ActivityQueue(recovered, methods);
         else if (job.Kind == "floats") Floats(recovered, methods);
@@ -695,6 +696,60 @@ internal static class ReferenceRoundtrip
         }
         observer.SetValue(null, null);
         Console.WriteLine("Wait constructors: fresh/dirty receivers, exact independent base initialization, interruptibility, boundary countdowns and subsequent Tick; no selected-body proxy or copied initialized state.");
+    }
+
+    static void PostDecrement(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 9 || methods.Values.Count(m => m.Name == "Fetch") != 1)
+            throw new Exception("Post-decrement selection drift");
+        Type owner = methods.Values.First().DeclaringType!, shell = recovered.GetType(owner.FullName!)!;
+        if (!methods.Values.Any(m => m.Name == "Decrement" && m.ReturnType == typeof(bool)) || methods.Values.Any(m => m.DeclaringType != owner))
+            throw new Exception("Post-decrement original fixture drift");
+        foreach (MethodInfo method in methods.Values.Where(m => m.Name != "Fetch"))
+        foreach (int initial in new[] { int.MinValue, -1, 0, 1, 2, int.MaxValue })
+        foreach (int mode in new[] { 0, 1, 2, 3 })
+        {
+            object a = mode == 3 ? null : New(owner), b = mode == 3 ? null : New(shell);
+            object otherA = mode == 1 ? a : mode == 2 ? null : New(owner);
+            object otherB = mode == 1 ? b : mode == 2 ? null : New(shell);
+            if (a != null)
+            {
+                Set(a, "Counter", initial); Set(b, "Counter", initial);
+                Set(a, "Calls", initial == int.MinValue ? int.MaxValue : 11); Set(b, "Calls", initial == int.MinValue ? int.MaxValue : 11);
+                Set(a, "UnsignedCounter", unchecked((uint)initial)); Set(b, "UnsignedCounter", unchecked((uint)initial));
+                Set(a, "Other", otherA); Set(b, "Other", otherB);
+            }
+            if (otherA != null && !ReferenceEquals(a, otherA))
+            {
+                Set(otherA, "Counter", unchecked(initial + 3)); Set(otherB, "Counter", unchecked(initial + 3));
+            }
+            for (int repeat = 0; repeat < 4; repeat++)
+            {
+                int before = a == null ? 0 : (int)Get(a, "Counter");
+                int calls = a == null ? 0 : (int)Get(a, "Calls");
+                uint unsigned = a == null ? 0 : (uint)Get(a, "UnsignedCounter");
+                object[] argumentsA = method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherA };
+                object[] argumentsB = method.GetParameters().Length == 0 ? Array.Empty<object>() : new[] { otherB };
+                Check(recovered, method, a, b, argumentsA, argumentsB, () => {
+                    if (a != null)
+                    {
+                        SameFields(a, b, "Counter", "Calls", "UnsignedCounter");
+                        if (!ReferenceEquals(Get(a, "Other"), otherA) || !ReferenceEquals(Get(b, "Other"), otherB))
+                            throw new Exception("Post-decrement rebound its captured receiver");
+                        int expectedCalls = method.Name is "EffectfulReceiver" or "KeepOldAcrossEffect" ? unchecked(calls + 1) : calls;
+                        if ((int)Get(b, "Calls") != expectedCalls) throw new Exception("Post-decrement lost or moved receiver effects");
+                        if (method.Name == "CheckedDecrement" && before == int.MinValue && (int)Get(b, "Counter") != before)
+                            throw new Exception("Checked post-decrement wrote before overflow");
+                        if (method.Name == "Decrement" && (int)Get(b, "Counter") != unchecked(before - 1))
+                            throw new Exception("Post-decrement lost unchecked writeback");
+                        if (method.Name == "UnsignedDecrement" && (uint)Get(b, "UnsignedCounter") != unchecked(unsigned - 1))
+                            throw new Exception("Unsigned decrement changed source width");
+                    }
+                    if (otherA != null) SameFields(otherA, otherB, "Counter", "Calls", "UnsignedCounter");
+                }, detailedExceptions: true);
+            }
+        }
+        Console.WriteLine("Post-decrement: actual default source, old-value zero tests, checked/unsigned negatives, wraparound, repeated writes, null/alias/side-effect receivers and preserved snapshots.");
     }
 
     static void Properties(Assembly recovered, Dictionary<int, MethodInfo> methods)
