@@ -33,7 +33,9 @@ base/interface identities, individual method results and a status summary.
 TypeRefs retain their assembly/module scope; TypeSpecs retain raw signature bytes
 and named-reference identities. No dependency assembly is loaded. One unsupported
 or unreadable method does not suppress peers. This is **not yet complete class
-context**: events and generic constraints are still being added. Property records
+context**: generic parameters and constraints are still being added. Event records
+retain their delegate type identity and add/remove/fire/other relationships, even
+when the corresponding delegate body cannot be lowered. Property records
 retain signatures (including index parameters), flags, defaults and exact
 getter/setter/other MethodSemantics relationships. Accessor bodies stay visible as
 methods; no automatic-property syntax is inferred.

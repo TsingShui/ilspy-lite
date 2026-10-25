@@ -88,3 +88,13 @@ public class Properties
     public static int Static => 41;
 }
 public class GenericProperty<T> { public T Stored { get; set; } }
+public delegate void Changed(int value);
+public class Events
+{
+    public event System.EventHandler External { add { } remove { } }
+    public static event Changed Local { add { } remove { } }
+}
+public class GenericEvents<T>
+{
+    public event System.Action<T> Updated { add { } remove { } }
+}
