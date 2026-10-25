@@ -102,6 +102,10 @@ retain raw code bytes in a `Failed` result.
   core-base calls with unchanged entry this are admitted. Other constructor
   calls and static initonly writes still fall back; body lowering is not a full
   initialization verifier.
+- Exact admitted core `Environment.TickCount` calls use `__cil_tick_count_TOKEN()`:
+  a signed I4 clock read at the original instruction, evaluated once. Test-only
+  controlled clocks preserve the full bit pattern; differing real times are not
+  compared as if they were equal.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,

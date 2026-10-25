@@ -75,7 +75,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "random-state") RandomState(recovered, methods);
+        if (job.Kind == "clock") Clock(recovered, methods);
+        else if (job.Kind == "random-state") RandomState(recovered, methods);
         else if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
         else if (job.Kind == "native") Native(recovered, methods);
@@ -94,6 +95,7 @@ internal static class ReferenceRoundtrip
         var types = new HashSet<Type>();
         var code = new List<string>();
         var coreConstructors = new HashSet<int>();
+        var clocks = new HashSet<int>();
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
@@ -118,6 +120,16 @@ internal static class ReferenceRoundtrip
                     || target.IsStatic || target.GetParameters().Length != 0)
                     throw new Exception("Core constructor intrinsic target mismatch");
                 coreConstructors.Add(token);
+            }
+            foreach (Match match in Regex.Matches(source, @"__cil_tick_count_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if (target is not MethodInfo clock || clock.DeclaringType != typeof(Environment)
+                    || clock.Name != "get_TickCount" || !clock.IsStatic
+                    || clock.ReturnType != typeof(int) || clock.GetParameters().Length != 0)
+                    throw new Exception("Clock intrinsic target mismatch");
+                clocks.Add(token);
             }
             string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
@@ -154,6 +166,12 @@ internal static class ReferenceRoundtrip
             code.Add("public static global::System.Action<object> CoreConstructorCall;");
             foreach (int token in coreConstructors)
                 code.Add($"public static void __cil_core_object_ctor_{token:X8}(object self) => CoreConstructorCall(self);");
+        }
+        if (clocks.Count != 0)
+        {
+            code.Add("public static global::System.Func<int> TickCount;");
+            foreach (int token in clocks)
+                code.Add($"public static int __cil_tick_count_{token:X8}() => TickCount();");
         }
         File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
@@ -215,6 +233,29 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void Clock(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 1 || methods.Values.Single().Name != "ClockValue")
+            throw new Exception("Clock fixture selection drift");
+        MethodInfo method = methods.Values.Single();
+        MethodInfo body = recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!;
+        int calls = 0;
+        foreach (int value in new[] { int.MinValue, -1, 0, 1, int.MaxValue })
+        {
+            recovered.GetType("Recovered")!.GetField("TickCount")!.SetValue(null,
+                (Func<int>)(() => { calls++; return value; }));
+            object actual = body.Invoke(null, Array.Empty<object>());
+            if (!Equals(actual, value)) throw new Exception("Clock bits changed");
+            checks++;
+        }
+        if (calls != 5) throw new Exception("Clock read missing or duplicated");
+        // The external operation is the runtime's exact getter, not guessed host time.
+        MethodInfo target = typeof(Environment).GetProperty("TickCount")!.GetMethod!;
+        if (Original(target, null, Array.Empty<object>()) is not int)
+            throw new Exception("Runtime clock contract mismatch");
+        Console.WriteLine("Clock: exact target validated; controlled signed boundary values read once each; distinct real times not compared.");
     }
 
     static void Constructors(Assembly recovered, Dictionary<int, MethodBase> methods)

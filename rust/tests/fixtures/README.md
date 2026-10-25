@@ -74,8 +74,12 @@ Base/Root bodies, including fields before/after the exact core Object call.
 The adapter emits a real runtime IL call and checks receiver identity, position
 and call count; local direct-core null behavior is tested without adding a check.
 Debug/Release passed 22 return/exception/state comparisons per configuration.
-Static constructors and generic/value-type constructors remain unsupported.
-Git pins the snapshots without a separate hash manifest.
+`ClockValue` supplies an exact Environment.TickCount MemberRef. The
+`reference-roundtrip.py --clock --from-class` gate verifies five controlled signed
+boundary values and one read each per Debug/Release configuration. Default
+constructor delegation remains a separate gate. Static constructors and
+generic/value-type constructors remain unsupported. Git pins the snapshots
+without a separate hash manifest.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated

@@ -1346,11 +1346,31 @@ impl<'a> Image<'a> {
                     args: Vec::new(),
                     ret: crate::ir::Ty::Void,
                     core_object_constructor: Some(reference.class.0),
+                    tick_count: false,
                 });
             }
         }
         if name == ".ctor" || name == ".cctor" {
             return Err("constructor call needs IL fallback".into());
+        }
+        if name == "get_TickCount" && t.table() == Some(TableId::MemberRef) {
+            let reference = self.md.tables().member_ref(t.rid())?;
+            if self.core_type_name(reference.class)? != "Environment"
+                || sig.raw != [0x00, 0x00, 0x08]
+            {
+                return Err(
+                    "clock call needs exact core Environment.TickCount identity/signature".into(),
+                );
+            }
+            return Ok(MethodRef {
+                token: t.0,
+                receiver: None,
+                target: format!("__cil_tick_count_{:08X}", t.0),
+                args: Vec::new(),
+                ret: crate::ir::Ty::I4,
+                core_object_constructor: None,
+                tick_count: true,
+            });
         }
         identifier(&name)?;
         let receiver = if sig.has_this {
@@ -1382,6 +1402,7 @@ impl<'a> Image<'a> {
             args,
             ret,
             core_object_constructor: None,
+            tick_count: false,
         })
     }
 
@@ -1440,6 +1461,7 @@ pub(crate) struct MethodRef {
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
     pub core_object_constructor: Option<u32>,
+    pub tick_count: bool,
 }
 
 fn generic_flags(flags: u16) -> String {

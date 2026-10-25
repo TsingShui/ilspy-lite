@@ -30,6 +30,8 @@ public class Root
     public readonly uint[] Values = new uint[3];
     public readonly int After;
     public int Effects;
+    public static int ClockValue() => System.Environment.TickCount;
+    public Root() : this(System.Environment.TickCount) { }
     public Root(int value)
     {
         Effects = 1;

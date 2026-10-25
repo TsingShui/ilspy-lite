@@ -617,6 +617,9 @@ impl Writer<'_, '_> {
                     values.insert(0, receiver.name);
                     self.lines.push("// __cil_direct: exact IL call target; no virtual dispatch or added null check.".into());
                 }
+                if method.tick_count {
+                    self.lines.push("// Exact core Environment.TickCount: signed I4 clock read at this instruction, evaluated once.".into());
+                }
                 let expression = format!("{}({})", method.target, values.join(", "));
                 self.lines.push(format!(
                     "// call token 0x{:08X}: {}",

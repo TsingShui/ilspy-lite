@@ -193,7 +193,11 @@ fn exact_core_object_constructor_call_keeps_initialization_order_and_target() {
         let root = list_methods(bytes)
             .unwrap()
             .into_iter()
-            .find(|m| m.declaring_type == "ConstructorCases.Root" && m.simple_name == ".ctor")
+            .find(|m| {
+                m.declaring_type == "ConstructorCases.Root"
+                    && m.simple_name == ".ctor"
+                    && m.name.ends_with("(int32)")
+            })
             .unwrap()
             .token;
         let result = decompile(bytes, root).unwrap();
@@ -205,6 +209,66 @@ fn exact_core_object_constructor_call_keeps_initialization_order_and_target() {
         assert!(result.text.find(".@Before = ").unwrap() < call);
         assert!(result.text.find(" = new uint[").unwrap() < call);
         assert!(result.text.find(".@After = ").unwrap() > call);
+    }
+}
+
+#[test]
+fn core_clock_read_keeps_exact_target_and_original_call_position() {
+    for bytes in IMAGES {
+        let clock = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "ConstructorCases.Root" && m.simple_name == "ClockValue")
+            .unwrap()
+            .token;
+        let result = decompile(bytes, clock).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(
+            result.text.contains("__cil_tick_count_0A"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("System.Environment::get_TickCount"));
+        assert!(
+            result
+                .text
+                .contains("signed I4 clock read at this instruction")
+        );
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body =
+            cildec::MethodBody::from_image(&pe, &md.tables().method_def(clock & 0xffffff).unwrap())
+                .unwrap()
+                .unwrap();
+        let call = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap()
+            .operand
+            .token()
+            .unwrap();
+        let member = md.tables().member_ref(call.rid()).unwrap();
+        let owner = md.tables().type_ref(member.class.rid()).unwrap();
+        let assembly = md
+            .tables()
+            .assembly_ref(owner.resolution_scope.rid())
+            .unwrap();
+        let sig = md.blobs().get(member.signature).unwrap();
+        assert_eq!(sig, &[0x00, 0x00, 0x08]);
+        for data in [
+            md.strings().str(assembly.name).unwrap().as_bytes(),
+            md.blobs().get(assembly.public_key_or_token).unwrap(),
+            md.strings().str(owner.type_name).unwrap().as_bytes(),
+            sig,
+        ] {
+            let mut patched = bytes.to_vec();
+            let start = data.as_ptr() as usize - bytes.as_ptr() as usize;
+            patched[start] ^= 1;
+            let result = decompile(&patched, clock).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
+        }
     }
 }
 
