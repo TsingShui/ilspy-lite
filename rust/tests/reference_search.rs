@@ -197,7 +197,7 @@ fn missing_candidate_attempts_consume_the_configured_probe_budget() {
             &ReferenceSearchOptions {
                 automatic: false,
                 directories: vec![root.clone(); 5000],
-                max_probes: 3,
+                max_loader_probes: 3,
                 ..ReferenceSearchOptions::default()
             },
         )
@@ -210,6 +210,33 @@ fn missing_candidate_attempts_consume_the_configured_probe_budget() {
         "missing files still require bounded inspection"
     );
     std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn zero_loader_budget_stops_before_automatic_path_enumeration() {
+    let root =
+        std::env::temp_dir().join(format!("ilspy-zero-loader-budget-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let input = root.join("owned.dll");
+    std::fs::write(input.with_extension("deps.json"), b"not JSON").unwrap();
+    let mut context =
+        DependencyContext::new(include_bytes!("fixtures/external-release.bin").to_vec()).unwrap();
+    context
+        .discover_references(
+            &input,
+            &ReferenceSearchOptions {
+                max_loader_probes: 0,
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    let notes = context.search_diagnostics().join("\n");
+    std::fs::remove_dir_all(root).unwrap();
+    assert!(notes.contains("probe limit"), "{notes}");
+    assert!(
+        !notes.contains("malformed deps"),
+        "enumeration ran despite zero loader budget: {notes}"
+    );
 }
 
 #[test]

@@ -20,8 +20,9 @@ pub struct ReferenceSearchOptions {
     pub directories: Vec<PathBuf>,
     pub environment: DiscoveryEnvironment,
     pub version_policy: ReferenceVersionPolicy,
-    /// Candidate inspection attempts, including absent files and supplied dirs.
-    pub max_probes: usize,
+    /// Loader inspection attempts (including absent files and supplied dirs).
+    /// Automatic path enumeration has its own documented finite bounds.
+    pub max_loader_probes: usize,
 }
 
 impl Default for ReferenceSearchOptions {
@@ -32,7 +33,7 @@ impl Default for ReferenceSearchOptions {
             directories: Vec::new(),
             environment: DiscoveryEnvironment::default(),
             version_policy: ReferenceVersionPolicy::Exact,
-            max_probes: 4096,
+            max_loader_probes: 4096,
         }
     }
 }
@@ -64,7 +65,7 @@ impl DependencyContext {
         let mut seen = BTreeSet::new();
         let mut budget = ProbeBudget {
             used: 0,
-            limit: options.max_probes.min(4096),
+            limit: options.max_loader_probes.min(4096),
         };
         for path in &options.files {
             if !self.search_file(path, "ExplicitFile", &mut seen, &mut budget) {
@@ -140,6 +141,10 @@ impl DependencyContext {
                     continue;
                 }
                 if self.exact_matching_modules(&identity).is_empty() {
+                    if budget.used >= budget.limit {
+                        self.search_failure("dependency file probe limit exceeded".into());
+                        break 'closure;
+                    }
                     let mut paths = Vec::new();
                     for directory in &options.directories {
                         for extension in ["dll", "exe"] {
