@@ -63,6 +63,8 @@ run, removing the recovered indirect state write caused
 `Random state mismatch at word ...`; the state assertions detect that defect.
 Logs: `behavior.log`, `mutation.log` under the ignored gate directory.
 
-The complete class still requires allocation/constructor-chain, range/exception
-and floating-point closure. The frozen Activity/Wait behavioral gates remain
+This historical state-only gate used original seed setup. The subsequent
+[RANDOM_SEED.md](RANDOM_SEED.md) gate validates recovered seed allocation and
+initialization without copying state. Default-constructor chain, range/exception
+and floating-point closure remain required. The frozen Activity/Wait behavioral gates remain
 pending. The existing resource/ammo milestone evidence remains unchanged.

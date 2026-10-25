@@ -33,7 +33,9 @@ metadata, including ownership, signatures, accessor relationships and status/exi
 accounting. Matching inventory is not successful semantic decompilation or a
 behavior gate. Results: [CLASS_MILESTONE.md](CLASS_MILESTONE.md).
 The separate [RANDOM_STATE.md](RANDOM_STATE.md) gate closes Generate/Next state
-behavior, not the still-pending constructor, range and floating contracts.
+behavior; [RANDOM_SEED.md](RANDOM_SEED.md) also validates recovered seed
+allocation/initialization without copying original state. Default construction,
+range and floating contracts remain pending.
 
 ## Pinned input and provenance
 

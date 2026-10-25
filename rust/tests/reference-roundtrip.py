@@ -26,6 +26,7 @@ def main():
     corpus_choice = parser.add_mutually_exclusive_group()
     corpus_choice.add_argument("--openra", action="store_true", help="execute pinned stage-1 bodies; never launch the game")
     corpus_choice.add_argument("--random-state", action="store_true", help="execute pinned Generate/Next on controlled state; seed construction is not recovered")
+    corpus_choice.add_argument("--random-seed", action="store_true", help="execute recovered pinned seed initialization and Generate/Next closure")
     corpus_choice.add_argument("--arrays", action="store_true", help="execute the owned integer-array corpus")
     corpus_choice.add_argument("--native", action="store_true", help="execute the owned native-integer storage corpus")
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
@@ -34,8 +35,8 @@ def main():
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
-    if args.verify_inputs and not (args.openra or args.random_state):
-        parser.error("--verify-inputs requires --openra or --random-state")
+    if args.verify_inputs and not (args.openra or args.random_state or args.random_seed):
+        parser.error("--verify-inputs requires --openra, --random-state or --random-seed")
     dotnet = Path(os.environ.get("DOTNET_ROOT", Path.home() / ".dotnet10"))
     def latest(path):
         return max((p for p in path.iterdir() if p.name.startswith("10.")),
@@ -62,10 +63,10 @@ def main():
     run("cargo", "build", "--release", "--locked", cwd=ROOT)
     cli = ROOT / "target/release/ilspy-lite"
     jobs = []
-    if args.openra or args.random_state:
+    if args.openra or args.random_state or args.random_seed:
         manifest = json.loads((ROOT / "acceptance/openra/manifest.json").read_text())
         corpus = ROOT / "report/openra"
-        assembly = corpus / "assemblies" / ("OpenRA.Game.dll" if args.random_state else "OpenRA.Mods.Common.dll")
+        assembly = corpus / "assemblies" / ("OpenRA.Mods.Common.dll" if args.openra else "OpenRA.Game.dll")
         if args.verify_inputs:
             expected = manifest["assemblies"][assembly.name]["sha256"]
             if hashlib.sha256(assembly.read_bytes()).hexdigest() != expected:
@@ -74,11 +75,14 @@ def main():
                 path = corpus / "runtime-deps" / name
                 if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
                     raise ValueError(f"OpenRA runtime dependency mismatch: {name}")
-        if args.random_state:
-            selected = [m for m in manifest["methods"] if m["id"] in ("random-next", "random-generate")]
-            if {m["id"] for m in selected} != {"random-next", "random-generate"} or len(selected) != 2:
-                raise ValueError("Random state selection drift")
-            name = "random-state"
+        if args.random_state or args.random_seed:
+            targets = {"random-next", "random-generate"}
+            if args.random_seed:
+                targets.add("random-seed")
+            selected = [m for m in manifest["methods"] if m["id"] in targets]
+            if {m["id"] for m in selected} != targets or len(selected) != len(targets):
+                raise ValueError("Random method selection drift")
+            name = "random-seed" if args.random_seed else "random-state"
         else:
             selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
             name = "openra"
@@ -104,8 +108,8 @@ def main():
             jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
-        directory = ROOT / "report/openra/random-state" if args.random_state else out / name
-        directory.mkdir(exist_ok=True)
+        directory = ROOT / "report/openra" / name if args.random_state or args.random_seed else out / name
+        directory.mkdir(parents=True, exist_ok=True)
         entries = []
         class_bodies = {}
         if args.from_class:
@@ -137,7 +141,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "constructors" if args.constructors else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"

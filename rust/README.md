@@ -245,9 +245,11 @@ is four resource/ammo methods plus one supporting getter, not the whole game.
 These five bodies lower and pass a bounded behavioral gate. `MersenneTwister.Next`
 and its `Generate` dependency also lower and pass the separate full-state gate:
 1,250 consecutive calls per fixed seed, with each return and all state checked.
-Seed construction is only an independent setup oracle here, not recovered.
-Constructors, range/exception and floating closure remain pending; see
-[random state results](acceptance/openra/RANDOM_STATE.md). The corpus is optional, downloaded
+The separate seed gate executes the recovered allocation/initialization body,
+compares all 624 words and follows it through continuous draws without copying
+original state. Default constructor, range/exception and floating closure remain
+pending; see [random state](acceptance/openra/RANDOM_STATE.md) and
+[seed initialization](acceptance/openra/RANDOM_SEED.md). The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
 the selected bodies extracted from class output. This gate reuses verified local

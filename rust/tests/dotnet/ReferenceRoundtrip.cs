@@ -62,6 +62,12 @@ internal static class ReferenceRoundtrip
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        if (job.Kind == "random-seed")
+        {
+            RandomSeed(recovered, members);
+            Console.WriteLine($"random-seed: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "constructors")
         {
             Constructors(recovered, members);
@@ -278,6 +284,77 @@ internal static class ReferenceRoundtrip
                 throw new Exception("Constructor null failure or core call timing changed");
         }
         Console.WriteLine("Core Object constructor: exact runtime call, no allocation or added null check; pre/post field ordering observed.");
+    }
+
+    static void RandomSeed(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        if (methods.Count != 3 || methods.Values.Count(m => m is ConstructorInfo) != 1)
+            throw new Exception("Random seed selection drift");
+        ConstructorInfo constructor = (ConstructorInfo)methods.Values.Single(m => m is ConstructorInfo);
+        MethodInfo next = (MethodInfo)methods.Values.Single(m => m.Name == "Next");
+        MethodInfo generate = (MethodInfo)methods.Values.Single(m => m.Name == "Generate");
+        Type cell = constructor.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        if (constructor.GetParameters().Length != 1 || constructor.GetParameters()[0].ParameterType != typeof(int)
+            || methods.Values.Any(m => m.DeclaringType != cell)) throw new Exception("Random seed signature drift");
+        Action<object> exactCore = CoreObjectCall();
+        string[] scalars = { "index", "Last", "TotalCount" };
+        object[] noArgs = Array.Empty<object>();
+        void SameState(object a, object b)
+        {
+            SameFields(a, b, scalars);
+            uint[] left = (uint[])Get(a, "mt"), right = (uint[])Get(b, "mt");
+            if (left == null || right == null || left.Length != 624 || right.Length != 624)
+                throw new Exception("Seed initialization state extent mismatch");
+            for (int i = 0; i < 624; i++)
+                if (left[i] != right[i]) throw new Exception($"Seed state mismatch at word {i}");
+        }
+        foreach (int seed in new[] { 0, 1, -1, int.MinValue, int.MaxValue })
+        foreach (bool dirty in new[] { false, true })
+        {
+            object a = New(cell), b = New(clone);
+            uint[] oldLeft = new[] { 17u }, oldRight = new[] { 17u };
+            if (dirty)
+            {
+                Set(a, "mt", oldLeft); Set(b, "mt", oldRight);
+                foreach (string name in scalars) { Set(a, name, -23); Set(b, name, -23); }
+            }
+            int coreCalls = 0;
+            recovered.GetType("Recovered")!.GetField("CoreConstructorCall")!.SetValue(null, (Action<object>)(self => {
+                uint[] state = (uint[])Get(self, "mt");
+                if (!ReferenceEquals(self, b) || state == null || state.Length != 624
+                    || state.Any(n => n != 0) || ReferenceEquals(state, oldRight)
+                    || scalars.Any(name => (int)Get(self, name) != (dirty ? -23 : 0)))
+                    throw new Exception("Seed initialization moved across its core base call");
+                coreCalls++;
+                exactCore(self);
+            }));
+            Check(recovered, constructor, a, b, new object[] { seed }, new object[] { seed }, () => {
+                if (coreCalls != 1 || ReferenceEquals(Get(a, "mt"), oldLeft) || ReferenceEquals(Get(b, "mt"), oldRight))
+                    throw new Exception("Seed allocation or core call identity mismatch");
+                SameState(a, b);
+            }, (x, y) => x == null && y == null);
+            if (!dirty)
+            {
+                object freshOracle = constructor.Invoke(new object[] { seed });
+                SameState(freshOracle, b); // Compare normal object construction without copying any original state.
+                for (int draw = 0; draw < 1250; draw++)
+                {
+                    uint[] left = (uint[])Get(a, "mt"), right = (uint[])Get(b, "mt");
+                    Check(recovered, next, a, b, noArgs, noArgs, () => {
+                        SameState(a, b);
+                        if (!ReferenceEquals(Get(a, "mt"), left) || !ReferenceEquals(Get(b, "mt"), right))
+                            throw new Exception("Next replaced the seed state array");
+                    }, (x, y) => x is int && y is int && Equals(x, y));
+                }
+                Check(recovered, generate, a, b, noArgs, noArgs, () => SameState(a, b), (x, y) => x == null && y == null);
+            }
+        }
+        int nullCoreCalls = 0;
+        recovered.GetType("Recovered")!.GetField("CoreConstructorCall")!.SetValue(null,
+            (Action<object>)(self => { nullCoreCalls++; exactCore(self); }));
+        Check(recovered, constructor, null, null, new object[] { 1 }, new object[] { 1 });
+        if (nullCoreCalls != 0) throw new Exception("Seed constructor null failure moved past its field store");
+        Console.WriteLine("Random seed: all 624 words and scalars; recovered allocation/init body; 1,250 draws per boundary seed; no original-state copying.");
     }
 
     static void RandomState(Assembly recovered, Dictionary<int, MethodInfo> methods)
