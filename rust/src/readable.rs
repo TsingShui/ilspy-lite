@@ -5,13 +5,21 @@ use crate::{
     DecompiledMethod, Result, Status,
     metadata::{Image, SelectedType},
 };
+mod property;
+
 use cildec::{Param, Rid, TableId, Token, Type};
 use std::collections::{BTreeMap, BTreeSet};
+
+struct View<'a, 'b> {
+    image: &'a Image<'b>,
+    dependencies: Option<&'a crate::DependencyContext>,
+}
 
 pub(crate) fn type_view(
     image: &Image<'_>,
     types: &[SelectedType],
     bodies: &BTreeMap<u32, DecompiledMethod>,
+    dependencies: Option<&crate::DependencyContext>,
 ) -> String {
     let mut out = String::new();
     let root = &types[0];
@@ -26,12 +34,16 @@ pub(crate) fn type_view(
         out.push_str(&format!("namespace {namespace};\n\n"));
     }
     let mut emitted = BTreeSet::new();
-    render_type(image, root, types, bodies, 0, &mut emitted, &mut out);
+    let view = View {
+        image,
+        dependencies,
+    };
+    render_type(&view, root, types, bodies, 0, &mut emitted, &mut out);
     out
 }
 
 fn render_type(
-    image: &Image<'_>,
+    view: &View<'_, '_>,
     ty: &SelectedType,
     types: &[SelectedType],
     bodies: &BTreeMap<u32, DecompiledMethod>,
@@ -39,6 +51,7 @@ fn render_type(
     emitted: &mut BTreeSet<u32>,
     out: &mut String,
 ) {
+    let image = view.image;
     if !emitted.insert(ty.token) {
         return;
     }
@@ -66,7 +79,7 @@ fn render_type(
     }
     for (index, &token) in ty.methods.iter().enumerate() {
         let result = &bodies[&token];
-        render_method(image, token, ty.token, result, indent + 1, out);
+        render_method(view, token, ty.token, result, indent + 1, out);
         if index + 1 != ty.methods.len() {
             out.push('\n');
         }
@@ -92,7 +105,7 @@ fn render_type(
             .is_some_and(|p| p.get() == ty.token & 0xffffff)
         {
             out.push('\n');
-            render_type(image, nested, types, bodies, indent + 1, emitted, out);
+            render_type(view, nested, types, bodies, indent + 1, emitted, out);
         }
     }
     line(out, indent, "}");
@@ -433,13 +446,14 @@ fn method_header(
 }
 
 fn render_method(
-    image: &Image<'_>,
+    view: &View<'_, '_>,
     token: u32,
     owner: u32,
     result: &DecompiledMethod,
     indent: usize,
     out: &mut String,
 ) {
+    let image = view.image;
     let (mut header, names) = method_header(image, token, owner)
         .unwrap_or_else(|_| (format!("void __method_{token:08X}()"), BTreeMap::new()));
     let mut body = if result.status == Status::Decompiled {
@@ -447,6 +461,9 @@ fn render_method(
     } else {
         String::new()
     };
+    if let Some(context) = view.dependencies {
+        body = property::rewrite(context, token, &body);
+    }
     if let Some((initializer, remaining)) =
         constructor_initializer(image, token, owner, &names, &body)
     {
@@ -562,7 +579,12 @@ fn constructor_initializer<'b>(
     ))
 }
 
-pub(crate) fn method_view(image: &Image<'_>, token: u32, result: &DecompiledMethod) -> String {
+pub(crate) fn method_view(
+    image: &Image<'_>,
+    token: u32,
+    result: &DecompiledMethod,
+    dependencies: Option<&crate::DependencyContext>,
+) -> String {
     let owner = image
         .md
         .tables()
@@ -571,7 +593,17 @@ pub(crate) fn method_view(image: &Image<'_>, token: u32, result: &DecompiledMeth
         .flatten()
         .map_or(0, |r| 0x02000000 | r.get());
     let mut out = String::new();
-    render_method(image, token, owner, result, 0, &mut out);
+    render_method(
+        &View {
+            image,
+            dependencies,
+        },
+        token,
+        owner,
+        result,
+        0,
+        &mut out,
+    );
     out
 }
 

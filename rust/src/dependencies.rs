@@ -207,13 +207,13 @@ impl DependencyContext {
     /// Analyze the main image and retain dependency provenance separately from
     /// the original body/metadata status accounting.
     pub fn decompile_type(&self, name: &str, style: OutputStyle) -> Result<DecompiledType> {
-        let mut result = crate::decompile_type_with_style(&self.main, name, style)?;
+        let mut result = crate::decompile_type_with_context(&self.main, name, style, Some(self))?;
         self.append_report(&mut result.text, style)?;
         Ok(result)
     }
 
     pub fn decompile(&self, token: u32, style: OutputStyle) -> Result<DecompiledMethod> {
-        let mut result = crate::decompile_with_style(&self.main, token, style)?;
+        let mut result = crate::decompile_with_context(&self.main, token, style, Some(self))?;
         self.append_report(&mut result.text, style)?;
         Ok(result)
     }

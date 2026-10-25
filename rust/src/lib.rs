@@ -47,10 +47,19 @@ pub fn decompile_with_style(
     token: u32,
     style: OutputStyle,
 ) -> Result<DecompiledMethod> {
+    decompile_with_context(bytes, token, style, None)
+}
+
+pub(crate) fn decompile_with_context(
+    bytes: &[u8],
+    token: u32,
+    style: OutputStyle,
+    context: Option<&DependencyContext>,
+) -> Result<DecompiledMethod> {
     let image = metadata::Image::parse(bytes)?;
     let mut result = decompile_method(&image, token)?;
     if style == OutputStyle::Readable {
-        result.text = readable::method_view(&image, token, &result);
+        result.text = readable::method_view(&image, token, &result, context);
     }
     Ok(result)
 }
@@ -153,6 +162,15 @@ pub fn decompile_type_with_style(
     bytes: &[u8],
     name: &str,
     style: OutputStyle,
+) -> Result<DecompiledType> {
+    decompile_type_with_context(bytes, name, style, None)
+}
+
+pub(crate) fn decompile_type_with_context(
+    bytes: &[u8],
+    name: &str,
+    style: OutputStyle,
+    context: Option<&DependencyContext>,
 ) -> Result<DecompiledType> {
     let image = metadata::Image::parse(bytes)?;
     let types = image.selected_types(name)?;
@@ -316,7 +334,7 @@ pub fn decompile_type_with_style(
         }
     }
     if style == OutputStyle::Readable {
-        text = readable::type_view(&image, &types, &bodies);
+        text = readable::type_view(&image, &types, &bodies, context);
         if summary.metadata_failed != 0 {
             text.push_str(
                 "\n// Metadata could not be fully read; use --details for retained evidence.\n",
