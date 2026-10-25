@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import unittest
 
 RUST = Path(__file__).resolve().parents[1]
@@ -31,6 +32,214 @@ class ComparisonTests(unittest.TestCase):
     def test_changed_signature_is_rejected(self):
         with self.assertRaisesRegex(AssertionError, "signature"):
             equal("200008", "200002", "definition signature")
+
+
+class FixtureShapeTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        output = RUST / "report/dependency-oracle"
+        output.mkdir(parents=True, exist_ok=True)
+        directory = tempfile.TemporaryDirectory(prefix="fixture-shapes-", dir=output)
+        cls.addClassCleanup(directory.cleanup)
+        output = Path(directory.name)
+        oracle = compile_oracle(output)
+        cls.catalogs = {}
+        for config in ("debug", "release"):
+            cls.catalogs[config] = {}
+            for name, suffix in (("main", ""), ("library", "-library"), ("contract", "-contract"), ("facade", "-facade")):
+                path = RUST / f"tests/fixtures/binding{suffix}-{config}.bin"
+                cls.catalogs[config][name] = json.loads(run_logged([*oracle, path], output / f"{config}-{name}.json"))
+
+    def test_owned_fixture_shapes_are_present(self):
+        for config, catalogs in self.catalogs.items():
+            with self.subTest(config=config):
+                check_fixture_shapes(copy.deepcopy(catalogs))
+
+    def test_missing_required_interface_is_rejected(self):
+        for config, catalogs in self.catalogs.items():
+            for role in ("library", "contract"):
+                with self.subTest(config=config, role=role):
+                    changed = copy.deepcopy(catalogs)
+                    base = unique([t for t in changed[role]["types"] if t["name"] == "BindingLibrary.Base"], "Base fixture")
+                    base["interfaces"] = []
+                    with self.assertRaisesRegex(AssertionError, "Base -> IFlag"):
+                        check_fixture_shapes(changed)
+
+    def test_required_fixture_shapes_cannot_disappear(self):
+        def ty(snapshot, name):
+            return unique([t for t in snapshot["types"] if t["name"] == name], name)
+
+        def remove_setter(snapshot):
+            enabled = unique([p for p in ty(snapshot, "BindingLibrary.Base")["properties"] if p["name"] == "Enabled"], "Enabled")
+            snapshot["method_semantics"] = [r for r in snapshot["method_semantics"] if r["method"] != enabled["setter"]]
+            enabled["setter"] = 0
+
+        def remove_export(snapshot, name):
+            row = unique([r for r in snapshot["exported_types"] if r["name"] == name], name)
+            snapshot["exported_types"].remove(row)
+
+        def collapse_overloads(snapshot):
+            echo = unique([m for m in ty(snapshot, "BindingLibrary.Generic`1")["methods"]
+                           if m["name"] == "Echo" and m["shape"]["result"] == "var:0"], "Echo(T)")
+            echo["shape"].update(result="I4", parameters=["I4"])
+
+        cases = [
+            ("derived base", "main", lambda s: ty(s, "BindingCases.Derived").update(base_type=0)),
+            ("contract marker", "contract", lambda s: s["reference_markers"].clear()),
+            ("constructed generic owner", "main", lambda s: s["type_specs"].pop(0)),
+            ("method instantiation target", "main", lambda s: s["method_specs"][0].update(method=0)),
+            ("forwarded outer", "facade", lambda s: remove_export(s, "Outer`1")),
+            ("forwarded inner", "facade", lambda s: remove_export(s, "Inner`1")),
+            ("forwarded peer", "facade", lambda s: remove_export(s, "Peer")),
+            ("local generic TypeSpecs", "library", lambda s: s["type_specs"].clear()),
+        ]
+        for role in ("library", "contract"):
+            cases += [
+                ("framework base", role, lambda s: ty(s, "BindingLibrary.Base").update(base_type=0)),
+                ("interface flags", role, lambda s: ty(s, "BindingLibrary.IFlag").update(flags=1)),
+                ("generic positions", role, lambda s: ty(s, "BindingLibrary.Generic`1")["generics"].clear()),
+                ("declared overload distinction", role, collapse_overloads),
+                ("nested parent", role, lambda s: ty(s, "BindingLibrary.Outer`1/Inner`1").update(parent=0)),
+                ("nested positions", role, lambda s: ty(s, "BindingLibrary.Outer`1/Inner`1")["generics"].pop()),
+                ("accessor setter", role, remove_setter),
+            ]
+        for config, catalogs in self.catalogs.items():
+            for shape, role, mutate in cases:
+                with self.subTest(config=config, role=role, shape=shape):
+                    changed = copy.deepcopy(catalogs)
+                    mutate(changed[role])
+                    with self.assertRaises(AssertionError):
+                        check_fixture_shapes(changed)
+
+    def test_forwarded_scope_is_required(self):
+        for config, catalogs in self.catalogs.items():
+            with self.subTest(config=config):
+                comparison = CatalogComparison(copy.deepcopy([catalogs[r] for r in ("main", "facade", "library")]))
+                with self.assertRaisesRegex(AssertionError, "required forwarded facade provenance"):
+                    requests_for(comparison, forward_only=True)
+
+
+def check_fixture_shapes(catalogs):
+    """Require named coverage shapes independently of discovered output requests."""
+    def ty(snapshot, name):
+        return unique([t for t in snapshot["types"] if t["name"] == name], "required type " + name)
+
+    def reference(snapshot, name):
+        return unique([r for r in snapshot["type_refs"] if r["full_name"] == name], "required TypeRef " + name)
+
+    def shape(header, result, parameters=(), generic_count=0):
+        return {"header": header, "generic_count": generic_count, "required_count": len(parameters),
+                "result": result, "parameters": list(parameters)}
+
+    def method(owner, name, result, parameters=(), generic_count=0):
+        expected = shape(0x30 if generic_count else 0x20, result, parameters, generic_count)
+        return unique([m for m in owner["methods"] if m["name"] == name and m["shape"] == expected],
+                      "required declared method " + owner["name"] + "::" + name)
+
+    def field(owner, name, value):
+        row = unique([f for f in owner["fields"] if f["name"] == name], "required field " + name)
+        equal((row["owner"], row["shape"]), (owner["token"], value), "required field owner/position " + name)
+
+    def accessor(snapshot, owner, name, value, writable=False):
+        row = unique([p for p in owner["properties"] if p["name"] == name], "required property " + owner["name"] + "::" + name)
+        getter = method(owner, "get_" + name, value)
+        setter = method(owner, "set_" + name, "Void", [value]) if writable else None
+        equal((row["owner"], row["shape"]), (owner["token"], shape(0x28, value)), "required property shape " + name)
+        equal((row["getter"], row["setter"], row["others"]),
+              (getter["token"], setter["token"] if setter else 0, []), "required accessor endpoints " + name)
+        expected = [(2, getter["token"])] + ([(1, setter["token"])] if setter else [])
+        actual = [(r["flags"], r["method"]) for r in snapshot["method_semantics"] if r["association"] == row["token"]]
+        equal(sorted(actual), sorted(expected), "required MethodSemantics " + name)
+
+    def instantiation(snapshot, definition, arguments):
+        row = unique([r for r in snapshot["type_specs"] if r["definition"] == definition], "required generic TypeSpec")
+        equal(row["arguments"], arguments, "required TypeSpec positions")
+        return row
+
+    main, library, contract, facade = (catalogs[r] for r in ("main", "library", "contract", "facade"))
+    equal(library["identity"]["name"], "BindingLibrary", "required library identity")
+    equal(contract["identity"], library["identity"], "required reference-contract identity")
+    equal(facade["identity"]["name"], "BindingFacade", "required facade identity")
+    for role, snapshot in catalogs.items():
+        markers = snapshot["reference_markers"]
+        equal(len(markers), 1 if role == "contract" else 0, "required reference-contract marker count")
+        for marker in markers:
+            equal((marker["name"], marker["signature"], marker["value"]),
+                  (".ctor", "200001", "01000000"), "required reference-contract marker bytes")
+
+    peer_shape = "class:BindingLibrary::BindingLibrary.Peer"
+    for snapshot in (library, contract):
+        base = ty(snapshot, "BindingLibrary.Base")
+        flag = ty(snapshot, "BindingLibrary.IFlag")
+        generic = ty(snapshot, "BindingLibrary.Generic`1")
+        outer = ty(snapshot, "BindingLibrary.Outer`1")
+        inner = ty(snapshot, "BindingLibrary.Outer`1/Inner`1")
+        equal(base["interfaces"], [flag["token"]], "required Base -> IFlag relationship")
+        assert flag["flags"] & 0x20, "required IFlag interface flag"
+        object_ref = reference(snapshot, "System.Runtime::System.Object")
+        for owner in (base, ty(snapshot, "BindingLibrary.Peer"), generic, outer, inner):
+            equal(owner["base_type"], object_ref["token"], "required framework base " + owner["name"])
+        equal(inner["parent"], outer["token"], "required nested declaring type")
+        for owner, positions in ((generic, [(0, "T")]), (outer, [(0, "T")]), (inner, [(0, "T"), (1, "U")])):
+            equal([(g["index"], g["name"]) for g in owner["generics"]], positions, "required generic positions " + owner["name"])
+        equal(len([m for m in generic["methods"] if m["name"] == "Echo"]), 2, "required declared generic overload count")
+        method(generic, "Echo", "var:0", ["var:0"])
+        method(generic, "Echo", "I4", ["I4"])
+        convert = method(generic, "Convert", "mvar:0", ["mvar:0"], generic_count=1)
+        equal([(g["index"], g["name"]) for g in convert["generics"]], [(0, "U")], "required method generic position")
+        method(inner, "Read", "var:0")
+        method(base, "Echo", peer_shape, [peer_shape])
+        for owner, name, value in ((base, "Stored", peer_shape), (base, "Ready", "Boolean"),
+                                   (generic, "Field", "var:0"), (inner, "Left", "var:0"), (inner, "Right", "var:1")):
+            field(owner, name, value)
+        for owner, name, value, writable in ((base, "Enabled", "Boolean", True), (base, "VirtualFlag", "Boolean", False),
+                                            (base, "ConstantFlag", "Boolean", False), (generic, "Item", "var:0", True),
+                                            (flag, "VirtualFlag", "Boolean", False)):
+            accessor(snapshot, owner, name, value, writable)
+        pretender = method(base, "get_Pretender", "Boolean")
+        assert not any(r["method"] == pretender["token"] for r in snapshot["method_semantics"]), "required non-accessor get_Pretender"
+        if snapshot is library:
+            for owner, arguments in ((generic, ["var:0"]), (outer, ["var:0"]), (inner, ["var:0", "var:1"])):
+                instantiation(snapshot, owner["token"], arguments)
+
+    assembly_ref = unique([r for r in main["assembly_refs"] if r["identity"] == library["identity"]], "required main library scope")
+    refs = {name: reference(main, "BindingLibrary::BindingLibrary." + name) for name in ("Base", "Peer", "Generic`1", "Outer`1")}
+    for row in refs.values():
+        equal((row["scope"], row["ns"]), (assembly_ref["token"], "BindingLibrary"), "required assembly TypeRef scope")
+    nested_ref = reference(main, "BindingLibrary::BindingLibrary.Outer`1/Inner`1")
+    equal((nested_ref["scope"], nested_ref["ns"]), (refs["Outer`1"]["token"], ""), "required nested TypeRef scope")
+    derived = ty(main, "BindingCases.Derived")
+    equal(derived["base_type"], refs["Base"]["token"], "required Derived -> Base relationship")
+    equal(ty(main, "BindingCases.GenericCases")["base_type"], reference(main, "System.Runtime::System.Object")["token"], "required main framework base")
+    accessor(main, derived, "VirtualFlag", "Boolean")
+    generic_spec = instantiation(main, refs["Generic`1"]["token"], ["I4"])
+    nested_spec = instantiation(main, nested_ref["token"], ["I4", "String"])
+
+    def member(owner, name, expected, kind="method"):
+        return unique([r for r in main["member_refs"] if (r["owner"], r["name"], r["kind"], r["shape"]) == (owner, name, kind, expected)],
+                      "required scoped MemberRef " + name)
+
+    for name in ("get_Enabled", "get_Pretender", "get_ConstantFlag", "get_VirtualFlag"):
+        member(refs["Base"]["token"], name, shape(0x20, "Boolean"))
+    member(refs["Base"]["token"], "set_Enabled", shape(0x20, "Void", ["Boolean"]))
+    member(refs["Base"]["token"], "Echo", shape(0x20, peer_shape, [peer_shape]))
+    member(generic_spec["token"], "get_Item", shape(0x20, "var:0"))
+    member(generic_spec["token"], "Echo", shape(0x20, "I4", ["I4"]))
+    member(nested_spec["token"], "Right", "var:1", kind="field")
+    member(nested_spec["token"], "Read", shape(0x20, "var:0"))
+    convert_ref = member(generic_spec["token"], "Convert", shape(0x30, "mvar:0", ["mvar:0"], generic_count=1))
+    method_spec = unique(main["method_specs"], "required MethodSpec")
+    equal((method_spec["method"], method_spec["arguments"]), (convert_ref["token"], ["String"]), "required MethodSpec target/arguments")
+
+    facade_ref = unique([r for r in facade["assembly_refs"] if r["identity"] == library["identity"]], "required forwarder target scope")
+    exports = {}
+    for name in ("Outer`1", "Peer"):
+        row = unique([r for r in facade["exported_types"] if (r["ns"], r["name"]) == ("BindingLibrary", name)], "required forwarder " + name)
+        assert row["flags"] & 0x00200000, "required assembly forwarder flag"
+        equal(row["implementation"], facade_ref["token"], "required assembly forwarder target")
+        exports[name] = row
+    nested_export = unique([r for r in facade["exported_types"] if (r["ns"], r["name"]) == ("", "Inner`1")], "required nested export")
+    equal(nested_export["implementation"], exports["Outer`1"]["token"], "required nested export parent")
 
 
 def equal(actual, expected, label):
@@ -229,6 +438,11 @@ def requests_for(comparison, forward_only=False):
         equal(len(types), 3, "required forwarded type coverage")
         types += [r["token"] for r in main["type_specs"] if len(r["arguments"]) == 2]
         equal(len(types), 4, "required forwarded nested TypeSpec coverage")
+        for token in types:
+            _, definition, _, forwarders = comparison.expected_type(main, token)
+            name = "Peer" if definition["name"] == "BindingLibrary.Peer" else "Outer`1"
+            equal([(s["identity"]["name"], r["name"]) for s, r in forwarders],
+                  [("BindingFacade", name)], "required forwarded facade provenance")
         return [{"kind": "type", "token": t} for t in types]
     types = [t["token"] for t in main["types"] if t["name"] != "<Module>"]
     # Framework TypeRefs and attribute constructors are cataloged, but not bound:
@@ -324,7 +538,8 @@ def main():
     parser.add_argument("--self-test", action="store_true", help="run comparator assertion tests only")
     args = parser.parse_args()
     if args.self_test:
-        suite = unittest.defaultTestLoader.loadTestsFromTestCase(ComparisonTests)
+        suite = unittest.TestSuite(unittest.defaultTestLoader.loadTestsFromTestCase(case)
+                                   for case in (ComparisonTests, FixtureShapeTests))
         assert unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful(), "comparator tests failed"
         return
     output = args.output.resolve()
@@ -356,11 +571,8 @@ def main():
         catalogs = {name: catalog(path, f"{config}-{name}", "<main>" if name == "main" else str(path),
                                   "ReferenceContract" if name == "contract" else "ImplementationImage")
                     for name, path in paths.items()}
-        equal(len(catalogs["main"]["method_specs"]), 1, "required MethodSpec coverage")
-        required = {"get_Enabled", "set_Enabled", "get_Pretender", "get_Item", "Echo", "Right", "Read", "Convert"}
-        assert required <= {r["name"] for r in catalogs["main"]["member_refs"]}, "required main MemberRefs missing"
-        generic = unique([t for t in catalogs["library"]["types"] if t["name"] == "BindingLibrary.Generic`1"], "generic fixture")
-        equal(len([m for m in generic["methods"] if m["name"] == "Echo"]), 2, "declared generic overload coverage")
+        check_fixture_shapes(catalogs)
+        print(f"{config}: required fixture-shape preflight passed")
         forwarded = output / f"{config}-forward-main.bin"
         patch_forward_scope(paths["main"], catalogs["main"], forwarded)
         forward_catalog = catalog(forwarded, f"{config}-forward-main", "<main>", "ImplementationImage")

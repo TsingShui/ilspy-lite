@@ -54,14 +54,43 @@ file offsets from the independent catalog. It repurposes the copy's
 this scenario requests types only. That copy is cataloged again before binding.
 The owned fixture sources and binaries are never modified.
 
+## Mandatory fixture-shape preflight
+
+Before generating binding requests, the runner asserts named shapes in the
+independent catalogs rather than treating whatever rows remain as sufficient
+coverage. Debug and Release must each retain:
+
+- `Derived -> Base`, `Base -> IFlag` in both implementation and contract, the
+  interface flag, and the class-to-framework base relationships.
+- The contract's identity and reference marker; `Generic<T>`'s distinct declared
+  `Echo(T)`/`Echo(int)` signatures; type/method generic positions; named generic
+  TypeSpecs and the `Convert<string>` MethodSpec target/arguments.
+- The `Outer<T>/Inner<U>` declaring type, inherited generic positions, scoped
+  main references, and left/right field positions.
+- Required property getter/setter endpoints and MethodSemantics rows, plus the
+  non-property `get_Pretender` method and required scoped MemberRefs.
+- Facade exports for `Peer`, `Outer`, and nested `Inner`, their targets/parent,
+  and an actual facade hop in every forwarded request's catalog provenance.
+
+These assertions prevent coverage from silently shrinking when a required
+relationship disappears, even if binding results still match the reduced
+catalog and request counts stay unchanged.
+
 ## Failure sensitivity and evidence
 
 Every normal scenario also writes three mutated **exported JSON copies** under
 `rust/report/dependency-oracle/`: a changed selected token, an appended raw
 signature byte, and a removed property relation. Each must fail the same
 comparison that accepted the unmodified output. Across both configurations,
-18 mutations must be rejected. Four focused self-tests require rejection of
-missing/duplicate/error results and mismatched signatures. Missing expected
+18 mutations must be rejected. Eight self-tests include the four focused output
+checks for missing/duplicate/error results and mismatched signatures. The other
+four tests compile the independent reader into a temporary report directory,
+read both configurations' owned fixture bytes, accept the original catalogs,
+and reject 50 required-shape omissions/changes in copied catalogs or forwarder
+request setup. These include removing `Base -> IFlag` separately from both the
+implementation and contract catalogs and removing an accessor setter while its
+getter remains. No fixtures are regenerated or modified. The self-tests require
+the same optional .NET 10 installation as the full gate. Missing expected
 fixtures, definitions, properties, overloads, or output requests fail assertions;
 there are no successful skips.
 
