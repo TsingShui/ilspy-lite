@@ -21,6 +21,8 @@ namespace PropertyCases;
 public class Cell : BindingLibrary.Base
 {
     public new bool Enabled => false;
+    public bool OwnConstant => true;
+    public bool ReadOwnConstant() => OwnConstant;
     public int Counter;
     public int Calls;
     public uint UnsignedCounter;

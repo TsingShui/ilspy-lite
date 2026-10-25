@@ -76,6 +76,7 @@ internal static class ReferenceRoundtrip
         };
         Assembly recovered = recoveredContext.LoadFromAssemblyPath(args[2]);
         InstallMemberCalls(job, original, recovered);
+        InstallLocalSourceProperties(job, original, recovered);
         if (job.Kind == "base-constructors")
         {
             BaseConstructors(recovered, members);
@@ -160,24 +161,26 @@ internal static class ReferenceRoundtrip
         var absoluteCalls = new HashSet<int>();
         var externalTypes = new Dictionary<int, Type>();
         var memberCalls = new Dictionary<int, MethodInfo>();
-        var sourceProperties = new Dictionary<int, (Type Caller, string Role, string Name)>();
+        var sourceProperties = new Dictionary<int, (Type Caller, string Role, string Qualifier, string Name)>();
         bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
             types.Add(method.DeclaringType!);
             string source = File.ReadAllText(entry.Source);
-            foreach (Match match in Regex.Matches(source, @"// source property token 0x([0-9A-F]{8}): (get|set) base\.(@?[A-Za-z_][A-Za-z_0-9]*)"))
+            foreach (Match match in Regex.Matches(source, @"// source property token 0x([0-9A-F]{8}): (get|set) (base|this)\.(@?[A-Za-z_][A-Za-z_0-9]*)"))
             {
                 int token = Convert.ToInt32(match.Groups[1].Value, 16);
-                string role = match.Groups[2].Value, name = match.Groups[3].Value;
+                string role = match.Groups[2].Value, qualifier = match.Groups[3].Value, name = match.Groups[4].Value;
                 MethodInfo target = (MethodInfo)original.ManifestModule.ResolveMethod(token)!;
                 PropertyInfo property = target.DeclaringType!.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
                     .Single(p => p.Name == name.TrimStart('@') && (role == "get" ? p.GetMethod : p.SetMethod) == target);
-                if (target.IsStatic || !target.IsSpecialName || target.DeclaringType != method.DeclaringType!.BaseType
-                    || target.DeclaringType.Assembly == original || property.GetIndexParameters().Length != 0)
-                    throw new Exception("Source property leaf must be an independent exact immediate-base accessor");
-                var description = (method.DeclaringType!, role, name);
+                bool validOwner = qualifier == "base"
+                    ? target.DeclaringType == method.DeclaringType!.BaseType && target.DeclaringType.Assembly != original
+                    : target.DeclaringType == method.DeclaringType && methods.ContainsKey(token) && !target.IsVirtual;
+                if (target.IsStatic || !target.IsSpecialName || !validOwner || property.GetIndexParameters().Length != 0)
+                    throw new Exception("Source property leaf must target an exact external base or a recovered nonvirtual own accessor");
+                var description = (method.DeclaringType!, role, qualifier, name);
                 if (sourceProperties.TryGetValue(token, out var previous) && previous != description)
                     throw new Exception("Source property leaf has ambiguous caller context");
                 sourceProperties[token] = description;
@@ -293,21 +296,25 @@ internal static class ReferenceRoundtrip
             }
             foreach (var pair in sourceProperties.Where(p => p.Value.Caller == type))
             {
-                MethodInfo accessor = memberCalls[pair.Key];
-                string expression = "base." + pair.Value.Name;
+                MethodInfo accessor = pair.Value.Qualifier == "base" ? memberCalls[pair.Key] : (MethodInfo)methods[pair.Key];
+                string expression = pair.Value.Qualifier + "." + pair.Value.Name;
                 members += pair.Value.Role == "get"
                     ? $"\npublic {TypeName(accessor.ReturnType)} __cil_source_property_{pair.Key:X8}() => {expression};"
                     : $"\npublic void __cil_source_property_{pair.Key:X8}({TypeName(accessor.GetParameters().Single().ParameterType)} value) {{ {expression} = value; }}";
             }
-            if (job.Kind == "properties")
+            foreach (PropertyInfo property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
             {
-                foreach (MethodInfo getter in methods.Values.OfType<MethodInfo>().Where(m => m.DeclaringType == type && m.IsSpecialName && m.Name.StartsWith("get_", StringComparison.Ordinal)))
-                {
-                    PropertyInfo property = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly).Single(p => p.GetMethod == getter);
-                    if (property.GetIndexParameters().Length != 0 || !getter.IsPublic) throw new Exception("Unsupported recovered property shell");
-                    string modifier = getter.GetBaseDefinition() != getter ? "override " : type.BaseType!.GetProperty(property.Name) != null ? "new " : "";
-                    members += $"\npublic {modifier}{TypeName(property.PropertyType)} @{property.Name} => global::Recovered.M_{getter.MetadataToken:X8}(this);";
-                }
+                bool required = sourceProperties.Values.Any(p => p.Caller == type && p.Qualifier == "this" && p.Name.TrimStart('@') == property.Name);
+                if (!required && job.Kind != "properties") continue;
+                bool getter = property.GetMethod != null && methods.ContainsKey(property.GetMethod.MetadataToken);
+                bool setter = property.SetMethod != null && methods.ContainsKey(property.SetMethod.MetadataToken);
+                if (!getter && !setter) continue;
+                if (property.GetIndexParameters().Length != 0) throw new Exception("Unsupported recovered indexer shell");
+                MethodInfo accessor = getter ? property.GetMethod! : property.SetMethod!;
+                string modifier = accessor.GetBaseDefinition() != accessor ? "override " : type.BaseType!.GetProperty(property.Name) != null ? "new " : "";
+                string get = getter ? $"get => global::Recovered.M_{property.GetMethod!.MetadataToken:X8}(this);" : "";
+                string set = setter ? $"set => global::Recovered.M_{property.SetMethod!.MetadataToken:X8}(this, value);" : "";
+                members += $"\npublic {modifier}{TypeName(property.PropertyType)} @{property.Name} {{ {get} {set} }}";
             }
             shells.Add($"namespace {type.Namespace} {{ public class {type.Name}{parent} {{ {members} }} }}");
         }
@@ -379,6 +386,17 @@ internal static class ReferenceRoundtrip
                 ? $"public static void __cil_memberref_call_{pair.Key:X8}({parameters}) {{ {result}; }}"
                 : $"public static {TypeName(leaf.ReturnType)} __cil_memberref_call_{pair.Key:X8}({parameters}) => ({TypeName(leaf.ReturnType)}){result};");
         }
+        foreach (var pair in sourceProperties.Where(p => p.Value.Qualifier == "this"))
+        {
+            MethodInfo accessor = (MethodInfo)methods[pair.Key];
+            string parameters = string.Join(", ", new[] { TypeName(accessor.DeclaringType!) + " self" }.Concat(accessor.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i)));
+            string arguments = string.Join(", ", accessor.GetParameters().Select((p, i) => "a" + i));
+            code.Add($"public static global::System.Func<object, object[], object> SourcePropertyCall_{pair.Key:X8};");
+            string call = $"SourcePropertyCall_{pair.Key:X8}(self, new object[] {{ {arguments} }})";
+            code.Add(accessor.ReturnType == typeof(void)
+                ? $"public static void __cil_source_this_property_{pair.Key:X8}({parameters}) {{ {call}; }}"
+                : $"public static {TypeName(accessor.ReturnType)} __cil_source_this_property_{pair.Key:X8}({parameters}) => ({TypeName(accessor.ReturnType)}){call};");
+        }
         File.WriteAllText(Path.ChangeExtension(output, ".references.json"), JsonSerializer.Serialize(externalTypes.Values
             .Select(t => t.Assembly).Concat(memberCalls.Values.Select(m => m.DeclaringType!.Assembly))
             .Concat(baseConstructors.Values.Select(m => m.DeclaringType!.Assembly))
@@ -433,6 +451,25 @@ internal static class ReferenceRoundtrip
             MethodInfo invoked = actual;
             recovered.GetType("Recovered")!.GetField($"MemberCall_{token:X8}")!.SetValue(null,
                 (Func<object, object[], object>)((self, values) => Original(invoked, self, values)));
+        }
+    }
+
+    static void InstallLocalSourceProperties(Job job, Assembly original, Assembly recovered)
+    {
+        var descriptions = job.Methods.SelectMany(entry => Regex.Matches(File.ReadAllText(entry.Source),
+            @"// source property token 0x([0-9A-F]{8}): (get|set) this\.(@?[A-Za-z_][A-Za-z_0-9]*)").Cast<Match>()
+            .Select(match => (Token: Convert.ToInt32(match.Groups[1].Value, 16), Role: match.Groups[2].Value, Name: match.Groups[3].Value.TrimStart('@')))).Distinct();
+        foreach (var description in descriptions)
+        {
+            if (!job.Methods.Any(entry => entry.Token == description.Token)) throw new Exception("Source property accessor was not recovered");
+            MethodInfo originalAccessor = (MethodInfo)original.ManifestModule.ResolveMethod(description.Token)!;
+            Type shell = recovered.GetType(originalAccessor.DeclaringType!.FullName!)!;
+            PropertyInfo property = shell.GetProperty(description.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!;
+            MethodInfo target = description.Role == "get" ? property.GetMethod! : property.SetMethod!;
+            MethodInfo thunk = shell.GetMethod($"__cil_source_property_{description.Token:X8}")!;
+            VerifySourcePropertyCall(thunk, target, description.Role);
+            recovered.GetType("Recovered")!.GetField($"SourcePropertyCall_{description.Token:X8}")!.SetValue(null,
+                (Func<object, object[], object>)((self, values) => Original(thunk, self, values)));
         }
     }
 
@@ -758,7 +795,7 @@ internal static class ReferenceRoundtrip
         if (methods.Values.Any(m => m.DeclaringType != owner)) throw new Exception("Property selection mixed owners");
         if (!methods.Values.Any(m => m.IsSpecialName && m.Name.StartsWith("get_", StringComparison.Ordinal)))
             throw new Exception("Property hiding/override negative is missing");
-        var leaves = recovered.GetType("Recovered")!.GetFields().Where(f => f.Name.StartsWith("MemberCall_", StringComparison.Ordinal))
+        var leaves = recovered.GetType("Recovered")!.GetFields().Where(f => f.Name.StartsWith("MemberCall_", StringComparison.Ordinal) || f.Name.StartsWith("SourcePropertyCall_", StringComparison.Ordinal))
             .ToDictionary(f => f, f => (Func<object, object[], object>)f.GetValue(null)!);
         foreach (MethodInfo method in methods.Values)
         foreach (bool ready in new[] { false, true })

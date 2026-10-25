@@ -64,6 +64,16 @@ class ReadableAdapter(unittest.TestCase):
         with self.assertRaises(ValueError):
             roundtrip.adapt_readable_body(readable, details.replace('::get_Enabled', '::get_Other'))
 
+    def test_this_property_uses_a_compiled_leaf_whose_accessor_is_recovered(self):
+        readable = 'public bool Read()\n{\n    return this.Flag;\n}\n'
+        details = ('// call token 0x06000002: Owned.Cell::get_Flag\n'
+                   'public static bool @Read(global::Owned.Cell a0)\n{\n'
+                   '    throw new System.Exception("not this body");\n}\n')
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('__cil_source_this_property_06000002(a0)', adapted)
+        self.assertIn('// source property token 0x06000002: get this.Flag', adapted)
+        self.assertNotIn('not this body', adapted)
+
     def test_ambiguous_parameter_bindings_fail_instead_of_merging_values(self):
         details = 'public static int @Difference(int a0, int a1)\n{\n}\n'
         readable = 'public static int Difference(int value, int value)\n{\n    return value - value;\n}\n'

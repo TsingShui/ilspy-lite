@@ -44,28 +44,34 @@ def adapt_source_properties(statements, details):
     """
     calls = re.findall(r'^\s*// call token 0x([0-9A-F]{8}): .+::(get|set)_([A-Za-z_][A-Za-z_0-9]*)$', details, re.M)
     directives = set()
-    def target(role, name):
+    field_names = set(re.findall(r'^\s*// field token 0x[0-9A-F]{8}: .*::@?([A-Za-z_][A-Za-z_0-9]*)$', details, re.M))
+    def target(role, qualifier, name):
         found = {token for token, actual_role, actual_name in calls
                  if role == actual_role and name.lstrip('@') == actual_name}
         if len(found) != 1:
             raise ValueError('Source property target metadata is missing or ambiguous')
         token = found.pop()
-        directives.add(f'// source property token 0x{token}: {role} base.{name}')
+        directives.add(f'// source property token 0x{token}: {role} {qualifier}.{name}')
         return token
-    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|\bbase\.(@?[A-Za-z_][A-Za-z_0-9]*)')
+    def eligible(role, qualifier, name):
+        return qualifier == 'base' or name.lstrip('@') not in field_names and any(actual_role == role and actual_name == name.lstrip('@') for _, actual_role, actual_name in calls)
+    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|\b(base|this)\.(@?[A-Za-z_][A-Za-z_0-9]*)')
     def getters(text):
         def replace(match):
-            if match[1] is None:
+            if match[1] is None or not eligible('get', match[1], match[2]):
                 return match[0]
-            return f'__cil_memberref_call_{target("get", match[1])}(this)'
+            qualifier, name = match[1], match[2]
+            operation = 'memberref_call' if qualifier == 'base' else 'source_this_property'
+            return f'__cil_{operation}_{target("get", qualifier, name)}(this)'
         return lexical.sub(replace, text)
     lines = []
     for line in statements.splitlines(keepends=True):
-        setter = re.fullmatch(r'([ \t]*)base\.(@?[A-Za-z_][A-Za-z_0-9]*) = (.+);[ \t]*\n?', line)
-        if setter:
-            space, name, value = setter.groups()
-            token = target('set', name)
-            lines.append(f'{space}__cil_memberref_call_{token}(this, {getters(value)});\n')
+        setter = re.fullmatch(r'([ \t]*)(base|this)\.(@?[A-Za-z_][A-Za-z_0-9]*) = (.+);[ \t]*\n?', line)
+        if setter and eligible('set', setter[2], setter[3]):
+            space, qualifier, name, value = setter.groups()
+            token = target('set', qualifier, name)
+            operation = 'memberref_call' if qualifier == 'base' else 'source_this_property'
+            lines.append(f'{space}__cil_{operation}_{token}(this, {getters(value)});\n')
         else:
             lines.append(getters(line))
     return ''.join(lines), sorted(directives)
@@ -274,7 +280,7 @@ def main():
         for config in ("release", "debug"):
             specifications = [("property", "PropertyCases.Cell", ("Decrement", "CheckedDecrement", "OtherDecrement", "Fetch", "EffectfulReceiver", "KeepOldAcrossEffect", "DifferentLocation", "TwoReads", "UnsignedDecrement", "LocalDecrement", "EffectBetweenReadAndWrite"))] if args.post_decrement else [
                 ("binding", "BindingCases.Derived", ("Read", "Write", "ReadConstant", "ReadVirtual", "get_VirtualFlag")),
-                ("property", "PropertyCases.Cell", ("ReadBase", "get_Enabled")),
+                ("property", "PropertyCases.Cell", ("ReadBase", "get_Enabled", "ReadOwnConstant", "get_OwnConstant")),
             ]
             for prefix, owner, names in specifications:
                 assembly = ROOT / f"tests/fixtures/{prefix}-{config}.bin"
