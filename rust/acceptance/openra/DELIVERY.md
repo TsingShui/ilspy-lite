@@ -22,7 +22,10 @@ flags/signature/constants/layout/RVA evidence. `8c878ac2f` fixes the analogous
 method-name early return, preserving signature/flags/parameters/import/generic
 context. The next audit found unreadable TypeRef names discarding namespace and
 assembly scope; `7739e2fa3` preserves independent raw reference evidence before
-display interpretation. Current validated production/test revision: `7739e2fa3`.
+display interpretation. The following audit found a failed P/Invoke entry name
+hiding its readable module identity; `103dcee7a` preserves these independently.
+The import oracle's encoded-width note is corrected by `5d3237878`.
+Current validated production/test revision: `103dcee7a`; latest oracle: `5d3237878`.
 This acceptance record supplies evidence, not a substitute for the goal completion
 auditor's decision.
 [SEMANTICS.md](../../SEMANTICS.md) defines output notation. Historical baseline,
@@ -145,6 +148,20 @@ then green; focused review returned **OK; no issues found**. Artifact:
 `reviews/class-type-reference-evidence.md`, run
 `e8431646-7f46-4492-8250-f79e3062f81f`.
 
+P/Invoke entry and module identities now retain independent name/index/raw-row
+evidence and guarded full scope RIDs; either name failure keeps the other readable
+identity. Public Debug/Release corrupt-entry/module/scope tests were red then
+green. Independent inventory checks exact entry/module/scoped identities and rows.
+Its wide-string/small-heap oracle regression reproduced and corrected the review
+note by deriving widths from encoded row layout, not heap length. Focused final
+verdict: **OK; no issues found**. Artifacts: `reviews/class-pinvoke-evidence.md`
+and `reviews/class-pinvoke-oracle-width-followup.md`, final run
+`38cf1571-5376-42b1-8100-2c7f390db698`. Owned import and encoded-width logs are
+`report/class-pinvoke-owned-oracle.log` and
+`report/class-pinvoke-wide-oracle-green.log`; reproduce the latter using
+`python3 rust/acceptance/openra/test_oracle_imports.py` after `inventory.py`.
+No native library is loaded or executed by this metadata preservation.
+
 ## Semantic and independent-class evidence
 
 Actual bodies are extracted from public --type output and executed, not
@@ -198,10 +215,11 @@ fresh execution evidence.
 
 ## Final gates
 
-At corrected revision `7739e2fa3`, locked Cargo Debug/Release suites, fmt and
-strict all-target clippy passed. The metadata checker and its ten
-positive/negative tests passed. The oracle-only fix at `d1f1f7bea` also passed its
-independent snapshot/output regressions; these were rerun after the name fixes. The five frozen class inventories and the
+At corrected revision `103dcee7a`, locked Cargo Debug/Release suites, fmt and
+strict all-target clippy passed. The metadata checker and its eleven
+positive/negative tests passed. The oracle-only fixes at `d1f1f7bea` and
+`5d3237878` also passed their independent snapshot/output regressions; these were
+rerun after the production corrections. The five frozen class inventories and the
 random-class, resource/ammo, Activity and Wait behavior gates passed again from
 current public output. The lowering engine and remaining owned behavior inputs
 are unchanged; their previous final-gate evidence is reused. Owned comparisons per

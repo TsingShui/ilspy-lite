@@ -42,6 +42,11 @@ not interpreted. These records are not executable recovered method bodies:
   association counts are checked; payload interpretation is not performed.
   Native conversions, allocation, pinning and cleanup remain runtime-owned,
   not additional operations recovered from an ordinary managed body.
+- `.pinvoke TOKEN method=... flags=... scope=... name=... module=...`
+  retains ImplMap and ModuleRef row/index evidence. Entry and module names are
+  independent: an unreadable entry does not hide the module, or vice versa.
+  Invalid scope retains its full raw RID rather than a truncated token.
+  Native binding and interop execution remain runtime-owned; no library is loaded.
 - `.custom-attribute TOKEN parent=... constructor=... value-blob-index=...
   value-bytes=[...] raw-row-bytes=[...] payload=uninterpreted` retains exact
   attachment, constructor identity/signature and complete payload. Parents
