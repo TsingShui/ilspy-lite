@@ -1,0 +1,337 @@
+{
+  "schema": 1,
+  "provenance": "manifest.json; reuse the existing pinned local release-20250330 inputs",
+  "selection_ref": "df446c1ce",
+  "selection_rule": "Independent classes selected by source-level purpose and nontrivial state/control flow before any lowering evaluation; not selected by current success rate.",
+  "classes": [
+    {
+      "id": "resources",
+      "role": "development",
+      "assembly": "OpenRA.Mods.Common.dll",
+      "name": "OpenRA.Mods.Common.Traits.PlayerResources",
+      "source": "OpenRA.Mods.Common/Traits/Player/PlayerResources.cs",
+      "required_methods": [
+        "0x06001941",
+        "0x0600193B",
+        "0x0600193C"
+      ],
+      "inventory": "all members and recursively owned nested types",
+      "behavior": "Existing resource return/state/exception comparisons; other methods may explicitly fall back.",
+      "frozen_inventory": {
+        "root": "0x020004E0",
+        "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+        "types": [
+          "0x020004E0"
+        ],
+        "fields": [
+          "0x040014EF",
+          "0x040014F0",
+          "0x040014F1",
+          "0x040014F2",
+          "0x040014F3",
+          "0x040014F4",
+          "0x040014F5",
+          "0x040014F6"
+        ],
+        "methods": [
+          "0x06001938",
+          "0x06001939",
+          "0x0600193A",
+          "0x0600193B",
+          "0x0600193C",
+          "0x0600193D",
+          "0x0600193E",
+          "0x0600193F",
+          "0x06001940",
+          "0x06001941"
+        ],
+        "properties": [],
+        "events": []
+      }
+    },
+    {
+      "id": "ammo",
+      "role": "development",
+      "assembly": "OpenRA.Mods.Common.dll",
+      "name": "OpenRA.Mods.Common.Traits.AmmoPool",
+      "source": "OpenRA.Mods.Common/Traits/AmmoPool.cs",
+      "required_methods": [
+        "0x06000FB7",
+        "0x06000FB4"
+      ],
+      "inventory": "all members and recursively owned nested types",
+      "behavior": "Existing full-ammo/count return, state, identity and null checks; other methods may explicitly fall back.",
+      "frozen_inventory": {
+        "root": "0x020002B9",
+        "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+        "types": [
+          "0x020002B9"
+        ],
+        "fields": [
+          "0x04000D12",
+          "0x04000D13",
+          "0x04000D14",
+          "0x04000D15"
+        ],
+        "methods": [
+          "0x06000FB4",
+          "0x06000FB5",
+          "0x06000FB6",
+          "0x06000FB7",
+          "0x06000FB8",
+          "0x06000FB9",
+          "0x06000FBA",
+          "0x06000FBB",
+          "0x06000FBC",
+          "0x06000FBD",
+          "0x06000FBE"
+        ],
+        "properties": [
+          "0x17000232",
+          "0x17000233",
+          "0x17000234"
+        ],
+        "events": []
+      }
+    },
+    {
+      "id": "random",
+      "role": "development",
+      "assembly": "OpenRA.Game.dll",
+      "name": "OpenRA.Support.MersenneTwister",
+      "source": "OpenRA.Game/Support/MersenneTwister.cs",
+      "required_method_names": [
+        ".ctor()",
+        ".ctor(int32)",
+        "Next()",
+        "Next(int32,int32)",
+        "Next(int32)",
+        "NextFloat()",
+        "Generate()"
+      ],
+      "inventory": "all members and recursively owned nested types",
+      "behavior": "All seven bodies and selected call dependencies must lower and pass the confirmed seed/state/sequence/range/float contract.",
+      "required_methods": [
+        "0x0600079D",
+        "0x0600079E",
+        "0x0600079F",
+        "0x060007A0",
+        "0x060007A1",
+        "0x060007A2",
+        "0x060007A3"
+      ],
+      "frozen_inventory": {
+        "root": "0x020000E8",
+        "mvid": "6b57af11-2705-4259-afe6-fb984ced7168",
+        "types": [
+          "0x020000E8"
+        ],
+        "fields": [
+          "0x04000529",
+          "0x0400052A",
+          "0x0400052B",
+          "0x0400052C"
+        ],
+        "methods": [
+          "0x0600079D",
+          "0x0600079E",
+          "0x0600079F",
+          "0x060007A0",
+          "0x060007A1",
+          "0x060007A2",
+          "0x060007A3"
+        ],
+        "properties": [],
+        "events": []
+      }
+    },
+    {
+      "id": "activity",
+      "role": "independent",
+      "assembly": "OpenRA.Game.dll",
+      "name": "OpenRA.Activities.Activity",
+      "source": "OpenRA.Game/Activities/Activity.cs",
+      "required_method_names": [
+        "Queue(class OpenRA.Activities.Activity)"
+      ],
+      "inventory": "all members and recursively owned nested types, including abstract/virtual and iterator/generic metadata",
+      "selection_reason": "Real linked-activity state: walks a reference chain and appends a specific object. Not a getter or arithmetic-only toy.",
+      "behavior": "Queue on finite chains of lengths 0, 1, 3; append null or a distinct object; check every link and reference identity, preservation of existing nodes, and null receiver exception. Infinite/cyclic chains are inspected statically, not executed or timed out as proof.",
+      "known_needs": [
+        "reference null branches",
+        "stable local class reference fields",
+        "loop and array-free reference state mutation"
+      ],
+      "fallback_boundary": "Other lifecycle, generic and iterator methods remain in inventory and may explicitly fall back; no comprehensive enum/generic/virtual/EH acceptance is implied.",
+      "required_methods": [
+        "0x06000F46"
+      ],
+      "frozen_inventory": {
+        "root": "0x0200024A",
+        "mvid": "6b57af11-2705-4259-afe6-fb984ced7168",
+        "types": [
+          "0x0200024A",
+          "0x020003A1",
+          "0x020003A2",
+          "0x020003A3",
+          "0x020003A4"
+        ],
+        "fields": [
+          "0x04000924",
+          "0x04000925",
+          "0x04000926",
+          "0x04000927",
+          "0x04000928",
+          "0x04000929",
+          "0x0400092A",
+          "0x0400092B",
+          "0x04000DD3",
+          "0x04000DD4",
+          "0x04000DD5",
+          "0x04000DD6",
+          "0x04000DD7",
+          "0x04000DD8",
+          "0x04000DD9",
+          "0x04000DDA",
+          "0x04000DDB",
+          "0x04000DDC",
+          "0x04000DDD",
+          "0x04000DDE",
+          "0x04000DDF",
+          "0x04000DE0",
+          "0x04000DE1",
+          "0x04000DE2",
+          "0x04000DE3",
+          "0x04000DE4"
+        ],
+        "methods": [
+          "0x06000F31",
+          "0x06000F32",
+          "0x06000F33",
+          "0x06000F34",
+          "0x06000F35",
+          "0x06000F36",
+          "0x06000F37",
+          "0x06000F38",
+          "0x06000F39",
+          "0x06000F3A",
+          "0x06000F3B",
+          "0x06000F3C",
+          "0x06000F3D",
+          "0x06000F3E",
+          "0x06000F3F",
+          "0x06000F40",
+          "0x06000F41",
+          "0x06000F42",
+          "0x06000F43",
+          "0x06000F44",
+          "0x06000F45",
+          "0x06000F46",
+          "0x06000F47",
+          "0x06000F48",
+          "0x06000F49",
+          "0x06000F4A",
+          "0x06000F4B",
+          "0x06000F4C",
+          "0x0600140B",
+          "0x0600140C",
+          "0x0600140D",
+          "0x0600140E",
+          "0x0600140F",
+          "0x06001410",
+          "0x06001411",
+          "0x06001412",
+          "0x06001413",
+          "0x06001414",
+          "0x06001415",
+          "0x06001416",
+          "0x06001417",
+          "0x06001418",
+          "0x06001419",
+          "0x0600141A",
+          "0x0600141B",
+          "0x0600141C",
+          "0x0600141D",
+          "0x0600141E",
+          "0x0600141F",
+          "0x06001420",
+          "0x06001421",
+          "0x06001422",
+          "0x06001423",
+          "0x06001424",
+          "0x06001425",
+          "0x06001426",
+          "0x06001427",
+          "0x06001428",
+          "0x06001429",
+          "0x0600142A",
+          "0x0600142B",
+          "0x0600142C"
+        ],
+        "properties": [
+          "0x170002F9",
+          "0x170002FA",
+          "0x170002FB",
+          "0x170002FC",
+          "0x170002FD",
+          "0x170002FE",
+          "0x17000363",
+          "0x17000364",
+          "0x17000365",
+          "0x17000366",
+          "0x17000367",
+          "0x17000368",
+          "0x17000369",
+          "0x1700036A"
+        ],
+        "events": []
+      }
+    },
+    {
+      "id": "wait",
+      "role": "independent",
+      "assembly": "OpenRA.Mods.Common.dll",
+      "name": "OpenRA.Mods.Common.Activities.Wait",
+      "source": "OpenRA.Mods.Common/Activities/Wait.cs",
+      "required_method_names": [
+        "Tick(class [OpenRA.Game]OpenRA.Actor)"
+      ],
+      "inventory": "all members and recursively owned nested types; WaitFor is a sibling and must not be expanded",
+      "selection_reason": "Real countdown/cancellation state: early cancellation return plus old-value post-decrement and integer wraparound. Exercises metadata inheritance across the existing two input assemblies.",
+      "behavior": "Tick with null Actor (unused argument), canceling/noncanceling state and remainingTicks at int.MinValue, -1, 0, 1, 2, int.MaxValue; check return, remainingTicks after one and repeated calls, and null receiver exception. Preserve the actual base getter call; do not rewrite the selected Tick body from its source.",
+      "known_needs": [
+        "opaque external class parameter identity",
+        "precise direct MemberRef call to base getter",
+        "reference receiver through external base",
+        "old-value snapshot and state mutation"
+      ],
+      "fallback_boundary": "Constructor metadata must be complete; unsupported constructor lowering may fall back. A known external getter may be exercised as an unchanged leaf or explicit single-operation test adapter, not substituted for the selected Wait.Tick body; no general dependency resolver is required.",
+      "required_methods": [
+        "0x0600241A"
+      ],
+      "frozen_inventory": {
+        "root": "0x020007A5",
+        "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+        "types": [
+          "0x020007A5"
+        ],
+        "fields": [
+          "0x04001DFA"
+        ],
+        "methods": [
+          "0x06002418",
+          "0x06002419",
+          "0x0600241A"
+        ],
+        "properties": [],
+        "events": []
+      }
+    }
+  ],
+  "limitations": [
+    "Both independent classes are new to this implementation, but come from the same OpenRA release and share an activity abstraction. They are not random or broad ecosystem coverage.",
+    "Known needs describe future acceptance obligations, not current support or passed tests. If they require a large framework or unapproved semantic expansion, stop and ask rather than changing samples.",
+    "Only member identities and acceptance rules belong in tracked files. OpenRA source, raw metadata snapshots, IL and generated class output remain in ignored report/.",
+    "Inventory completeness and successful lowering are separate gates; neither decoding nor complete IL fallback counts as successful semantic decompilation."
+  ]
+}

@@ -1,10 +1,32 @@
 # Bounded OpenRA acceptance corpus
 
-This is an external real-world corpus, not an expansion of the product contract
-to "decompile all of OpenRA". The first delivery boundary is **stage 1 only**.
-Stages 2 and 3 are recorded candidates, not authorization to implement everything
-needed by them. Stage 1 is implemented and has passed its bounded behavioral
-gate; see [STAGE1.md](STAGE1.md). The original corpus-setup baseline is preserved.
+This is an external real-world corpus, not a promise to decompile all of OpenRA.
+The original stage-1 milestone passed its bounded behavioral gate; see
+[STAGE1.md](STAGE1.md). The confirmed class-level goal also requires all seven
+MersenneTwister methods and two independently selected classes. The generic ring
+candidates remain outside that goal. The original baseline is preserved.
+
+## Frozen class acceptance
+
+[classes.json](classes.json) freezes five class selections, their original
+TypeDef/member tokens and required behavior targets before class lowering work.
+The independent classes are `OpenRA.Activities.Activity` (reference-chain append)
+and `OpenRA.Mods.Common.Activities.Wait` (countdown/cancellation). Selection used
+source purpose, not current decompiler results. They are related classes from one
+project, not broad ecosystem coverage; their dependencies and remaining semantic
+needs are recorded rather than assumed supported. Failures must not cause silent
+replacement or deletion of samples.
+
+The optional independent static metadata check uses .NET 10 without loading or
+executing the input, running Rust lowering, or rehashing unchanged files:
+
+```sh
+python3 rust/acceptance/openra/inventory.py
+```
+
+Its reader is `tests/dotnet/ClassInventory.cs`. Full metadata snapshots stay in
+ignored `report/openra/class-inventory/`; only identities/contracts are tracked.
+Matching inventory is not successful decompilation or a behavior gate.
 
 ## Pinned input and provenance
 
