@@ -342,18 +342,121 @@ fn core_constructor_admission_rejects_spoofs_wrong_calls_and_receiver_contexts()
 }
 
 #[test]
-fn constructor_calls_are_not_ordinary_calls_and_remain_visible_when_unsupported() {
+fn delegated_constructor_calls_keep_same_receiver_clock_order_and_exact_target() {
     for bytes in IMAGES {
-        for count in [0, 2] {
-            let ctor = method(bytes, ".ctor", count);
-            let result = decompile(bytes, ctor).unwrap();
-            assert_eq!(result.status, Status::Partial);
-            assert!(
-                result.text.contains("constructor call needs IL fallback"),
-                "{}",
-                result.text
-            );
-            assert!(result.text.contains("IL FALLBACK") && result.text.contains("call"));
-        }
+        let root = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| {
+                m.declaring_type == "ConstructorCases.Root"
+                    && m.simple_name == ".ctor"
+                    && m.name.ends_with("()")
+            })
+            .unwrap()
+            .token;
+        let result = decompile(bytes, root).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_ctor_call_06"));
+        assert!(
+            result.text.find("__cil_tick_count_0A").unwrap()
+                < result.text.find("__cil_ctor_call_06").unwrap()
+        );
+        assert!(
+            result
+                .text
+                .contains("same original receiver; no allocation or added null check")
+        );
+        assert!(
+            !result.text.contains(" = new ") && !result.text.contains("__cil_core_object_ctor_")
+        );
+        let caller = method(bytes, ".ctor", 0);
+        let result = decompile(bytes, caller).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text); // Caller lowering is not closure of its base dependency.
+    }
+}
+
+#[test]
+fn delegated_constructor_rejects_ordinary_other_receiver_and_invalid_target_contexts() {
+    for bytes in IMAGES {
+        let target = method(bytes, ".ctor", 2);
+        let other = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| {
+                m.declaring_type == "ConstructorCases.Cells"
+                    && m.simple_name == ".ctor"
+                    && m.name.contains("class ConstructorCases.Cells")
+            })
+            .unwrap()
+            .token;
+        let mut code = vec![0x03, 0x16, 0x04, 0x28]; // Other receiver, length, value.
+        code.extend(target.to_le_bytes());
+        code.push(0x2a);
+        let result = decompile(&patch_body(bytes, other, &code), other).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("same owning constructor and original this")
+        );
+        let ordinary = method(bytes, "Reserved", 1);
+        let mut code = vec![0x02, 0x16, 0x03, 0x28];
+        code.extend(target.to_le_bytes());
+        code.extend([0x03, 0x2a]);
+        assert_eq!(
+            decompile(&patch_body(bytes, ordinary, &code), ordinary)
+                .unwrap()
+                .status,
+            Status::Partial
+        );
+        let caller = method(bytes, ".ctor", 0);
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::MethodDef, target & 0xffffff)
+            .unwrap();
+        let start = row.as_ptr() as usize - bytes.as_ptr() as usize;
+        let flags = u16::from_le_bytes(row[6..8].try_into().unwrap());
+        let mut patched = bytes.to_vec();
+        patched[start + 6..start + 8].copy_from_slice(&(flags & !0x1000).to_le_bytes());
+        let result = decompile(&patched, caller).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(result.text.contains("invalid constructor call context"));
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(caller & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let mut code = body.code.to_vec();
+        let offset = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap()
+            .offset as usize;
+        code[offset] = 0x6f; // Constructor callvirt remains unsupported.
+        assert_eq!(
+            decompile(&patch_body(bytes, caller, &code), caller)
+                .unwrap()
+                .status,
+            Status::Partial
+        );
+    }
+}
+
+#[test]
+fn other_constructor_calls_remain_visible_when_unsupported() {
+    for bytes in IMAGES {
+        let ctor = method(bytes, ".ctor", 2);
+        let result = decompile(bytes, ctor).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(
+            result.text.contains("base/other contexts need IL fallback"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("IL FALLBACK") && result.text.contains("call"));
     }
 }

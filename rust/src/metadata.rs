@@ -1347,8 +1347,34 @@ impl<'a> Image<'a> {
                     ret: crate::ir::Ty::Void,
                     core_object_constructor: Some(reference.class.0),
                     tick_count: false,
+                    local_constructor: false,
                 });
             }
+        }
+        if name == ".ctor" && t.table() == Some(TableId::MethodDef) {
+            let row = self.row(t.0)?;
+            if !sig.has_this
+                || row.is_static()
+                || row.flags & 0x1800 != 0x1800
+                || row.flags & 0x440 != 0
+                || crate::ir::Ty::from_param(&sig.return_type)? != crate::ir::Ty::Void
+            {
+                return Err("invalid constructor call context needs IL fallback".into());
+            }
+            return Ok(MethodRef {
+                token: t.0,
+                receiver: Some(self.receiver(t.0)?),
+                target: format!("__cil_ctor_call_{:08X}", t.0),
+                args: sig
+                    .params
+                    .iter()
+                    .map(crate::ir::Ty::from_param)
+                    .collect::<Result<Vec<_>>>()?,
+                ret: crate::ir::Ty::Void,
+                core_object_constructor: None,
+                tick_count: false,
+                local_constructor: true,
+            });
         }
         if name == ".ctor" || name == ".cctor" {
             return Err("constructor call needs IL fallback".into());
@@ -1370,6 +1396,7 @@ impl<'a> Image<'a> {
                 ret: crate::ir::Ty::I4,
                 core_object_constructor: None,
                 tick_count: true,
+                local_constructor: false,
             });
         }
         identifier(&name)?;
@@ -1403,6 +1430,7 @@ impl<'a> Image<'a> {
             ret,
             core_object_constructor: None,
             tick_count: false,
+            local_constructor: false,
         })
     }
 
@@ -1462,6 +1490,7 @@ pub(crate) struct MethodRef {
     pub ret: crate::ir::Ty,
     pub core_object_constructor: Option<u32>,
     pub tick_count: bool,
+    pub local_constructor: bool,
 }
 
 fn generic_flags(flags: u16) -> String {

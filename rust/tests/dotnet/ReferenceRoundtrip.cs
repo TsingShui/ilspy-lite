@@ -62,6 +62,12 @@ internal static class ReferenceRoundtrip
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        if (job.Kind == "default")
+        {
+            DefaultConstructor(recovered, members);
+            Console.WriteLine($"default: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "random-seed")
         {
             RandomSeed(recovered, members);
@@ -112,6 +118,12 @@ internal static class ReferenceRoundtrip
             foreach (Match match in Regex.Matches(source, @"__cil_direct_([0-9A-F]{8})\("))
                 if (!methods.ContainsKey(Convert.ToInt32(match.Groups[1].Value, 16)))
                     throw new Exception("A direct-call dependency was not recovered");
+            foreach (Match match in Regex.Matches(source, @"__cil_ctor_call_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                if (!methods.TryGetValue(token, out MethodBase target) || target is not ConstructorInfo)
+                    throw new Exception("A delegated constructor dependency was not recovered");
+            }
             foreach (Match match in Regex.Matches(source, @"__cil_core_object_ctor_([0-9A-F]{8})\("))
             {
                 int token = Convert.ToInt32(match.Groups[1].Value, 16);
@@ -151,6 +163,8 @@ internal static class ReferenceRoundtrip
             }
             shells.Add($"namespace {type.Namespace} {{ public class {type.Name}{parent} {{ {members} }} }}");
         }
+        if (methods.Values.Any(m => m is ConstructorInfo))
+            code.Add("public static global::System.Action<int, object, object[]> ConstructorCallObserver;");
         foreach (var pair in methods)
         {
             MethodBase method = pair.Value;
@@ -158,7 +172,12 @@ internal static class ReferenceRoundtrip
             var parameters = new[] { TypeName(method.DeclaringType!) + " self" }
                 .Concat(method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
             string arguments = string.Join(", ", new[] { "self" }.Concat(method.GetParameters().Select((p, i) => "a" + i)));
-            if (method is MethodInfo)
+            if (method is ConstructorInfo)
+            {
+                string observedArgs = string.Join(", ", method.GetParameters().Select((p, i) => "a" + i));
+                code.Add($"public static void __cil_ctor_call_{pair.Key:X8}({string.Join(", ", parameters)}) {{ ConstructorCallObserver?.Invoke({pair.Key}, self, new object[] {{ {observedArgs} }}); M_{pair.Key:X8}({arguments}); }}");
+            }
+            else
                 code.Add($"public static {TypeName(ReturnType(method))} __cil_direct_{pair.Key:X8}({string.Join(", ", parameters)}) => M_{pair.Key:X8}({arguments});");
         }
         if (coreConstructors.Count != 0)
@@ -325,6 +344,138 @@ internal static class ReferenceRoundtrip
                 throw new Exception("Constructor null failure or core call timing changed");
         }
         Console.WriteLine("Core Object constructor: exact runtime call, no allocation or added null check; pre/post field ordering observed.");
+    }
+
+    static Action<object, Func<int>> ControlledOriginalDefault(ConstructorInfo constructor, ConstructorInfo delegated)
+    {
+        // Decode the original bounded body, substituting only the external clock call.
+        // The oracle is independent of the decompiler's output and does not rewrite the input image.
+        MethodBody body = constructor.GetMethodBody()!;
+        if (body.LocalVariables.Count != 0 || body.ExceptionHandlingClauses.Count != 0)
+            throw new Exception("Controlled default oracle requires a straight-line body without locals/EH");
+        byte[] code = body.GetILAsByteArray()!;
+        var dm = new DynamicMethod("ControlledOriginalDefault", typeof(void), new[] { typeof(object), typeof(Func<int>) }, constructor.Module, true);
+        ILGenerator il = dm.GetILGenerator();
+        int stage = 0;
+        for (int offset = 0; offset < code.Length;)
+        {
+            byte op = code[offset++];
+            if (op == 0x00) { il.Emit(OpCodes.Nop); continue; }
+            if (op == 0x02 && stage == 0)
+            {
+                il.Emit(OpCodes.Ldarg_0); il.Emit(OpCodes.Castclass, constructor.DeclaringType!); stage = 1;
+            }
+            else if (op == 0x28 && (stage == 1 || stage == 2) && offset + 4 <= code.Length)
+            {
+                int token = BitConverter.ToInt32(code, offset); offset += 4;
+                MethodBase target = constructor.Module.ResolveMethod(token)!;
+                if (stage == 1)
+                {
+                    if (target is not MethodInfo clock || clock.DeclaringType != typeof(Environment)
+                        || clock.Name != "get_TickCount" || !clock.IsStatic || clock.ReturnType != typeof(int)
+                        || clock.GetParameters().Length != 0)
+                        throw new Exception("Original default clock target drift");
+                    il.Emit(OpCodes.Ldarg_1);
+                    il.Emit(OpCodes.Callvirt, typeof(Func<int>).GetMethod("Invoke")!);
+                    stage = 2;
+                }
+                else
+                {
+                    if (target != delegated) throw new Exception("Original delegated constructor target drift");
+                    il.Emit(OpCodes.Call, delegated); stage = 3;
+                }
+            }
+            else if (op == 0x2a && stage == 3 && offset == code.Length)
+            {
+                il.Emit(OpCodes.Ret); stage = 4;
+            }
+            else throw new Exception($"Unadmitted original default instruction at {offset - 1}");
+        }
+        if (stage != 4) throw new Exception("Incomplete original default oracle");
+        return (Action<object, Func<int>>)dm.CreateDelegate(typeof(Action<object, Func<int>>));
+    }
+
+    static void DefaultConstructor(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        ConstructorInfo entry = (ConstructorInfo)methods.Values.Single(m => m is ConstructorInfo && m.GetParameters().Length == 0);
+        ConstructorInfo delegated = (ConstructorInfo)methods.Values.Single(m => m is ConstructorInfo && m.GetParameters().Length == 1);
+        Type cell = entry.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        bool random = cell.FullName == "OpenRA.Support.MersenneTwister";
+        if (methods.Count != (random ? 4 : 2) || methods.Values.Any(m => m.DeclaringType != cell)
+            || delegated.GetParameters()[0].ParameterType != typeof(int))
+            throw new Exception("Default constructor selection drift");
+        Action<object, Func<int>> original = ControlledOriginalDefault(entry, delegated);
+        Action<object> exactCore = CoreObjectCall();
+        Type loweredType = recovered.GetType("Recovered")!;
+        MethodInfo loweredEntry = loweredType.GetMethod($"M_{entry.MetadataToken:X8}")!;
+        string arrayField = random ? "mt" : "Values";
+        string[] scalars = random ? new[] { "index", "Last", "TotalCount" } : new[] { "Before", "After", "Effects" };
+        foreach (int clockValue in new[] { int.MinValue, -1, 0, 1, int.MaxValue })
+        foreach (bool dirty in new[] { false, true })
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            object a = nullReceiver ? null : New(cell), b = nullReceiver ? null : New(clone);
+            uint[] oldLeft = dirty && !nullReceiver ? new[] { 17u } : null;
+            uint[] oldRight = dirty && !nullReceiver ? new[] { 17u } : null;
+            if (dirty && !nullReceiver)
+            {
+                Set(a, arrayField, oldLeft); Set(b, arrayField, oldRight);
+                foreach (string name in scalars) { Set(a, name, -23); Set(b, name, -23); }
+            }
+            void AssertBefore(object self, uint[] old)
+            {
+                if (self == null) return;
+                if (!ReferenceEquals(Get(self, arrayField), old)
+                    || scalars.Any(name => (int)Get(self, name) != (dirty ? -23 : 0)))
+                    throw new Exception("Initialization moved before clock/delegated call");
+            }
+            int originalReads = 0, reads = 0, delegations = 0, cores = 0;
+            Func<int> originalClock = () => { AssertBefore(a, oldLeft); originalReads++; return clockValue; };
+            loweredType.GetField("TickCount")!.SetValue(null, (Func<int>)(() => {
+                AssertBefore(b, oldRight);
+                if (delegations != 0 || cores != 0) throw new Exception("Clock read reordered");
+                reads++; return clockValue;
+            }));
+            loweredType.GetField("ConstructorCallObserver")!.SetValue(null, (Action<int, object, object[]>)((token, self, values) => {
+                if (token != delegated.MetadataToken || !ReferenceEquals(self, b) || reads != 1 || cores != 0
+                    || values.Length != 1 || !Equals(values[0], clockValue))
+                    throw new Exception("Delegated target/receiver/clock bits changed");
+                AssertBefore(self, oldRight); delegations++;
+            }));
+            loweredType.GetField("CoreConstructorCall")!.SetValue(null, (Action<object>)(self => {
+                if (!ReferenceEquals(self, b) || reads != 1 || delegations != 1)
+                    throw new Exception("Core call occurred before delegation");
+                uint[] state = (uint[])Get(self, arrayField);
+                if (state == null || state.Length != (random ? 624 : 3) || state.Any(n => n != 0)
+                    || ReferenceEquals(state, oldRight)) throw new Exception("Default constructor allocation timing changed");
+                cores++; exactCore(self);
+            }));
+            object expected = Outcome(() => { original(a, originalClock); return null; });
+            object actual = Outcome(() => loweredEntry.Invoke(null, new[] { b }));
+            if (!Equals(expected, actual) || (!nullReceiver && expected != null))
+                throw new Exception($"Default constructor outcome mismatch: {expected} / {actual}");
+            if (originalReads != 1 || reads != 1 || delegations != 1 || cores != (nullReceiver ? 0 : 1))
+                throw new Exception("Default constructor clock/delegation/core count mismatch");
+            if (!nullReceiver)
+            {
+                SameFields(a, b, scalars);
+                uint[] left = (uint[])Get(a, arrayField), right = (uint[])Get(b, arrayField);
+                SameArray(left, right);
+                if (left.Length != (random ? 624 : 3) || ReferenceEquals(left, oldLeft) || ReferenceEquals(right, oldRight))
+                    throw new Exception("Default construction changed array identity/extent");
+                if (random && !dirty)
+                {
+                    MethodInfo next = (MethodInfo)methods.Values.Single(m => m.Name == "Next");
+                    for (int draw = 0; draw < 3; draw++)
+                        Check(recovered, next, a, b, Array.Empty<object>(), Array.Empty<object>(), () => {
+                            SameFields(a, b, scalars); SameArray((uint[])Get(a, arrayField), (uint[])Get(b, arrayField));
+                        }, (x, y) => x is int && y is int && Equals(x, y));
+                }
+            }
+            checks++;
+        }
+        loweredType.GetField("ConstructorCallObserver")!.SetValue(null, null);
+        Console.WriteLine("Default: original IL replay changes only clock boundary; recovered bodies keep one clock/delegation/core call in order, including null receiver paths.");
     }
 
     static void RandomSeed(Assembly recovered, Dictionary<int, MethodBase> methods)

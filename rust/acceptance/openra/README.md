@@ -34,8 +34,9 @@ accounting. Matching inventory is not successful semantic decompilation or a
 behavior gate. Results: [CLASS_MILESTONE.md](CLASS_MILESTONE.md).
 The separate [RANDOM_STATE.md](RANDOM_STATE.md) gate closes Generate/Next state
 behavior; [RANDOM_SEED.md](RANDOM_SEED.md) also validates recovered seed
-allocation/initialization without copying original state. Default construction,
-range and floating contracts remain pending.
+allocation/initialization without copying original state.
+[RANDOM_DEFAULT.md](RANDOM_DEFAULT.md) validates controlled-clock default
+construction. Range and floating contracts remain pending.
 
 ## Pinned input and provenance
 

@@ -76,8 +76,10 @@ and call count; local direct-core null behavior is tested without adding a check
 Debug/Release passed 22 return/exception/state comparisons per configuration.
 `ClockValue` supplies an exact Environment.TickCount MemberRef. The
 `reference-roundtrip.py --clock --from-class` gate verifies five controlled signed
-boundary values and one read each per Debug/Release configuration. Default
-constructor delegation remains a separate gate. Static constructors and
+boundary values and one read each per Debug/Release configuration. The
+`--delegated --from-class` gate compares Root default/seed bodies using original
+IL replay with only the clock boundary substituted: 20 comparisons/configuration,
+including target/argument/count/order and null/dirty-state cases. Static constructors and
 generic/value-type constructors remain unsupported. Git pins the snapshots
 without a separate hash manifest.
 

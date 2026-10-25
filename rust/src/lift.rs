@@ -614,8 +614,18 @@ impl Writer<'_, '_> {
                 } else if let Some(owner) = method.receiver {
                     let receiver = self.pop()?;
                     self.image.assignable(receiver.ty, owner)?;
+                    if method.local_constructor {
+                        if self.constructor_owner != Some(owner)
+                            || receiver.ty != owner
+                            || !self.original_this.contains(&receiver.name)
+                        {
+                            return Err("constructor call needs same owning constructor and original this; base/other contexts need IL fallback".into());
+                        }
+                        self.lines.push("// Exact same-type constructor delegation on the same original receiver; no allocation or added null check.".into());
+                    } else {
+                        self.lines.push("// __cil_direct: exact IL call target; no virtual dispatch or added null check.".into());
+                    }
                     values.insert(0, receiver.name);
-                    self.lines.push("// __cil_direct: exact IL call target; no virtual dispatch or added null check.".into());
                 }
                 if method.tick_count {
                     self.lines.push("// Exact core Environment.TickCount: signed I4 clock read at this instruction, evaluated once.".into());

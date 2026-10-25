@@ -99,9 +99,10 @@ retain raw code bytes in a `Failed` result.
   admitted core `System.Object::.ctor()` retains its token and position as
   `__cil_core_object_ctor_TOKEN(this)`: initialization on the same receiver,
   without allocation, virtual dispatch or an added null check. Only immediate
-  core-base calls with unchanged entry this are admitted. Other constructor
-  calls and static initonly writes still fall back; body lowering is not a full
-  initialization verifier.
+  core-base calls with unchanged entry this are admitted. Same-type MethodDef
+  delegation uses `__cil_ctor_call_TOKEN(this, ...)` without allocation or
+  repeated field initializers. Other receiver/base contexts and static initonly
+  writes fall back; body lowering is not a full initialization verifier.
 - Exact admitted core `Environment.TickCount` calls use `__cil_tick_count_TOKEN()`:
   a signed I4 clock read at the original instruction, evaluated once. Test-only
   controlled clocks preserve the full bit pattern; differing real times are not
@@ -251,9 +252,11 @@ and its `Generate` dependency also lower and pass the separate full-state gate:
 1,250 consecutive calls per fixed seed, with each return and all state checked.
 The separate seed gate executes the recovered allocation/initialization body,
 compares all 624 words and follows it through continuous draws without copying
-original state. Default constructor, range/exception and floating closure remain
-pending; see [random state](acceptance/openra/RANDOM_STATE.md) and
-[seed initialization](acceptance/openra/RANDOM_SEED.md). The corpus is optional, downloaded
+original state. Default construction also passes its controlled-clock/delegation
+gate. Range/exception and floating closure remain pending; see
+[random state](acceptance/openra/RANDOM_STATE.md),
+[seed initialization](acceptance/openra/RANDOM_SEED.md) and
+[default constructor](acceptance/openra/RANDOM_DEFAULT.md). The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
 the selected bodies extracted from class output. This gate reuses verified local
