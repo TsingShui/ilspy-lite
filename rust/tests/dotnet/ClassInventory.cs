@@ -32,7 +32,7 @@ internal static class ClassInventory
 
     static void Main(string[] args)
     {
-        if (args.Length != 2) throw new ArgumentException("Expected assembly path and exact type name");
+        if (args.Length != 2) throw new ArgumentException("Expected assembly path and exact type name or --list-types");
         using var pe = new PEReader(File.OpenRead(args[0]));
         MetadataReader md = pe.GetMetadataReader();
         string TypeName(TypeDefinitionHandle handle)
@@ -43,6 +43,34 @@ internal static class ClassInventory
             if (!parent.IsNil) return TypeName(parent) + "/" + name;
             string ns = md.GetString(type.Namespace);
             return ns.Length == 0 ? name : ns + "." + name;
+        }
+        if (args[1] == "--list-types")
+        {
+            string Kind(TypeDefinitionHandle handle)
+            {
+                var type = md.GetTypeDefinition(handle);
+                if (TypeName(handle) == "<Module>") return "module";
+                if ((type.Attributes & System.Reflection.TypeAttributes.Interface) != 0) return "interface";
+                string baseName = "";
+                if (type.BaseType.Kind == HandleKind.TypeDefinition)
+                    baseName = TypeName((TypeDefinitionHandle)type.BaseType);
+                else if (type.BaseType.Kind == HandleKind.TypeReference)
+                {
+                    var reference = md.GetTypeReference((TypeReferenceHandle)type.BaseType);
+                    baseName = md.GetString(reference.Namespace) + "." + md.GetString(reference.Name);
+                }
+                return baseName == "System.ValueType" || baseName == "System.Enum" ? "value_type" : "class";
+            }
+            Console.WriteLine(JsonSerializer.Serialize(new {
+                schema = 1, oracle = "System.Reflection.Metadata (static PEReader; no input execution)",
+                mvid = md.GetGuid(md.GetModuleDefinition().Mvid),
+                types = md.TypeDefinitions.Select(handle => {
+                    var type = md.GetTypeDefinition(handle);
+                    return new { token = Token(handle), name = TypeName(handle), kind = Kind(handle),
+                        flags = (int)type.Attributes, parent = Token(type.GetDeclaringType()), base_type = Token(type.BaseType) };
+                }).ToArray()
+            }, new JsonSerializerOptions { WriteIndented = true }));
+            return;
         }
         byte[] metadata = pe.GetMetadata().GetContent().ToArray();
         byte[] Row(TableIndex table, int rid)

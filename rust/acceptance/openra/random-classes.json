@@ -1,0 +1,166 @@
+{
+  "schema": 1,
+  "baseline_ref": "39bd383ff",
+  "algorithm": "ascending SHA256(seed_bytes + NUL + UTF8(assembly + NUL + mvid + NUL + token)); identity tie-break",
+  "seed": "a851d53c66e12a7c1282d0c93cfaeca8",
+  "eligibility": "kind=class; no generic, nested, generated, visibility or complexity filter",
+  "excluded_names": [
+    "OpenRA.Mods.Common.Activities.Wait"
+  ],
+  "population_sources": [
+    {
+      "assembly": "OpenRA.Game.dll",
+      "path": "rust/report/openra/random-classes/population/OpenRA.Game.json",
+      "mvid": "6b57af11-2705-4259-afe6-fb984ced7168"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "path": "rust/report/openra/random-classes/population/OpenRA.Mods.Common.json",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982"
+    }
+  ],
+  "eligible_count": 4472,
+  "count": 20,
+  "classes": [
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000B65",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.LatencyTooltipLogic/<>c__DisplayClass0_1",
+      "selection_key": "001084cdfcf351a82b008c4cf103338a4ae2ed3eedcb27d3a832ed8441acdc6f"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000F97",
+      "name": "OpenRA.Mods.Common.Traits.Render.WithSpriteBodyInfo/<>c",
+      "selection_key": "001a0acfe2fab7966cb6c1a0615680577fc386cf30746e9b50f87428220c8927"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020003E1",
+      "name": "OpenRA.Mods.Common.Traits.DamagedByTerrain",
+      "selection_key": "001e5db7b72279462bb7043d5b41bbd9700c57db1062792eb5ff73560b4849ff"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000514",
+      "name": "OpenRA.Mods.Common.Traits.ProximityCapturable",
+      "selection_key": "001f40ee2753a256a25862fda57bd5d1c3045b6cbc903c446d5f080f3c1b3bba"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x0200047E",
+      "name": "OpenRA.Mods.Common.Traits.MustBeDestroyed",
+      "selection_key": "0023eaef5ea019344d5a6156321557eca0e04605f30d31a2756e1dc196afdc1f"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000CCC",
+      "name": "OpenRA.Mods.Common.Traits.BaseBuilderQueueManager/<>c__DisplayClass23_1",
+      "selection_key": "0091442f1215049d3f65cd0277edcd8c728391ef65f6516bfb93a51603563d72"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000A38",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.AnonymousProfileTooltipLogic/<>c__DisplayClass0_0",
+      "selection_key": "009c48161486ef63d55b6947ec00ae2eece6f6eefa516b7419ccc79d57df48e3"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020000EB",
+      "name": "OpenRA.Mods.Common.Scripting.ProductionProperties",
+      "selection_key": "00a5c4043669e82c1df3cf03a7f9cef6de7bf0c624e14e5401b20916a742c03f"
+    },
+    {
+      "assembly": "OpenRA.Game.dll",
+      "mvid": "6b57af11-2705-4259-afe6-fb984ced7168",
+      "token": "0x020003BB",
+      "name": "OpenRA.FileSystem.ZipFileLoader/ReadOnlyZipFile/<get_Contents>d__9",
+      "selection_key": "00a70e33736bbc21d2b23f75baf0b133b0817b5bfabaab566c1e5ba84bb4f4e8"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000858",
+      "name": "OpenRA.Mods.Common.UpdateRules.Rules.UnhardcodeBaseBuilderBotModule/<BeforeUpdateActors>d__8",
+      "selection_key": "00b566d6247ee07c8c054395d6dc13634b1c5a410e038a3f8ffc30b6e2238817"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000714",
+      "name": "OpenRA.Mods.Common.Traits.Render.WithHarvestOverlay",
+      "selection_key": "00c040243e7c6f4fc44e94e79eeb92e204581412f5fa2ec16706333386527f05"
+    },
+    {
+      "assembly": "OpenRA.Game.dll",
+      "mvid": "6b57af11-2705-4259-afe6-fb984ced7168",
+      "token": "0x020002EA",
+      "name": "OpenRA.Widgets.Widget/<>c__DisplayClass28_0",
+      "selection_key": "00c34c83e2f9cb3c81009c73ab4010c4df025d372a95676f9d68b56c2c06f80f"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000462",
+      "name": "OpenRA.Mods.Common.Traits.GivesExperienceMultiplier",
+      "selection_key": "00c86a02c15e9b4ad373e7cda94be8ca0a0001c3fac071a4c4dfbaadf81cb1fa"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000AD7",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.GameInfoStatsLogic/<>c__DisplayClass21_4",
+      "selection_key": "00cc03639e0d207718700e40a9721fcca1aab5965eb32d578f9fa83c98e81535"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020005D4",
+      "name": "OpenRA.Mods.Common.Traits.MarkerLayerOverlayInfo",
+      "selection_key": "00dbcbfc9fdbe2d218c4375b89c4c192d956fe2cbb94604c537290688e3e6dbf"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020007A0",
+      "name": "OpenRA.Mods.Common.Activities.SimpleTeleport",
+      "selection_key": "0112e87585753e600a698f18dbec5bc0a4f3c86325eaa020141cacdb5f3c5022"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000B5C",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.IntroductionPromptLogic/<>c__DisplayClass6_0",
+      "selection_key": "0115b79b4a35586e99a2a319a3fb92079971f7111aa654c3a8aa422394f5364a"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000B36",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.DownloadPackageLogic/<>c__DisplayClass20_0",
+      "selection_key": "012be9f396478bcff60c457720bcbd5be993cd4484d527ca4fa68b39c55323ab"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000985",
+      "name": "OpenRA.Mods.Common.Graphics.DefaultSpriteSequence/<>c",
+      "selection_key": "0136b1a7e4c35ab1baaefbecc20ddaeb7e5ee370b9c202c6da4cb69cea82fc49"
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020008BA",
+      "name": "OpenRA.Mods.Common.Server.SkirmishLogic/<>c__DisplayClass1_1",
+      "selection_key": "013a5854c635016dd6224e9577e00480bd1f52b5808873cadec6dc3a062d3ce7"
+    }
+  ]
+}
