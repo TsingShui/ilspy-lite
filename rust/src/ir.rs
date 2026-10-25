@@ -19,6 +19,8 @@ pub(crate) enum Ty {
     U8,
     Native,
     UNative,
+    R4,
+    F4,
     String,
     CoreException(u32),
     Class(u32),
@@ -35,6 +37,7 @@ pub(crate) enum StackKind {
     I4,
     I8,
     Native,
+    Float,
     Ref,
     Address,
 }
@@ -56,6 +59,7 @@ impl Ty {
             T::U8 => Self::U8,
             T::IntPtr => Self::Native,
             T::UIntPtr => Self::UNative,
+            T::R4 => Self::R4,
             T::String => Self::String,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
             T::Class(t) if t.table() == Some(cildec::TableId::TypeRef) => Self::CoreException(t.0),
@@ -88,6 +92,8 @@ impl Ty {
             Self::U8 => "ulong",
             Self::Native => "nint",
             Self::UNative => "nuint",
+            Self::R4 => "float",
+            Self::F4 => "__cil_F",
             Self::String => "string",
             Self::Class(t) => return image.class_name(t),
             Self::CoreException(t) => return image.core_exception_name(t),
@@ -104,6 +110,7 @@ impl Ty {
             Self::Void => StackKind::Void,
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
+            Self::R4 | Self::F4 => StackKind::Float,
             Self::I4Address | Self::U4Address => StackKind::Address,
             Self::String
             | Self::CoreException(_)
@@ -127,11 +134,14 @@ impl Ty {
             | Self::Null => self,
             Self::I8 | Self::U8 => Self::I8,
             Self::Native | Self::UNative => Self::Native,
+            Self::R4 | Self::F4 => Self::F4,
             _ => Self::I4,
         }
     }
     pub fn load(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::R4 => format!("__cil_load_r4({expression})"),
+            Self::F4 => expression.into(),
             Self::CoreException(_) => {
                 self.cs(image)?;
                 expression.into()
@@ -153,6 +163,8 @@ impl Ty {
     }
     pub fn store(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
+            Self::R4 => format!("__cil_store_r4({expression})"),
+            Self::F4 => expression.into(),
             Self::CoreException(_) => {
                 self.cs(image)?;
                 expression.into()

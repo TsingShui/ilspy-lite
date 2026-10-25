@@ -224,6 +224,19 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             "// nint/nuint use the target runtime pointer width, not the analyzer host width.\n",
         );
     }
+    if writer
+        .args
+        .iter()
+        .chain(&writer.locals)
+        .chain(std::iter::once(&writer.ret))
+        .any(|ty| ty.kind() == StackKind::Float)
+        || instructions
+            .iter()
+            .any(|i| i.opcode.canonical().name() == "conv.r4")
+    {
+        out.push_str("// __cil_F is a nominal R4 evaluation/local value; CLI F precision is target-runtime-defined, not analyzer-host-defined.\n");
+        out.push_str("// conv.r4 rounds to binary32 (nearest); local/argument snapshots do not add a storage rounding. Field storage and return/call boundaries stay explicit.\n");
+    }
     let body_name = if constructor_owner.is_some() {
         out.push_str("// Instance constructor initialization body on an existing receiver; does not allocate or certify a complete constructor chain.\n");
         format!("__cil_ctor_body_{token:08X}")
@@ -235,7 +248,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         ret.cs(image)?
     ));
     for (i, t) in writer.locals.iter().enumerate() {
-        out.push_str(&format!("    {} l{i} = default;\n", t.cs(image)?));
+        let local = if *t == Ty::R4 { t.stack() } else { *t };
+        out.push_str(&format!("    {} l{i} = default;\n", local.cs(image)?));
     }
     for (n, types) in entries.iter().enumerate() {
         for (s, t) in types.as_ref().unwrap().iter().enumerate() {
@@ -346,6 +360,19 @@ impl Writer<'_, '_> {
                 };
                 self.push(target, expression)?;
             }
+            "conv.r4" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err(
+                        "conv.r4 needs a signed integer stack source in the admitted model".into(),
+                    );
+                }
+                self.lines.push("// Signed integer value rounded to binary32 (nearest), then represented as CLI F; declared unsigned storage does not change the input sign.".into());
+                self.push(Ty::F4, format!("__cil_conv_r4({})", value.name))?;
+            }
             "ldarg" | "ldloc" => {
                 let idx = var(i)?;
                 let (ty, expr) = if op == "ldarg" {
@@ -359,7 +386,16 @@ impl Writer<'_, '_> {
                         format!("l{idx}"),
                     )
                 };
-                self.push(ty.stack(), ty.load(&expr, self.image)?)?;
+                let loaded = if ty == Ty::R4 {
+                    if op == "ldarg" {
+                        format!("__cil_arg_r4({expr})")
+                    } else {
+                        expr
+                    }
+                } else {
+                    ty.load(&expr, self.image)?
+                };
+                self.push(ty.stack(), loaded)?;
                 if op == "ldarg" && idx == 0 && self.constructor_owner.is_some() {
                     self.original_this
                         .insert(self.stack.last().unwrap().name.clone());
@@ -380,8 +416,16 @@ impl Writer<'_, '_> {
                     )
                 };
                 self.image.assignable(value.ty, ty.stack())?;
-                self.lines
-                    .push(format!("{dest} = {};", ty.store(&value.name, self.image)?));
+                let stored = if ty == Ty::R4 {
+                    if op == "starg" {
+                        format!("__cil_set_arg_r4({})", value.name)
+                    } else {
+                        value.name
+                    }
+                } else {
+                    ty.store(&value.name, self.image)?
+                };
+                self.lines.push(format!("{dest} = {stored};"));
             }
             "newobj" => {
                 let token = i.operand.token().ok_or("missing constructor token")?;
@@ -630,7 +674,11 @@ impl Writer<'_, '_> {
                 for &ty in method.args.iter().rev() {
                     let v = self.pop()?;
                     self.image.assignable(v.ty, ty.stack())?;
-                    values.push(ty.store(&v.name, self.image)?);
+                    values.push(if ty == Ty::R4 {
+                        format!("__cil_call_arg_r4({})", v.name)
+                    } else {
+                        ty.store(&v.name, self.image)?
+                    });
                 }
                 values.reverse();
                 if let Some(core_owner) = method.core_object_constructor {
@@ -739,7 +787,7 @@ impl Writer<'_, '_> {
                         return Err("readonly static field write needs IL fallback".into());
                     }
                     let v = self.pop()?;
-                    if ty.kind() == StackKind::Native {
+                    if matches!(ty.kind(), StackKind::Native | StackKind::Float) {
                         self.image.assignable(v.ty, ty.stack())?;
                     } else {
                         expect(v.ty, ty.stack())?;
@@ -766,10 +814,12 @@ impl Writer<'_, '_> {
                 } else {
                     let value = self.pop()?;
                     self.image.assignable(value.ty, self.ret.stack())?;
-                    self.lines.push(format!(
-                        "return {};",
+                    let returned = if self.ret == Ty::R4 {
+                        format!("__cil_return_r4({})", value.name)
+                    } else {
                         self.ret.store(&value.name, self.image)?
-                    ));
+                    };
+                    self.lines.push(format!("return {returned};"));
                 }
                 if !self.stack.is_empty() {
                     return Err("return leaves excess stack values".into());

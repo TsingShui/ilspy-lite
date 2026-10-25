@@ -89,6 +89,14 @@ retain raw code bytes in a `Failed` result.
   only. Conversion rules come from the opcode and source stack category, not parameter
   names or declared unsigned storage. Reference/floating sources and checked
   conversions remain unsupported.
+- Signed integer `conv.r4` rounds I4/I8/native input to binary32 with nearest
+  rounding at the conversion instruction. Nominal R4 evaluation/local values
+  use explicit `__cil_F` semantics, whose internal precision belongs to the
+  target runtime. Local/argument copies do not silently add storage rounding;
+  field stores and call/return boundaries have explicit operations. The optional
+  local .NET 10 adapter uses a Single carrier; it is not a cross-runtime CLI F
+  implementation. Float-to-integer, unsigned `conv.r.un`, R8 and floating
+  arithmetic remain unsupported in this slice.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Instance `.ctor` initialization bodies use `__cil_ctor_body_TOKEN`, distinct
@@ -201,7 +209,7 @@ error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, string operations, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
-floating point, native integer arithmetic/comparisons, general constructor calls, external instance calls,
+floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
@@ -253,6 +261,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --addresses -
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --constructors --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --strings --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --exceptions --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --floats --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root

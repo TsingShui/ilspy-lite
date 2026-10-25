@@ -38,6 +38,7 @@ def main():
     corpus_choice.add_argument("--delegated", action="store_true", help="validate owned delegated constructor with a controlled clock")
     corpus_choice.add_argument("--strings", action="store_true", help="execute owned UTF-16 literals and string reference state")
     corpus_choice.add_argument("--exceptions", action="store_true", help="execute owned bounded exception-object allocation")
+    corpus_choice.add_argument("--floats", action="store_true", help="execute owned nominal R4 conversion and snapshots")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
@@ -105,7 +106,7 @@ def main():
             name = "openra"
         jobs.append((name, assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
     else:
-        corpus_name = "exception" if args.exceptions else "string" if args.strings else "constructor" if args.constructors or args.clock or args.delegated else "address" if args.addresses else "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
+        corpus_name = "float" if args.floats else "exception" if args.exceptions else "string" if args.strings else "constructor" if args.constructors or args.clock or args.delegated else "address" if args.addresses else "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
         for config in ("release", "debug"):
             assembly = ROOT / f"tests/fixtures/{corpus_name}-{config}.bin"
             listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
@@ -124,10 +125,10 @@ def main():
                 elif "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature or "::Anchor" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 8 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
+            expected_count = 10 if args.floats else 8 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
-            name = f"exception-{config}" if args.exceptions else f"string-{config}" if args.strings else f"delegated-{config}" if args.delegated else f"clock-{config}" if args.clock else f"{corpus_name}-{config}" if args.constructors or args.addresses or args.conversions or args.native or args.arrays else config
+            name = f"float-{config}" if args.floats else f"exception-{config}" if args.exceptions else f"string-{config}" if args.strings else f"delegated-{config}" if args.delegated else f"clock-{config}" if args.clock else f"{corpus_name}-{config}" if args.constructors or args.addresses or args.conversions or args.native or args.arrays else config
             jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
@@ -164,13 +165,16 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
         run(dotnet / "dotnet", harness, "prepare", job, source)
         recovered = directory / "Recovered.dll"
-        compile_cs(recovered, [source])
+        sources = [source]
+        if "__cil_F" in source.read_text():
+            sources.append(ROOT / "tests/dotnet/FloatSemantics.cs")
+        compile_cs(recovered, sources)
         run(dotnet / "dotnet", harness, "run", job, recovered)
 
 

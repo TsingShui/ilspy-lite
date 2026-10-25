@@ -87,7 +87,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "exceptions") Exceptions(recovered, methods);
+        if (job.Kind == "floats") Floats(recovered, methods);
+        else if (job.Kind == "exceptions") Exceptions(recovered, methods);
         else if (job.Kind == "strings") Strings(recovered, methods);
         else if (job.Kind == "clock") Clock(recovered, methods);
         else if (job.Kind == "random-state") RandomState(recovered, methods);
@@ -112,11 +113,13 @@ internal static class ReferenceRoundtrip
         var clocks = new HashSet<int>();
         var strings = new HashSet<int>();
         var exceptions = new HashSet<int>();
+        bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
             MethodBase method = methods[entry.Token];
             types.Add(method.DeclaringType!);
             string source = File.ReadAllText(entry.Source);
+            hasFloat |= source.Contains("__cil_F", StringComparison.Ordinal);
             foreach (Match match in Regex.Matches(source, @"// field token 0x([0-9A-F]{8})"))
             {
                 int token = Convert.ToInt32(match.Groups[1].Value, 16);
@@ -231,7 +234,8 @@ internal static class ReferenceRoundtrip
             foreach (int token in exceptions)
                 code.Add($"public static global::System.ArgumentOutOfRangeException __cil_newobj_{token:X8}(string parameter, string message) {{ ExceptionAllocationObserver?.Invoke({token}, parameter, message); return new global::System.ArgumentOutOfRangeException(parameter, message); }}");
         }
-        File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
+        string floatImports = hasFloat ? "using __cil_F = System.Single;\nusing static CilFloat;\n" : "";
+        File.WriteAllText(output, floatImports + string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
 
     static object Original(MethodBase method, object receiver, object[] args)
@@ -304,6 +308,71 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static bool SameFloatBits(object expected, object actual) => expected is float left && actual is float right
+        ? BitConverter.SingleToInt32Bits(left) == BitConverter.SingleToInt32Bits(right) : Equals(expected, actual);
+
+    static void Floats(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        string[] names = { "FromI4", "FromU4Bits", "FromI8", "FromU8Bits", "FromNative", "FromUNativeBits", "Identity", "Choose", "Replace", "ConvertedSnapshot" };
+        if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
+            throw new Exception("Float conversion selection drift");
+        int[] i4 = { int.MinValue, -16777219, -16777217, -1, 0, 1, 16777215, 16777216, 16777217, 16777219, int.MaxValue };
+        long[] i8 = { long.MinValue, -9007199254740993L, -16777217, -1, 0, 1, 16777217, 9007199254740993L, long.MaxValue };
+        uint[] floatBits = { 0u, 0x80000000u, 1u, 0x007fffffu, 0x00800000u, 0x3f800000u, 0xbf800000u,
+            0x7f7fffffu, 0xff7fffffu, 0x7f800000u, 0xff800000u, 0x7fc01234u, 0xffc05678u };
+        float[] floats = floatBits.Select(n => BitConverter.Int32BitsToSingle(unchecked((int)n))).ToArray();
+        object[] Domain(Type type)
+        {
+            if (type == typeof(int)) return i4.Cast<object>().ToArray();
+            if (type == typeof(uint)) return new[] { 0u, 1u, 16777217u, 0x80000000u, uint.MaxValue }.Cast<object>().ToArray();
+            if (type == typeof(long)) return i8.Cast<object>().ToArray();
+            if (type == typeof(ulong)) return new[] { 0UL, 1UL, 16777217UL, 0x8000000000000000UL, ulong.MaxValue }.Cast<object>().ToArray();
+            if (type == typeof(nint)) return i8.Select(n => (object)unchecked((nint)n)).ToArray();
+            if (type == typeof(nuint)) return new[] { 0UL, 1UL, 16777217UL, 0x8000000000000000UL, ulong.MaxValue }.Select(n => (object)unchecked((nuint)n)).ToArray();
+            if (type == typeof(float)) return floats.Cast<object>().ToArray();
+            throw new Exception("Missing float-conversion domain");
+        }
+        foreach (MethodInfo method in methods.Values.Where(m => m.IsStatic && m.Name != "Choose"))
+            foreach (object value in Domain(method.GetParameters().Single().ParameterType))
+                Check(recovered, method, null, null, new[] { value }, new[] { value }, equal: SameFloatBits);
+        MethodInfo choose = methods.Values.Single(m => m.Name == "Choose");
+        foreach (bool first in new[] { false, true })
+        foreach (float left in floats)
+        foreach (float right in floats)
+            Check(recovered, choose, null, null, new object[] { first, left, right }, new object[] { first, left, right }, equal: SameFloatBits);
+        MethodInfo replace = methods.Values.Single(m => m.Name == "Replace");
+        Type cell = replace.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        foreach (float initial in floats)
+        foreach (float replacement in floats)
+        {
+            object a = New(cell), b = New(clone);
+            Set(a, "Number", initial); Set(b, "Number", initial);
+            Check(recovered, replace, a, b, new object[] { replacement }, new object[] { replacement }, () => {
+                if (!SameFloatBits(Get(a, "Number"), Get(b, "Number"))) throw new Exception("Float storage bits changed");
+            }, SameFloatBits);
+        }
+        MethodInfo snapshot = methods.Values.Single(m => m.Name == "ConvertedSnapshot");
+        foreach (int initial in i4)
+        foreach (int replacement in i4)
+        {
+            object a = New(cell), b = New(clone);
+            Set(a, "Count", initial); Set(b, "Count", initial);
+            Check(recovered, snapshot, a, b, new object[] { replacement }, new object[] { replacement },
+                () => SameFields(a, b, "Count"), SameFloatBits);
+        }
+        foreach (var pair in new[] { (Value: 16777217, Bits: 0x4b800000), (Value: 16777219, Bits: 0x4b800002),
+            (Value: int.MaxValue, Bits: 0x4f000000), (Value: int.MinValue, Bits: unchecked((int)0xcf000000u)) })
+        {
+            object value = recovered.GetType("Recovered")!.GetMethod($"M_{methods.Values.Single(m => m.Name == "FromI4").MetadataToken:X8}")!
+                .Invoke(null, new object[] { pair.Value });
+            if (value is not float result || BitConverter.SingleToInt32Bits(result) != pair.Bits)
+                throw new Exception("Explicit binary32 rounding boundary mismatch");
+        }
+        Check(recovered, replace, null, null, new object[] { 1f }, new object[] { 1f });
+        Check(recovered, snapshot, null, null, new object[] { 1 }, new object[] { 1 });
+        Console.WriteLine($"Float conversions: bitwise binary32 outputs, signed stack interpretation, snapshots; local .NET runtime carrier, native width {IntPtr.Size * 8}, no cross-runtime F-precision claim.");
     }
 
     static void Exceptions(Assembly recovered, Dictionary<int, MethodInfo> methods)
