@@ -226,6 +226,32 @@ fn out_parameter_contract_is_retained_even_when_the_body_falls_back() {
 }
 
 #[test]
+fn backing_field_declarations_and_accessors_use_the_same_token_alias() {
+    let result =
+        decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();
+    let md = cildec::PeImage::parse(IMAGE).unwrap().metadata().unwrap();
+    let (rid, _) = md
+        .tables()
+        .iter::<cildec::tables::FieldRow>()
+        .find(|(_, row)| {
+            md.strings().str(row.as_ref().unwrap().name).unwrap() == "<Auto>k__BackingField"
+        })
+        .unwrap();
+    let alias = format!("__il_field_{:08X}", 0x04000000 | rid);
+    assert!(
+        result.text.contains(&format!("private int {alias};")),
+        "{}",
+        result.text
+    );
+    assert!(
+        result.text.contains(&format!("this.{alias}")),
+        "{}",
+        result.text
+    );
+    assert!(!result.text.contains("__name_3C4175746F"));
+}
+
+#[test]
 fn readable_fields_and_nested_types_remain_visible() {
     let fields =
         decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();
