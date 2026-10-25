@@ -66,6 +66,56 @@ fn type_names_do_not_cross_assembly_scope_and_duplicate_definitions_are_rejected
 }
 
 #[test]
+fn nested_reference_scopes_and_local_definitions_keep_their_declaring_identity() {
+    for (main, dependency) in [
+        (
+            include_bytes!("fixtures/binding-release.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-release.bin").as_slice(),
+        ),
+        (
+            include_bytes!("fixtures/binding-debug.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-debug.bin").as_slice(),
+        ),
+    ] {
+        let mut context = DependencyContext::new(main.to_vec()).unwrap();
+        context
+            .add_reference("BindingLibrary.dll", dependency.to_vec())
+            .unwrap();
+        let inner = type_reference(main, "", "Inner`1");
+        let bound = context.resolve_type(inner).unwrap();
+        assert_eq!(bound.name, "BindingLibrary.Outer`1/Inner`1");
+        assert_eq!(bound.definition.token, 0x02000006);
+        assert_eq!(bound.definition.assembly.name, "BindingLibrary");
+        let local = context.resolve_type(0x02000002).unwrap();
+        assert_eq!(local.name, "BindingCases.Derived");
+        assert!(local.definition.assembly.name.starts_with("binding-"));
+
+        let pe = cildec::PeImage::parse(main).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::TypeRef, inner & 0xffffff)
+            .unwrap();
+        assert_eq!(row.len(), 6);
+        let offset = row.as_ptr() as usize - main.as_ptr() as usize;
+        let mut cyclic = main.to_vec();
+        cyclic[offset..offset + 2]
+            .copy_from_slice(&((((inner & 0xffffff) << 2) | 3) as u16).to_le_bytes());
+        let mut context = DependencyContext::new(cyclic).unwrap();
+        context
+            .add_reference("BindingLibrary.dll", dependency.to_vec())
+            .unwrap();
+        assert!(
+            context
+                .resolve_type(inner)
+                .unwrap_err()
+                .to_string()
+                .contains("cyclic")
+        );
+    }
+}
+
+#[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     let reference = type_reference(MAIN, "ExternalLibrary", "Base");

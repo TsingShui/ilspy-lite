@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use super::{AssemblyIdentity, AssemblyResolution, DependencyContext};
+use super::{AssemblyIdentity, DependencyContext, assembly_identity, reference_identity};
 use crate::{Result, metadata::Image};
-use cildec::{TableId, Token};
-use std::collections::BTreeSet;
+use cildec::{CodedIndex, TableId, Token};
+use std::collections::{BTreeMap, BTreeSet};
 
 /// A token is meaningful only together with its defining assembly snapshot.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -22,64 +22,202 @@ pub struct ResolvedType {
 }
 
 impl DependencyContext {
-    /// Resolve an input-image TypeRef without loading or executing its assembly.
+    /// Resolve an input-image type without loading or executing its assembly.
     pub fn resolve_type(&self, token: u32) -> Result<ResolvedType> {
-        let input = Image::parse(&self.main)?;
-        let token = Token(token);
-        if token.table() != Some(TableId::TypeRef) || token.rid() == 0 {
-            return Err("type binding needs a non-null TypeRef".into());
-        }
-        let reference = input.md.tables().type_ref(token.rid())?;
-        if reference.resolution_scope.table() != Some(TableId::AssemblyRef) {
-            return Err("type binding needs an AssemblyRef scope".into());
-        }
-        let namespace = input.md.strings().str(reference.type_namespace)?;
-        let name = input.md.strings().str(reference.type_name)?;
-        let AssemblyResolution::Resolved { identity, source } =
-            self.resolve(reference.resolution_scope.0)?
-        else {
-            return Err("type binding requires an unambiguous resolved assembly identity".into());
+        self.bind_type_in(0, Token(token), &mut BTreeSet::new())
+            .map(|(_, ty)| ty)
+    }
+
+    pub(super) fn binding_image(&self, module: usize) -> Result<Image<'_>> {
+        let bytes = if module == 0 {
+            &self.main
+        } else {
+            &self
+                .candidates
+                .get(module - 1)
+                .ok_or("unknown defining snapshot")?
+                .1
         };
-        let index = *self
-            .sources
-            .get(&source)
-            .ok_or("resolved assembly snapshot is missing")?;
-        let definition = Image::parse(&self.candidates[index].1)?;
-        let nested = definition
-            .md
-            .tables()
-            .iter::<cildec::tables::NestedClassRow>()
-            .map(|(_, row)| row.map(|row| row.nested_class.get()))
-            .collect::<std::result::Result<BTreeSet<_>, _>>()?;
+        Image::parse(bytes)
+    }
+
+    pub(super) fn identity_source(&self, module: usize) -> Result<(AssemblyIdentity, String)> {
+        if module == 0 {
+            return Ok((
+                assembly_identity(&self.binding_image(0)?)?,
+                "<main>".to_string(),
+            ));
+        }
+        let (source, _, identity) = self
+            .candidates
+            .get(module - 1)
+            .ok_or("unknown defining snapshot")?;
+        Ok((identity.clone(), source.clone()))
+    }
+
+    pub(super) fn matching_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
+        let mut found = Vec::new();
+        if self
+            .binding_image(0)
+            .and_then(|image| assembly_identity(&image))
+            .is_ok_and(|identity| identity.matches(requested))
+        {
+            found.push(0);
+        }
+        for (index, (_, bytes, identity)) in self.candidates.iter().enumerate() {
+            if identity.matches(requested) && !(found.first() == Some(&0) && *bytes == self.main) {
+                found.push(index + 1);
+            }
+        }
+        found
+    }
+
+    fn binding_assembly(&self, module: usize, token: Token) -> Result<usize> {
+        if token.table() != Some(TableId::AssemblyRef) || token.rid() == 0 {
+            return Err("type binding requires a non-null AssemblyRef".into());
+        }
+        let requested = reference_identity(&self.binding_image(module)?, token.rid())?;
+        match self.matching_modules(&requested).as_slice() {
+            [only] => Ok(*only),
+            [] => Err(format!("type binding requires a resolved assembly: {requested}").into()),
+            _ => Err(
+                format!("type binding has conflicting assembly definitions: {requested}").into(),
+            ),
+        }
+    }
+
+    fn bind_type_in(
+        &self,
+        module: usize,
+        token: Token,
+        visiting: &mut BTreeSet<(usize, u32)>,
+    ) -> Result<(usize, ResolvedType)> {
+        if token.rid() == 0 || visiting.len() >= 32 || !visiting.insert((module, token.0)) {
+            return Err("null, cyclic or excessive type reference".into());
+        }
+        let result = (|| {
+            let image = self.binding_image(module)?;
+            match token.table() {
+                Some(TableId::TypeDef) => Ok((module, self.describe_type(module, token.rid())?)),
+                Some(TableId::TypeRef) => {
+                    let reference = image.md.tables().type_ref(token.rid())?;
+                    // Validate the full coded RID before cildec's token conversion
+                    // can truncate it to 24 bits.
+                    let scope = image.metadata_coded_token(
+                        CodedIndex::ResolutionScope,
+                        image
+                            .md
+                            .tables()
+                            .raw_column(TableId::TypeRef, token.rid(), 0)?,
+                    )?;
+                    let namespace = image.md.strings().str(reference.type_namespace)?;
+                    let name = image.md.strings().str(reference.type_name)?;
+                    let (target, parent) = match scope.table() {
+                        Some(TableId::AssemblyRef) => (self.binding_assembly(module, scope)?, None),
+                        Some(TableId::Module) if scope.rid() == 1 => {
+                            image.md.tables().module(1)?;
+                            (module, None)
+                        }
+                        Some(TableId::TypeRef) => {
+                            if !namespace.is_empty() {
+                                return Err("nested TypeRef has a namespace".into());
+                            }
+                            let (parent_module, parent) =
+                                self.bind_type_in(module, scope, visiting)?;
+                            (parent_module, Some(parent.definition.token & 0xffffff))
+                        }
+                        _ => return Err("unsupported type resolution scope".into()),
+                    };
+                    let rid = self.find_type(target, namespace, name, parent)?;
+                    Ok((target, self.describe_type(target, rid)?))
+                }
+                _ => Err("type binding needs a TypeDef or TypeRef".into()),
+            }
+        })();
+        visiting.remove(&(module, token.0));
+        result
+    }
+
+    fn find_type(
+        &self,
+        module: usize,
+        namespace: &str,
+        name: &str,
+        parent: Option<u32>,
+    ) -> Result<u32> {
+        let image = self.binding_image(module)?;
+        let parents = nested_parents(&image)?;
         let mut found = None;
-        for (rid, row) in definition.md.tables().iter::<cildec::tables::TypeDefRow>() {
+        for (rid, row) in image.md.tables().iter::<cildec::tables::TypeDefRow>() {
             let row = row?;
-            if !nested.contains(&rid)
-                && definition.md.strings().str(row.type_namespace)? == namespace
-                && definition.md.strings().str(row.type_name)? == name
+            if parents.get(&rid).copied() == parent
+                && image.md.strings().str(row.type_name)? == name
+                && (parent.is_some() || image.md.strings().str(row.type_namespace)? == namespace)
             {
                 if found.is_some() {
                     return Err("ambiguous type definition in resolved assembly".into());
                 }
-                found = Some((rid, row.flags));
+                found = Some(rid);
             }
         }
-        let (rid, flags) = found.ok_or("type definition missing from resolved assembly")?;
-        if rid > 0x00ffffff {
-            return Err("type definition RID exceeds token width".into());
-        }
+        found.ok_or_else(|| "type definition missing from resolved assembly".into())
+    }
+
+    fn describe_type(&self, module: usize, rid: u32) -> Result<ResolvedType> {
+        let image = self.binding_image(module)?;
+        let flags = image.md.tables().type_def(rid)?.flags;
+        let parents = nested_parents(&image)?;
+        let mut names = Vec::new();
+        let mut seen = BTreeSet::new();
+        let mut current = rid;
+        let namespace = loop {
+            if !seen.insert(current) || seen.len() > 32 {
+                return Err("cyclic or excessive nested type definition".into());
+            }
+            let row = image.md.tables().type_def(current)?;
+            names.push(image.md.strings().str(row.type_name)?.to_string());
+            if let Some(&parent) = parents.get(&current) {
+                current = parent;
+            } else {
+                break image.md.strings().str(row.type_namespace)?;
+            }
+        };
+        names.reverse();
+        let name = names.join("/");
+        let (assembly, source) = self.identity_source(module)?;
         Ok(ResolvedType {
             definition: DefinitionLocation {
-                assembly: identity,
+                assembly,
                 source,
                 token: 0x02000000 | rid,
             },
             name: if namespace.is_empty() {
-                name.to_string()
+                name
             } else {
                 format!("{namespace}.{name}")
             },
             flags,
         })
     }
+}
+
+fn nested_parents(image: &Image<'_>) -> Result<BTreeMap<u32, u32>> {
+    let count = image.md.tables().row_count(TableId::TypeDef);
+    if count > 0x00ffffff {
+        return Err("type definition RID exceeds token width".into());
+    }
+    let mut parents = BTreeMap::new();
+    for (_, row) in image.md.tables().iter::<cildec::tables::NestedClassRow>() {
+        let row = row?;
+        let (child, parent) = (row.nested_class.get(), row.enclosing_class.get());
+        if child == 0
+            || child > count
+            || parent == 0
+            || parent > count
+            || parents.insert(child, parent).is_some()
+        {
+            return Err("invalid or duplicate nested type owner".into());
+        }
+    }
+    Ok(parents)
 }

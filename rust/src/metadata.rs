@@ -334,7 +334,11 @@ impl<'a> Image<'a> {
         Ok((text, failures))
     }
 
-    fn metadata_coded_token(&self, kind: cildec::CodedIndex, encoded: u32) -> Result<Token> {
+    pub(crate) fn metadata_coded_token(
+        &self,
+        kind: cildec::CodedIndex,
+        encoded: u32,
+    ) -> Result<Token> {
         if encoded >> kind.tag_bits() > Token::RID_MASK {
             return Err("coded-index RID exceeds metadata token width".into());
         }

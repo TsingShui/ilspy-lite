@@ -136,24 +136,7 @@ impl DependencyContext {
         let count = reference_count(&image, limits)?;
         for rid in 1..=count {
             let token = 0x23000000 | rid;
-            let identity = (|| -> Result<AssemblyIdentity> {
-                let row = image.md.tables().assembly_ref(rid)?;
-                Ok(AssemblyIdentity {
-                    name: image.md.strings().str(row.name)?.to_string(),
-                    version: [
-                        row.major_version,
-                        row.minor_version,
-                        row.build_number,
-                        row.revision_number,
-                    ],
-                    culture: image.md.strings().str(row.culture)?.to_string(),
-                    public_key_token: key_token(
-                        image.md.blobs().get(row.public_key_or_token)?,
-                        row.flags & 1 != 0,
-                    )?,
-                    content_type: row.flags & 0x0e00,
-                })
-            })();
+            let identity = reference_identity(&image, rid);
             match identity {
                 Ok(identity) => references.push(AssemblyReference { token, identity }),
                 Err(error) => reference_failures.push(ReferenceFailure {
@@ -325,26 +308,7 @@ impl DependencyContext {
         }
         let image = Image::parse(&bytes)?;
         reference_count(&image, self.limits)?;
-        if image.md.tables().row_count(TableId::Assembly) != 1 {
-            return Err("dependency needs exactly one Assembly definition".into());
-        }
-        let row = image.md.tables().assembly(1)?;
-        let public_key = image.md.blobs().get(row.public_key)?;
-        if !public_key.is_empty() && row.flags & 1 == 0 {
-            return Err("Assembly definition key requires the full-public-key flag".into());
-        }
-        let identity = AssemblyIdentity {
-            name: image.md.strings().str(row.name)?.to_string(),
-            version: [
-                row.major_version,
-                row.minor_version,
-                row.build_number,
-                row.revision_number,
-            ],
-            culture: image.md.strings().str(row.culture)?.to_string(),
-            public_key_token: key_token(public_key, row.flags & 1 != 0)?,
-            content_type: row.flags & 0x0e00,
-        };
+        let identity = assembly_identity(&image)?;
         self.sources
             .insert(source.to_string(), self.candidates.len());
         self.candidates.push((source.to_string(), bytes, identity));
@@ -388,6 +352,48 @@ impl DependencyContext {
             }),
         }
     }
+}
+
+fn assembly_identity(image: &Image<'_>) -> Result<AssemblyIdentity> {
+    if image.md.tables().row_count(TableId::Assembly) != 1 {
+        return Err("dependency needs exactly one Assembly definition".into());
+    }
+    let row = image.md.tables().assembly(1)?;
+    let public_key = image.md.blobs().get(row.public_key)?;
+    if !public_key.is_empty() && row.flags & 1 == 0 {
+        return Err("Assembly definition key requires the full-public-key flag".into());
+    }
+    Ok(AssemblyIdentity {
+        name: image.md.strings().str(row.name)?.to_string(),
+        version: [
+            row.major_version,
+            row.minor_version,
+            row.build_number,
+            row.revision_number,
+        ],
+        culture: image.md.strings().str(row.culture)?.to_string(),
+        public_key_token: key_token(public_key, row.flags & 1 != 0)?,
+        content_type: row.flags & 0x0e00,
+    })
+}
+
+fn reference_identity(image: &Image<'_>, rid: u32) -> Result<AssemblyIdentity> {
+    let row = image.md.tables().assembly_ref(rid)?;
+    Ok(AssemblyIdentity {
+        name: image.md.strings().str(row.name)?.to_string(),
+        version: [
+            row.major_version,
+            row.minor_version,
+            row.build_number,
+            row.revision_number,
+        ],
+        culture: image.md.strings().str(row.culture)?.to_string(),
+        public_key_token: key_token(
+            image.md.blobs().get(row.public_key_or_token)?,
+            row.flags & 1 != 0,
+        )?,
+        content_type: row.flags & 0x0e00,
+    })
 }
 
 fn reference_count(image: &Image<'_>, limits: DependencyLimits) -> Result<u32> {
