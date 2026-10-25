@@ -65,6 +65,7 @@ def main():
     corpus_choice.add_argument("--random-class", action="store_true", help="execute all seven frozen random-class bodies and their combined gates")
     corpus_choice.add_argument("--activity", action="store_true", help="execute the frozen independent Activity.Queue body on finite chains")
     corpus_choice.add_argument("--wait", action="store_true", help="execute the frozen independent Wait.Tick body with its unchanged exact base getter")
+    corpus_choice.add_argument("--wait-constructors", action="store_true", help="execute both frozen Wait constructors and subsequent Tick calls on fresh state")
     corpus_choice.add_argument("--arrays", action="store_true", help="execute the owned integer-array corpus")
     corpus_choice.add_argument("--native", action="store_true", help="execute the owned native-integer storage corpus")
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
@@ -80,9 +81,10 @@ def main():
     parser.add_argument("--readable", action="store_true", help="execute actual readable bodies; detailed metadata supplies test shell identities only")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
+    wait_family = args.wait or args.wait_constructors
     if args.random_class and not args.from_class:
         parser.error("--random-class requires --from-class")
-    if args.verify_inputs and not (args.openra or args.activity or args.wait or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class):
+    if args.verify_inputs and not (args.openra or args.activity or wait_family or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class):
         parser.error("--verify-inputs requires an OpenRA behavior selection")
     dotnet = Path(os.environ.get("DOTNET_ROOT", Path.home() / ".dotnet10"))
     def latest(path):
@@ -112,10 +114,10 @@ def main():
     run("cargo", "build", "--release", "--locked", cwd=ROOT)
     cli = ROOT / "target/release/ilspy-lite"
     jobs = []
-    if args.openra or args.activity or args.wait or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class:
+    if args.openra or args.activity or wait_family or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class:
         manifest = json.loads((ROOT / "acceptance/openra/manifest.json").read_text())
         corpus = ROOT / "report/openra"
-        assembly = corpus / "assemblies" / ("OpenRA.Mods.Common.dll" if args.openra or args.wait else "OpenRA.Game.dll")
+        assembly = corpus / "assemblies" / ("OpenRA.Mods.Common.dll" if args.openra or wait_family else "OpenRA.Game.dll")
         if args.verify_inputs:
             expected = manifest["assemblies"][assembly.name]["sha256"]
             if hashlib.sha256(assembly.read_bytes()).hexdigest() != expected:
@@ -124,7 +126,7 @@ def main():
                 path = corpus / "runtime-deps" / name
                 if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
                     raise ValueError(f"OpenRA runtime dependency mismatch: {name}")
-        if args.wait:
+        if wait_family:
             frozen = json.loads((ROOT / "acceptance/openra/classes.json").read_text())
             wait = next(c for c in frozen["classes"] if c["id"] == "wait")
             if len(wait["required_methods"]) != 1:
@@ -132,6 +134,13 @@ def main():
             token = wait["required_methods"][0]
             selected = [{"token": token, "signature": f'instance bool {wait["name"]}::Tick(class [OpenRA.Game]OpenRA.Actor)'}]
             name = "wait"
+            if args.wait_constructors:
+                listing = dict(line.split(" ", 1) for line in run(cli, "list", assembly, capture_output=True).stdout.splitlines())
+                tokens = wait["frozen_inventory"]["methods"]
+                if len(tokens) != 3:
+                    raise ValueError("Frozen complete Wait selection drift")
+                selected = [{"token": token, "signature": listing[token]} for token in tokens]
+                name = "wait-constructors"
         elif args.activity:
             frozen = json.loads((ROOT / "acceptance/openra/classes.json").read_text())
             activity = next(c for c in frozen["classes"] if c["id"] == "activity")
@@ -211,7 +220,7 @@ def main():
             jobs.append((name, assembly, dependencies, selected))
 
     for name, assembly, dependencies, selected in jobs:
-        directory = ROOT / "report/openra" / name if args.wait or args.activity or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class else out / name
+        directory = ROOT / "report/openra" / name if wait_family or args.activity or args.random_state or args.random_seed or args.random_default or args.random_ranges or args.random_float or args.random_class else out / name
         directory.mkdir(parents=True, exist_ok=True)
         entries = []
         class_bodies = {}
@@ -259,7 +268,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "wait-constructors" if args.wait_constructors else "wait" if args.wait else "external" if args.external else "activity" if args.activity else "random-class" if args.random_class else "random-float" if args.random_float else "floats" if args.floats else "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
@@ -271,7 +280,7 @@ def main():
         references = json.loads(source.with_suffix(".references.json").read_text())
         # The pinned Wait leaf targets .NET 6; this optional gate intentionally
         # uses the installed .NET 10 runtime's framework-reference unification.
-        compile_cs(recovered, sources, references=references, runtime_unification=args.wait)
+        compile_cs(recovered, sources, references=references, runtime_unification=wait_family)
         run(dotnet / "dotnet", harness, "run", job, recovered)
 
 

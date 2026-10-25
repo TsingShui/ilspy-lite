@@ -76,6 +76,12 @@ internal static class ReferenceRoundtrip
         };
         Assembly recovered = recoveredContext.LoadFromAssemblyPath(args[2]);
         InstallMemberCalls(job, original, recovered);
+        if (job.Kind == "wait-constructors")
+        {
+            WaitConstructors(recovered, members);
+            Console.WriteLine($"wait-constructors: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "random-class")
         {
             RandomClass(recovered, members);
@@ -139,6 +145,7 @@ internal static class ReferenceRoundtrip
         var types = new HashSet<Type>();
         var code = new List<string>();
         var coreConstructors = new HashSet<int>();
+        var baseConstructors = new Dictionary<int, ConstructorInfo>();
         var clocks = new HashSet<int>();
         var strings = new HashSet<int>();
         var exceptions = new HashSet<int>();
@@ -174,8 +181,13 @@ internal static class ReferenceRoundtrip
             foreach (Match match in Regex.Matches(source, @"__cil_ctor_call_([0-9A-F]{8})\("))
             {
                 int token = Convert.ToInt32(match.Groups[1].Value, 16);
-                if (!methods.TryGetValue(token, out MethodBase target) || target is not ConstructorInfo)
-                    throw new Exception("A delegated constructor dependency was not recovered");
+                if (methods.TryGetValue(token, out MethodBase local) && local is ConstructorInfo) continue;
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if ((token >> 24) != 0x0a || method is not ConstructorInfo
+                    || target is not ConstructorInfo baseConstructor || target.IsStatic
+                    || target.DeclaringType!.Assembly == original || target.DeclaringType != method.DeclaringType!.BaseType)
+                    throw new Exception("A constructor dependency must be recovered or an independent exact external base");
+                baseConstructors[token] = baseConstructor;
             }
             foreach (Match match in Regex.Matches(source, @"__cil_core_object_ctor_([0-9A-F]{8})\("))
             {
@@ -242,7 +254,8 @@ internal static class ReferenceRoundtrip
         {
             if (type.IsGenericType || type.IsNested || type.IsValueType) throw new Exception("Unsupported test shell shape");
             string parent = type.BaseType != null && (types.Contains(type.BaseType)
-                || memberCalls.Values.Any(m => m.DeclaringType == type.BaseType)) ? " : " + TypeName(type.BaseType) : "";
+                || memberCalls.Values.Any(m => m.DeclaringType == type.BaseType)
+                || baseConstructors.Values.Any(m => m.DeclaringType == type.BaseType)) ? " : " + TypeName(type.BaseType) : "";
             string members = string.Join("\n", fields.Values.Where(f => f.DeclaringType == type).Select(f =>
                 $"public {(f.IsStatic ? "static " : "")}{TypeName(f.FieldType)} {Alias(f)};"));
             // Static call adapters forward only to another recovered body.
@@ -270,6 +283,15 @@ internal static class ReferenceRoundtrip
             }
             else
                 code.Add($"public static {TypeName(ReturnType(method))} __cil_direct_{pair.Key:X8}({string.Join(", ", parameters)}) => M_{pair.Key:X8}({arguments});");
+        }
+        foreach (var pair in baseConstructors)
+        {
+            ConstructorInfo constructor = pair.Value;
+            string parameters = string.Join(", ", new[] { TypeName(constructor.DeclaringType!) + " self" }
+                .Concat(constructor.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i)));
+            string arguments = string.Join(", ", constructor.GetParameters().Select((p, i) => "a" + i));
+            code.Add($"public static global::System.Func<object, object[], object> BaseConstructorCall_{pair.Key:X8};");
+            code.Add($"public static void __cil_ctor_call_{pair.Key:X8}({parameters}) {{ var args = new object[] {{ {arguments} }}; ConstructorCallObserver?.Invoke({pair.Key}, self, args); BaseConstructorCall_{pair.Key:X8}(self, args); }}");
         }
         if (coreConstructors.Count != 0)
         {
@@ -315,6 +337,7 @@ internal static class ReferenceRoundtrip
         }
         File.WriteAllText(Path.ChangeExtension(output, ".references.json"), JsonSerializer.Serialize(externalTypes.Values
             .Select(t => t.Assembly).Concat(memberCalls.Values.Select(m => m.DeclaringType!.Assembly))
+            .Concat(baseConstructors.Values.Select(m => m.DeclaringType!.Assembly))
             .Where(a => a != typeof(object).Assembly && a != original).Select(a => a.Location).Distinct().ToArray()));
         string floatImports = hasFloat ? "using __cil_F = System.Single;\nusing static CilFloat;\n" : "";
         string externalImports = string.Join("\n", externalTypes.Select(p => $"using __cil_type_{p.Key:X8} = {TypeName(p.Value)};")) + "\n";
@@ -326,6 +349,22 @@ internal static class ReferenceRoundtrip
 
     static void InstallMemberCalls(Job job, Assembly original, Assembly recovered)
     {
+        foreach (int token in job.Methods.SelectMany(entry => Regex.Matches(File.ReadAllText(entry.Source),
+            @"__cil_ctor_call_(0A[0-9A-F]{6})\(").Cast<Match>().Select(m => Convert.ToInt32(m.Groups[1].Value, 16))).Distinct())
+        {
+            ConstructorInfo target = (ConstructorInfo)original.ManifestModule.ResolveMethod(token)!;
+            if (target.DeclaringType!.Assembly == original)
+                throw new Exception("External base adapter cannot proxy a selected assembly constructor");
+            Module module = ExternalType(recovered, target.DeclaringType).Module;
+            ConstructorInfo mapped = (ConstructorInfo)module.ResolveMethod(target.MetadataToken)!;
+            if (module.ModuleVersionId != target.Module.ModuleVersionId
+                || mapped.DeclaringType!.FullName != target.DeclaringType.FullName
+                || !mapped.GetParameters().Select(p => p.ParameterType.FullName).SequenceEqual(target.GetParameters().Select(p => p.ParameterType.FullName))
+                || !mapped.GetMethodBody()!.GetILAsByteArray()!.SequenceEqual(target.GetMethodBody()!.GetILAsByteArray()!))
+                throw new Exception("External base constructor adapter changed identity or implementation");
+            recovered.GetType("Recovered")!.GetField($"BaseConstructorCall_{token:X8}")!.SetValue(null,
+                (Func<object, object[], object>)((self, values) => Original(mapped, self, values)));
+        }
         foreach (int token in job.Methods.SelectMany(entry => Regex.Matches(File.ReadAllText(entry.Source),
             @"__cil_memberref_call_([0-9A-F]{8})\(").Cast<Match>().Select(m => Convert.ToInt32(m.Groups[1].Value, 16))).Distinct())
         {
@@ -452,6 +491,73 @@ internal static class ReferenceRoundtrip
             }, name == "DirectVirtual" ? (x, y) => Equals(x, 41) && Equals(y, 41) : null);
         }
         Console.WriteLine("External references/calls: token aliases, exact runtime leaves, null receiver without added checks, side effects and direct virtual target; no external hierarchy inferred.");
+    }
+
+    static void WaitConstructors(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        var constructors = methods.Values.OfType<ConstructorInfo>().ToArray();
+        if (methods.Count != 3 || constructors.Length != 2
+            || !constructors.Select(c => c.GetParameters().Length).Order().SequenceEqual(new[] { 1, 2 }))
+            throw new Exception("Frozen Wait constructor selection drift");
+        MethodInfo tick = methods.Values.OfType<MethodInfo>().Single(m => m.Name == "Tick");
+        Type owner = tick.DeclaringType!, shell = recovered.GetType(owner.FullName!)!;
+        FieldInfo observer = recovered.GetType("Recovered")!.GetField("ConstructorCallObserver")!;
+        foreach (ConstructorInfo constructor in constructors)
+        foreach (int period in new[] { int.MinValue, -1, 0, 1, 2, int.MaxValue })
+        foreach (bool interruptible in new[] { false, true })
+        foreach (bool dirty in new[] { false, true })
+        {
+            object a = New(owner), b = New(shell);
+            Set(a, "remainingTicks", 91); Set(b, "remainingTicks", 91);
+            if (dirty)
+            {
+                Set(a, "<IsInterruptible>k__BackingField", !interruptible);
+                Set(b, "<IsInterruptible>k__BackingField", !interruptible);
+                var left = Field(owner, "<State>k__BackingField");
+                var right = Field(shell, "<State>k__BackingField");
+                left.SetValue(a, Enum.ToObject(left.FieldType, 3));
+                right.SetValue(b, Enum.ToObject(right.FieldType, 3));
+            }
+            int calls = 0;
+            observer.SetValue(null, (Action<int, object, object[]>)((token, self, values) => {
+                if (!ReferenceEquals(self, b) || values.Length != 0 || (int)Get(self, "remainingTicks") != 91)
+                    throw new Exception("Wait base initialization changed receiver or crossed field assignment");
+                calls++;
+            }));
+            void SameState()
+            {
+                SameFields(a, b, "remainingTicks");
+                foreach (FieldInfo field in owner.BaseType!.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                {
+                    object left = field.GetValue(a), right = Field(shell.BaseType!, field.Name).GetValue(b);
+                    if (field.FieldType.IsEnum)
+                    {
+                        if (!Equals(Convert.ToInt64(left), Convert.ToInt64(right))) throw new Exception("Wait base enum mismatch");
+                    }
+                    else if (!Equals(left, right)) throw new Exception($"Wait base field mismatch: {field.Name}");
+                }
+            }
+            object[] arguments = constructor.GetParameters().Length == 1 ? new object[] { period } : new object[] { period, interruptible };
+            Check(recovered, constructor, a, b, arguments, arguments, () => {
+                SameState();
+                if (calls != 1 || (int)Get(b, "remainingTicks") != period
+                    || !(bool)Get(b, "<IsInterruptible>k__BackingField") && constructor.GetParameters().Length == 1
+                    || constructor.GetParameters().Length == 2 && (bool)Get(b, "<IsInterruptible>k__BackingField") != interruptible)
+                    throw new Exception("Wait initialization contract changed");
+            }, detailedExceptions: true);
+            for (int repeat = 0; repeat < 4; repeat++)
+                Check(recovered, tick, a, b, new object[] { null }, new object[] { null }, SameState, detailedExceptions: true);
+        }
+        foreach (ConstructorInfo constructor in constructors)
+        {
+            int calls = 0;
+            observer.SetValue(null, (Action<int, object, object[]>)((token, self, values) => calls++));
+            object[] arguments = constructor.GetParameters().Length == 1 ? new object[] { 7 } : new object[] { 7, false };
+            Check(recovered, constructor, null, null, arguments, arguments, detailedExceptions: true);
+            if (calls != 1) throw new Exception("Wait base call null-check position changed");
+        }
+        observer.SetValue(null, null);
+        Console.WriteLine("Wait constructors: fresh/dirty receivers, exact independent base initialization, interruptibility, boundary countdowns and subsequent Tick; no selected-body proxy or copied initialized state.");
     }
 
     static void WaitTick(Assembly recovered, Dictionary<int, MethodInfo> methods)
