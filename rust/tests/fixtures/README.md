@@ -36,6 +36,13 @@ output. Local execution uses a 64-bit .NET runtime; no 32-bit execution result i
 claimed. Native arithmetic and implicit width changes remain negative cases.
 Snapshot revisions are pinned by Git without a separate hash manifest.
 
+The integer-conversion snapshots (`conversion-release.bin`, `conversion-debug.bin`)
+come from `../dotnet/ConversionCases.cs`. They exercise low-bit truncation,
+signed/unsigned storage, native widths and snapshots across mutation. Regenerate
+with `python3 rust/tests/build-conversion-fixtures.py` and execute actual class
+output with `reference-roundtrip.py --conversions --from-class`. Only local
+64-bit runtime execution is verified; snapshots are pinned by Git.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

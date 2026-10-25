@@ -80,7 +80,9 @@ retain raw code bytes in a `Failed` result.
 - Native integers as a separate stack category: `nint` / `nuint` storage,
   parameters, returns, same-category joins and direct calls. Their width is the
   target runtime pointer width, not the width of the analyzer host. Native
-  arithmetic, comparisons, implicit width changes and conversions still fall back.
+  arithmetic, comparisons and implicit width changes still fall back.
+- `conv.i4` from I4/I8/native values: retain low 32 bits without overflow checking.
+  Reference/floating sources and checked conversions remain unsupported.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
@@ -186,6 +188,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --arrays
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --native --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --conversions --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root

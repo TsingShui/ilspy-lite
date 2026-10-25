@@ -263,6 +263,16 @@ impl Writer<'_, '_> {
                 };
                 self.push(Ty::I8, format!("{n}L"))?;
             }
+            "conv.i4" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err("conv.i4 source category needs IL fallback".into());
+                }
+                self.push(Ty::I4, format!("unchecked((int)({}))", value.name))?;
+            }
             "ldarg" | "ldloc" => {
                 let idx = var(i)?;
                 let (ty, expr) = if op == "ldarg" {

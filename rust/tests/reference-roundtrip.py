@@ -27,6 +27,7 @@ def main():
     corpus_choice.add_argument("--openra", action="store_true", help="execute pinned stage-1 bodies; never launch the game")
     corpus_choice.add_argument("--arrays", action="store_true", help="execute the owned integer-array corpus")
     corpus_choice.add_argument("--native", action="store_true", help="execute the owned native-integer storage corpus")
+    corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
@@ -73,7 +74,7 @@ def main():
         selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
         jobs.append(("openra", assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
     else:
-        corpus_name = "native" if args.native else "array" if args.arrays else "reference"
+        corpus_name = "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
         for config in ("release", "debug"):
             assembly = ROOT / f"tests/fixtures/{corpus_name}-{config}.bin"
             listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
@@ -83,10 +84,10 @@ def main():
                 if "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 7 if args.native else 11 if args.arrays else 14
+            expected_count = 6 if args.conversions else 7 if args.native else 11 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
-            name = f"{corpus_name}-{config}" if args.native or args.arrays else config
+            name = f"{corpus_name}-{config}" if args.conversions or args.native or args.arrays else config
             jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
@@ -123,7 +124,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "openra" if args.openra else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "openra" if args.openra else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"

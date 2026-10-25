@@ -65,6 +65,7 @@ internal static class ReferenceRoundtrip
         if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
         else if (job.Kind == "native") Native(recovered, methods);
+        else if (job.Kind == "conversions") Conversions(recovered, methods);
         else if (job.Kind == "references") References(original, recovered, methods);
         else throw new Exception("Unknown corpus kind");
         Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
@@ -333,6 +334,58 @@ internal static class ReferenceRoundtrip
         if (methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
             "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice"
         }.Order()) == false) throw new Exception("Array method selection drift");
+    }
+
+    static void Conversions(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        long[] wide = { long.MinValue, -4294967297L, -2147483649L, -1L, 0L, 1L,
+            2147483647L, 2147483648L, 4294967295L, 4294967296L, long.MaxValue };
+        object[] Domain(Type type)
+        {
+            if (type == typeof(long)) return wide.Cast<object>().ToArray();
+            if (type == typeof(ulong)) return new object[] { 0UL, 1UL, 2147483648UL, 4294967295UL,
+                4294967296UL, 0x8000000000000000UL, ulong.MaxValue };
+            if (type == typeof(nint)) return wide.Select(n => (object)unchecked((nint)n)).ToArray();
+            if (type == typeof(nuint)) return new ulong[] { 0UL, 1UL, 2147483648UL, 4294967295UL,
+                4294967296UL, 0x8000000000000000UL, ulong.MaxValue }.Select(n => (object)unchecked((nuint)n)).ToArray();
+            throw new Exception($"Missing conversion test domain: {type}");
+        }
+        foreach (MethodInfo method in methods.Values)
+        {
+            if (method.IsStatic)
+            {
+                var parameters = method.GetParameters();
+                void Enumerate(int index, object[] values)
+                {
+                    if (index == values.Length)
+                    {
+                        Check(recovered, method, null, null, values, values);
+                        return;
+                    }
+                    foreach (object value in Domain(parameters[index].ParameterType))
+                    {
+                        values[index] = value;
+                        Enumerate(index + 1, values);
+                    }
+                }
+                Enumerate(0, new object[parameters.Length]);
+            }
+            else
+            {
+                if (method.Name != "ReadThenWrite") throw new Exception("Unexpected conversion instance method");
+                foreach (long initial in wide)
+                foreach (long replacement in wide)
+                {
+                    object a = New(method.DeclaringType!), b = New(recovered.GetType(method.DeclaringType!.FullName!)!);
+                    Set(a, "Wide", initial); Set(b, "Wide", initial);
+                    Check(recovered, method, a, b, new object[] { replacement }, new object[] { replacement },
+                        () => SameFields(a, b, "Wide"));
+                }
+                Check(recovered, method, null, null, new object[] { 1L }, new object[] { 1L });
+            }
+        }
+        if (methods.Count != 6) throw new Exception("Conversion method selection drift");
+        Console.WriteLine($"Conversion execution width: {IntPtr.Size * 8} bits; no cross-width execution claim.");
     }
 
     static void Native(Assembly recovered, Dictionary<int, MethodInfo> methods)
