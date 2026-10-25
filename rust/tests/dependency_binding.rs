@@ -592,6 +592,120 @@ fn a_dependency_source_label_cannot_redirect_main_image_property_lookup() {
     assert_eq!(property.definition.assembly.name, "BindingLibrary");
 }
 
+fn identity_label_image(
+    bytes: &[u8],
+    reference: bool,
+    long_name: &str,
+    short_name: &str,
+    long_is_name: bool,
+) -> Vec<u8> {
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let anchor = |name: &str| {
+        let (rid, row) = md
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                md.strings()
+                    .str(row.as_ref().unwrap().type_namespace)
+                    .unwrap()
+                    == name
+            })
+            .unwrap();
+        let value = md.strings().str(row.unwrap().type_namespace).unwrap();
+        (
+            u16::try_from(
+                md.tables()
+                    .raw_column(cildec::TableId::TypeRef, rid, 2)
+                    .unwrap(),
+            )
+            .unwrap(),
+            value.as_ptr() as usize - bytes.as_ptr() as usize,
+            value.len(),
+        )
+    };
+    let (long_index, long_start, long_capacity) = anchor("System.Runtime.CompilerServices");
+    let (short_index, short_start, short_capacity) = anchor("System");
+    assert!(long_name.len() <= long_capacity && short_name.len() <= short_capacity);
+    let (table, rid, name_offset, culture_offset, width) = if reference {
+        let rid = md
+            .tables()
+            .iter::<cildec::tables::AssemblyRefRow>()
+            .find(|(_, row)| {
+                md.strings().str(row.as_ref().unwrap().name).unwrap() == "BindingLibrary"
+            })
+            .unwrap()
+            .0;
+        (cildec::TableId::AssemblyRef, rid, 14, 16, 20)
+    } else {
+        (cildec::TableId::Assembly, 1, 18, 20, 22)
+    };
+    let row = md.tables().row_bytes(table, rid).unwrap();
+    assert_eq!(row.len(), width);
+    let start = row.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut result = bytes.to_vec();
+    result[long_start..long_start + long_capacity].fill(0);
+    result[long_start..long_start + long_name.len()].copy_from_slice(long_name.as_bytes());
+    result[short_start..short_start + short_capacity].fill(0);
+    result[short_start..short_start + short_name.len()].copy_from_slice(short_name.as_bytes());
+    let (name, culture) = if long_is_name {
+        (long_index, short_index)
+    } else {
+        (short_index, long_index)
+    };
+    result[start + name_offset..start + name_offset + 2].copy_from_slice(&name.to_le_bytes());
+    result[start + culture_offset..start + culture_offset + 2]
+        .copy_from_slice(&culture.to_le_bytes());
+    result
+}
+
+#[test]
+fn named_signature_scopes_do_not_use_ambiguous_assembly_display_labels_as_identity() {
+    let inputs = [
+        ("A, Version=0.0.0.0, Culture=B", "C", true),
+        ("B, Version=0.0.0.0, Culture=C", "A", false),
+    ];
+    let mut methods = Vec::new();
+    let mut identities = Vec::new();
+    for (long, short, is_name) in inputs {
+        let main = identity_label_image(
+            include_bytes!("fixtures/binding-release.bin"),
+            true,
+            long,
+            short,
+            is_name,
+        );
+        let library = identity_label_image(
+            include_bytes!("fixtures/binding-library-release.bin"),
+            false,
+            long,
+            short,
+            is_name,
+        );
+        let mut context = DependencyContext::new(main.clone()).unwrap();
+        context.add_reference("scoped library", library).unwrap();
+        let relay = ilspy_lite::list_methods(&main)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.simple_name == "Relay")
+            .unwrap()
+            .token;
+        let signature = context.resolve_method(relay).unwrap();
+        let peer = type_reference(&main, "BindingLibrary", "Peer");
+        identities.push(context.resolve_type(peer).unwrap().definition.assembly);
+        methods.push(signature.signature_identity);
+    }
+    assert_ne!(identities[0], identities[1]);
+    assert_eq!(
+        identities[0].to_string(),
+        identities[1].to_string(),
+        "the adversarial labels must actually collide"
+    );
+    assert_ne!(
+        methods[0], methods[1],
+        "full nominal type scopes must remain distinct even when human-readable labels collide"
+    );
+}
+
 #[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();

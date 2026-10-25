@@ -414,7 +414,7 @@ impl DependencyContext {
                 }
                 let (_, bound) = self.bind_type_in(module, *token, &mut BTreeSet::new())?;
                 format!(
-                    "{:?}:{}:0x{:08X}",
+                    "{:?}:{:?}:0x{:08X}",
                     matches!(ty, Type::ValueType(_)),
                     bound.definition.assembly,
                     bound.definition.token
