@@ -116,6 +116,164 @@ fn nested_reference_scopes_and_local_definitions_keep_their_declaring_identity()
 }
 
 #[test]
+fn member_references_bind_using_full_signatures_and_owning_definitions() {
+    for (main, dependency) in [
+        (
+            include_bytes!("fixtures/binding-release.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-release.bin").as_slice(),
+        ),
+        (
+            include_bytes!("fixtures/binding-debug.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-debug.bin").as_slice(),
+        ),
+    ] {
+        let mut context = DependencyContext::new(main.to_vec()).unwrap();
+        context
+            .add_reference("BindingLibrary.dll", dependency.to_vec())
+            .unwrap();
+        let pe = cildec::PeImage::parse(main).unwrap();
+        let md = pe.metadata().unwrap();
+        for name in ["get_Enabled", "set_Enabled", "get_Pretender", "Echo"] {
+            let (rid, row) = md
+                .tables()
+                .iter::<cildec::tables::MemberRefRow>()
+                .find(|(_, r)| {
+                    let r = r.as_ref().unwrap();
+                    md.strings().str(r.name).unwrap() == name
+                        && r.class.table() == Some(cildec::TableId::TypeRef)
+                })
+                .unwrap();
+            let row = row.unwrap();
+            let method = context.resolve_method(0x0a000000 | rid).unwrap();
+            assert_eq!(method.name, name);
+            assert_eq!(method.owner.name, "BindingLibrary.Base");
+            assert_eq!(method.definition.source, "BindingLibrary.dll");
+            assert_eq!(
+                method.reference_signature,
+                md.blobs().get(row.signature).unwrap()
+            );
+            assert!(!method.definition_signature.is_empty());
+        }
+    }
+}
+
+#[test]
+fn property_accessors_require_metadata_relationships_not_get_or_set_names() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let dependency = include_bytes!("fixtures/binding-library-release.bin");
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .add_reference("BindingLibrary.dll", dependency.to_vec())
+        .unwrap();
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    for (name, property, role) in [
+        ("get_Enabled", Some("Enabled"), "get"),
+        ("set_Enabled", Some("Enabled"), "set"),
+        ("get_Pretender", None, ""),
+    ] {
+        let rid = md
+            .tables()
+            .iter::<cildec::tables::MemberRefRow>()
+            .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == name)
+            .unwrap()
+            .0;
+        let accessor = context.resolve_property_accessor(0x0a000000 | rid).unwrap();
+        match property {
+            Some(property) => {
+                let accessor = accessor.unwrap();
+                assert_eq!(accessor.name, property);
+                assert_eq!(accessor.role, role);
+                assert_eq!(accessor.owner.name, "BindingLibrary.Base");
+                assert!(!accessor.signature.is_empty());
+            }
+            None => assert!(accessor.is_none()),
+        }
+    }
+}
+
+#[test]
+fn property_semantics_flags_and_signatures_must_agree() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let dependency = include_bytes!("fixtures/binding-library-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let rid = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap()
+        .0;
+    let def = cildec::PeImage::parse(dependency)
+        .unwrap()
+        .metadata()
+        .unwrap();
+    let (method, _) = def
+        .tables()
+        .iter::<cildec::tables::MethodDefRow>()
+        .find(|(_, row)| def.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap();
+    let (relation, _) = def
+        .tables()
+        .iter::<cildec::tables::MethodSemanticsRow>()
+        .find(|(_, row)| row.as_ref().unwrap().method.get() == method)
+        .unwrap();
+    let raw = def
+        .tables()
+        .row_bytes(cildec::TableId::MethodSemantics, relation)
+        .unwrap();
+    let offset = raw.as_ptr() as usize - dependency.as_ptr() as usize;
+    let property = def.tables().property(1).unwrap();
+    assert_eq!(def.strings().str(property.name).unwrap(), "Enabled");
+    let bytes = def.blobs().get(property.type_signature).unwrap();
+    assert_eq!(bytes, &[0x28, 0, 2]);
+    let signature_offset = bytes.as_ptr() as usize - dependency.as_ptr() as usize;
+    for invalid in ["semantics", "signature"] {
+        let mut patched = dependency.to_vec();
+        if invalid == "semantics" {
+            patched[offset..offset + 2].copy_from_slice(&3u16.to_le_bytes());
+        } else {
+            patched[signature_offset + 2] = 8;
+        }
+        let mut context = DependencyContext::new(main.to_vec()).unwrap();
+        context.add_reference("changed.dll", patched).unwrap();
+        assert!(context.resolve_method(0x0a000000 | rid).is_ok());
+        assert!(
+            context.resolve_property_accessor(0x0a000000 | rid).is_err(),
+            "{invalid}"
+        );
+    }
+}
+
+#[test]
+fn member_signature_mismatch_is_not_a_name_only_binding() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let (rid, row) = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_Enabled")
+        .unwrap();
+    let signature = md.blobs().get(row.unwrap().signature).unwrap();
+    assert_eq!(signature, &[0x20, 0, 2]);
+    let offset = signature.as_ptr() as usize - main.as_ptr() as usize;
+    let mut changed = main.to_vec();
+    changed[offset + 2] = 8;
+    let mut context = DependencyContext::new(changed).unwrap();
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    assert!(
+        context
+            .resolve_method(0x0a000000 | rid)
+            .unwrap_err()
+            .to_string()
+            .contains("signature")
+    );
+}
+
+#[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     let reference = type_reference(MAIN, "ExternalLibrary", "Base");

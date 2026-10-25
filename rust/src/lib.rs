@@ -10,7 +10,7 @@ mod readable;
 
 pub use dependencies::{
     AssemblyIdentity, AssemblyReference, AssemblyResolution, DefinitionLocation, DependencyContext,
-    DependencyLimits, ReferenceFailure, ResolvedType,
+    DependencyLimits, PropertyAccessor, ReferenceFailure, ResolvedMethod, ResolvedType,
 };
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.

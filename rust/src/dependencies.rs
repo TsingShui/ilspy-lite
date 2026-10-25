@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 mod binding;
-pub use binding::{DefinitionLocation, ResolvedType};
+pub use binding::{DefinitionLocation, PropertyAccessor, ResolvedMethod, ResolvedType};
 
 use crate::{DecompiledMethod, DecompiledType, OutputStyle, Result, metadata::Image};
 use cildec::TableId;

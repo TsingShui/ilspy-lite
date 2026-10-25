@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
+mod members;
+pub use members::{PropertyAccessor, ResolvedMethod};
+
 use super::{AssemblyIdentity, DependencyContext, assembly_identity, reference_identity};
 use crate::{Result, metadata::Image};
 use cildec::{CodedIndex, TableId, Token};
