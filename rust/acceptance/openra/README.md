@@ -29,7 +29,8 @@ python3 rust/acceptance/openra/inventory.py --check-cli
 Its reader is `tests/dotnet/ClassInventory.cs`. Full metadata snapshots stay in
 ignored `report/openra/class-inventory/`; only identities/contracts are tracked.
 `--check-cli` compares the public class output with the frozen independent
-metadata, including ownership, signatures, accessor relationships and status/exit
+metadata, including ownership, signatures, accessor relationships, class layout,
+attached attributes/security records, exact MethodImpl endpoints and status/exit
 accounting. Matching inventory is not successful semantic decompilation or a
 behavior gate. Results: [CLASS_MILESTONE.md](CLASS_MILESTONE.md).
 The separate [RANDOM_STATE.md](RANDOM_STATE.md) gate closes Generate/Next state

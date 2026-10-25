@@ -44,7 +44,15 @@ getter/setter/other MethodSemantics relationships. Accessor bodies stay visible 
 methods; no automatic-property syntax is inferred.
 All owned fields are listed with names/aliases, types, raw signatures and flags.
 Constants preserve decoded values and original bytes (strings as UTF-16 units,
-floating constants as bits). Field layout and marshalling descriptors are retained;
+floating constants as bits). ClassLayout packing/size and raw rows, field offsets
+and marshalling descriptors are retained. Custom attributes retain their parent,
+exact constructor identity/signature and raw payload without interpreting arguments
+or executing constructors. Attached member/parameter/generic/relation records and
+image-level Module/Assembly attributes are included. Declarative security retains
+scope/action/permission-set bytes; enforcement remains runtime-owned, not recovered
+body logic. Explicit MethodImpl mappings retain both endpoint identities/signatures
+and raw rows without guessing name-based overrides or validating general dispatch.
+Each uninterpreted record carries a local limitation, not only a global disclaimer.
 RVA data is read only for a known primitive or fieldless explicit-layout extent,
 otherwise its location and unresolved extent are shown without guessing.
 Every method also has an original metadata signature/flags header, implementation
@@ -62,7 +70,7 @@ Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 |---|---|
 | 0 | Every selected method rendered, or was a legitimate bodyless declaration |
 | 2 | At least one method has an explicitly marked IL fallback; none failed |
-| 1 | Invalid request/input, decode failure, or output I/O failure |
+| 1 | Invalid request/input, body/metadata failure, or output I/O failure |
 
 Library entry points in `src/lib.rs` accept assembly bytes and method tokens or
 an exact metadata type name. `DecompiledType.summary` counts each selected method;
@@ -183,8 +191,10 @@ contexts and base-field receiver casts remain explicit; no expressions are moved
 or inlined for this simplification.
 
 The original assembly's metadata remains authoritative: source-level
-binding, accessibility, attributes, type initialization context and assembly
-resolution are not reconstructed by the writer. A method reported `Decompiled`
+binding, accessibility, attribute payload effects, declarative security enforcement,
+full dispatch, type initialization context and assembly resolution are not
+reconstructed by the writer. Their available metadata records are evidence, not
+permission to erase unknown effects. A method reported `Decompiled`
 is lowered within this restricted model, **not certified equivalent/recompilable
 for every CLI input**.
 

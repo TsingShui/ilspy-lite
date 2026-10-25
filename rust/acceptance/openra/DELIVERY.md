@@ -1,9 +1,21 @@
 # Class-level delivery acceptance
 
-The confirmed three-milestone class-level goal is delivered within its bounded
-method-lowering contract. Final production/test revision checked: `74407e18f`.
-The final documentation adds [SEMANTICS.md](../../SEMANTICS.md); historical
-baseline/stage reports remain historical rather than being rewritten.
+The three-milestone behavior/output-reading gates passed at `74407e18f`, but the
+initial completion request at `05a056ac7` was rejected: ClassLayout,
+CustomAttribute, DeclSecurity and MethodImpl evidence was silently omitted from
+selected class results and the independent inventory checker. Passing method
+bodies did not satisfy metadata completeness. These omissions are corrected by
+`0408e6d2e`, `2ddcf8930`, `accdeec22` and `b4f25e943`, respectively. Independent
+review then found invalid-owner omission, lost endpoint failure evidence and an
+insensitive identity checker; `4a9ec2d43`, `209aede11` and `a50b1f77c` correct those
+findings. The review's four-byte RID follow-up is corrected by `f01ba7876`, which
+validates untrusted simple/coded RIDs before token construction can truncate them.
+Final corrected production/test revision: `f01ba7876`. The focused independent
+review's final follow-up found no issues and returned OK. This acceptance record
+supplies evidence, not a substitute for the goal completion auditor's decision.
+[SEMANTICS.md](../../SEMANTICS.md) defines output notation. Historical baseline,
+stage and first delivery evidence are retained rather than rewritten as broader
+success claims.
 
 ## Public interface and member completeness
 
@@ -28,8 +40,9 @@ are permitted; compilable source/project export is not the contract.
 
 Independent System.Reflection.Metadata PEReader snapshots match all five frozen
 public class outputs, including complete ownership/member identities, flags/raw
-signatures, generic context, parameters/constants, accessors and status/exit
-accounting. Final results have no failed bodies or metadata failures:
+signatures, generic context, parameters/constants, accessors, ClassLayout,
+CustomAttribute, DeclSecurity, MethodImpl and status/exit accounting. Corrected
+results have no failed bodies or metadata failures:
 
 | Class | Decompiled | Partial | Exit | Required behavioral closure |
 |---|---:|---:|---:|---|
@@ -41,6 +54,45 @@ accounting. Final results have no failed bodies or metadata failures:
 
 Counts describe these selections, not semantic coverage percentages. Unrelated
 partial members are still limitations, not successful decompilations.
+
+## Metadata completeness corrections
+
+The corrected public class result includes each owned ClassLayout size/packing
+and raw row. CustomAttribute records retain parent, exact constructor
+identity/signature, original blob index, complete raw payload and row; they are
+explicitly uninterpreted and never executed. Attached members/return and ordinary
+parameters/generics/relations/security records and image-level attributes are
+included. DeclSecurity retains class/method/assembly scope, action, permission-set
+blob/index/raw row and a local runtime-owned enforcement limit. MethodImpl retains
+both MethodDefOrRef endpoints, full scoped identities/signatures and raw row,
+without pretending to resolve dispatch/access/ancestry or guess source overrides.
+
+Owned Debug/Release public-interface regressions cover explicit layout and invalid
+packing; attributes on all supported owner categories and a nested type;
+class/method/assembly security; overloaded local and external/generic explicit
+method mappings. Invalid constructor/blob/mapping endpoints retain their readable
+raw evidence, metadata failure and peer fields/methods. Null/out-of-range owners
+in all four tables are retained as explicitly unowned image context; readable
+endpoint rows/name/owner/signature bytes survive failed signature/reference
+interpretation. An authored wide-table PE fixture with 65,536 TypeDefs checks
+four-byte simple/coded owners against an otherwise aliasing RID, for both the
+apparent target and unrelated selections. Full invalid raw RIDs are retained,
+not truncated into valid owner tokens. The oracle additionally checks exact
+endpoint names/raw owners and rejects identity-only mutations. All were observed
+red before implementation. The separate PEReader oracle and checker compare
+these four record families; negative tests reject their omission, mutation or
+unsupported interpretation claims. Ordinary body status is not a claim that
+attribute arguments, permission-set policies or complete dispatch were recovered.
+
+The focused read-only correction review initially returned BLOCK with two raw
+preservation defects and an endpoint identity-check gap. Parent reproduced/fixed
+these findings in the commits above; its follow-up found the wide-RID edge, which
+was also reproduced/fixed. Final focused verdict: **OK; no issues found**. Reports
+are session-managed `reviews/class-metadata-corrections.md`,
+`reviews/class-metadata-corrections-followup.md` and
+`reviews/class-metadata-wide-owner-followup.md` (final run
+`20f1dfff-78c3-43ff-a7ee-55222b474782`). Reviewers inspected sources/logs, not
+executed inputs; parent validation supplies the execution evidence.
 
 ## Semantic and independent-class evidence
 
@@ -72,7 +124,8 @@ contract, not broad ecosystem compatibility or whole-game support.
 
 ## Output-only Agent reading
 
-A fresh-context read-only Agent read only SEMANTICS.md and the supplied public
+Before metadata corrections, a fresh-context read-only Agent read only the
+then-current SEMANTICS.md and supplied public
 class outputs for resources, ammo, random, Activity, Wait, addresses and integer
 conversions. It did not read implementation, original source/DLLs, tests, behavior
 logs or prior answers, and did not execute methods. Verdict: **PASS; no issues**.
@@ -94,9 +147,12 @@ fresh execution evidence.
 
 ## Final gates
 
-Final fmt, strict all-target clippy and locked Cargo Debug/Release suites passed.
-The metadata checker and its five positive/negative tests passed. All affected
-behavior gates passed from current public output. Owned comparisons per
+At corrected revision `f01ba7876`, locked Cargo Debug/Release suites, fmt and
+strict all-target clippy passed. The metadata checker and its nine
+positive/negative tests passed. The five frozen class inventories and the
+random-class, resource/ammo, Activity and Wait behavior gates passed again from
+current public output. The lowering engine and remaining owned behavior inputs
+are unchanged; their previous final-gate evidence is reused. Owned comparisons per
 Debug/Release configuration:
 
 | Gate | Comparisons |
@@ -115,7 +171,9 @@ Debug/Release configuration:
 | External identities/exact calls | 48 |
 | Integer differential regression | 735 |
 
-Logs: ignored `report/openra/final-gates/`. Reproduce the distinct real-class gates:
+Behavior logs before correction: ignored `report/openra/final-gates/`.
+Corrected final Rust/inventory/real-class behavior logs:
+`report/openra/metadata-final/`. Reproduce the distinct real-class gates:
 
 ```sh
 python3 rust/acceptance/openra/test_inventory.py

@@ -27,6 +27,42 @@ operations below are semantic notation; the CLI does not ship a runtime adapter.
   A back edge does not imply termination. EH is not modeled by these edges;
   methods with exception regions fall back.
 
+## Attached metadata and interpretation limits
+
+Class results retain attached records even when their higher-level meaning is
+not interpreted. These records are not executable recovered method bodies:
+
+- `.class-layout TOKEN parent=... packing=... size=... raw-row-bytes=[...]`
+  preserves every owned ClassLayout row. Zero size means runtime-computed; zero
+  packing means default. Full target layout and ancestry validation is not
+  performed. Field offsets remain separate FieldLayout evidence.
+- `.custom-attribute TOKEN parent=... constructor=... value-blob-index=...
+  value-bytes=[...] raw-row-bytes=[...] payload=uninterpreted` retains exact
+  attachment, constructor identity/signature and complete payload. Parents
+  include owned members, parameters, generic parameters/constraints, interface
+  relations and security declarations, plus image-level Module/Assembly context.
+  Payload arguments and attribute effects are not decoded or executed. Do not
+  infer that an unknown attribute has no effects from a successful body status.
+- `.decl-security TOKEN parent=... action=... permission-set-blob-index=...
+  permission-set-bytes=[...] raw-row-bytes=[...] payload=uninterpreted` retains
+  type/method/assembly declarations. Permission-set formats and action policy are
+  not interpreted; security enforcement belongs to the original target runtime.
+  A recovered body is not a security-policy reconstruction or bypass contract.
+- `.method-impl TOKEN class=... body=... declaration=... raw-row-bytes=[...]`
+  retains the explicit MethodImpl endpoints, with separate exact owner/signature
+  records for body and declaration. This mapping is not inferred from names,
+  overload spelling or source `override` syntax. Full dispatch, access, ancestry
+  and signature-compatibility validation is not performed; external and generic
+  endpoint identities remain metadata context without dependency resolution.
+
+Broken readable records retain raw evidence, explicit metadata failure and peer
+members; their failure count is independent of body statuses. Null/out-of-range
+owners are retained as `ownership=unowned-invalid` image context, not assigned to
+the selected type or silently treated as valid unrelated records. Endpoint
+name/owner indexes, original row and signature blob index/bytes precede fallible
+signature/reference interpretation, so malformed signatures do not erase them. A complete inventory
+means the records are present, not that every payload or runtime policy is modeled.
+
 ## Numeric categories
 
 The canonical evaluation values for unsigned storage are bit patterns in `int`,
