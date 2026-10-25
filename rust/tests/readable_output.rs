@@ -174,6 +174,7 @@ fn field_old_value_is_not_delayed_until_after_a_store() {
         let returned = credit.find("return ").unwrap();
         assert!(read < store && store < returned, "{credit}");
         assert!(!credit.contains("return this.Value;"), "{credit}");
+        assert!(credit.contains("this.Value = unchecked("), "{credit}");
     }
 }
 

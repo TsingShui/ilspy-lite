@@ -653,10 +653,21 @@ fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
                 })
                 && !expression.contains(['/', '%', '[', '.', '?']);
             let adjacent = uses == 1
-                && lines
-                    .get(i + 1)
-                    .is_some_and(|l| identifiers(l).contains(&name))
-                && lines[i + 1].starts_with("return ");
+                && lines.get(i + 1).is_some_and(|l| {
+                    identifiers(l).contains(&name)
+                        && (l.starts_with("return ")
+                            || l.split_once(" = ").is_some_and(|(target, value)| {
+                                value == format!("{name};")
+                                    && !target.contains(['[', '(', ')'])
+                                    && identifiers(target).iter().all(|w| {
+                                        w.starts_with('@')
+                                            || target.trim().ends_with(w)
+                                            || w == "this"
+                                            || generated_value(w)
+                                            || w.starts_with('a')
+                                    })
+                            }))
+                });
             if !(literal || stable || arithmetic && adjacent) {
                 continue;
             }
