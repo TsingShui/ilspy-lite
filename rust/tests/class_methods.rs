@@ -26,6 +26,52 @@ fn method(bytes: &[u8], name: &str) -> (u32, usize) {
 }
 
 #[test]
+fn unreadable_method_name_keeps_flags_signature_parameters_and_body() {
+    for bytes in IMAGES {
+        let (token, offset) = method(bytes, "Optional");
+        let mut patched = bytes.to_vec();
+        patched[offset + 8..offset + 10].copy_from_slice(&0xffffu16.to_le_bytes());
+        let result = decompile_type(&patched, "ClassCases.Methods").unwrap();
+        assert_eq!(result.summary.metadata_failed, 1, "{}", result.text);
+        assert_eq!(result.summary.exit_code(), 1);
+        let line = result
+            .text
+            .lines()
+            .find(|l| l.starts_with(&format!(".method 0x{token:08X} ")))
+            .unwrap();
+        assert!(
+            line.contains("flags=0x0096")
+                && line.contains("impl-flags=0x0000")
+                && line.contains("rva="),
+            "{line}"
+        );
+        assert!(
+            line.contains("name-index=0x0000FFFF")
+                && line.contains("signature-bytes=[00, 01, 08, 08]"),
+            "{line}"
+        );
+        assert!(result.text.contains(".param ") && result.text.contains("name=amount"));
+        assert!(
+            result
+                .text
+                .contains("type=0x0008 value=int32(-7) bytes=[F9, FF, FF, FF]")
+        );
+        // A readable body can remain supported independently of an invalid name.
+        assert!(
+            result
+                .text
+                .contains(&format!(".method-status 0x{token:08X} "))
+        );
+        assert!(
+            result.text.contains("return v0;") || result.text.contains("Raw IL bytes (undecoded):"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("ClassCases.Methods::Pick(int64)"));
+    }
+}
+
+#[test]
 fn unreadable_method_signature_keeps_header_parameters_and_original_body() {
     let bytes = IMAGES[0];
     let (token, offset) = method(bytes, "Hidden");

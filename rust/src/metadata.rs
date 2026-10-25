@@ -1205,7 +1205,19 @@ impl<'a> Image<'a> {
 
     pub fn method_declaration(&self, token: u32, owner: &str) -> Result<(String, usize)> {
         let row = self.row(token)?;
-        let name = self.md.strings().str(row.name)?;
+        let mut failures = 0;
+        let mut name_diagnostic = String::new();
+        let name = match self.md.strings().str(row.name) {
+            Ok(name) => name.to_string(),
+            Err(error) => {
+                failures += 1;
+                name_diagnostic = format!(
+                    "// FAILED metadata method name: {}\n",
+                    escape_line(&error.to_string())
+                );
+                format!("<unreadable name-index=0x{:08X}>", row.name.get())
+            }
+        };
         let blob = self.md.blobs().get(row.signature);
         let evidence = match &blob {
             Ok(bytes) => format!("signature-bytes={bytes:02X?}"),
@@ -1214,7 +1226,6 @@ impl<'a> Image<'a> {
         let signature: Result<MethodSig<'_>> = blob
             .map_err(Into::into)
             .and_then(|bytes| MethodSig::parse(bytes).map_err(Into::into));
-        let mut failures = 0;
         let mut text = format!(
             ".method 0x{token:08X} flags=0x{:04X} impl-flags=0x{:04X} rva=0x{:08X} {} ",
             row.flags,
@@ -1255,11 +1266,12 @@ impl<'a> Image<'a> {
                 text.push_str(&format!(
                     "{}::{} // {evidence}\n// FAILED metadata: {}\n",
                     escape_line(owner),
-                    escape_line(name),
+                    escape_line(&name),
                     escape_line(&error.to_string())
                 ));
             }
         }
+        text.push_str(&name_diagnostic);
         text.push_str(&format!(
             ".implementation 0x{token:08X} {}\n",
             implementation_flags(row.impl_flags)
