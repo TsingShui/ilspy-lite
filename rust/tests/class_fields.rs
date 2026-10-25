@@ -126,9 +126,50 @@ fn field_layout_and_marshalling_evidence_are_not_dropped() {
         assert_eq!(result.summary.metadata_failed, 0, "{}", result.text);
         assert!(result.text.contains("offset=0"));
         assert!(result.text.contains("offset=4"));
+        assert!(
+            result.text.contains(".class-layout 0x0F"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("packing=0 size=8"), "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("size=0 means runtime-computed; packing=0 means default")
+        );
         assert!(result.text.contains(".field-marshal "), "{}", result.text);
         assert!(result.text.contains("bytes=[02]"), "{}", result.text);
     }
+}
+
+#[test]
+fn invalid_class_layout_retains_the_record_and_peer_fields() {
+    let bytes = IMAGES[0];
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let (rid, layout) = md
+        .tables()
+        .iter::<cildec::tables::ClassLayoutRow>()
+        .find(|(_, row)| row.as_ref().unwrap().class_size == 8)
+        .unwrap();
+    let raw = md
+        .tables()
+        .row_bytes(cildec::TableId::ClassLayout, rid)
+        .unwrap();
+    let offset = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset..offset + 2].copy_from_slice(&3u16.to_le_bytes());
+    let result = decompile_type(&patched, "ClassCases.LayoutFields").unwrap();
+    assert_eq!(result.summary.metadata_failed, 1, "{}", result.text);
+    assert_eq!(result.summary.exit_code(), 1);
+    assert!(result.text.contains(&format!(
+        ".class-layout 0x{:08X} parent=0x{:08X} packing=3 size=8",
+        0x0f000000 | rid,
+        0x02000000 | layout.unwrap().parent.get()
+    )));
+    assert!(result.text.contains("raw-row-bytes="));
+    assert!(result.text.contains("invalid class layout"));
+    assert!(result.text.contains("@Number") && result.text.contains("@Ready"));
 }
 
 #[test]

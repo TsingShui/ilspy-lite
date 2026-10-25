@@ -43,6 +43,20 @@ internal static class ClassInventory
             string ns = md.GetString(type.Namespace);
             return ns.Length == 0 ? name : ns + "." + name;
         }
+        byte[] metadata = pe.GetMetadata().GetContent().ToArray();
+        byte[] Row(TableIndex table, int rid)
+        {
+            int size = md.GetTableRowSize(table);
+            int offset = md.GetTableMetadataOffset(table) + (rid - 1) * size;
+            return metadata.AsSpan(offset, size).ToArray();
+        }
+        object[] Layouts(TypeDefinitionHandle owner) => Enumerable.Range(1, md.GetTableRowCount(TableIndex.ClassLayout))
+            .Select(rid => (Rid: rid, Bytes: Row(TableIndex.ClassLayout, rid)))
+            .Where(row => (row.Bytes.Length == 8 ? BitConverter.ToUInt16(row.Bytes, 6) : BitConverter.ToUInt32(row.Bytes, 6))
+                == MetadataTokens.GetRowNumber(owner))
+            .Select(row => (object)new { token = $"0x{0x0f000000 | row.Rid:X8}", parent = Token(owner),
+                packing = BitConverter.ToUInt16(row.Bytes, 0), size = BitConverter.ToUInt32(row.Bytes, 2),
+                raw_row = Convert.ToHexString(row.Bytes) }).ToArray();
         string Blob(BlobHandle handle) => Convert.ToHexString(md.GetBlobBytes(handle));
         object Constant(ConstantHandle handle)
         {
@@ -69,6 +83,7 @@ internal static class ClassInventory
                 token = Token(handle), name = TypeName(handle), flags = (int)type.Attributes,
                 parent = Token(type.GetDeclaringType()), base_type = Token(type.BaseType),
                 interfaces = type.GetInterfaceImplementations().Select(i => Token(md.GetInterfaceImplementation(i).Interface)).ToArray(),
+                class_layout = Layouts(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);

@@ -273,6 +273,33 @@ impl<'a> Image<'a> {
                 }
             }
         }
+        let layouts = self
+            .md
+            .tables()
+            .rows_for_parent(TableId::ClassLayout, Token(token))?;
+        if layouts.len() > 1 {
+            failures += 1;
+            text.push_str("// FAILED metadata: duplicate class layout records\n");
+        }
+        for layout_rid in layouts {
+            let layout = self.md.tables().class_layout(layout_rid)?;
+            let raw = self
+                .md
+                .tables()
+                .row_bytes(TableId::ClassLayout, layout_rid)?;
+            text.push_str(&format!(
+                ".class-layout 0x{:08X} parent=0x{token:08X} packing={} size={} raw-row-bytes={raw:02X?}\n",
+                0x0f000000 | layout_rid, layout.packing_size, layout.class_size
+            ));
+            text.push_str("// size=0 means runtime-computed; packing=0 means default; full target layout/ancestry validation is not performed.\n");
+            if row.flags & 0x20 != 0
+                || !matches!(row.layout_kind(), 1 | 2)
+                || !matches!(layout.packing_size, 0 | 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128)
+            {
+                failures += 1;
+                text.push_str("// FAILED metadata: invalid class layout flags or packing\n");
+            }
+        }
         match self.generic_metadata(token, None) {
             Ok((generics, errors)) => {
                 text.push_str(&generics);

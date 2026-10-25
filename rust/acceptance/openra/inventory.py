@@ -79,6 +79,12 @@ def check_output(snapshot, text, stderr, code):
                 "Base type mismatch")
         require(re.findall(r"^\.implements (0x[0-9A-F]{8}) ", block, re.M) == ty["interfaces"],
                 "Interface inventory mismatch")
+        layouts = re.findall(r"^\.class-layout (0x0F[0-9A-F]{6}) parent=(0x02[0-9A-F]{6}) "
+                             r"packing=(\d+) size=(\d+) raw-row-bytes=\[([^]]*)\]$", block, re.M)
+        expected_layouts = [(layout["token"], layout["parent"], str(layout["packing"]), str(layout["size"]),
+                             ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
+                            for layout in ty["class_layout"]]
+        require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
         generics(block, ty["token"], ty["generic_parameters"])
         fields = members(block, "field", ty["fields"])
         for field in ty["fields"]:

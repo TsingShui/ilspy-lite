@@ -13,7 +13,7 @@ class ClassOutputGate(unittest.TestCase):
         self.snapshot = {"root": "0x02000001", "types": [{
             "token": "0x02000001", "name": "Example", "flags": 1,
             "parent": "0x00000000", "base_type": "0x00000000", "interfaces": [],
-            "generic_parameters": [], "fields": [], "properties": [], "events": [],
+            "class_layout": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
             "methods": [{"token": "0x06000001", "name": "Read", "flags": 22,
                          "impl_flags": 0, "signature": "000008", "has_rva": True,
                          "generic_parameters": [], "parameters": []}]
@@ -33,6 +33,21 @@ class ClassOutputGate(unittest.TestCase):
 
     def test_complete_output_passes(self):
         self.assertEqual(self.check()["decompiled"], 1)
+
+    def test_class_layout_identity_values_and_raw_record_are_required(self):
+        snapshot = copy.deepcopy(self.snapshot)
+        layout = {"token": "0x0F000001", "parent": "0x02000001", "packing": 4,
+                  "size": 8, "raw_row": "0400080000000100"}
+        snapshot["types"][0]["class_layout"] = [layout]
+        record = (".class-layout 0x0F000001 parent=0x02000001 packing=4 size=8 "
+                  "raw-row-bytes=[04, 00, 08, 00, 00, 00, 01, 00]\n")
+        text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
+        self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
+        for invalid in [self.text, text.replace("packing=4", "packing=0"),
+                        text.replace("size=8", "size=0"), text.replace("parent=0x02000001", "parent=0x02000002"),
+                        text.replace("[04, 00", "[00, 00"), text.replace(record, record + record)]:
+            with self.assertRaises(ValueError):
+                self.check(text=invalid, snapshot=snapshot)
 
     def test_missing_or_duplicate_method_fails(self):
         header = self.text.split(".method-status", 1)[0].split(".method ", 1)[1]
