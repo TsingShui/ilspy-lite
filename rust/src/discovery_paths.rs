@@ -281,7 +281,11 @@ impl Search {
                         "deps runtimeTargets assets are not selected without RID policy",
                     );
                 }
-                let Some(runtime) = entry.get("runtime").and_then(|v| v.as_object()) else {
+                let Some(runtime) = entry.get("runtime") else {
+                    continue;
+                };
+                let Some(runtime) = runtime.as_object() else {
+                    self.diagnostic(format!("deps runtime section must be an object: {name}"));
                     continue;
                 };
                 for extension in ["dll", "exe"] {

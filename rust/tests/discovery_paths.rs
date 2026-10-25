@@ -681,3 +681,71 @@ fn mono_versions_prefer_framework_hint_but_not_modern_dotnet_hint() {
         );
     }
 }
+
+#[test]
+fn deps_present_nonobject_runtime_is_diagnostic() {
+    let f = Fixture::new();
+    std::fs::create_dir_all(f.0.join("Cache")).unwrap();
+    let env = DiscoveryEnvironment {
+        nuget_roots: vec![f.0.join("Cache")],
+        ..Default::default()
+    };
+    for runtime in [
+        serde_json::json!([]),
+        serde_json::json!(null),
+        serde_json::json!("invalid"),
+        serde_json::json!(42),
+        serde_json::json!(true),
+    ] {
+        deps(
+            &f,
+            &serde_json::json!({
+                "targets": {"T": {"P/1": {"runtime": runtime}}},
+                "libraries": {"P/1": {"type": "package"}}
+            })
+            .to_string(),
+        );
+        let result = candidates_for(&f.input(), &identity(), Some("T"), &env);
+        assert!(result.candidates.is_empty());
+        assert!(
+            result
+                .diagnostics
+                .iter()
+                .any(|s| s.contains("runtime section must be an object")),
+            "runtime={runtime}: {:?}",
+            result.diagnostics
+        );
+    }
+    let neighbor = f.file("Widget.dll");
+    let result = candidates_for(&f.input(), &identity(), Some("T"), &env);
+    assert_eq!(paths(&result), vec![neighbor.as_path()]);
+    assert!(
+        result
+            .diagnostics
+            .iter()
+            .any(|s| s.contains("runtime section must be an object"))
+    );
+}
+
+#[test]
+fn deps_absent_or_empty_runtime_is_optional() {
+    let f = Fixture::new();
+    std::fs::create_dir_all(f.0.join("Cache")).unwrap();
+    let env = DiscoveryEnvironment {
+        nuget_roots: vec![f.0.join("Cache")],
+        ..Default::default()
+    };
+    for entry in [serde_json::json!({}), serde_json::json!({"runtime": {}})] {
+        deps(
+            &f,
+            &serde_json::json!({
+                "targets": {"T": {"P/1": entry}},
+                "libraries": {"P/1": {"type": "package"}}
+            })
+            .to_string(),
+        );
+        let result = candidates_for(&f.input(), &identity(), Some("T"), &env);
+        assert!(result.candidates.is_empty());
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    }
+}
