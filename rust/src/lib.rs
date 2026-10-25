@@ -2,10 +2,15 @@
 // SPDX-License-Identifier: MIT
 
 mod cfg;
+mod dependencies;
 mod ir;
 mod lift;
 mod metadata;
 mod readable;
+
+pub use dependencies::{
+    AssemblyIdentity, AssemblyReference, AssemblyResolution, DependencyContext, DependencyLimits,
+};
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
