@@ -58,6 +58,15 @@ impl<'a> Image<'a> {
             .iter::<TypeDefRow>()
             .map(|(_, row)| row.map_err(Into::into))
             .collect::<Result<Vec<_>>>()?;
+        let method_limit = tables.row_count(TableId::MethodDef) + 1;
+        let mut prior = 1;
+        for row in &rows {
+            let start = row.method_list.get();
+            if start < prior || start > method_limit {
+                return Err("invalid or overlapping type method ownership ranges".into());
+            }
+            prior = start;
+        }
         let mut parents = vec![None; rows.len()];
         for (_, row) in tables.iter::<NestedClassRow>() {
             let row = row?;
