@@ -279,6 +279,15 @@ fn property_and_event_relationships_show_names_types_and_accessors_not_tokens() 
         events.text
     );
     assert!(!events.text.contains("relationship 0x"));
+    let generic =
+        decompile_type_with_style(IMAGE, "ClassCases.GenericEvents`1", OutputStyle::Readable)
+            .unwrap();
+    assert!(
+        generic.text.contains("// event System.Action<T> Updated"),
+        "{}",
+        generic.text
+    );
+    assert!(!generic.text.contains("System.Action<T0>"));
 }
 
 #[test]

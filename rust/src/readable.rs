@@ -107,7 +107,7 @@ fn accessor_summary(image: &Image<'_>, token: u32, owner: u32) -> Result<String>
             "event",
             format!(
                 "{} {}",
-                named_type(image, row.event_type)?,
+                named_type_with_owners(image, row.event_type, owner, 0)?,
                 ident(image.md.strings().str(row.name)?)
             ),
         )
