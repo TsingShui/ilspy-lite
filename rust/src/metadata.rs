@@ -775,7 +775,153 @@ impl<'a> Image<'a> {
     }
 
     fn type_reference(&self, token: Token, depth: usize) -> Result<String> {
-        if depth == 32 || token.rid() == 0 {
+        self.render_type_reference(token, depth).map_err(|error| {
+            format!(
+                "{} // type reference interpretation failed: {error}",
+                self.raw_reference_evidence(token, depth)
+            )
+            .into()
+        })
+    }
+
+    /// Failure evidence is independent of display-name and signature interpretation.
+    /// It never turns an unreadable identity into an admitted lowering type.
+    fn raw_reference_evidence(&self, token: Token, depth: usize) -> String {
+        let mut text = format!("type-reference-evidence=0x{:08X} ", token.0);
+        if depth >= 32 {
+            text.push_str("reference-depth-limit; identity retained without recursion");
+            return text;
+        }
+        let tables = self.md.tables();
+        let Some(table) = token.table() else {
+            return format!("{text}invalid-table");
+        };
+        let raw = match tables.row_bytes(table, token.rid()) {
+            Ok(raw) => raw,
+            Err(error) => {
+                return format!("{text}row-unavailable: {}", escape_line(&error.to_string()));
+            }
+        };
+        text.push_str(&format!("raw-row-bytes={raw:02X?} "));
+        let mut string =
+            |label: &str, index: cildec::StringIndex| match self.md.strings().str(index) {
+                Ok(value) => text.push_str(&format!("{label}={} ", escape_line(value))),
+                Err(error) => text.push_str(&format!(
+                    "{label}-index=0x{:08X} unreadable({}) ",
+                    index.0,
+                    escape_line(&error.to_string())
+                )),
+            };
+        match table {
+            TableId::TypeRef => {
+                // Decode the scope only after independently preserving the raw row
+                // and both heap indexes; bad scope decoding cannot hide the name.
+                let name = tables.raw_column(table, token.rid(), 1).unwrap();
+                let ns = tables.raw_column(table, token.rid(), 2).unwrap();
+                string("name", cildec::StringIndex(name));
+                string("namespace", cildec::StringIndex(ns));
+                let encoded = tables.raw_column(table, token.rid(), 0).unwrap();
+                text.push_str(&format!("resolution-scope-encoded=0x{encoded:08X} "));
+                match self.metadata_coded_token(cildec::CodedIndex::ResolutionScope, encoded) {
+                    Ok(scope) => {
+                        text.push_str(&format!("resolution-scope=0x{:08X} ", scope.0));
+                        if !scope.is_null() {
+                            text.push_str(&self.raw_reference_evidence(scope, depth + 1));
+                        } else {
+                            text.push_str("unresolved-scope; no dependency guessed");
+                        }
+                    }
+                    Err(error) => text.push_str(&format!(
+                        "scope-unreadable: {}",
+                        escape_line(&error.to_string())
+                    )),
+                }
+            }
+            TableId::TypeDef => {
+                string(
+                    "name",
+                    cildec::StringIndex(tables.raw_column(table, token.rid(), 1).unwrap()),
+                );
+                string(
+                    "namespace",
+                    cildec::StringIndex(tables.raw_column(table, token.rid(), 2).unwrap()),
+                );
+                text.push_str(&format!(
+                    "flags=0x{:08X} extends-encoded=0x{:08X} field-list={} method-list={} ",
+                    tables.raw_column(table, token.rid(), 0).unwrap(),
+                    tables.raw_column(table, token.rid(), 3).unwrap(),
+                    tables.raw_column(table, token.rid(), 4).unwrap(),
+                    tables.raw_column(table, token.rid(), 5).unwrap()
+                ));
+                if let Ok(Some(owner)) = tables.enclosing_type(Rid::new(token.rid())) {
+                    text.push_str(&self.raw_reference_evidence(
+                        Token::new(TableId::TypeDef, owner.get()),
+                        depth + 1,
+                    ));
+                }
+            }
+            TableId::AssemblyRef => {
+                let row = tables.assembly_ref(token.rid()).unwrap();
+                string("name", row.name);
+                string("culture", row.culture);
+                text.push_str(&format!(
+                    "assembly-ref=0x{:08X} version={}.{}.{}.{} flags=0x{:08X} ",
+                    token.0,
+                    row.major_version,
+                    row.minor_version,
+                    row.build_number,
+                    row.revision_number,
+                    row.flags
+                ));
+                for (label, index) in [
+                    ("key-or-token", row.public_key_or_token),
+                    ("hash", row.hash_value),
+                ] {
+                    match self.md.blobs().get(index) {
+                        Ok(bytes) => text.push_str(&format!("{label}={bytes:02X?} ")),
+                        Err(error) => text.push_str(&format!(
+                            "{label}-blob-index=0x{:08X} unreadable({}) ",
+                            index.0,
+                            escape_line(&error.to_string())
+                        )),
+                    }
+                }
+            }
+            TableId::TypeSpec => {
+                let index = tables.raw_column(table, token.rid(), 0).unwrap();
+                text.push_str(&format!("signature-blob-index=0x{index:08X} "));
+                match self.md.blobs().get(cildec::BlobIndex(index)) {
+                    Ok(bytes) => text.push_str(&format!("signature-bytes={bytes:02X?}")),
+                    Err(error) => text.push_str(&format!(
+                        "signature-unreadable: {}",
+                        escape_line(&error.to_string())
+                    )),
+                }
+            }
+            TableId::ModuleRef => string(
+                "name",
+                cildec::StringIndex(tables.raw_column(table, token.rid(), 0).unwrap()),
+            ),
+            TableId::Module => {
+                string(
+                    "name",
+                    cildec::StringIndex(tables.raw_column(table, token.rid(), 1).unwrap()),
+                );
+                text.push_str(&format!(
+                    "generation={} mvid-index={} enc-id-index={} enc-base-id-index={}",
+                    tables.raw_column(table, token.rid(), 0).unwrap(),
+                    tables.raw_column(table, token.rid(), 2).unwrap(),
+                    tables.raw_column(table, token.rid(), 3).unwrap(),
+                    tables.raw_column(table, token.rid(), 4).unwrap()
+                ));
+            }
+            _ => text.push_str("unexpected-type-reference-table; raw row retained"),
+        }
+        text
+    }
+
+    fn render_type_reference(&self, token: Token, depth: usize) -> Result<String> {
+        if depth >= 32 || token.rid() == 0 {
             return Err("invalid or excessive type reference".into());
         }
         let tables = self.md.tables();
