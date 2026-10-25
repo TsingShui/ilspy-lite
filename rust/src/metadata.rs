@@ -433,7 +433,10 @@ impl<'a> Image<'a> {
                     .map_err(Into::into)
                     .and_then(|token| self.metadata_method_identity(token))
                 {
-                    Ok(identity) => text.push_str(&format!(".method-impl-{kind} {identity}\n")),
+                    Ok((identity, errors)) => {
+                        failures += errors;
+                        text.push_str(&format!(".method-impl-{kind} {identity}\n"));
+                    }
                     Err(error) => {
                         failures += 1;
                         text.push_str(&format!(
@@ -561,7 +564,10 @@ impl<'a> Image<'a> {
                 .map_err(Into::into)
                 .and_then(|token| self.metadata_method_identity(token))
             {
-                Ok(identity) => text.push_str(&format!(".attribute-constructor {identity}\n")),
+                Ok((identity, errors)) => {
+                    failures += errors;
+                    text.push_str(&format!(".attribute-constructor {identity}\n"));
+                }
                 Err(error) => {
                     failures += 1;
                     text.push_str(&format!(
@@ -575,44 +581,119 @@ impl<'a> Image<'a> {
     }
 
     /// Metadata identity only: no lowering admission, dependency loading or execution.
-    fn metadata_method_identity(&self, token: Token) -> Result<String> {
-        let (name, owner, blob) = match token.table() {
-            Some(TableId::MethodDef) if token.rid() != 0 => {
-                let row = self.row(token.0)?;
-                let owner = self
-                    .md
-                    .tables()
-                    .type_of_method(Rid::new(token.rid()))?
-                    .ok_or("missing metadata method owner")?;
-                (
-                    self.md.strings().str(row.name)?,
-                    Token(0x02000000 | owner.get()),
-                    row.signature,
-                )
-            }
-            Some(TableId::MemberRef) if token.rid() != 0 => {
-                let row = self.md.tables().member_ref(token.rid())?;
-                (self.md.strings().str(row.name)?, row.class, row.signature)
-            }
-            _ => return Err("metadata method reference needs MethodDef or MemberRef".into()),
-        };
-        let bytes = self.md.blobs().get(blob)?;
-        let signature = MethodSig::parse(bytes)?;
-        let mut references = Vec::new();
-        for parameter in std::iter::once(&signature.return_type)
-            .chain(&signature.params)
-            .chain(&signature.vararg_params)
-        {
-            self.signature_references(&parameter.type_, 0, &mut references)?;
+    fn metadata_method_identity(&self, token: Token) -> Result<(String, usize)> {
+        let tables = self.md.tables();
+        let table = token.table().ok_or("invalid metadata endpoint table")?;
+        if !matches!(table, TableId::MethodDef | TableId::MemberRef) || token.rid() == 0 {
+            return Err("metadata method reference needs MethodDef or MemberRef".into());
         }
-        Ok(format!(
-            "0x{:08X} {}::{} owner={} signature-bytes={bytes:02X?} parsed={signature:?} references=[{}]",
-            token.0,
-            escape_line(&Names::new(&self.md).try_token(owner)?),
-            escape_line(name),
-            self.type_reference(owner, 0)?,
-            references.join("; ")
-        ))
+        let raw = tables.row_bytes(table, token.rid())?;
+        let (name_index, blob_index, owner, owner_evidence) = if table == TableId::MethodDef {
+            let owner: Result<Token> = tables
+                .type_of_method(Rid::new(token.rid()))
+                .map_err(Into::into)
+                .and_then(|owner| {
+                    owner
+                        .map(|rid| Token::new(TableId::TypeDef, rid.get()))
+                        .ok_or_else(|| "missing metadata method owner".into())
+                });
+            (
+                tables.raw_column(table, token.rid(), 3)?,
+                tables.raw_column(table, token.rid(), 4)?,
+                owner,
+                format!(
+                    "method-owner-derived-from-TypeDef-lists; param-list-index=0x{:08X}",
+                    tables.raw_column(table, token.rid(), 5)?
+                ),
+            )
+        } else {
+            let encoded = tables.raw_column(table, token.rid(), 0)?;
+            (
+                tables.raw_column(table, token.rid(), 1)?,
+                tables.raw_column(table, token.rid(), 2)?,
+                cildec::CodedIndex::MemberRefParent
+                    .decode(encoded, 0)
+                    .map_err(Into::into),
+                format!("owner-encoded=0x{encoded:08X}"),
+            )
+        };
+        let mut failures = 0;
+        let mut errors = Vec::new();
+        let name = match self.md.strings().str(cildec::StringIndex(name_index)) {
+            Ok(name) => escape_line(name),
+            Err(error) => {
+                failures += 1;
+                errors.push(format!("name: {error}"));
+                "<unreadable-name>".into()
+            }
+        };
+        let (owner_name, owner_description) = match owner {
+            Ok(owner) => {
+                let owner_name = match Names::new(&self.md).try_token(owner) {
+                    Ok(name) => escape_line(&name),
+                    Err(error) => {
+                        failures += 1;
+                        errors.push(format!("owner name: {error}"));
+                        "<unreadable-owner>".into()
+                    }
+                };
+                let description = match self.type_reference(owner, 0) {
+                    Ok(description) => description,
+                    Err(error) => {
+                        failures += 1;
+                        errors.push(format!("owner: {error}"));
+                        format!("0x{:08X}", owner.0)
+                    }
+                };
+                (owner_name, description)
+            }
+            Err(error) => {
+                failures += 1;
+                errors.push(format!("owner: {error}"));
+                ("<unreadable-owner>".into(), "unresolved".into())
+            }
+        };
+        let mut text = format!(
+            "0x{:08X} {owner_name}::{name} owner={owner_description} name-index=0x{name_index:08X} {owner_evidence} signature-blob-index=0x{blob_index:08X} raw-row-bytes={raw:02X?}",
+            token.0
+        );
+        // Keep row and blob evidence before parsing. A malformed signature or named
+        // reference cannot erase the independently readable endpoint identity.
+        match self.md.blobs().get(cildec::BlobIndex(blob_index)) {
+            Ok(bytes) => {
+                text.push_str(&format!(" signature-bytes={bytes:02X?}"));
+                match MethodSig::parse(bytes) {
+                    Ok(signature) => {
+                        text.push_str(&format!(" parsed={signature:?}"));
+                        let mut references = Vec::new();
+                        for parameter in std::iter::once(&signature.return_type)
+                            .chain(&signature.params)
+                            .chain(&signature.vararg_params)
+                        {
+                            if let Err(error) =
+                                self.signature_references(&parameter.type_, 0, &mut references)
+                            {
+                                failures += 1;
+                                errors.push(format!("signature reference: {error}"));
+                            }
+                        }
+                        text.push_str(&format!(" references=[{}]", references.join("; ")));
+                    }
+                    Err(error) => {
+                        failures += 1;
+                        errors.push(format!("signature: {error}"));
+                    }
+                }
+            }
+            Err(error) => {
+                failures += 1;
+                errors.push(format!("signature blob: {error}"));
+            }
+        }
+        for error in errors {
+            text.push_str(&format!(" // FAILED metadata: {}", escape_line(&error)));
+        }
+        Ok((text, failures))
     }
 
     fn type_reference(&self, token: Token, depth: usize) -> Result<String> {
