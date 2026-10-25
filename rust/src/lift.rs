@@ -759,6 +759,13 @@ impl Writer<'_, '_> {
                 if method.tick_count {
                     self.lines.push("// Exact core Environment.TickCount: signed I4 clock read at this instruction, evaluated once.".into());
                 }
+                if let (Some(Ty::ExternalClass(owner)), Some(cildec::TableId::MemberRef)) =
+                    (method.receiver, t.table())
+                {
+                    let reference = self.image.md.tables().member_ref(t.rid())?;
+                    self.lines.push(format!("// memberref target 0x{:08X}: owner={} method-name={} signature-bytes={:02X?}; exact IL call; no virtual dispatch or added null check; resolution/access/body effects belong to the original target runtime.",
+                        t.0, self.image.external_class_context(owner)?, crate::metadata::escape_line(self.image.md.strings().str(reference.name)?), self.image.md.blobs().get(reference.signature)?));
+                }
                 let expression = format!("{}({})", method.target, values.join(", "));
                 self.lines.push(format!(
                     "// call token 0x{:08X}: {}",

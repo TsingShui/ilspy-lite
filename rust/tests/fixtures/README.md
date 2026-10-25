@@ -125,10 +125,14 @@ The external-reference snapshots (`external-{release,debug}.bin` and
 `external-library-{release,debug}.bin`) come from `../dotnet/ExternalCases.cs`.
 Regenerate with `python3 rust/tests/build-external-fixtures.py`; the DEPENDENCY
 compiler define produces a separate owned ExternalLibrary assembly. The
-`reference-roundtrip.py --external --from-class` gate initially exercises three
-opaque-reference bodies (24 comparisons/configuration), without external calls.
+`reference-roundtrip.py --external --from-class` gate exercises six bodies
+(48 comparisons/configuration), including exact instance MemberRef calls. The
+recovered shell inherits the independent owned dependency; adapters emit exact
+IL calls rather than copying leaf logic. Null receiver behavior, external state
+mutation and an overridden virtual target test no added null checks/dispatch.
 Aliases retain the original image-scoped TypeRef and full assembly identity;
-different types are not inferred assignable. Git pins the snapshots.
+only exact locally named external ancestry is admitted, not inferred external
+inheritance. Git pins the snapshots.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated

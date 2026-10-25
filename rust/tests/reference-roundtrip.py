@@ -60,11 +60,12 @@ def main():
     out = ROOT / "report/reference-roundtrip"
     out.mkdir(parents=True, exist_ok=True)
 
-    def compile_cs(output, sources, executable=False):
+    def compile_cs(output, sources, executable=False, references=()):
         response = output.with_suffix(".rsp")
         response.write_text("\n".join([
             "-nologo", "-langversion:14", "-warnaserror+", "-nowarn:0164,0219", "-target:exe" if executable else "-target:library",
             f'-out:"{output}"', *[f'-r:"{p}"' for p in sorted(ref.glob("*.dll"))],
+            *[f'-r:"{p}"' for p in references],
             *[f'"{p}"' for p in sources],
         ]))
         run(dotnet / "dotnet", sdk / "Roslyn/bincore/csc.dll", f"@{response}")
@@ -141,7 +142,7 @@ def main():
             for line in listing:
                 token, signature = line.split(" ", 1)
                 if args.external:
-                    if not any(f"::{name}(" in signature for name in ("Unused", "Identity", "Other")):
+                    if not any(f"::{name}(" in signature for name in ("Unused", "Identity", "Other", "DirectFlag", "DirectConstant", "DirectVirtual")):
                         continue
                 elif args.delegated:
                     if "ConstructorCases.Root::.ctor(" not in signature:
@@ -155,7 +156,7 @@ def main():
                 elif "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature or "::Anchor" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 3 if args.external else 21 if args.floats else 8 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
+            expected_count = 6 if args.external else 21 if args.floats else 8 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
             name = f"external-{config}" if args.external else f"float-{config}" if args.floats else f"exception-{config}" if args.exceptions else f"string-{config}" if args.strings else f"delegated-{config}" if args.delegated else f"clock-{config}" if args.clock else f"{corpus_name}-{config}" if args.constructors or args.addresses or args.conversions or args.native or args.arrays else config
@@ -209,7 +210,8 @@ def main():
         sources = [source]
         if "__cil_F" in source.read_text():
             sources.append(ROOT / "tests/dotnet/FloatSemantics.cs")
-        compile_cs(recovered, sources)
+        references = json.loads(source.with_suffix(".references.json").read_text())
+        compile_cs(recovered, sources, references=references)
         run(dotnet / "dotnet", harness, "run", job, recovered)
 
 

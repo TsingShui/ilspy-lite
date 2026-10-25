@@ -40,6 +40,49 @@ fn opaque_external_classes_keep_image_scoped_identity_without_loading_dependenci
 }
 
 #[test]
+fn direct_memberref_calls_keep_full_identity_signature_and_no_virtual_dispatch() {
+    for bytes in IMAGES {
+        for name in ["DirectFlag", "DirectConstant", "DirectVirtual"] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("__cil_memberref_call_0A"));
+            assert!(
+                result.text.contains("signature-bytes=") && result.text.contains("assembly-ref")
+            );
+            assert!(
+                result
+                    .text
+                    .contains("exact IL call; no virtual dispatch or added null check")
+            );
+        }
+    }
+}
+
+#[test]
+fn memberref_calls_do_not_infer_wrong_receiver_or_callvirt_semantics() {
+    let bytes = IMAGES[0];
+    let method = token(bytes, "DirectFlag");
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let body =
+        cildec::MethodBody::from_image(&pe, &md.tables().method_def(method & 0xffffff).unwrap())
+            .unwrap()
+            .unwrap();
+    let call = body
+        .instructions()
+        .map(Result::unwrap)
+        .find(|i| i.opcode.name() == "call")
+        .unwrap();
+    let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[start] = 0x03; // Actor is not the external Base receiver.
+    assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
+    let mut patched = bytes.to_vec();
+    patched[start + call.offset as usize] = 0x6f;
+    assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
+}
+
+#[test]
 fn differently_scoped_external_types_are_not_interchangeable() {
     let bytes = IMAGES[0];
     let pe = cildec::PeImage::parse(bytes).unwrap();

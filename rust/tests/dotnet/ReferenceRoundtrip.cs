@@ -33,7 +33,7 @@ internal static class ReferenceRoundtrip
 {
     record Entry(int Token, string Source);
     record Job(string Kind, string Assembly, string Dependencies, Entry[] Methods);
-    static readonly Dictionary<int, Func<object, object[], object>> OriginalCalls = new();
+    static readonly Dictionary<(Module, int), Func<object, object[], object>> OriginalCalls = new();
     static int checks;
     static string TypeName(Type type) => type == typeof(void) ? "void" : type == typeof(int) ? "int" :
         type == typeof(bool) ? "bool" : type == typeof(long) ? "long" : type == typeof(uint) ? "uint" :
@@ -69,7 +69,13 @@ internal static class ReferenceRoundtrip
             return;
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
-        Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        var recoveredContext = new AssemblyLoadContext("recovered", isCollectible: true);
+        recoveredContext.Resolving += (context, name) => {
+            string path = Path.Combine(job.Dependencies, name.Name + ".dll");
+            return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
+        };
+        Assembly recovered = recoveredContext.LoadFromAssemblyPath(args[2]);
+        InstallMemberCalls(job, original, recovered);
         if (job.Kind == "random-class")
         {
             RandomClass(recovered, members);
@@ -137,6 +143,7 @@ internal static class ReferenceRoundtrip
         var exceptions = new HashSet<int>();
         var absoluteCalls = new HashSet<int>();
         var externalTypes = new Dictionary<int, Type>();
+        var memberCalls = new Dictionary<int, MethodInfo>();
         bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
@@ -151,7 +158,6 @@ internal static class ReferenceRoundtrip
                 if (!external.IsClass || external.IsGenericType || external.IsNested)
                     throw new Exception("Unsupported opaque external test shell");
                 externalTypes[token] = external;
-                types.Add(external);
             }
             foreach (Match match in Regex.Matches(source, @"// field token 0x([0-9A-F]{8})"))
             {
@@ -216,6 +222,16 @@ internal static class ReferenceRoundtrip
                     throw new Exception("Float absolute-call target mismatch");
                 absoluteCalls.Add(token);
             }
+            foreach (Match match in Regex.Matches(source, @"__cil_memberref_call_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if (target is not MethodInfo leaf || leaf.IsStatic || leaf.IsGenericMethod
+                    || leaf.DeclaringType!.IsValueType || leaf.DeclaringType.IsInterface
+                    || leaf.DeclaringType.Assembly == original)
+                    throw new Exception("External exact-call adapter needs an independent reference-class leaf");
+                memberCalls[token] = leaf;
+            }
             string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
             code.Add(source.Replace(declaration, $"M_{entry.Token:X8}("));
@@ -224,7 +240,8 @@ internal static class ReferenceRoundtrip
         foreach (Type type in types)
         {
             if (type.IsGenericType || type.IsNested || type.IsValueType) throw new Exception("Unsupported test shell shape");
-            string parent = type.BaseType != null && types.Contains(type.BaseType) ? " : " + TypeName(type.BaseType) : "";
+            string parent = type.BaseType != null && (types.Contains(type.BaseType)
+                || memberCalls.Values.Any(m => m.DeclaringType == type.BaseType)) ? " : " + TypeName(type.BaseType) : "";
             string members = string.Join("\n", fields.Values.Where(f => f.DeclaringType == type).Select(f =>
                 $"public {(f.IsStatic ? "static " : "")}{TypeName(f.FieldType)} {Alias(f)};"));
             // Static call adapters forward only to another recovered body.
@@ -283,14 +300,48 @@ internal static class ReferenceRoundtrip
             foreach (int token in absoluteCalls)
                 code.Add($"public static float __cil_abs_r4_{token:X8}(float value) {{ AbsoluteCallObserver?.Invoke({token}, value); return global::System.Math.Abs(value); }}");
         }
+        foreach (var pair in memberCalls)
+        {
+            MethodInfo leaf = pair.Value;
+            string parameters = string.Join(", ", new[] { TypeName(leaf.DeclaringType!) + " self" }
+                .Concat(leaf.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i)));
+            string arguments = string.Join(", ", leaf.GetParameters().Select((p, i) => "a" + i));
+            code.Add($"public static global::System.Func<object, object[], object> MemberCall_{pair.Key:X8};");
+            string result = $"MemberCall_{pair.Key:X8}(self, new object[] {{ {arguments} }})";
+            code.Add(leaf.ReturnType == typeof(void)
+                ? $"public static void __cil_memberref_call_{pair.Key:X8}({parameters}) {{ {result}; }}"
+                : $"public static {TypeName(leaf.ReturnType)} __cil_memberref_call_{pair.Key:X8}({parameters}) => ({TypeName(leaf.ReturnType)}){result};");
+        }
+        File.WriteAllText(Path.ChangeExtension(output, ".references.json"), JsonSerializer.Serialize(externalTypes.Values
+            .Select(t => t.Assembly).Concat(memberCalls.Values.Select(m => m.DeclaringType!.Assembly))
+            .Where(a => a != typeof(object).Assembly && a != original).Select(a => a.Location).Distinct().ToArray()));
         string floatImports = hasFloat ? "using __cil_F = System.Single;\nusing static CilFloat;\n" : "";
         string externalImports = string.Join("\n", externalTypes.Select(p => $"using __cil_type_{p.Key:X8} = {TypeName(p.Value)};")) + "\n";
         File.WriteAllText(output, floatImports + externalImports + string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
 
+    static Type ExternalType(Assembly recovered, Type original) => AssemblyLoadContext.GetLoadContext(recovered)!
+        .LoadFromAssemblyName(original.Assembly.GetName()).GetType(original.FullName!)!;
+
+    static void InstallMemberCalls(Job job, Assembly original, Assembly recovered)
+    {
+        foreach (int token in job.Methods.SelectMany(entry => Regex.Matches(File.ReadAllText(entry.Source),
+            @"__cil_memberref_call_([0-9A-F]{8})\(").Cast<Match>().Select(m => Convert.ToInt32(m.Groups[1].Value, 16))).Distinct())
+        {
+            MethodInfo target = (MethodInfo)original.ManifestModule.ResolveMethod(token)!;
+            Module module = ExternalType(recovered, target.DeclaringType!).Module;
+            MethodInfo mapped = (MethodInfo)module.ResolveMethod(target.MetadataToken)!;
+            if (mapped.Name != target.Name || mapped.DeclaringType!.FullName != target.DeclaringType.FullName)
+                throw new Exception("External exact-call mapping changed identity");
+            recovered.GetType("Recovered")!.GetField($"MemberCall_{token:X8}")!.SetValue(null,
+                (Func<object, object[], object>)((self, values) => Original(mapped, self, values)));
+        }
+    }
+
     static object Original(MethodBase method, object receiver, object[] args)
     {
-        if (!OriginalCalls.TryGetValue(method.MetadataToken, out var invoke))
+        var key = (method.Module, method.MetadataToken);
+        if (!OriginalCalls.TryGetValue(key, out var invoke))
         {
             var dm = new DynamicMethod("ExactCall", typeof(object), new[] { typeof(object), typeof(object[]) }, method.Module, true);
             ILGenerator il = dm.GetILGenerator();
@@ -307,7 +358,7 @@ internal static class ReferenceRoundtrip
             else if (returnType.IsValueType) il.Emit(OpCodes.Box, returnType);
             il.Emit(OpCodes.Ret);
             invoke = (Func<object, object[], object>)dm.CreateDelegate(typeof(Func<object, object[], object>));
-            OriginalCalls.Add(method.MetadataToken, invoke);
+            OriginalCalls.Add(key, invoke);
         }
         return invoke(receiver, args);
     }
@@ -362,15 +413,15 @@ internal static class ReferenceRoundtrip
 
     static void ExternalReferences(Assembly recovered, Dictionary<int, MethodInfo> methods)
     {
-        if (methods.Count != 3 || !methods.Values.Select(m => m.Name).Order()
-            .SequenceEqual(new[] { "Unused", "Identity", "Other" }.Order()))
+        if (methods.Count != 6 || !methods.Values.Select(m => m.Name).Order()
+            .SequenceEqual(new[] { "Unused", "Identity", "Other", "DirectFlag", "DirectConstant", "DirectVirtual" }.Order()))
             throw new Exception("Opaque external selection drift");
-        foreach (MethodInfo method in methods.Values)
+        foreach (MethodInfo method in methods.Values.Where(m => m.GetParameters().Length == 1 && m.Name != "DirectFlag"))
         foreach (bool nullArgument in new[] { false, true })
         {
             Type argument = method.GetParameters().Single().ParameterType;
             object left = nullArgument ? null : New(argument);
-            object right = nullArgument ? null : New(recovered.GetType(argument.FullName!)!);
+            object right = nullArgument ? null : New(ExternalType(recovered, argument));
             if (method.IsStatic)
                 Check(recovered, method, null, null, new[] { left }, new[] { right },
                     equal: (x, y) => ReferenceEquals(x, left) && ReferenceEquals(y, right));
@@ -385,7 +436,21 @@ internal static class ReferenceRoundtrip
                         () => { if (!nullReceiver) SameFields(a, b, "Value"); });
                 }
         }
-        Console.WriteLine("Opaque external references: exact token aliases, null/distinct identity and unused-argument state; no external hierarchy inferred.");
+        foreach (string name in new[] { "DirectFlag", "DirectConstant", "DirectVirtual" })
+        foreach (bool canceling in new[] { false, true })
+        foreach (int reads in new[] { 0, int.MaxValue })
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            MethodInfo method = methods.Values.Single(m => m.Name == name);
+            object a = nullReceiver ? null : New(method.DeclaringType!);
+            object b = nullReceiver ? null : New(recovered.GetType(method.DeclaringType!.FullName!)!);
+            if (!nullReceiver) { Set(a, "Canceling", canceling); Set(b, "Canceling", canceling); Set(a, "Reads", reads); Set(b, "Reads", reads); }
+            object[] values = name == "DirectFlag" ? new object[] { null } : Array.Empty<object>();
+            Check(recovered, method, a, b, values, values, () => {
+                if (!nullReceiver) SameFields(a, b, "Canceling", "Reads");
+            }, name == "DirectVirtual" ? (x, y) => Equals(x, 41) && Equals(y, 41) : null);
+        }
+        Console.WriteLine("External references/calls: token aliases, exact runtime leaves, null receiver without added checks, side effects and direct virtual target; no external hierarchy inferred.");
     }
 
     static void ActivityQueue(Assembly recovered, Dictionary<int, MethodInfo> methods)

@@ -204,7 +204,12 @@ to an original selected constructor body. `callvirt` is still a fallback.
 
 Reference identities are metadata tokens scoped to the one input image, not
 strings compared across assemblies. Local ancestor checks stop at external
-bases; no external inheritance compatibility is assumed. Interfaces, value
+bases; a local class can be assigned to the exact external TypeRef named in
+its local ancestor chain, but no further external inheritance is inferred.
+Direct reference-class MemberRef instance calls use `__cil_memberref_call_TOKEN`,
+keeping owner scope/name/raw signature, exact dispatch and original runtime
+resolution/access/body effects. Test adapters execute independent external leaves
+by exact IL call; they never replace selected bodies. Interfaces, value
 types and generic reference types remain unsupported. Reference brtrue/brfalse
 tests use identity null patterns without dereferencing or overloaded equality.
 Reference comparisons and mixed-reference joins are not yet lowered.
@@ -218,7 +223,7 @@ error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general external object operations, string operations, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
-other floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, external instance calls,
+other floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, constructed/value-type external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized

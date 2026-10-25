@@ -1386,6 +1386,14 @@ impl<'a> Image<'a> {
                 return Ok(());
             }
         }
+        if let (Ty::Class(a), Ty::ExternalClass(b)) = (actual, expected) {
+            self.external_class_context(b)?;
+            for owner in self.class_chain(a)? {
+                if self.md.tables().type_def(owner & 0xffffff)?.extends.0 == b {
+                    return Ok(());
+                }
+            }
+        }
         Err("incompatible value/receiver types".into())
     }
 
@@ -1514,14 +1522,17 @@ impl<'a> Image<'a> {
         }
         identifier(&name)?;
         let receiver = if sig.has_this {
-            if t.table() != Some(TableId::MethodDef) {
-                return Err("external instance call needs IL fallback".into());
+            if t.table() == Some(TableId::MemberRef) {
+                let reference = self.md.tables().member_ref(t.rid())?;
+                self.external_class_context(reference.class.0)?;
+                Some(crate::ir::Ty::ExternalClass(reference.class.0))
+            } else {
+                let row = self.row(t.0)?;
+                if row.is_static() {
+                    return Err("inconsistent call signature".into());
+                }
+                Some(self.receiver(t.0)?)
             }
-            let row = self.row(t.0)?;
-            if row.is_static() {
-                return Err("inconsistent call signature".into());
-            }
-            Some(self.receiver(t.0)?)
         } else {
             None
         };
@@ -1561,7 +1572,9 @@ impl<'a> Image<'a> {
         Ok(MethodRef {
             token: t.0,
             receiver,
-            target: if receiver.is_some() {
+            target: if receiver.is_some() && t.table() == Some(TableId::MemberRef) {
+                format!("__cil_memberref_call_{:08X}", t.0)
+            } else if receiver.is_some() {
                 format!("__cil_direct_{:08X}", t.0)
             } else {
                 format!("{}.@{name}", cs_owner(&owner)?)
