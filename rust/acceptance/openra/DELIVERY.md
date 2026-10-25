@@ -10,8 +10,13 @@ review then found invalid-owner omission, lost endpoint failure evidence and an
 insensitive identity checker; `4a9ec2d43`, `209aede11` and `a50b1f77c` correct those
 findings. The review's four-byte RID follow-up is corrected by `f01ba7876`, which
 validates untrusted simple/coded RIDs before token construction can truncate them.
-Final corrected production/test revision: `f01ba7876`. The focused independent
-review's final follow-up found no issues and returned OK. This acceptance record
+The four-table correction review found no remaining issues and returned OK, but
+the next completion audit at `140d8aeaa` found omitted parameter FieldMarshal
+records. `b538ca77f` adds uniform field/ordinary-parameter/return-parameter native
+descriptor evidence, local limits and independent inventory checks. Final
+corrected production/test revision: `b538ca77f`; `d1f1f7bea` fixes the independent
+oracle's unrelated-blob filtering and adds reproducible owned oracle checks.
+This acceptance record
 supplies evidence, not a substitute for the goal completion auditor's decision.
 [SEMANTICS.md](../../SEMANTICS.md) defines output notation. Historical baseline,
 stage and first delivery evidence are retained rather than rewritten as broader
@@ -41,7 +46,8 @@ are permitted; compilable source/project export is not the contract.
 Independent System.Reflection.Metadata PEReader snapshots match all five frozen
 public class outputs, including complete ownership/member identities, flags/raw
 signatures, generic context, parameters/constants, accessors, ClassLayout,
-CustomAttribute, DeclSecurity, MethodImpl and status/exit accounting. Corrected
+CustomAttribute, DeclSecurity, MethodImpl, field/parameter FieldMarshal and
+status/exit accounting. Corrected
 results have no failed bodies or metadata failures:
 
 | Class | Decompiled | Partial | Exit | Required behavioral closure |
@@ -93,6 +99,25 @@ are session-managed `reviews/class-metadata-corrections.md`,
 `reviews/class-metadata-wide-owner-followup.md` (final run
 `20f1dfff-78c3-43ff-a7ee-55222b474782`). Reviewers inspected sources/logs, not
 executed inputs; parent validation supplies the execution evidence.
+
+The subsequent completion audit's FieldMarshal finding is fixed independently
+of body semantics: owned managed return/ordinary bool descriptors and a PInvoke
+LPArray parameter retain exact parent/blob/row evidence, explicitly uninterpreted
+runtime-owned interop policy. Bad blob indexes or association flags retain records,
+metadata failures and peer methods. Field and parameter records use one output
+path, avoiding duplicate field declarations. The independent oracle/checker now
+compares every owned FieldMarshal row, including return parameter sequence 0;
+negative checker mutations were observed red before the fix. This is metadata
+preservation, not a CLR marshaling interpreter. The focused marshalling review
+returned OK with notes and confirmed the production omission resolved. Its oracle
+scope note was reproduced red then fixed in `d1f1f7bea`: unrelated malformed
+marshal blobs are filtered before heap decoding. Owned Debug/Release class output
+checks and unchanged unrelated-corruption snapshots are saved in
+`report/class-marshalling-owned-oracle.log`, reproduced by
+`python3 rust/acceptance/openra/test_oracle_marshalling.py` after building the
+oracle with `inventory.py`. Review artifact: `reviews/class-marshalling-correction.md`,
+run `599198f0-6390-422e-a7e6-024434738f10`. Parent execution, not reviewer statements,
+supplies the validation evidence.
 
 ## Semantic and independent-class evidence
 
@@ -147,9 +172,11 @@ fresh execution evidence.
 
 ## Final gates
 
-At corrected revision `f01ba7876`, locked Cargo Debug/Release suites, fmt and
-strict all-target clippy passed. The metadata checker and its nine
-positive/negative tests passed. The five frozen class inventories and the
+At corrected revision `b538ca77f`, locked Cargo Debug/Release suites, fmt and
+strict all-target clippy passed. The metadata checker and its ten
+positive/negative tests passed. The subsequent oracle-only fix at `d1f1f7bea`
+passed its independent snapshot/output regressions and checker; unchanged Rust
+production uses the already passing final results. The five frozen class inventories and the
 random-class, resource/ammo, Activity and Wait behavior gates passed again from
 current public output. The lowering engine and remaining owned behavior inputs
 are unchanged; their previous final-gate evidence is reused. Owned comparisons per

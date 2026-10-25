@@ -36,6 +36,12 @@ not interpreted. These records are not executable recovered method bodies:
   preserves every owned ClassLayout row. Zero size means runtime-computed; zero
   packing means default. Full target layout and ancestry validation is not
   performed. Field offsets remain separate FieldLayout evidence.
+- `.field-marshal TOKEN parent=... native-type-blob-index=... bytes=[...]
+  raw-row-bytes=[...] payload=uninterpreted` preserves field, ordinary parameter
+  and return-parameter (sequence 0) native descriptors. Marshaling flags and
+  association counts are checked; payload interpretation is not performed.
+  Native conversions, allocation, pinning and cleanup remain runtime-owned,
+  not additional operations recovered from an ordinary managed body.
 - `.custom-attribute TOKEN parent=... constructor=... value-blob-index=...
   value-bytes=[...] raw-row-bytes=[...] payload=uninterpreted` retains exact
   attachment, constructor identity/signature and complete payload. Parents
@@ -60,8 +66,8 @@ members; their failure count is independent of body statuses. Null/out-of-range
 owners are retained as `ownership=unowned-invalid` image context, not assigned to
 the selected type or silently treated as valid unrelated records. Endpoint
 name/owner indexes, original row and signature blob index/bytes precede fallible
-signature/reference interpretation, so malformed signatures do not erase them. A complete inventory
-means the records are present, not that every payload or runtime policy is modeled.
+signature/reference interpretation, so malformed signatures do not erase them.
+A complete inventory means the records are present, not that every payload or runtime policy is modeled.
 
 ## Numeric categories
 

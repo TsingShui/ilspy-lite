@@ -45,7 +45,9 @@ methods; no automatic-property syntax is inferred.
 All owned fields are listed with names/aliases, types, raw signatures and flags.
 Constants preserve decoded values and original bytes (strings as UTF-16 units,
 floating constants as bits). ClassLayout packing/size and raw rows, field offsets
-and marshalling descriptors are retained. Custom attributes retain their parent,
+and field/ordinary-parameter/return-parameter marshalling descriptors are retained
+with blob indexes, raw bytes/rows and explicit runtime-owned interop limits.
+Custom attributes retain their parent,
 exact constructor identity/signature and raw payload without interpreting arguments
 or executing constructors. Attached member/parameter/generic/relation records and
 image-level Module/Assembly attributes are included. Declarative security retains
