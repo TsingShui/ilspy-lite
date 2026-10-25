@@ -85,6 +85,33 @@ impl<'a> Image<'a> {
             }
             prior = start;
         }
+        let mut properties = vec![Vec::new(); rows.len()];
+        let maps = tables
+            .iter::<cildec::tables::PropertyMapRow>()
+            .map(|(_, row)| row.map_err(Into::into))
+            .collect::<Result<Vec<_>>>()?;
+        let property_limit = tables.row_count(TableId::Property) + 1;
+        if property_limit > 1 && maps.first().map(|m| m.property_list.get()) != Some(1) {
+            return Err("unowned property metadata rows".into());
+        }
+        let mut owners = std::collections::BTreeSet::new();
+        for (index, map) in maps.iter().enumerate() {
+            let owner = map.parent.get();
+            let start = map.property_list.get();
+            let end = maps
+                .get(index + 1)
+                .map_or(property_limit, |m| m.property_list.get());
+            if owner == 0
+                || owner as usize > rows.len()
+                || !owners.insert(owner)
+                || start == 0
+                || start > end
+                || end > property_limit
+            {
+                return Err("invalid property ownership range".into());
+            }
+            properties[(owner - 1) as usize] = (start..end).map(|p| 0x17000000 | p).collect();
+        }
         let mut parents = vec![None; rows.len()];
         for (_, row) in tables.iter::<NestedClassRow>() {
             let row = row?;
@@ -154,6 +181,7 @@ impl<'a> Image<'a> {
                 token: 0x02000000 | rid,
                 name: names[(rid - 1) as usize].clone(),
                 methods: (start..end).map(|m| 0x06000000 | m).collect(),
+                properties: properties[(rid - 1) as usize].clone(),
                 fields: (row.field_list.get()
                     ..rows
                         .get(rid as usize)
@@ -505,6 +533,112 @@ impl<'a> Image<'a> {
             }
             _ => None,
         })
+    }
+
+    pub fn property_declaration(
+        &self,
+        token: u32,
+        owner: &SelectedType,
+    ) -> Result<(String, usize)> {
+        let row = self.md.tables().property(token & 0xffffff)?;
+        let mut failures = 0;
+        let mut name_diagnostic = String::new();
+        let name = match self.md.strings().str(row.name) {
+            Ok(name) => escape_line(name),
+            Err(error) => {
+                failures += 1;
+                name_diagnostic =
+                    format!("// FAILED metadata: {}\n", escape_line(&error.to_string()));
+                format!("<unreadable name-index=0x{:08X}>", row.name.get())
+            }
+        };
+        let blob = self.md.blobs().get(row.type_signature);
+        let evidence = match &blob {
+            Ok(bytes) => format!("signature-bytes={bytes:02X?}"),
+            Err(_) => format!("signature-blob-index=0x{:08X}", row.type_signature.get()),
+        };
+        let signature = (|| -> Result<String> {
+            let sig = cildec::PropertySig::parse(blob?)?;
+            let names = Names::new(&self.md);
+            let params = sig
+                .params
+                .iter()
+                .map(|p| escape_line(&names.param(p)))
+                .collect::<Vec<_>>()
+                .join(", ");
+            let mut references = Vec::new();
+            for param in std::iter::once(&sig.return_type).chain(&sig.params) {
+                self.signature_references(&param.type_, 0, &mut references)?;
+                for modifier in &param.custom_mods {
+                    references.push(self.type_reference(modifier.type_token, 0)?);
+                }
+            }
+            Ok(format!(
+                "{} {} {name}({params}) // {evidence} parsed={sig:?} references=[{}]",
+                if sig.has_this { "instance" } else { "static" },
+                escape_line(&names.param(&sig.return_type)),
+                references.join("; ")
+            ))
+        })();
+        let mut text = format!(".property 0x{token:08X} flags=0x{:04X} ", row.flags);
+        match signature {
+            Ok(signature) => text.push_str(&format!("{signature}\n")),
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    "{name} // {evidence}\n// FAILED metadata: {}\n",
+                    escape_line(&error.to_string())
+                ));
+            }
+        }
+        text.push_str(&name_diagnostic);
+        let mut singles = std::collections::BTreeSet::new();
+        for rid in self.md.tables().semantics_for(Token(token))? {
+            let relation = self.md.tables().method_semantics(rid)?;
+            let method = 0x06000000 | relation.method.get();
+            let kind = match relation.semantics {
+                1 => "setter",
+                2 => "getter",
+                4 => "other",
+                _ => "unknown",
+            };
+            text.push_str(&format!(".accessor 0x{:08X} association=0x{token:08X} semantics=0x{:04X} {kind} method=0x{method:08X}",
+                0x18000000 | rid, relation.semantics));
+            if !owner.methods.contains(&method)
+                || kind == "unknown"
+                || (kind != "other" && !singles.insert(relation.semantics))
+            {
+                failures += 1;
+                text.push_str(
+                    "\n// FAILED metadata: invalid or duplicate property accessor relationship\n",
+                );
+            } else {
+                match self.name(method) {
+                    Ok(name) => text.push_str(&format!(" {}\n", escape_line(&name))),
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!(
+                            "\n// FAILED metadata: {}\n",
+                            escape_line(&error.to_string())
+                        ));
+                    }
+                }
+            }
+        }
+        match self.constant_metadata(token, row.flags & 0x1000 != 0) {
+            Ok((constants, errors)) => {
+                text.push_str(&constants);
+                failures += errors;
+            }
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata: {}\n",
+                    escape_line(&error.to_string())
+                ));
+            }
+        }
+        Ok((text, failures))
     }
 
     pub fn method_declaration(&self, token: u32, owner: &str) -> Result<(String, usize)> {
@@ -1061,6 +1195,7 @@ pub(crate) struct SelectedType {
     pub name: String,
     pub methods: Vec<u32>,
     pub fields: Vec<u32>,
+    pub properties: Vec<u32>,
 }
 
 pub(crate) struct FieldRef {

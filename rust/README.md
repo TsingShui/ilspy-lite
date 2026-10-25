@@ -33,7 +33,10 @@ base/interface identities, individual method results and a status summary.
 TypeRefs retain their assembly/module scope; TypeSpecs retain raw signature bytes
 and named-reference identities. No dependency assembly is loaded. One unsupported
 or unreadable method does not suppress peers. This is **not yet complete class
-context**: properties, events and generic constraints are still being added.
+context**: events and generic constraints are still being added. Property records
+retain signatures (including index parameters), flags, defaults and exact
+getter/setter/other MethodSemantics relationships. Accessor bodies stay visible as
+methods; no automatic-property syntax is inferred.
 All owned fields are listed with names/aliases, types, raw signatures and flags.
 Constants preserve decoded values and original bytes (strings as UTF-16 units,
 floating constants as bits). Field layout and marshalling descriptors are retained;

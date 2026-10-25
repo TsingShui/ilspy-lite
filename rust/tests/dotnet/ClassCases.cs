@@ -79,3 +79,12 @@ public abstract class Methods
     [System.Runtime.InteropServices.DllImport("fixture-native", EntryPoint = "native_count")]
     public static extern int Native(int count);
 }
+public class Properties
+{
+    private int value;
+    public int this[int index] { get => unchecked(value + index); set => this.value = unchecked(value - index); }
+    public int Only => value;
+    public int WriteOnly { set => this.value = value; }
+    public static int Static => 41;
+}
+public class GenericProperty<T> { public T Stored { get; set; } }
