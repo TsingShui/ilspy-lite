@@ -13,7 +13,7 @@ class ClassOutputGate(unittest.TestCase):
         self.snapshot = {"root": "0x02000001", "types": [{
             "token": "0x02000001", "name": "Example", "flags": 1,
             "parent": "0x00000000", "base_type": "0x00000000", "interfaces": [],
-            "class_layout": [], "custom_attributes": [], "security_declarations": [], "method_implementations": [], "marshalling": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
+            "class_layout": [], "custom_attributes": [], "security_declarations": [], "method_implementations": [], "marshalling": [], "imports": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
             "methods": [{"token": "0x06000001", "name": "Read", "flags": 22,
                          "impl_flags": 0, "signature": "000008", "has_rva": True,
                          "generic_parameters": [], "parameters": []}]
@@ -123,6 +123,22 @@ class ClassOutputGate(unittest.TestCase):
                         text.replace("bytes=[02]", "bytes=[03]"), text.replace("[03, 00, 07, 00]", "[00, 00]"),
                         text.replace("payload=uninterpreted", "payload=decoded"),
                         text.replace("interop marshaling is runtime-owned", "marshaling ignored")]:
+            with self.assertRaises(ValueError):
+                self.check(text=invalid, snapshot=snapshot)
+
+    def test_import_entry_module_identity_and_raw_records_are_required(self):
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot["types"][0]["imports"] = [{"token": "0x1C000001", "method": "0x06000001", "flags": 256,
+            "name": "entry", "scope": "0x1A000001", "module": "native", "module_name_index": 3,
+            "module_raw_row": "0300", "raw_row": "0001030001000100"}]
+        record = (".pinvoke 0x1C000001 method=0x06000001 flags=0x0100 scope=0x1A000001 name=entry module=native "
+                  "module-raw-row-bytes=[03, 00] module-name-index=0x00000003 raw-row-bytes=[00, 01, 03, 00, 01, 00, 01, 00]; "
+                  "external native binding and interop execution are runtime-owned\n")
+        text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
+        self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
+        for invalid in [self.text, text.replace("name=entry", "name=wrong"), text.replace("module=native", "module=wrong"),
+                        text.replace("scope=0x1A000001", "scope=0x1A000002"), text.replace("module-raw-row-bytes=[03", "module-raw-row-bytes=[00"),
+                        text.replace("external native binding and interop execution are runtime-owned", "native ignored")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 

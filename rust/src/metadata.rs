@@ -1485,31 +1485,54 @@ impl<'a> Image<'a> {
             text.push_str("// FAILED metadata: inconsistent method import association\n");
         }
         for rid in imports {
-            let import = tables.row::<cildec::tables::ImplMapRow>(rid)?;
+            let flags = tables.raw_column(TableId::ImplMap, rid, 0)?;
+            let name_index = tables.raw_column(TableId::ImplMap, rid, 2)?;
+            let scope = tables.raw_column(TableId::ImplMap, rid, 3)?;
+            let raw = tables.row_bytes(TableId::ImplMap, rid)?;
+            let valid_scope = scope != 0
+                && scope <= Token::RID_MASK
+                && scope <= tables.row_count(TableId::ModuleRef);
+            let scope_identity = if valid_scope {
+                format!("scope=0x{:08X}", Token::new(TableId::ModuleRef, scope).0)
+            } else {
+                format!("scope-rid=0x{scope:08X}")
+            };
             text.push_str(&format!(
-                ".pinvoke 0x{:08X} method=0x{token:08X} flags=0x{:04X} scope=0x{:08X} ",
-                0x1c000000 | rid,
-                import.mapping_flags,
-                0x1a000000 | import.import_scope.get()
+                ".pinvoke 0x{:08X} method=0x{token:08X} flags=0x{flags:04X} {scope_identity} ",
+                0x1c000000 | rid
             ));
-            let target = (|| -> Result<String> {
-                let module = tables.module_ref(import.import_scope.get())?;
-                Ok(format!(
-                    "name={} module={}\n",
-                    escape_line(self.md.strings().str(import.import_name)?),
-                    escape_line(self.md.strings().str(module.name)?)
-                ))
-            })();
-            match target {
-                Ok(target) => text.push_str(&target),
+            let mut errors = Vec::new();
+            match self.md.strings().str(cildec::StringIndex(name_index)) {
+                Ok(name) => text.push_str(&format!("name={} ", escape_line(name))),
                 Err(error) => {
                     failures += 1;
-                    text.push_str(&format!(
-                        "name-index=0x{:08X}\n// FAILED metadata: {}\n",
-                        import.import_name.get(),
-                        escape_line(&error.to_string())
-                    ));
+                    text.push_str(&format!("name-index=0x{name_index:08X} "));
+                    errors.push(format!("import name: {error}"));
                 }
+            }
+            // Module identity is independent of the entry point name. Preserve its
+            // raw row/index even when either heap lookup fails.
+            if valid_scope {
+                let module_raw = tables.row_bytes(TableId::ModuleRef, scope)?;
+                let module_name = tables.raw_column(TableId::ModuleRef, scope, 0)?;
+                match self.md.strings().str(cildec::StringIndex(module_name)) {
+                    Ok(name) => text.push_str(&format!("module={} ", escape_line(name))),
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!("module-name-index=0x{module_name:08X} "));
+                        errors.push(format!("module name: {error}"));
+                    }
+                }
+                text.push_str(&format!(
+                    "module-raw-row-bytes={module_raw:02X?} module-name-index=0x{module_name:08X} "
+                ));
+            } else {
+                failures += 1;
+                errors.push("module scope RID is null/out-of-range".into());
+            }
+            text.push_str(&format!("raw-row-bytes={raw:02X?}; external native binding and interop execution are runtime-owned\n"));
+            for error in errors {
+                text.push_str(&format!("// FAILED metadata: {}\n", escape_line(&error)));
             }
         }
         let arity = signature

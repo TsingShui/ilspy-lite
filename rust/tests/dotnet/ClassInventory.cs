@@ -109,6 +109,30 @@ internal static class ClassInventory
                     native_type_blob_index = blob, native_type = Blob(MetadataTokens.BlobHandle(blob)), raw_row = Convert.ToHexString(record.row) };
             }).ToArray();
         }
+        object[] Imports(TypeDefinitionHandle handle)
+        {
+            var methods = md.GetTypeDefinition(handle).GetMethods().Select(h => (EntityHandle)h).ToHashSet();
+            bool wide = Math.Max(md.GetTableRowCount(TableIndex.Field), md.GetTableRowCount(TableIndex.MethodDef)) >= 32768;
+            bool stringsWide = (md.GetHeapSize(HeapIndex.String) > ushort.MaxValue);
+            bool modulesWide = md.GetTableRowCount(TableIndex.ModuleRef) >= 65536;
+            return Enumerable.Range(1, md.GetTableRowCount(TableIndex.ImplMap)).Select(rid => {
+                byte[] row = Row(TableIndex.ImplMap, rid);
+                uint encoded = wide ? BitConverter.ToUInt32(row, 2) : BitConverter.ToUInt16(row, 2);
+                var member = MetadataTokens.EntityHandle((encoded & 1) == 0 ? TableIndex.Field : TableIndex.MethodDef, (int)(encoded >> 1));
+                return new { rid, row, member };
+            }).Where(record => methods.Contains(record.member)).Select(record => {
+                int nameOffset = 2 + (wide ? 4 : 2);
+                int name = stringsWide ? (int)BitConverter.ToUInt32(record.row, nameOffset) : BitConverter.ToUInt16(record.row, nameOffset);
+                int scopeOffset = nameOffset + (stringsWide ? 4 : 2);
+                int scope = modulesWide ? (int)BitConverter.ToUInt32(record.row, scopeOffset) : BitConverter.ToUInt16(record.row, scopeOffset);
+                var module = md.GetModuleReference(MetadataTokens.ModuleReferenceHandle(scope));
+                return (object)new { token = $"0x{0x1c000000 | record.rid:X8}", method = Token(record.member),
+                    flags = BitConverter.ToUInt16(record.row, 0), name = md.GetString(MetadataTokens.StringHandle(name)),
+                    scope = $"0x{0x1a000000 | scope:X8}", module = md.GetString(module.Name),
+                    module_name_index = MetadataTokens.GetHeapOffset(module.Name),
+                    module_raw_row = Convert.ToHexString(Row(TableIndex.ModuleRef, scope)), raw_row = Convert.ToHexString(record.row) };
+            }).ToArray();
+        }
         object[] Security(TypeDefinitionHandle handle)
         {
             var type = md.GetTypeDefinition(handle);
@@ -180,6 +204,7 @@ internal static class ClassInventory
                 security_declarations = Security(handle),
                 method_implementations = Implementations(handle),
                 marshalling = Marshals(handle),
+                imports = Imports(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);

@@ -93,6 +93,17 @@ def check_output(snapshot, text, stderr, code):
                              ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
                             for layout in ty["class_layout"]]
         require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
+        imports = members(block, "pinvoke", ty["imports"])
+        for record in ty["imports"]:
+            line = imports[record["token"]]
+            module_row = ", ".join(record["module_raw_row"][i:i + 2] for i in range(0, len(record["module_raw_row"]), 2))
+            row_bytes = ", ".join(record["raw_row"][i:i + 2] for i in range(0, len(record["raw_row"]), 2))
+            require(f"method={record['method']} flags=0x{record['flags']:04X} scope={record['scope']} " in line
+                    and f"name={escaped_name(record['name'])} module={escaped_name(record['module'])} " in line
+                    and f"module-raw-row-bytes=[{module_row}] module-name-index=0x{record['module_name_index']:08X} " in line
+                    and f"raw-row-bytes=[{row_bytes}];" in line
+                    and "external native binding and interop execution are runtime-owned" in line,
+                    f"Native import record mismatch: {record['token']}")
         marshals = members(block, "field-marshal", ty["marshalling"])
         for record in ty["marshalling"]:
             line = marshals[record["token"]]
