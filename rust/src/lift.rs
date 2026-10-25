@@ -320,12 +320,14 @@ impl Writer<'_, '_> {
                 } else {
                     "unchecked"
                 };
+                let expression = format!("{mode}({x} {symbol} {y})");
                 self.push(
                     a.ty,
-                    format!(
-                        "unchecked(({}){mode}({x} {symbol} {y}))",
-                        a.ty.cs(self.image)?
-                    ),
+                    if unsigned {
+                        format!("unchecked(({}){expression})", a.ty.cs(self.image)?)
+                    } else {
+                        expression
+                    },
                 )?;
             }
             "div" | "div.un" | "rem" | "rem.un" => {
@@ -344,7 +346,11 @@ impl Writer<'_, '_> {
                 };
                 self.push(
                     a.ty,
-                    format!("unchecked(({})({x} {symbol} {y}))", a.ty.cs(self.image)?),
+                    if op.ends_with(".un") {
+                        format!("unchecked(({})({x} {symbol} {y}))", a.ty.cs(self.image)?)
+                    } else {
+                        format!("unchecked({x} {symbol} {y})")
+                    },
                 )?;
             }
             "neg" | "not" => {
@@ -438,12 +444,17 @@ impl Writer<'_, '_> {
                 };
                 let receiver = self.pop()?;
                 self.image.assignable(receiver.ty, field.owner)?;
-                let target = format!(
-                    "(({}){}).{}",
-                    field.owner.cs(self.image)?,
-                    receiver.name,
-                    field.name
-                );
+                // Keep base casts: a derived type can hide the named field.
+                let target = if receiver.ty == field.owner {
+                    format!("{}.{}", receiver.name, field.name)
+                } else {
+                    format!(
+                        "(({}){}).{}",
+                        field.owner.cs(self.image)?,
+                        receiver.name,
+                        field.name
+                    )
+                };
                 self.lines.push(format!(
                     "// field token 0x{:08X}: {}",
                     field.token,

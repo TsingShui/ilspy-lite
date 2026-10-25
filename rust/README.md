@@ -59,7 +59,12 @@ retain raw code bytes in a `Failed` result.
 All output is explicitly **C#-like reverse-engineering output**. It uses stable
 temporaries, original IL offsets, labels and `goto`; it does not recover
 `while`, `foreach`, `async`, iterators, lambdas or LINQ. Call and field tokens are
-retained. The original assembly's metadata remains authoritative: source-level
+retained. Identity casts on `int`/`long` values and exact-type field receivers
+are omitted. Unsigned reinterpretation, narrowing, Boolean conversions, overflow
+contexts and base-field receiver casts remain explicit; no expressions are moved
+or inlined for this simplification.
+
+The original assembly's metadata remains authoritative: source-level
 binding, accessibility, attributes, type initialization context and assembly
 resolution are not reconstructed by the writer. A method reported `Decompiled`
 is lowered within this restricted model, **not certified equivalent/recompilable

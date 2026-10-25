@@ -4,11 +4,11 @@ public static int @CheckedAdd(int a0)
 {
     IL_0000: ;
     // IL_0000: ldarg.0
-    int v0 = unchecked((int)(a0));
+    int v0 = a0;
     // IL_0001: ldc.i4.1
     int v1 = 1;
     // IL_0002: add.ovf
-    int v2 = unchecked((int)checked(v0 + v1));
+    int v2 = checked(v0 + v1);
     // IL_0003: ret
-    return unchecked((int)(v2));
+    return v2;
 }

@@ -89,14 +89,14 @@ impl Ty {
     }
     pub fn load(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
-            Self::Class(_) | Self::Null => expression.into(),
+            Self::I4 | Self::I8 | Self::Class(_) | Self::Null => expression.into(),
             Self::Bool => format!("({expression} ? 1 : 0)"),
             _ => format!("unchecked(({})({expression}))", self.stack().cs(image)?),
         })
     }
     pub fn store(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
-            Self::Class(_) | Self::Null => expression.into(),
+            Self::I4 | Self::I8 | Self::Class(_) | Self::Null => expression.into(),
             Self::Bool => format!("({expression} != 0)"),
             _ => format!("unchecked(({})({expression}))", self.cs(image)?),
         })
