@@ -57,8 +57,8 @@ fn allocation_is_a_typed_zero_initialized_array_at_the_original_instruction() {
             assert!(result.text.contains("newarr"));
         }
         let result = decompile_type(bytes, "ArrayCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 21);
-        assert_eq!(result.summary.partial, 1);
+        assert_eq!(result.summary.decompiled, 22);
+        assert_eq!(result.summary.partial, 0);
         assert_eq!(result.summary.failed + result.summary.metadata_failed, 0);
     }
 }

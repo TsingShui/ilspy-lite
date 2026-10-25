@@ -1211,19 +1211,18 @@ impl<'a> Image<'a> {
         Err("reference hierarchy depth exceeded".into())
     }
 
-    /// Recognize only the exact core TypeRef used by primitive array operations.
-    /// No dependency is loaded and a locally named System type is not a core type.
-    pub fn array_element_type(&self, token: Token) -> Result<crate::ir::Ty> {
-        use crate::ir::Ty;
+    /// Recognize admitted core identities without loading dependencies.
+    /// A locally named System type is not a core type.
+    fn core_type_name(&self, token: Token) -> Result<&'a str> {
         if token.table() != Some(TableId::TypeRef) || token.rid() == 0 {
-            return Err("array element token needs a core TypeRef".into());
+            return Err("operation needs a core TypeRef".into());
         }
         let row = self.md.tables().type_ref(token.rid())?;
         if row.resolution_scope.table() != Some(TableId::AssemblyRef)
             || row.resolution_scope.rid() == 0
             || self.md.strings().str(row.type_namespace)? != "System"
         {
-            return Err("unresolved array element type identity".into());
+            return Err("unresolved core type identity".into());
         }
         let assembly = self.md.tables().assembly_ref(row.resolution_scope.rid())?;
         let name = self.md.strings().str(assembly.name)?;
@@ -1237,9 +1236,14 @@ impl<'a> Image<'a> {
         };
         if !core || assembly.flags & 1 != 0 || !self.md.strings().str(assembly.culture)?.is_empty()
         {
-            return Err("array element scope is not an admitted core identity".into());
+            return Err("type scope is not an admitted core identity".into());
         }
-        match self.md.strings().str(row.type_name)? {
+        Ok(self.md.strings().str(row.type_name)?)
+    }
+
+    pub fn array_element_type(&self, token: Token) -> Result<crate::ir::Ty> {
+        use crate::ir::Ty;
+        match self.core_type_name(token)? {
             "Int32" => Ok(Ty::I4),
             "UInt32" => Ok(Ty::U4),
             _ => Err("array element type needs IL fallback".into()),
@@ -1332,6 +1336,19 @@ impl<'a> Image<'a> {
         {
             return Err("instance/generic/vararg call needs IL fallback".into());
         }
+        if name == ".ctor" && t.table() == Some(TableId::MemberRef) {
+            let reference = self.md.tables().member_ref(t.rid())?;
+            if self.core_type_name(reference.class)? == "Object" && sig.raw == [0x20, 0x00, 0x01] {
+                return Ok(MethodRef {
+                    token: t.0,
+                    receiver: None,
+                    target: format!("__cil_core_object_ctor_{:08X}", t.0),
+                    args: Vec::new(),
+                    ret: crate::ir::Ty::Void,
+                    core_object_constructor: Some(reference.class.0),
+                });
+            }
+        }
         if name == ".ctor" || name == ".cctor" {
             return Err("constructor call needs IL fallback".into());
         }
@@ -1364,6 +1381,7 @@ impl<'a> Image<'a> {
             },
             args,
             ret,
+            core_object_constructor: None,
         })
     }
 
@@ -1421,6 +1439,7 @@ pub(crate) struct MethodRef {
     pub target: String,
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
+    pub core_object_constructor: Option<u32>,
 }
 
 fn generic_flags(flags: u16) -> String {

@@ -188,6 +188,96 @@ fn readonly_permission_does_not_follow_another_receiver_or_a_reassigned_this_slo
 }
 
 #[test]
+fn exact_core_object_constructor_call_keeps_initialization_order_and_target() {
+    for bytes in IMAGES {
+        let root = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "ConstructorCases.Root" && m.simple_name == ".ctor")
+            .unwrap()
+            .token;
+        let result = decompile(bytes, root).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_core_object_ctor_0A"));
+        assert!(result.text.contains("System.Object::.ctor"));
+        assert!(result.text.contains("no added null check"));
+        let call = result.text.find("__cil_core_object_ctor_0A").unwrap();
+        assert!(result.text.find(".@Before = ").unwrap() < call);
+        assert!(result.text.find(" = new uint[").unwrap() < call);
+        assert!(result.text.find(".@After = ").unwrap() > call);
+    }
+}
+
+#[test]
+fn core_constructor_admission_rejects_spoofs_wrong_calls_and_receiver_contexts() {
+    for bytes in IMAGES {
+        let methods = list_methods(bytes).unwrap();
+        let base = methods
+            .iter()
+            .find(|m| m.declaring_type == "ConstructorCases.Base" && m.simple_name == ".ctor")
+            .unwrap()
+            .token;
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md.tables().method_def(base & 0xffffff).unwrap();
+        let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+        let call = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let target = call.operand.token().unwrap();
+        let reference = md.tables().member_ref(target.rid()).unwrap();
+        let type_ref = md.tables().type_ref(reference.class.rid()).unwrap();
+        let assembly = md
+            .tables()
+            .assembly_ref(type_ref.resolution_scope.rid())
+            .unwrap();
+        let signature = md.blobs().get(reference.signature).unwrap();
+        assert_eq!(signature, &[0x20, 0x00, 0x01]);
+        for data in [
+            md.strings().str(assembly.name).unwrap().as_bytes(),
+            md.blobs().get(assembly.public_key_or_token).unwrap(),
+            signature,
+        ] {
+            let start = data.as_ptr() as usize - bytes.as_ptr() as usize;
+            let mut patched = bytes.to_vec();
+            patched[start] ^= 1;
+            let result = decompile(&patched, base).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
+        }
+        let mut code = vec![0x02, 0x6f]; // callvirt is not the admitted exact base call.
+        code.extend(target.0.to_le_bytes());
+        code.push(0x2a);
+        assert_eq!(
+            decompile(&patch_body(bytes, base, &code), base)
+                .unwrap()
+                .status,
+            Status::Partial
+        );
+        let ordinary = method(bytes, "Reserved", 1);
+        let mut code = vec![0x02, 0x28];
+        code.extend(target.0.to_le_bytes());
+        code.extend([0x03, 0x2a]);
+        let result = decompile(&patch_body(bytes, ordinary, &code), ordinary).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(result.text.contains("outside constructor context"));
+        let derived = method(bytes, ".ctor", 2);
+        let mut code = vec![0x02, 0x28];
+        code.extend(target.0.to_le_bytes());
+        code.push(0x2a);
+        let result = decompile(&patch_body(bytes, derived, &code), derived).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(result.text.contains("not the immediate base"));
+        code[0] = 0x14; // Explicit null is not a proved original receiver.
+        let result = decompile(&patch_body(bytes, base, &code), base).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(result.text.contains("unchanged original this"));
+    }
+}
+
+#[test]
 fn constructor_calls_are_not_ordinary_calls_and_remain_visible_when_unsupported() {
     for bytes in IMAGES {
         for count in [0, 2] {

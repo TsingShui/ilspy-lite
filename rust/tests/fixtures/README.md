@@ -69,7 +69,12 @@ patch owned bodies to isolate constructor identity and initonly permission:
 exact field ownership, unchanged entry this, ordinary/derived/other-receiver
 negatives and visible unsupported constructor calls. A constructor fragment
 without a base call tests permission only, not a valid complete initialization
-chain. Static constructors and generic/value-type constructors remain unsupported.
+chain. The `reference-roundtrip.py --constructors --from-class` gate executes
+Base/Root bodies, including fields before/after the exact core Object call.
+The adapter emits a real runtime IL call and checks receiver identity, position
+and call count; local direct-core null behavior is tested without adding a check.
+Debug/Release passed 22 return/exception/state comparisons per configuration.
+Static constructors and generic/value-type constructors remain unsupported.
 Git pins the snapshots without a separate hash manifest.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,

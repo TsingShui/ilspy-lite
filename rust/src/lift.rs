@@ -595,7 +595,23 @@ impl Writer<'_, '_> {
                     values.push(ty.store(&v.name, self.image)?);
                 }
                 values.reverse();
-                if let Some(owner) = method.receiver {
+                if let Some(core_owner) = method.core_object_constructor {
+                    let owner = self
+                        .constructor_owner
+                        .ok_or("core constructor call outside constructor context")?;
+                    let receiver = self.pop()?;
+                    if receiver.ty != owner || !self.original_this.contains(&receiver.name) {
+                        return Err("core constructor call needs unchanged original this".into());
+                    }
+                    let Ty::Class(owner) = owner else {
+                        return Err("core constructor call needs a reference class".into());
+                    };
+                    if self.image.md.tables().type_def(owner & 0xffffff)?.extends.0 != core_owner {
+                        return Err("core constructor call is not the immediate base".into());
+                    }
+                    values.insert(0, receiver.name);
+                    self.lines.push("// Core Object constructor initialization: exact IL call, no allocation, no virtual dispatch, no added null check.".into());
+                } else if let Some(owner) = method.receiver {
                     let receiver = self.pop()?;
                     self.image.assignable(receiver.ty, owner)?;
                     values.insert(0, receiver.name);

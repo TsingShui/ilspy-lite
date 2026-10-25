@@ -24,6 +24,20 @@ public class Base
     public Base(int value) { BaseValue = value; }
 }
 
+public class Root
+{
+    public readonly int Before = 9;
+    public readonly uint[] Values = new uint[3];
+    public readonly int After;
+    public int Effects;
+    public Root(int value)
+    {
+        Effects = 1;
+        After = value;
+        Effects = 2;
+    }
+}
+
 public class Cells : Base
 {
     public readonly uint[] Values;

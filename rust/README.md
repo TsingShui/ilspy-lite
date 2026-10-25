@@ -95,9 +95,13 @@ retain raw code bytes in a `Failed` result.
   from ordinary methods and allocation. Initonly instance writes require the
   field's exact owning constructor and a direct, unchanged entry-this load;
   receiver aliases/joins are not inferred. This this-only restriction is a
-  conservative subset, not an extra CLI requirement. Static initonly writes and
-  constructor calls still fall back; successful body lowering does not certify
-  base-chain initialization.
+  conservative subset, not an extra CLI requirement. A direct call to the exact
+  admitted core `System.Object::.ctor()` retains its token and position as
+  `__cil_core_object_ctor_TOKEN(this)`: initialization on the same receiver,
+  without allocation, virtual dispatch or an added null check. Only immediate
+  core-base calls with unchanged entry this are admitted. Other constructor
+  calls and static initonly writes still fall back; body lowering is not a full
+  initialization verifier.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
@@ -155,7 +159,9 @@ meaning an exact IL `call`: no virtual dispatch and no added receiver null check
 These are **semantic intrinsics**, not a shipped C# runtime library. The test
 harness maps them only to recovered method bodies; it fails if a call target is
 missing. Pasting this output into C# without suitable declarations/adapters is
-not sufficient to compile it. `callvirt` is still a fallback.
+not sufficient to compile it. The core constructor test adapter performs the
+exact runtime constructor call, not a `new object()` substitution or a callback
+to an original selected constructor body. `callvirt` is still a fallback.
 
 Reference identities are metadata tokens scoped to the one input image, not
 strings compared across assemblies. Local ancestor checks stop at external
@@ -172,7 +178,7 @@ error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
-floating point, native integer arithmetic/comparisons, constructors, external instance calls,
+floating point, native integer arithmetic/comparisons, general constructor calls, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
@@ -221,6 +227,7 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --arrays
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --native --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --conversions --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --addresses --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --constructors --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root

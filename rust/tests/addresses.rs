@@ -89,8 +89,8 @@ fn element_addresses_are_taken_immediately_and_not_read_as_values() {
             );
         }
         let result = decompile_type(bytes, "AddressCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 15);
-        assert_eq!(result.summary.partial, 3); // Two ref-return anchors and constructor.
+        assert_eq!(result.summary.decompiled, 16);
+        assert_eq!(result.summary.partial, 2); // Two ref-return anchors.
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
     }

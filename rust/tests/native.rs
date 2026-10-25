@@ -39,8 +39,8 @@ fn native_values_keep_target_width_at_storage_and_call_boundaries() {
             );
         }
         let result = decompile_type(bytes, "NativeCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 7);
-        assert_eq!(result.summary.partial, 2); // Constructor and native arithmetic.
+        assert_eq!(result.summary.decompiled, 8);
+        assert_eq!(result.summary.partial, 1); // Native arithmetic.
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
         assert!(result.text.contains("native int @Signed"));

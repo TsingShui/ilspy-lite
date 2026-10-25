@@ -53,15 +53,22 @@ internal static class ReferenceRoundtrip
             return File.Exists(path) ? context.LoadFromAssemblyPath(path) : null;
         };
         Assembly original = originalContext.LoadFromAssemblyPath(job.Assembly);
-        var methods = job.Methods.ToDictionary(e => e.Token, e => (MethodInfo)original.ManifestModule.ResolveMethod(e.Token)!);
+        var members = job.Methods.ToDictionary(e => e.Token, e => original.ManifestModule.ResolveMethod(e.Token)!);
         if (args[0] == "prepare")
         {
-            Prepare(job, original, methods, args[2]);
-            Console.WriteLine($"Prepared {methods.Count} recovered bodies; no original method executed.");
+            Prepare(job, original, members, args[2]);
+            Console.WriteLine($"Prepared {members.Count} recovered bodies; no original method executed.");
             return;
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        if (job.Kind == "constructors")
+        {
+            Constructors(recovered, members);
+            Console.WriteLine($"constructors: {checks} return/exception/state comparisons passed");
+            return;
+        }
+        var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
         if (job.Kind == "random-state") RandomState(recovered, methods);
         else if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
@@ -73,14 +80,17 @@ internal static class ReferenceRoundtrip
         Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
     }
 
-    static void Prepare(Job job, Assembly original, Dictionary<int, MethodInfo> methods, string output)
+    static Type ReturnType(MethodBase method) => method is MethodInfo info ? info.ReturnType : typeof(void);
+
+    static void Prepare(Job job, Assembly original, Dictionary<int, MethodBase> methods, string output)
     {
         var fields = new Dictionary<int, FieldInfo>();
         var types = new HashSet<Type>();
         var code = new List<string>();
+        var coreConstructors = new HashSet<int>();
         foreach (Entry entry in job.Methods)
         {
-            MethodInfo method = methods[entry.Token];
+            MethodBase method = methods[entry.Token];
             types.Add(method.DeclaringType!);
             string source = File.ReadAllText(entry.Source);
             foreach (Match match in Regex.Matches(source, @"// field token 0x([0-9A-F]{8})"))
@@ -94,7 +104,16 @@ internal static class ReferenceRoundtrip
             foreach (Match match in Regex.Matches(source, @"__cil_direct_([0-9A-F]{8})\("))
                 if (!methods.ContainsKey(Convert.ToInt32(match.Groups[1].Value, 16)))
                     throw new Exception("A direct-call dependency was not recovered");
-            string declaration = "@" + method.Name + "(";
+            foreach (Match match in Regex.Matches(source, @"__cil_core_object_ctor_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if (target is not ConstructorInfo || target.DeclaringType != typeof(object)
+                    || target.IsStatic || target.GetParameters().Length != 0)
+                    throw new Exception("Core constructor intrinsic target mismatch");
+                coreConstructors.Add(token);
+            }
+            string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
             code.Add(source.Replace(declaration, $"M_{entry.Token:X8}("));
         }
@@ -106,7 +125,7 @@ internal static class ReferenceRoundtrip
             string members = string.Join("\n", fields.Values.Where(f => f.DeclaringType == type).Select(f =>
                 $"public {(f.IsStatic ? "static " : "")}{TypeName(f.FieldType)} {Alias(f)};"));
             // Static call adapters forward only to another recovered body.
-            foreach (MethodInfo method in methods.Values.Where(m => m.IsStatic && m.DeclaringType == type))
+            foreach (MethodInfo method in methods.Values.OfType<MethodInfo>().Where(m => m.IsStatic && m.DeclaringType == type))
             {
                 string parameters = string.Join(", ", method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
                 string arguments = string.Join(", ", method.GetParameters().Select((p, i) => "a" + i));
@@ -116,17 +135,24 @@ internal static class ReferenceRoundtrip
         }
         foreach (var pair in methods)
         {
-            MethodInfo method = pair.Value;
+            MethodBase method = pair.Value;
             if (method.IsStatic) continue;
             var parameters = new[] { TypeName(method.DeclaringType!) + " self" }
                 .Concat(method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
             string arguments = string.Join(", ", new[] { "self" }.Concat(method.GetParameters().Select((p, i) => "a" + i)));
-            code.Add($"public static {TypeName(method.ReturnType)} __cil_direct_{pair.Key:X8}({string.Join(", ", parameters)}) => M_{pair.Key:X8}({arguments});");
+            if (method is MethodInfo)
+                code.Add($"public static {TypeName(ReturnType(method))} __cil_direct_{pair.Key:X8}({string.Join(", ", parameters)}) => M_{pair.Key:X8}({arguments});");
+        }
+        if (coreConstructors.Count != 0)
+        {
+            code.Add("public static global::System.Action<object> CoreConstructorCall;");
+            foreach (int token in coreConstructors)
+                code.Add($"public static void __cil_core_object_ctor_{token:X8}(object self) => CoreConstructorCall(self);");
         }
         File.WriteAllText(output, string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
 
-    static object Original(MethodInfo method, object receiver, object[] args)
+    static object Original(MethodBase method, object receiver, object[] args)
     {
         if (!OriginalCalls.TryGetValue(method.MetadataToken, out var invoke))
         {
@@ -138,9 +164,11 @@ internal static class ReferenceRoundtrip
                 il.Emit(OpCodes.Ldarg_1); il.Emit(OpCodes.Ldc_I4, p.Position); il.Emit(OpCodes.Ldelem_Ref);
                 il.Emit(p.ParameterType.IsValueType ? OpCodes.Unbox_Any : OpCodes.Castclass, p.ParameterType);
             }
-            il.Emit(OpCodes.Call, method);
-            if (method.ReturnType == typeof(void)) il.Emit(OpCodes.Ldnull);
-            else if (method.ReturnType.IsValueType) il.Emit(OpCodes.Box, method.ReturnType);
+            if (method is ConstructorInfo constructor) il.Emit(OpCodes.Call, constructor);
+            else il.Emit(OpCodes.Call, (MethodInfo)method);
+            Type returnType = ReturnType(method);
+            if (returnType == typeof(void)) il.Emit(OpCodes.Ldnull);
+            else if (returnType.IsValueType) il.Emit(OpCodes.Box, returnType);
             il.Emit(OpCodes.Ret);
             invoke = (Func<object, object[], object>)dm.CreateDelegate(typeof(Func<object, object[], object>));
             OriginalCalls.Add(method.MetadataToken, invoke);
@@ -153,7 +181,7 @@ internal static class ReferenceRoundtrip
         try { return action(); }
         catch (Exception e) { return (e is TargetInvocationException t ? t.InnerException! : e).GetType().FullName; }
     }
-    static void Check(Assembly recovered, MethodInfo method, object left, object right, object[] leftArgs, object[] rightArgs,
+    static void Check(Assembly recovered, MethodBase method, object left, object right, object[] leftArgs, object[] rightArgs,
         Action stateCheck = null, Func<object, object, bool> equal = null)
     {
         object expected = Outcome(() => Original(method, left, leftArgs));
@@ -171,6 +199,85 @@ internal static class ReferenceRoundtrip
     {
         foreach (string name in names)
             if (!Equals(Get(left, name), Get(right, name))) throw new Exception($"Field mismatch: {name}");
+    }
+
+    static Action<object> CoreObjectCall()
+    {
+        var dm = new DynamicMethod("ExactCoreObjectConstructor", typeof(void), new[] { typeof(object) }, typeof(object).Module, true);
+        ILGenerator il = dm.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
+        il.Emit(OpCodes.Ret);
+        return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void Constructors(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        if (methods.Count != 2 || methods.Values.Any(m => m is not ConstructorInfo || m.GetParameters().Length != 1)
+            || !methods.Values.Select(m => m.DeclaringType!.FullName).Order().SequenceEqual(
+                new[] { "ConstructorCases.Base", "ConstructorCases.Root" }.Order()))
+            throw new Exception("Core constructor fixture selection drift");
+        Action<object> exactCore = CoreObjectCall();
+        exactCore(null); // Direct core call does not acquire callvirt's receiver null check on this runtime.
+        exactCore(new object());
+        foreach (MethodBase method in methods.Values)
+        foreach (int value in new[] { int.MinValue, -1, 0, 1, int.MaxValue })
+        foreach (bool dirty in new[] { false, true })
+        {
+            Type cell = method.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+            bool root = cell.Name == "Root";
+            object a = New(cell), b = New(clone);
+            uint[] oldLeft = new[] { 17u }, oldRight = new[] { 17u };
+            if (dirty)
+            {
+                if (root)
+                {
+                    Set(a, "Before", -31); Set(b, "Before", -31);
+                    Set(a, "Values", oldLeft); Set(b, "Values", oldRight);
+                    Set(a, "After", -12); Set(b, "After", -12);
+                    Set(a, "Effects", -5); Set(b, "Effects", -5);
+                }
+                else { Set(a, "BaseValue", -77); Set(b, "BaseValue", -77); }
+            }
+            int calls = 0;
+            Action<object> callback = self => {
+                if (!ReferenceEquals(self, b)) throw new Exception("Core constructor changed the receiver identity");
+                if (root)
+                {
+                    uint[] state = (uint[])Get(self, "Values");
+                    if ((int)Get(self, "Before") != 9 || state == null || state.Length != 3 || state.Any(n => n != 0)
+                        || ReferenceEquals(state, oldRight) || (int)Get(self, "After") != (dirty ? -12 : 0)
+                        || (int)Get(self, "Effects") != (dirty ? -5 : 0))
+                        throw new Exception("Core constructor moved across field initialization");
+                }
+                else if ((int)Get(self, "BaseValue") != (dirty ? -77 : 0))
+                    throw new Exception("Readonly write moved before core constructor call");
+                calls++;
+                exactCore(self);
+            };
+            recovered.GetType("Recovered")!.GetField("CoreConstructorCall")!.SetValue(null, callback);
+            Check(recovered, method, a, b, new object[] { value }, new object[] { value }, () => {
+                if (calls != 1) throw new Exception("Core constructor call missing or duplicated");
+                SameFields(a, b, root ? new[] { "Before", "After", "Effects" } : new[] { "BaseValue" });
+                if (root)
+                {
+                    uint[] left = (uint[])Get(a, "Values"), right = (uint[])Get(b, "Values");
+                    SameArray(left, right);
+                    if (left.Length != 3 || ReferenceEquals(left, oldLeft) || ReferenceEquals(right, oldRight))
+                        throw new Exception("Constructor allocation identity mismatch");
+                }
+            }, (x, y) => x == null && y == null);
+        }
+        foreach (MethodBase method in methods.Values)
+        {
+            int calls = 0;
+            recovered.GetType("Recovered")!.GetField("CoreConstructorCall")!.SetValue(null,
+                (Action<object>)(self => { calls++; exactCore(self); }));
+            Check(recovered, method, null, null, new object[] { 7 }, new object[] { 7 });
+            if (calls != (method.DeclaringType!.Name == "Base" ? 1 : 0))
+                throw new Exception("Constructor null failure or core call timing changed");
+        }
+        Console.WriteLine("Core Object constructor: exact runtime call, no allocation or added null check; pre/post field ordering observed.");
     }
 
     static void RandomState(Assembly recovered, Dictionary<int, MethodInfo> methods)

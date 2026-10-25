@@ -206,8 +206,8 @@ fn conv_i4_preserves_low_bits_and_evaluation_order() {
             );
         }
         let result = decompile_type(bytes, "ConversionCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 16);
-        assert_eq!(result.summary.partial, 1); // Constructor not lowered.
+        assert_eq!(result.summary.decompiled, 17);
+        assert_eq!(result.summary.partial, 0);
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
     }

@@ -30,6 +30,7 @@ def main():
     corpus_choice.add_argument("--native", action="store_true", help="execute the owned native-integer storage corpus")
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
     corpus_choice.add_argument("--addresses", action="store_true", help="execute the owned managed-element-address corpus")
+    corpus_choice.add_argument("--constructors", action="store_true", help="execute owned core-base constructor bodies, not unsupported constructor chains")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
@@ -83,20 +84,23 @@ def main():
             name = "openra"
         jobs.append((name, assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
     else:
-        corpus_name = "address" if args.addresses else "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
+        corpus_name = "constructor" if args.constructors else "address" if args.addresses else "conversion" if args.conversions else "native" if args.native else "array" if args.arrays else "reference"
         for config in ("release", "debug"):
             assembly = ROOT / f"tests/fixtures/{corpus_name}-{config}.bin"
             listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
             selected = []
             for line in listing:
                 token, signature = line.split(" ", 1)
-                if "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature or "::Anchor" in signature:
+                if args.constructors:
+                    if not any(owner + "::.ctor(" in signature for owner in ("ConstructorCases.Base", "ConstructorCases.Root")):
+                        continue
+                elif "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature or "::Anchor" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
+            expected_count = 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
-            name = f"{corpus_name}-{config}" if args.addresses or args.conversions or args.native or args.arrays else config
+            name = f"{corpus_name}-{config}" if args.constructors or args.addresses or args.conversions or args.native or args.arrays else config
             jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
@@ -133,7 +137,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "constructors" if args.constructors else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
