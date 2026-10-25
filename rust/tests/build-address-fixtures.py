@@ -65,6 +65,11 @@ for config in ("release", "debug"):
         "ReadSnapshot": prefix + unsigned + b"\x4b" + write + finish + b"\x2a",
         "ReadAfterWrite": prefix + unsigned + write + b"\x4b" + finish + b"\x2a",
         "ReadAfterRetarget": prefix + field_address + retarget + b"\x4b" + finish + b"\x2a",
+        "WriteUnsigned": prefix + unsigned + b"\x05\x54" + finish + b"\x2a",
+        "WriteSignedBits": prefix + b"\x03\x04\x8f" + pack(i4) + b"\x05\x54" + finish + b"\x2a",
+        "UpdateViaDup": prefix + unsigned + b"\x25\x4b\x05\x61\x54" + finish + b"\x2a",
+        "WriteAfterRetarget": prefix + field_address + retarget + b"\x05\x54" + finish + b"\x2a",
+        "WriteAfterCall": prefix + unsigned + b"\x0e\x04\x28" + pack(int(tokens["Bump"], 16)) + b"\x26\x05\x54" + finish + b"\x2a",
     })
     for name, code in bodies.items():
         original = bytes(int(byte, 16) for chunk in re.findall(r"^\.code-bytes IL_[0-9A-F]+: \[([^]]*)\]", il(name), re.M)

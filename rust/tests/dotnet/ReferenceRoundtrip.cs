@@ -464,10 +464,61 @@ internal static class ReferenceRoundtrip
                     });
             }
         }
-        foreach (string name in new[] { "Take", "TakeSigned", "Duplicate", "Retarget", "ReadUnsigned", "ReadSignedBits", "ReadAfterRetarget", "ReadSnapshot", "ReadAfterWrite" })
+        foreach (int length in new[] { -1, 0, 1, 3 })
+        foreach (int index in indices)
+        foreach (uint value in new[] { 0u, 1u, 0x80000000u, uint.MaxValue })
         {
-            object[] values = name == "ReadSnapshot" || name == "ReadAfterWrite"
-                ? new object[] { null, 0, 1u } : new object[] { null, 0 };
+            foreach (string name in new[] { "WriteUnsigned", "WriteSignedBits", "UpdateViaDup" })
+            {
+                object a = New(cell), b = New(clone);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                Array left = length < 0 ? null : name == "WriteSignedBits"
+                    ? new[] { int.MinValue, -1, int.MaxValue }.Take(length).ToArray()
+                    : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                Array right = (Array)left?.Clone();
+                Check(recovered, methods.Values.Single(m => m.Name == name), a, b,
+                    new object[] { left, index, value }, new object[] { right, index, value },
+                    () => { SameFields(a, b, "Effects"); SameArray(left, right); });
+            }
+            foreach (bool nullReplacement in new[] { false, true })
+            foreach (bool alias in new[] { false, true })
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = length < 0 ? null : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                uint[] right = (uint[])left?.Clone();
+                uint[] al = nullReplacement ? null : alias ? left : new uint[2];
+                uint[] ar = nullReplacement ? null : alias ? right : new uint[2];
+                Set(a, "Values", left); Set(b, "Values", right);
+                Check(recovered, methods.Values.Single(m => m.Name == "WriteAfterRetarget"), a, b,
+                    new object[] { al, index, value }, new object[] { ar, index, value }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right); SameArray(al, ar);
+                        bool valid = length >= 0 && index >= 0 && index < length;
+                        if (!ReferenceEquals(Get(a, "Values"), valid ? al : left)
+                            || !ReferenceEquals(Get(b, "Values"), valid ? ar : right))
+                            throw new Exception("Indirect write lost the addressed array identity");
+                    });
+            }
+            foreach (int otherKind in new[] { 0, 1, 2 })
+            {
+                object a = New(cell), b = New(clone);
+                object oa = otherKind == 0 ? null : otherKind == 1 ? a : New(cell);
+                object ob = otherKind == 0 ? null : otherKind == 1 ? b : New(clone);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                if (otherKind == 2) { Set(oa, "Effects", int.MaxValue); Set(ob, "Effects", int.MaxValue); }
+                uint[] left = length < 0 ? null : new[] { 0x80000000u, uint.MaxValue, 1u }.Take(length).ToArray();
+                uint[] right = (uint[])left?.Clone();
+                Check(recovered, methods.Values.Single(m => m.Name == "WriteAfterCall"), a, b,
+                    new object[] { left, index, value, oa }, new object[] { right, index, value, ob }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right);
+                        if (oa != null) SameFields(oa, ob, "Effects");
+                    });
+            }
+        }
+        foreach (string name in new[] { "Take", "TakeSigned", "Duplicate", "Retarget", "ReadUnsigned", "ReadSignedBits", "ReadAfterRetarget", "ReadSnapshot", "ReadAfterWrite", "WriteUnsigned", "WriteSignedBits", "UpdateViaDup", "WriteAfterRetarget", "WriteAfterCall" })
+        {
+            object[] values = name == "WriteAfterCall" ? new object[] { null, 0, 1u, null }
+                : methods.Values.Single(m => m.Name == name).GetParameters().Length == 3
+                    ? new object[] { null, 0, 1u } : new object[] { null, 0 };
             Check(recovered, methods.Values.Single(m => m.Name == name), null, null, values, values);
         }
         object ba = New(cell), bb = New(clone);
@@ -477,7 +528,8 @@ internal static class ReferenceRoundtrip
         Check(recovered, methods.Values.Single(m => m.Name == "Bump"), null, null,
             Array.Empty<object>(), Array.Empty<object>());
         if (!methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
-            "Take", "TakeSigned", "Duplicate", "Retarget", "Bump", "ReadUnsigned", "ReadSignedBits", "ReadSnapshot", "ReadAfterWrite", "ReadAfterRetarget"
+            "Take", "TakeSigned", "Duplicate", "Retarget", "Bump", "ReadUnsigned", "ReadSignedBits", "ReadSnapshot", "ReadAfterWrite", "ReadAfterRetarget",
+            "WriteUnsigned", "WriteSignedBits", "UpdateViaDup", "WriteAfterRetarget", "WriteAfterCall"
         }.Order())) throw new Exception("Address method selection drift");
     }
 

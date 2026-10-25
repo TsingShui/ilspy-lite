@@ -105,8 +105,10 @@ retain raw code bytes in a `Failed` result.
   later read. `dup` copies the address identity without reading or checking it
   again. `ldind.u4` reads this address at its original instruction, into a
   canonical I4 bit-pattern snapshot; signed I4 storage does not change its bits.
-  Indirect writes, byref parameters/locals/returns, prefixes and address values
-  crossing a basic-block edge remain unsupported.
+  `stind.i4` writes I4 bits back to that same location at the store instruction,
+  including after alias writes, calls and array-field rebinding. Byref
+  parameters/locals/returns, prefixes and address values crossing a basic-block
+  edge remain unsupported.
 - Constant/argument/local loads and stores, `dup`, `pop`, static field loads/stores.
 - Arithmetic, checked arithmetic (signed and unsigned), division/remainder,
   comparisons, bitwise operations and shifts.
@@ -157,7 +159,7 @@ If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
-element types, multidimensional/jagged arrays, `newarr`, indirect element writes,
+element types, multidimensional/jagged arrays, `newarr`, other indirect access,
 floating point, native integer arithmetic/comparisons, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and

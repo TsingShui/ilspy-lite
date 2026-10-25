@@ -89,7 +89,7 @@ fn element_addresses_are_taken_immediately_and_not_read_as_values() {
             );
         }
         let result = decompile_type(bytes, "AddressCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 10);
+        assert_eq!(result.summary.decompiled, 15);
         assert_eq!(result.summary.partial, 3); // Two ref-return anchors and constructor.
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
@@ -132,6 +132,73 @@ fn indirect_u4_reads_snapshot_the_value_at_the_read_instruction() {
 }
 
 #[test]
+fn indirect_i4_writes_use_the_previously_acquired_address() {
+    for bytes in IMAGES {
+        for name in [
+            "WriteUnsigned",
+            "WriteSignedBits",
+            "UpdateViaDup",
+            "WriteAfterRetarget",
+            "WriteAfterCall",
+        ] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("stind.i4"));
+            let address = result
+                .text
+                .lines()
+                .find(|l| l.contains(" = ref "))
+                .unwrap()
+                .split_whitespace()
+                .nth(2)
+                .unwrap();
+            let write = result
+                .text
+                .lines()
+                .find(|l| l.trim_start().starts_with(&format!("{address} = ")))
+                .unwrap();
+            assert!(!write.contains('['), "{write}");
+            assert_eq!(
+                result
+                    .text
+                    .lines()
+                    .filter(|l| l.contains(" = ref "))
+                    .count(),
+                1
+            );
+            if name == "WriteSignedBits" {
+                assert!(!write.contains("uint"), "{write}");
+            } else {
+                assert!(write.contains("unchecked((uint)(v"), "{write}");
+            }
+        }
+    }
+}
+
+#[test]
+fn indirect_i4_rejects_invalid_destination_and_value_categories() {
+    for bytes in IMAGES {
+        let method = token(bytes, "Take");
+        for code in [
+            &[0x17, 0x17, 0x54, 0x2a][..],
+            &[0x14, 0x17, 0x54, 0x2a][..],
+            &[0x03, 0x17, 0x54, 0x2a][..],
+            &[0x54, 0x2a][..],
+        ] {
+            let result = decompile(&patched_body(bytes, method, code), method).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
+        }
+        let mut code = vec![0x03, 0x04, 0x8f];
+        code.extend(element_token(bytes, method).0.to_le_bytes());
+        code.extend([0x17, 0x6a, 0x54, 0x2a]); // I8 value is not implicit I4.
+        let result = decompile(&patched_body(bytes, method, &code), method).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(result.text.contains("IL FALLBACK"));
+    }
+}
+
+#[test]
 fn indirect_u4_rejects_ordinary_values_and_empty_stack() {
     for bytes in IMAGES {
         let method = token(bytes, "Take");
@@ -160,7 +227,7 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
                 "managed element address crossing a block",
             ),
             (&[0x4a, 0x26, 0x2a][..], "unsupported opcode ldind.i4"),
-            (&[0x17, 0x54, 0x2a][..], "unsupported opcode stind.i4"),
+            (&[0x17, 0x55, 0x2a][..], "unsupported opcode stind.i8"),
             (
                 &[0x25, 0x58, 0x26, 0x2a][..],
                 "integer operation on non-integer",

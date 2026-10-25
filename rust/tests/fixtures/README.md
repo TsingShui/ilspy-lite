@@ -48,15 +48,16 @@ from `../dotnet/AddressCases.cs` and the authored IL in
 `../build-address-fixtures.py`. Core TypeRef operands are obtained from ref-return
 anchors, not guessed from token order. Reserved bodies are replaced without
 executing them; the producer validates tiny headers or ordinary fat headers
-before changing code size/maxstack. Ten recovered bodies exercise immediate
-null/bounds checks, address duplication across a call, field rebinding and
-`ldind.u4` snapshots before/after alias writes. The anchors retain unsupported
-byref signatures. Regenerate with `python3 rust/tests/build-address-fixtures.py`
-and execute public class output with
-`reference-roundtrip.py --addresses --from-class`. The Debug/Release gate passed
-767 return/exception/state comparisons per configuration. Indirect writes and
-cross-block address propagation are separate unsupported cases. Git pins the
-snapshots without a separate hash manifest.
+before changing code size/maxstack. Fifteen recovered bodies exercise immediate
+null/bounds checks, address duplication across a call, field rebinding,
+`ldind.u4` snapshots before/after alias writes, and `stind.i4` writes to the
+original location. Calls can mutate aliased state or throw before a pending
+write. The anchors retain unsupported byref signatures. Regenerate with
+`python3 rust/tests/build-address-fixtures.py` and execute public class output
+with `reference-roundtrip.py --addresses --from-class`. The Debug/Release gate
+passed 1,892 return/exception/state comparisons per configuration. Other
+indirect operations and cross-block address propagation remain unsupported.
+Git pins the snapshots without a separate hash manifest.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated

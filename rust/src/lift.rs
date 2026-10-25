@@ -373,6 +373,21 @@ impl Writer<'_, '_> {
                 // Read now, from the already checked location, into canonical I4 bits.
                 self.push(Ty::I4, Ty::U4.load(&address.name, self.image)?)?;
             }
+            "stind.i4" => {
+                let value = self.pop()?;
+                expect(value.ty, Ty::I4)?;
+                let address = self.pop()?;
+                let element = match address.ty {
+                    Ty::I4Address => Ty::I4,
+                    Ty::U4Address => Ty::U4,
+                    _ => return Err("stind.i4 needs a stable I4 element address".into()),
+                };
+                self.lines.push(format!(
+                    "{} = {};",
+                    address.name,
+                    element.store(&value.name, self.image)?
+                ));
+            }
             "ldelem.i4" | "ldelem.u4" => {
                 let index = self.pop()?;
                 expect(index.ty, Ty::I4)?;
