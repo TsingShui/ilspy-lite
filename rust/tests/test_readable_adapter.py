@@ -20,6 +20,18 @@ class ReadableAdapter(unittest.TestCase):
         self.assertIn('"this Value"', adapted)
         self.assertNotIn('a0.a1', adapted)
 
+    def test_dependency_reports_stay_outside_executed_method_statements(self):
+        readable = ('public int Read()\n{\n    return this.Value;\n}\n'
+                    '\n// Dependency unresolved: Missing; reference identity retained.\n')
+        details = ('// field token 0x04000001\npublic static int @Read(global::Owned.Cell a0)\n{\n'
+                   '    return a0.Value;\n}\n\n.dependency 0x23000001 status=missing\n')
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('return a0.Value;', adapted)
+        self.assertNotIn('Dependency unresolved', adapted)
+        self.assertNotIn('.dependency ', adapted)
+        self.assertTrue(roundtrip.detailed_method(details).endswith('}\n'))
+        self.assertTrue(roundtrip.readable_method(readable).endswith('}\n'))
+
     def test_constructor_initializer_uses_its_arguments_not_detailed_body_logic(self):
         readable = 'public Child(int value) : base(value)\n{\n    this.Value = value;\n}\n'
         details = ('// token 0x06000001 instance void Owned.Child::.ctor(int32)\n'

@@ -21,6 +21,20 @@ def run(*args, **kwargs):
     return subprocess.run(list(map(str, args)), check=True, text=True, timeout=120, **kwargs)
 
 
+def detailed_method(text):
+    """Keep the original method record before the separate dependency report."""
+    return re.split(r"^\.dependency(?: |-|$)", text, maxsplit=1, flags=re.M)[0].rstrip() + "\n"
+
+
+def readable_method(text):
+    """A method view ends at its unindented closing brace, before diagnostics."""
+    text = text.rstrip() + "\n"
+    end = text.find("\n}\n")
+    if end < 0:
+        raise ValueError("Readable method has no complete body")
+    return text[:end + 3]
+
+
 def adapt_readable_body(readable, details):
     """Execute readable statements, using only unchanged detailed header/identity evidence.
 
@@ -29,7 +43,8 @@ def adapt_readable_body(readable, details):
     An explicit initializer becomes one same-receiver operation at body entry;
     call-token metadata binds its target, never its arguments or detailed statements.
     """
-    readable = readable.rstrip() + "\n"
+    readable = readable_method(readable)
+    details = detailed_method(details)
     detailed = re.search(r"^public static [^\n]+\n\{\n", details, re.M)
     rendered = re.search(r"^[^\n]+\n\{\n", readable)
     if detailed is None or rendered is None or not readable.endswith("}\n"):
@@ -281,9 +296,11 @@ def main():
                 if "decompiled=1 declarations=0 partial=0 failed=0" != result.stderr.strip():
                     raise ValueError(f"Not a decompiled method: {signature}")
                 body = result.stdout
+            body = detailed_method(body)
             if args.readable:
                 readable = run(cli, "decompile", assembly, "--method", token, capture_output=True).stdout
                 (directory / f"{token}.readable.txt").write_text(readable)
+                readable = readable_method(readable)
                 normalized = "\n".join(line.strip() for line in readable.rstrip().splitlines())
                 if args.from_class and not any(normalized in text for text in readable_classes.values()):
                     raise ValueError("Selected method view differs from actual readable class body")

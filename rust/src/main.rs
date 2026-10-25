@@ -47,13 +47,14 @@ fn run() -> Result<u8> {
     let mut style = OutputStyle::Readable;
     let mut references = Vec::new();
     let mut reference_dirs = Vec::new();
+    let mut automatic = args.first().is_some_and(|arg| arg == "decompile");
     if args.first().is_some_and(|arg| arg == "decompile") && args.len() >= 4 {
         let mut index = 4;
         while index < args.len() {
             if args[index] == "--details" {
                 style = OutputStyle::Details;
             } else if args[index] == "--no-auto-references" {
-                // Explicit byte contexts perform no automatic filesystem search.
+                automatic = false;
             } else if args[index] == "--reference" || args[index] == "--reference-dir" {
                 let directory = args[index] == "--reference-dir";
                 index += 1;
@@ -99,13 +100,20 @@ fn run() -> Result<u8> {
         return Ok(0);
     }
     let mut reference_warnings = Vec::new();
-    let context = if references.is_empty() && reference_dirs.is_empty() {
+    let context = if !automatic && references.is_empty() && reference_dirs.is_empty() {
         None
     } else {
         let mut context = DependencyContext::new(std::mem::take(&mut bytes))?;
         let mut seen = BTreeSet::new();
         for reference in references {
             load_reference(&mut context, &reference, &mut seen, &mut reference_warnings);
+        }
+        if automatic {
+            let directory = Path::new(&args[1])
+                .parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or(Path::new("."));
+            reference_dirs.push(directory.to_path_buf());
         }
         for directory in &reference_dirs {
             if !directory.is_dir() {

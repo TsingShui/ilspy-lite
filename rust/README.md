@@ -65,8 +65,9 @@ while giving the CLI a readable default. Validation:
 
 ### Explicit dependency metadata
 
-`--reference <file>` and `--reference-dir <directory>` supply static dependency
-metadata; both repeat. `--no-auto-references` preserves isolated lookup. Explicit
+The CLI searches the input file's directory for matching DLL/EXE dependencies by
+default. `--reference <file>` and `--reference-dir <directory>` supply additional
+static metadata; both repeat. `--no-auto-references` disables automatic lookup. Explicit
 files precede ordered directory searches, and identities are checked from metadata,
 not filenames. Missing/conflicting/rejected dependencies are reported separately
 without hiding independently recovered bodies. The byte-only library APIs keep

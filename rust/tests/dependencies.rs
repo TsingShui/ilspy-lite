@@ -617,6 +617,49 @@ fn unreadable_reference_identity_does_not_hide_independently_decompilable_bodies
 }
 
 #[test]
+fn cli_finds_neighboring_dependencies_by_default_and_can_disable_discovery() {
+    let root =
+        std::env::temp_dir().join(format!("ilspy-neighbor-reference-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let main = root.join("input.dll");
+    std::fs::write(&main, MAIN).unwrap();
+    std::fs::write(root.join("ExternalLibrary.dll"), DEPENDENCY).unwrap();
+    for automatic in [true, false] {
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"));
+        command
+            .arg("decompile")
+            .arg(&main)
+            .args(["--type", "ExternalCases.Cells", "--details"]);
+        if !automatic {
+            command.arg("--no-auto-references");
+        }
+        let result = command.output().unwrap();
+        assert_eq!(
+            result.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let text = String::from_utf8(result.stdout).unwrap();
+        if automatic {
+            let resolution = text
+                .lines()
+                .find(|l| l.contains("status=resolved") && l.contains("ExternalLibrary"))
+                .expect("neighboring exact dependency must resolve without a manual path");
+            assert!(resolution.contains("ExternalLibrary.dll"));
+        } else {
+            assert_eq!(
+                text,
+                ilspy_lite::decompile_type(MAIN, "ExternalCases.Cells")
+                    .unwrap()
+                    .text
+            );
+        }
+    }
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn explicit_bytes_resolve_an_assembly_reference_without_searching_the_filesystem() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     let reference = context

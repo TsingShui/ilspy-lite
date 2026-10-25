@@ -586,7 +586,14 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
         .output()
         .unwrap();
     let details = Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
-        .args(["decompile", path, "--type", "ClassCases.Mixed", "--details"])
+        .args([
+            "decompile",
+            path,
+            "--type",
+            "ClassCases.Mixed",
+            "--details",
+            "--no-auto-references",
+        ])
         .output()
         .unwrap();
     assert_eq!(default.status.code(), Some(2));

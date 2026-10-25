@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix="ilspy-rust-roundtrip-") as directory:
         integer_listing = run(str(cli), "list", str(integer_fixture), capture_output=True).stdout
         integer_methods = []
         for line in integer_listing.splitlines():
-            integer_methods.append(run(str(cli), "decompile", str(integer_fixture), "--method", line.split()[0], "--details", capture_output=True).stdout)
+            integer_methods.append(run(str(cli), "decompile", str(integer_fixture), "--method", line.split()[0], "--details", "--no-auto-references", capture_output=True).stdout)
         if len(integer_methods) != 25:
             raise AssertionError("Integer fixture inventory changed")
         methods = []
@@ -51,7 +51,7 @@ with tempfile.TemporaryDirectory(prefix="ilspy-rust-roundtrip-") as directory:
             if "LiteSamples.ControlFlowSample::" not in line or "::Divide(" in line:
                 continue
             token = line.split()[0]
-            methods.append(run(str(cli), "decompile", str(fixture), "--method", token, "--details",
+            methods.append(run(str(cli), "decompile", str(fixture), "--method", token, "--details", "--no-auto-references",
                                capture_output=True).stdout)
         if len(methods) != 9:
             raise AssertionError(f"Expected 9 supported methods, found {len(methods)}")

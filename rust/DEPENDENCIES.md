@@ -12,8 +12,9 @@ string is provenance, not a file to open. `references()` exposes AssemblyRef
 requests and `resolve(token)` returns `Resolved`, `Missing`, `Conflicting` or
 `Invalid` results. Malformed request rows remain in `reference_failures()` with
 raw bytes and diagnostics, without suppressing independently analyzable bodies. Its method/class decompile entries append dependency evidence separately
-from body and metadata status counts. This context does not yet perform automatic
-lookup or change source binding; those are separate implementation milestones.
+from body and metadata status counts. The byte context does not perform automatic lookup or change source binding.
+The CLI now probes neighboring DLL/EXE files by default after explicit inputs;
+system/package discovery and source binding are separate implementation milestones.
 
 Identity matching uses assembly name, four-part version, culture, public-key token
 and content type. Names/cultures compare ASCII case-insensitively. Full keys use
@@ -30,7 +31,7 @@ labels are retained. Replacing a cached source's bytes is rejected. Limits inclu
 per image by default; 24-bit token-width validation also applies. These are bounded
 analysis guards, not a complete hostile-input verifier.
 
-CLI explicit inputs:
+CLI automatic neighboring lookup and explicit inputs:
 
 ```sh
 ilspy-lite decompile Assembly.dll --type Namespace.Type \
@@ -58,7 +59,8 @@ without charging image bytes again, and canonical same-path cache hits avoid I/O
 
 ## Automatic discovery and binding (pending)
 
-The confirmed goal additionally requires default automatic discovery, strict
+Neighboring-file discovery is implemented and can be disabled. The confirmed
+goal additionally requires system/package discovery, strict
 versus explicit compatible-version policy, actual type/member/property binding,
 reference-versus-implementation classification and bounded type-forwarder chains.
 Do not infer these from a resolved AssemblyRef status in the explicit-context
