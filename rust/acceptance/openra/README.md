@@ -1,5 +1,9 @@
 # Bounded OpenRA acceptance corpus
 
+Later static dependency/property/postfix work and the unchanged frozen twenty-class
+sample are reported separately in [dependency/presentation acceptance](DEPENDENCY_PRESENTATION.md).
+The historical results below retain their original scope; they do not certify later changes.
+
 This is an external real-world corpus, not a promise to decompile all of OpenRA.
 The original stage-1 milestone passed its bounded behavioral gate; see
 [STAGE1.md](STAGE1.md). The confirmed class-level goal also requires all seven

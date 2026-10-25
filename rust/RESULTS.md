@@ -1,5 +1,9 @@
 # First Rust slice: measured results (historical)
 
+Later static dependency/property/postfix work and the unchanged frozen twenty-class
+sample are reported separately in [dependency/presentation acceptance](acceptance/openra/DEPENDENCY_PRESENTATION.md).
+The historical results below retain their original scope; they do not certify later changes.
+
 This records the historical integer-only slice, not current coverage or size.
 Current class-level acceptance and remaining limits are in
 [DELIVERY.md](acceptance/openra/DELIVERY.md); operation definitions are in

@@ -139,5 +139,6 @@ outputs. Logs are under `report/constructor-presentation-*.log`.
   constructor/accessor adapters are allowed, selected-body proxies or copying
   original initialized state are not.
 - Relevant Rust Debug/Release, fmt, strict clippy, actual-body gates, truthful
-  examples and per-class limitations. This document is a contract, not a claim
-  that implementation or final acceptance is already complete.
+  examples and per-class limitations. This document records the frozen contract. The final implementation,
+  per-class execution/static distinction and remaining limits are recorded in
+  [DEPENDENCY_PRESENTATION.md](DEPENDENCY_PRESENTATION.md).

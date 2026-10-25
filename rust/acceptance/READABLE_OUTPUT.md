@@ -1,5 +1,9 @@
 # Readable output and complete evidence
 
+Later static dependency/property/postfix work and the unchanged frozen twenty-class
+sample are reported separately in [dependency/presentation acceptance](openra/DEPENDENCY_PRESENTATION.md).
+The historical results below retain their original scope; they do not certify later changes.
+
 Readable-body simplification validated at `f9ce32653`; inline fallback-body
 presentation has separate focused validation described below.
 

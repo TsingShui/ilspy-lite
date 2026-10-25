@@ -25,6 +25,28 @@ that dependencies were recovered. Both presentations retain the same statuses an
 exit precedence. The detailed library entry points remain compatible; explicit
 `OutputStyle::Readable` selects the concise view.
 
+Constructor initializers are presentation of an existing-receiver exact call,
+never allocation. Only a first initialization with unchanged, exactly typed
+arguments can move into `: base(...)` / `: this(...)`; pre-base writes/calls stay
+in place. Parameterless initialization is explicit, not silently erased.
+
+Property source recovery needs actual Property/MethodSemantics and a separate
+source proof: unchanged original `this`, exact direct dispatch, an accessible
+unambiguous local/nonvirtual or immediate-base lookup, and exact owner, accessor
+reference/definition and PropertySig type paths. `base.Property` suppresses virtual
+dispatch exactly when the original opcode was `call`. Getter/setter names alone,
+version-substituted metadata, indexer/generic/modified shapes, changed receivers
+and unproved lookup keep exact calls. Accessor methods and relationship summaries
+remain visible; automatic-property declarations are not inferred.
+
+For owned unchanged-this signed-I4 fields and address-unexposed I4 locals, adjacent
+old-value load plus same-location unchecked subtract/store can become postfix.
+A still-live generated old-value variable remains at its original point, before
+later effects/reads. Only a sole immediate old-value-zero return is further fused
+into `return unchecked(location-- == 0);`. Checked/unsigned stores, different or
+effectful receivers, intervening operations and unproved address cases remain
+explicit. These are presentation rewrites, not new body lowering.
+
 ## Identity, status and order
 
 - `--type` selects the exact TypeDef metadata name and recursively owned nested
@@ -85,7 +107,8 @@ not interpreted. These records are not executable recovered method bodies:
   records for body and declaration. This mapping is not inferred from names,
   overload spelling or source `override` syntax. Full dispatch, access, ancestry
   and signature-compatibility validation is not performed; external and generic
-  endpoint identities remain metadata context without dependency resolution.
+  endpoint records remain raw metadata context; the separate explicit resolver
+  does not turn them into general dispatch or implementation validation.
 
 Broken readable records retain raw evidence, explicit metadata failure and peer
 members; their failure count is independent of body statuses. Null/out-of-range
@@ -94,6 +117,16 @@ the selected type or silently treated as valid unrelated records. Endpoint
 name/owner indexes, original row and signature blob index/bytes precede fallible
 signature/reference interpretation, so malformed signatures do not erase them.
 A complete inventory means the records are present, not that every payload or runtime policy is modeled.
+
+## Static dependency context
+
+[DEPENDENCIES.md](DEPENDENCIES.md) defines discovery order, full scoped identity,
+exact/default versus explicit metadata replacement, forwarders/generic positions,
+reference-contract classification and layered limits. Byte-only APIs never search
+files. Metadata definitions and signature matches are not implementation, publisher
+or runtime-compatibility proof. Reference input stubs are explicitly marked in
+context output. Missing/rejected dependencies do not suppress independent bodies;
+large missing sets have a default notice and complete scoped details.
 
 ## Numeric categories
 
@@ -119,8 +152,9 @@ CIL rules within the admitted I4/I8 subset.
 Local class tokens and opaque `__cil_type_TOKEN` aliases are scoped to the input
 image. Alias comments retain external name and full AssemblyRef identity. Tokens
 from different images cannot be compared as if they were globally unique.
-No dependency is loaded by production lowering. External class signatures retain
-that declared Class identity, not independently verified type definitions.
+No dependency is runtime-loaded or executed by production. Single-image lowering
+retains declared external Class identity. The explicit context can independently
+bind supplied definitions, without expanding that body admission.
 
 Local assignment may follow locally known ancestors to an exact named external
 base TypeRef; external ancestor chains, interfaces and generic instantiations are
@@ -163,9 +197,10 @@ For admitted zero-based one-dimensional int[]/uint[] arrays:
 - `__cil_ctor_body_TOKEN(receiver, ...)`: instance constructor initialization
   body on an existing receiver. It does not allocate an object or certify a
   complete valid constructor chain. Pre-base field writes stay where they were.
-- `__cil_ctor_call_TOKEN(receiver, ...)`: exact same-type constructor delegation
-  at the call position, on the same entry receiver. Do not repeat allocation or
-  field initializers. Other receiver/base contexts remain unsupported.
+- `__cil_ctor_call_TOKEN(receiver, ...)`: exact same-type delegation or local/
+  external immediate-base initialization at the call position, on the same entry
+  receiver. Do not repeat allocation or field initializers. Other receiver/base
+  contexts remain unsupported.
 - `__cil_core_object_ctor_TOKEN(receiver)`: exact admitted immediate core Object
   constructor initialization call, not `new object()` or an erased statement.
   No callvirt-style null check is introduced. Runtime resolution/body semantics

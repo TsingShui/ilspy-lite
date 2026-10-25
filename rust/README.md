@@ -3,10 +3,11 @@
 A small, independent CIL-to-C#-like decompiler with exact named-type selection
 and complete class-level metadata/member results. It is not a complete .NET
 decompiler or a port of ILSpy's pass pipeline.
-It does not link to ILSpy, invoke a .NET process, load dependencies from the GAC,
-or execute input assemblies. The PE/metadata/IL decoder remains pinned
-`cildec 0.1.0`; `sha1 0.10.7` supplies ECMA-335 assembly public-key-token identities
-(not signature authentication). See [third-party notices](THIRD-PARTY-NOTICES.md).
+It does not link to ILSpy, invoke a .NET process, runtime-load assemblies or
+execute input code. Dependency discovery reads local metadata, including installed
+framework layouts when available. The decoder remains pinned `cildec 0.1.0`;
+`sha1 0.10.7` supplies ECMA-335 identity tokens (not authentication), and
+`serde_json 1.0.154` reads bounded local deps manifests. See [third-party notices](THIRD-PARTY-NOTICES.md).
 
 ## Build and use
 
@@ -45,8 +46,11 @@ Unsupported methods keep their declaration, an `IL fallback` reason and the
 complete original IL as comments inside that method body, including locals and
 exception regions. Failed bodies retain available raw/decodable evidence or the
 original body-read error inline. No `--details` option is needed to inspect a
-fallback body. Commented IL is not executable recovered C#. Properties/events have concise named relationship summaries;
-their accessor methods stay visible, without pretending to infer source sugar.
+fallback body. Commented IL is not executable recovered C#. Properties/events have
+named relationship summaries and visible accessor methods; automatic-property
+declarations are not invented. With an explicit resolved context, proven direct
+original-this property calls can use `base.Property` or nonvirtual `this.Property`.
+Uncertain scope, dispatch, receiver or lookup keeps exact-call notation.
 Exact-call and target-runtime intrinsics remain where ordinary C# would change
 semantics. This is similar in presentation to ILSpy, not equivalent syntax
 coverage, resolver behavior or a promise of compilable source.
@@ -63,18 +67,34 @@ Choose presentation with `decompile_with_style`/`decompile_type_with_style` and
 while giving the CLI a readable default. Validation:
 [readable output acceptance](acceptance/READABLE_OUTPUT.md).
 
-### Explicit dependency metadata
+### Automatic static dependencies
 
-The CLI searches the input file's directory for matching DLL/EXE dependencies by
-default. `--reference <file>` and `--reference-dir <directory>` supply additional
-static metadata; both repeat. `--no-auto-references` disables automatic lookup. Explicit
-files precede ordered directory searches, and identities are checked from metadata,
-not filenames. Missing/conflicting/rejected dependencies are reported separately
-without hiding independently recovered bodies. The byte-only library APIs keep
-their no-filesystem behavior; `DependencyContext` is the explicit library interface.
-See [DEPENDENCIES.md](DEPENDENCIES.md) for implemented behavior and the remaining
-automatic-discovery/binding milestones. Resolving an assembly alone does not yet
-turn external calls into property syntax.
+The CLI discovers local dependencies by default: neighboring images, static
+framework hints, deps/local NuGet assets, shared frameworks/reference packs and
+common Framework/GAC/Mono layouts. No SDK/runtime installation is required.
+`--reference <file>` and `--reference-dir <directory>` repeat; explicit files
+precede ordered directories and automatic families. `--no-auto-references`
+disables automatic lookup. Every candidate is checked by full assembly identity,
+not filename.
+
+Version policy defaults to `--reference-version-policy exact`. Explicit
+`same-major` permits nearest nonolder metadata replacement, reports requested and
+selected versions/provenance, and is not runtime compatibility proof. Incomplete
+search never authorizes replacement. Source property binding requires exact
+owner and method/property signature scopes, not merely a resolved AssemblyRef.
+
+Missing/conflicting/rejected metadata never hides independently recovered bodies.
+Large missing sets use a concise default notice; `--details` retains all scoped
+requests, source/role records, selections and diagnostics. Reference input stubs
+are explicitly labeled as API contracts. Reference contracts are not executable
+implementations, and absence of a marker is not execution proof.
+
+The existing byte-only APIs perform no filesystem search. `DependencyContext`
+provides explicit immutable byte inputs, bounded filesystem discovery and scoped
+type/method/field/property/base/interface/generic/forwarder metadata binding.
+These are finite metadata capabilities, not a complete CLR or C# type system.
+See [DEPENDENCIES.md](DEPENDENCIES.md) and
+[dependency/presentation acceptance](acceptance/openra/DEPENDENCY_PRESENTATION.md).
 
 ### Detailed metadata contract
 
@@ -176,13 +196,22 @@ retain raw code bytes in a `Failed` result.
   `__cil_core_object_ctor_TOKEN(this)`: initialization on the same receiver,
   without allocation, virtual dispatch or an added null check. Only immediate
   core-base calls with unchanged entry this are admitted. Same-type MethodDef
-  delegation uses `__cil_ctor_call_TOKEN(this, ...)` without allocation or
-  repeated field initializers. Other receiver/base contexts and static initonly
-  writes fall back; body lowering is not a full initialization verifier.
+  delegation and direct local/external immediate-base initialization use
+  `__cil_ctor_call_TOKEN(this, ...)` without allocation or repeated field
+  initializers. Readable `: base(...)` / `: this(...)` is used only for a first
+  exact call with safely movable, exactly typed arguments; earlier field/argument
+  effects keep ordered intrinsic notation. Other receiver/base contexts and static
+  initonly writes fall back; this is not a complete initialization verifier.
 - Exact admitted core `Environment.TickCount` calls use `__cil_tick_count_TOKEN()`:
   a signed I4 clock read at the original instruction, evaluated once. Test-only
   controlled clocks preserve the full bit pattern; differing real times are not
   compared as if they were equal.
+- Readable postfix recovery combines an adjacent signed I4 load and unchecked
+  same-location write for owned unchanged-this fields or address-unexposed I4
+  locals. Live old-value snapshots stay at their original point; an immediate
+  sole old-value zero return can become `return unchecked(location-- == 0);`.
+  Checked/unsigned, changed/effectful receivers and intervening operations are
+  not forced into this form. Details and lowering statuses are unchanged.
 - `ldstr` retains exact UTF-16 code units, including embedded nulls and unpaired
   surrogates, using ASCII C# literal escapes. `__cil_ldstr_TOKEN(literal)` means
   load according to the original module's literal/interning policy, not allocate
@@ -242,9 +271,9 @@ are omitted. Unsigned reinterpretation, narrowing, Boolean conversions, overflow
 contexts and base-field receiver casts remain explicit; no expressions are moved
 or inlined for this simplification.
 
-The original assembly's metadata remains authoritative: source-level
-binding, accessibility, attribute payload effects, declarative security enforcement,
-full dispatch, type initialization context and assembly resolution are not
+The original assembly's metadata remains authoritative. Limited explicit-context
+binding supports only the source proofs described above; arbitrary accessibility,
+attribute/security effects, full dispatch and runtime assembly loading are not
 reconstructed by the writer. Their available metadata records are evidence, not
 permission to erase unknown effects. A method reported `Decompiled`
 is lowered within this restricted model, **not certified equivalent/recompilable
@@ -267,8 +296,9 @@ not sufficient to compile it. The core constructor test adapter performs the
 exact runtime constructor call, not a `new object()` substitution or a callback
 to an original selected constructor body. `callvirt` is still a fallback.
 
-Reference identities are metadata tokens scoped to the one input image, not
-strings compared across assemblies. Local ancestor checks stop at external
+Single-image body references are scoped metadata tokens, not strings compared
+across assemblies. The explicit metadata context separately binds actual scoped
+definitions; that does not widen the body checks below. Local ancestor checks stop at external
 bases; a local class can be assigned to the exact external TypeRef named in
 its local ancestor chain, but no further external inheritance is inferred.
 Direct reference-class MemberRef instance calls use `__cil_memberref_call_TOKEN`,
@@ -303,10 +333,15 @@ rejected. These are real coverage limits, not successful decompilations.
 | `cfg.rs` | Instruction-boundary validation and normal-flow basic blocks |
 | `ir.rs` | Small declared-type / evaluation-stack-category vocabulary |
 | `lift.rs` | Worklist stack propagation, stable values and conservative writer |
+| `readable.rs`, `readable/` | Bounded presentation without changing lowering admission |
+| `dependencies.rs`, `dependencies/` | Immutable scoped metadata binding and explicit search |
+| `discovery_paths.rs` | Bounded filesystem-only candidate enumeration |
+| `signature_guard.rs` | Checked signature preflight for dependency binding |
 | `lib.rs` | Public result/fallback contract |
 | `main.rs` | CLI selection, output and exit accounting |
 
-There is no general C# AST, SSA framework, pass manager or dependency resolver.
+There is no general C# AST, SSA framework or pass manager. The finite static
+metadata resolver is separate from body lowering; it is not a full CLR/C# type system.
 Every mutable load becomes a snapshot before later stores/calls. `dup` duplicates
 a stable value, not an expression. A popped call result is still evaluated.
 Every edge first snapshots all stack arguments, then assigns destination stack
@@ -341,12 +376,18 @@ DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --constructor
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --strings --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --exceptions --from-class
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --floats --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/dependency-oracle.py
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --properties --readable --from-class
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --post-decrement --readable --from-class --checked-carrier
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/frozen-constructors.py --corpus report/openra
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root
 `global.json`, or requiring .NET 11. It compiles CLI output from the **owned test
-fixtures only**, then compares returns and exception types with the original
-methods. It does not execute arbitrary user assemblies. This test is explicit,
+fixtures** for ordinary gates, then compares returns/exceptions/state. Explicit
+external gates additionally require the already acquired pinned OpenRA cache and
+execute only the selected bounded bodies/leaves, never the game or arbitrary user
+assemblies. This test is explicit,
 not silently skipped by `cargo test`.
 
 Fixture origins and regeneration: [tests/fixtures/README.md](tests/fixtures/README.md).

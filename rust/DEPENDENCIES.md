@@ -1,111 +1,144 @@
 # Static dependency analysis
 
-Dependency metadata is additional evidence, not execution and not a prerequisite
-for all single-image lowering. The byte-based `decompile` / `decompile_type`
-interfaces keep their existing contracts and never search the filesystem.
+Production reads local PE/metadata bytes only. It never starts dotnet, executes
+input/dependency code, reflection-loads assemblies, restores packages or installs
+an SDK. Existing byte-only `decompile` / `decompile_type` APIs remain detailed and
+perform no implicit filesystem search. `DependencyContext` is the explicit
+metadata/search interface. Resolving metadata does not expand body lowering.
 
-## Explicit context (implemented)
+## Inputs, identity and cache
 
-`DependencyContext::new(Vec<u8>)` owns an input snapshot.
-`add_reference(source, Vec<u8>)` supplies another immutable snapshot; the source
-string is provenance, not a file to open. `references()` exposes AssemblyRef
-requests and `resolve(token)` returns `Resolved`, `Missing`, `Conflicting` or
-`Invalid` results. Malformed request rows remain in `reference_failures()` with
-raw bytes and diagnostics, without suppressing independently analyzable bodies. Its method/class decompile entries append dependency evidence separately
-from body and metadata status counts. The byte context does not perform automatic lookup or change source binding.
-The CLI now probes neighboring DLL/EXE files by default after explicit inputs;
-system/package discovery and source binding are separate implementation milestones.
+`DependencyContext::new(Vec<u8>)` owns the main snapshot. `add_reference(source,
+Vec<u8>)` and `add_reference_reader(source, reader)` accept immutable supplied
+content; source strings are provenance labels, never paths to open. Defining
+module indexes, not public labels, select snapshots. Reader overflow is rejected
+before cache matching, so a truncated prefix cannot masquerade as a complete image.
 
-Identity matching uses assembly name, four-part version, culture, public-key token
-and content type. Names/cultures compare ASCII case-insensitively. Full keys use
-the ECMA-335 reversed final eight SHA-1 bytes, with the standardized ECMA public
-key/token regression. Neither token equality nor this context authenticates a
-publisher or verifies a strong-name signature. File names are never identities.
+Assembly matching includes name, four-part version, culture, public-key token and
+content type. Names/cultures compare ASCII case-insensitively. Full public keys
+use the standardized reversed final eight SHA-1 bytes. Tokens are legacy identity
+labels, **not publisher authentication or strong-name verification**. File names
+and framework-directory versions are not identities. Nominal signature keys quote
+structured identities; ambiguous human-readable display labels are not keys.
 
-Different explicitly supplied byte/file contents with the same requested identity
-are conflicting, not silently first-file-wins. Directory arguments instead define
-an ordered search path: the first exact identity in that deliberate order is used,
-not an arbitrary filesystem enumeration winner. Identical bytes are cached once; additional source
-labels are retained. Replacing a cached source's bytes is rejected. Limits include
-256 owned images (including main), 512 MiB total owned bytes and 65,536 references
-per image by default; 24-bit token-width validation also applies. These are bounded
-analysis guards, not a complete hostile-input verifier.
+Different explicit reference contents with the same identity conflict; identical
+reference bytes cache once and retain source aliases. Changed bytes at a cached
+source are rejected. Ordered search directories instead deliberately select the
+first exact identity, not an arbitrary enumeration winner. Distinct filesystem
+aliases can be conservatively rejected near the read budget; complete byte aliases
+still deduplicate. Malformed AssemblyRef rows retain token/reason/raw-row evidence.
 
-CLI automatic neighboring lookup and explicit inputs:
+## CLI and lookup order
 
 ```sh
+ilspy-lite decompile Assembly.dll --type Namespace.Type
 ilspy-lite decompile Assembly.dll --type Namespace.Type \
-  --reference Dependency.dll --reference-dir ./references --no-auto-references
+  --reference Dependency.dll --reference-dir ./references
+ilspy-lite decompile Assembly.dll --type Namespace.Type --no-auto-references
+ilspy-lite decompile Assembly.dll --type Namespace.Type \
+  --reference-version-policy same-major --details
 ```
 
-Options may follow the selector in any order; file/directory options repeat.
-Explicit files are considered before directories. For an unresolved identity,
-directories are checked in supplied order, DLL before EXE. An earlier wrong
-identity or damaged file cannot hide a later exact match. Missing/rejected optional
-inputs are diagnosed without suppressing independently recovered method bodies.
-Body summary/exit meanings remain separate from dependency completeness.
+Post-selector options may appear in any order; file/directory options repeat.
+Explicit files precede explicitly ordered directories (DLL before EXE), then
+these automatic families:
 
-Detailed output includes `.dependency-candidate` provenance/identity and
-`.dependency` request/resolution records. Readable output omits resolved metadata
-noise but retains missing/conflicting input warnings. Path labels and diagnostic
-text are escaped. Directory probing refuses reference names containing path
-separators, drive syntax, nulls or dot-directory names. File reads are bounded by
-the remaining context budget and filesystem candidates are canonicalized/cached.
-`add_reference_reader` accepts an explicit reader without opening any file itself.
-Its overflow sentinel is rejected before cache matching, so a truncated prefix
-cannot masquerade as a complete cached image. A distinct filesystem alias can be
-conservatively rejected near the read budget; complete byte inputs still deduplicate
-without charging image bytes again, and canonical same-path cache hits avoid I/O.
+1. The current referring image's directory.
+2. Adjacent `.deps.json` runtime assets in local NuGet caches, using metadata
+   target-framework hints and safe, case-preserving cache-relative paths.
+3. Installed .NET shared frameworks and separate SDK reference packs.
+4. Windows .NET Framework/GAC and common Mono layouts.
 
-## Discovery integration and version policy (in progress)
+A wrong/damaged early candidate does not hide a later exact identity. Selected
+references are searched transitively in each referrer's scope. Cycles, missing
+images, invalid requests and truncated searches retain diagnostics. `--no-auto-`
+`references` disables automatic families, not supplied file/directory inputs.
+Embedding defaults use empty injected roots; the CLI obtains host roots through
+environment/filesystem inspection only. Missing SDK/runtime installations are
+ordinary missing metadata, not prerequisites for independent bodies.
 
-Common candidate-path discovery is integrated: static framework attributes guide
-local/deps/NuGet/shared/reference-pack/Framework/GAC/Mono probes. In embedding,
-`ReferenceSearchOptions::default()` uses empty injected roots; the CLI injects
-filesystem-only host discovery. No dotnet process or SDK is required. Explicit
-files precede explicit directories, then automatic families. Every candidate still
-passes complete-byte identity checks. Transitive discovery, reference-image
-classification and bounded forwarder chains remain separate milestones.
+Framework hints come from static attributes, not the analyzer's runtime. Hints
+order relevant versions before deterministic alternatives; directories themselves
+never prove identity or compatibility. NuGet path containment and canonical
+candidate deduplication prevent traversal/alias loops. Silverlight, WinMD/Windows
+SDK specialization, archives/single-file containers, remote restore, RID-specific
+runtimeTargets selection and full runtimeconfig roll-forward are not implemented.
 
-Version policy defaults to `exact`; `--reference-version-policy same-major` is an
-explicit metadata-only opt-in to the nearest nonolder version with the same major,
-name, culture, token and content type. Search completes exact matching across all
-candidate locations before selecting an alternative. Every substitution is reported
-as requested versus selected identity and provenance, with a readable warning.
-This is not an API-compatibility or runtime-behavior guarantee; type bindings carry
-`exact_identity=false` through substituted assembly hops. Exact mode never takes
-this fallback. Same-version conflicting explicit snapshots remain conflicting.
+## Exact versus metadata-only replacement
 
-Type/member/property binding is implemented incrementally against explicit cached
-bytes; reference-versus-implementation classification and bounded type-forwarder
-chains are still pending. A resolved assembly is not proof that every member binds.
-Do not infer these from a resolved AssemblyRef status in the explicit-context
-milestone. `--no-auto-references` preserves the isolated mode as discovery is added.
+`ReferenceVersionPolicy::Exact` is the default. Explicit `SameMajor` selects the
+nearest nonolder version with the same major/name/culture/token/content type only
+when no exact candidate exists. Exact candidates are searched first. Inspection,
+read/enumeration errors and resource truncation explicitly mark discovery
+incomplete; incomplete discovery cannot authorize replacement. Exact matches
+found independently remain usable.
 
-Discovery will adapt the existing ILSpy rules, not copy their permissive identity
-shortcuts. Source map:
+Requested/selected identities, source and policy remain auditable. A substituted
+type has `exact_identity=false` through forwarding hops. This is **not** API or
+runtime compatibility proof. Property source recovery additionally checks owner,
+accessor-reference, accessor-definition and PropertySig type paths; an exact
+owner cannot launder substituted return/argument/property types into C# proof.
 
-- `ICSharpCode.Decompiler/Metadata/UniversalAssemblyResolver.cs`: probe families,
-  directory order, Framework/GAC/Mono handling, filesystem-only path search.
-- `ICSharpCode.Decompiler/Metadata/DotNetCorePathFinder.cs`: adjacent deps file,
-  local NuGet directories, shared frameworks and separate reference-pack lookup.
-- `DotNetCorePathFinderExtensions.cs`: metadata target-framework hints and
-  reference-assembly classification.
-- `TypeSystem/DecompilerTypeSystem.cs`: facade/exported-type traversal. Its
-  short-name/highest-version unification is not an identity proof and is not the
-  intended Rust policy.
+## Binding and metadata roles
 
-Important distinctions from a wholesale port: ordinary ILSpy core lookup does not
-include its separate reference-pack API; a version directory is not an assembly
-identity; an unrelated DLL in a directory does not prove a requested assembly
-exists; package cache paths must retain case; framework replacement must be
-explicit/auditable, not inferred from the analyzer's host runtime. A reference
-assembly supplies an API contract, not a runtime implementation to execute.
+`resolve_type`, `resolve_method`, `resolve_field`, `resolve_property_accessor` and
+`type_relations` return actual scoped definitions, original signatures and
+provenance. Binding covers assembly/module/nested scopes, named generic owner
+positions, MethodSpec arguments, real Property/MethodSemantics relationships,
+base/interface relation rows and bounded assembly type-forwarder chains. Forwarders
+must terminate in actual definitions; duplicates/cycles/missing terminals fail.
+Multi-module File exports remain unresolved. Method/field selection compares
+**declared** signatures before instantiation: `Echo(T)` and `Echo(int)` must not
+collapse on `Generic<int>`.
 
-Read-only source research is retained as
-`research/ilspy-dependency-discovery.md`, run
-`d16bbd96-c195-42a1-bb29-bae5da5eca48`. It maps local/deps/NuGet/shared/ref/GAC/Mono
-rules and proposes isolated fixtures; it did not execute DLLs or certify the Rust
-implementation. Production discovery must not invoke dotnet, install frameworks,
-fetch packages or require an SDK. Silverlight, WinMD and containers remain outside
-the confirmed first-round scope.
+Checked signature preflight validates EOF, canonical compression, full coded-token
+width and bounded work/depth before the pinned decoder can truncate evidence.
+The context is a finite metadata binder, not a full CLR verifier, inherited-member
+lookup engine, C# overload binder or generic/value-type/EH body implementation.
+Unresolved relation edges remain separate; a missing base does not erase an
+independently readable interface or method.
+
+`ReferenceContract` means a recognized ReferenceAssemblyAttribute or reference-pack
+provenance. `ImplementationImage` means no recognized contract marker was found;
+it is **not execution proof**. Malformed classification is `Unclassified`.
+Explicit-context output labels reference input stubs as API contracts, never
+runtime implementations. Dependency bodies are not executed or borrowed.
+
+## Reports and limits
+
+Body/metadata success counts and exit codes remain independent of dependency
+completeness. Readable output keeps conflicting/invalid/substituted warnings;
+large missing sets use one explicit unresolved-count notice rather than drowning
+the body. Exact calls remain visible when source binding cannot be proved.
+`--details` retains `.dependency-main`, `.dependency-candidate`, per-referrer
+`.dependency-request`, probe/diagnostic and final main-reference `.dependency`
+records, including requested/selected identities and metadata-only limits.
+Discovery request records are a trace, not a promise that later incomplete search
+or conflicting input could not change a final resolution.
+
+Default owned-image limits are 256 images including main, 512 MiB owned bytes and
+65,536 references/image; full 24-bit RIDs are checked. Closure limits include depth
+32 and 4,096 requests. `max_loader_probes` has a hard ceiling of 4,096 loader
+file/directory inspections, including missing candidates; zero stops before
+automatic enumeration. The path enumerator has separate per-call bounds: 64
+roots/family, 512 directory reads, 1,024 entries/directory, 32,768 total entries,
+16,384 probes, 1,024 candidates, 1 MiB deps JSON and 4,096 manifest visits. These
+are layered analysis guards, not a global 4,096-OS-call ceiling, memory sandbox or
+complete hostile-input verifier.
+
+## Sources and finite validation
+
+Rules were adapted from ILSpy's `Metadata/UniversalAssemblyResolver.cs`,
+`DotNetCorePathFinder.cs`, `DotNetCorePathFinderExtensions.cs` and
+`TypeSystem/DecompilerTypeSystem.cs`. Upstream MIT attribution remains in adapted
+source. Short-name/highest-version unification was deliberately not adopted.
+
+Owned tests cover isolated no-SDK/local/explicit order, deps/NuGet/shared/ref,
+Framework/GAC/Mono layouts, identity conflicts/missing/corrupt requests,
+replacement policy, generic positions, signature corruption, forwarding and
+resource boundaries. Windows/Mono directory tests are injected layouts on macOS,
+not native Windows execution. A native macOS .NET 10 filesystem-only lookup is
+recorded separately. The optional [independent binding oracle](tests/DEPENDENCY_ORACLE.md)
+compares 406 requests with PEReader catalogs and rejects 18 output mutations;
+required fixture-shape preflights prevent vacuous omission of interfaces and
+other promised shapes. Static binding is not generated-C# or runtime proof.
