@@ -232,7 +232,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         .any(|ty| ty.kind() == StackKind::Float)
         || instructions
             .iter()
-            .any(|i| i.opcode.canonical().name() == "conv.r4")
+            .any(|i| matches!(i.opcode.canonical().name(), "conv.r4" | "ldc.r4"))
     {
         out.push_str("// __cil_F is a nominal R4 evaluation/local value; CLI F precision is target-runtime-defined, not analyzer-host-defined.\n");
         out.push_str("// conv.r4 rounds to binary32 (nearest); local/argument snapshots do not add a storage rounding. Field storage and return/call boundaries stay explicit.\n");
@@ -338,6 +338,15 @@ impl Writer<'_, '_> {
                     return Err("bad i8 operand".into());
                 };
                 self.push(Ty::I8, format!("{n}L"))?;
+            }
+            "ldc.r4" => {
+                let Operand::R32(value) = i.operand else {
+                    return Err("bad r4 operand".into());
+                };
+                self.push(
+                    Ty::F4,
+                    format!("__cil_ldc_r4_bits(0x{:08X}u)", value.to_bits()),
+                )?;
             }
             "conv.i4" | "conv.i8" | "conv.u8" => {
                 let value = self.pop()?;
@@ -600,6 +609,11 @@ impl Writer<'_, '_> {
             "div" | "div.un" | "rem" | "rem.un" => {
                 let b = self.pop()?;
                 let a = self.pop()?;
+                if op == "div" && a.ty == Ty::F4 && b.ty == Ty::F4 {
+                    self.lines.push("// Floating division in target CLI F precision; IEEE special values, no integer divide checks or extra storage rounding.".into());
+                    self.push(Ty::F4, format!("__cil_div_F({}, {})", a.name, b.name))?;
+                    return Ok(());
+                }
                 expect(a.ty, b.ty)?;
                 let symbol = if op.starts_with("div") { "/" } else { "%" };
                 let (x, y) = if op.ends_with(".un") {

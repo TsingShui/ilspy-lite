@@ -95,8 +95,11 @@ retain raw code bytes in a `Failed` result.
   target runtime. Local/argument copies do not silently add storage rounding;
   field stores and call/return boundaries have explicit operations. The optional
   local .NET 10 adapter uses a Single carrier; it is not a cross-runtime CLI F
-  implementation. Float-to-integer, unsigned `conv.r.un`, R8 and floating
-  arithmetic remain unsupported in this slice.
+  implementation. `ldc.r4` preserves raw binary32 bits through
+  `__cil_ldc_r4_bits(bits)`; `div` on two nominal R4 values uses `__cil_div_F`,
+  retaining target CLI precision and IEEE special values without integer checks
+  or an extra storage rounding. Float-to-integer, unsigned `conv.r.un`, R8 and
+  other floating arithmetic remain unsupported.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Instance `.ctor` initialization bodies use `__cil_ctor_body_TOKEN`, distinct
@@ -209,7 +212,7 @@ error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, string operations, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
-floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, external instance calls,
+other floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized

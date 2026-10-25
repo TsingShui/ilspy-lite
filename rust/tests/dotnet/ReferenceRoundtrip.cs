@@ -315,12 +315,14 @@ internal static class ReferenceRoundtrip
 
     static void Floats(Assembly recovered, Dictionary<int, MethodInfo> methods)
     {
-        string[] names = { "FromI4", "FromU4Bits", "FromI8", "FromU8Bits", "FromNative", "FromUNativeBits", "Identity", "Choose", "Replace", "ConvertedSnapshot" };
+        string[] names = { "FromI4", "FromU4Bits", "FromI8", "FromU8Bits", "FromNative", "FromUNativeBits", "Identity", "Choose", "Replace", "ConvertedSnapshot",
+            "Unit", "NegativeZero", "Largest", "Infinite", "NotANumber", "Smallest", "Divide", "Scale", "DivideSnapshot" };
         if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
             throw new Exception("Float conversion selection drift");
         int[] i4 = { int.MinValue, -16777219, -16777217, -1, 0, 1, 16777215, 16777216, 16777217, 16777219, int.MaxValue };
         long[] i8 = { long.MinValue, -9007199254740993L, -16777217, -1, 0, 1, 16777217, 9007199254740993L, long.MaxValue };
         uint[] floatBits = { 0u, 0x80000000u, 1u, 0x007fffffu, 0x00800000u, 0x3f800000u, 0xbf800000u,
+            0x40400000u, 0x3eaaaaabu, 0x4f000000u,
             0x7f7fffffu, 0xff7fffffu, 0x7f800000u, 0xff800000u, 0x7fc01234u, 0xffc05678u };
         float[] floats = floatBits.Select(n => BitConverter.Int32BitsToSingle(unchecked((int)n))).ToArray();
         object[] Domain(Type type)
@@ -334,7 +336,7 @@ internal static class ReferenceRoundtrip
             if (type == typeof(float)) return floats.Cast<object>().ToArray();
             throw new Exception("Missing float-conversion domain");
         }
-        foreach (MethodInfo method in methods.Values.Where(m => m.IsStatic && m.Name != "Choose"))
+        foreach (MethodInfo method in methods.Values.Where(m => m.IsStatic && m.GetParameters().Length == 1))
             foreach (object value in Domain(method.GetParameters().Single().ParameterType))
                 Check(recovered, method, null, null, new[] { value }, new[] { value }, equal: SameFloatBits);
         MethodInfo choose = methods.Values.Single(m => m.Name == "Choose");
@@ -353,6 +355,32 @@ internal static class ReferenceRoundtrip
                 if (!SameFloatBits(Get(a, "Number"), Get(b, "Number"))) throw new Exception("Float storage bits changed");
             }, SameFloatBits);
         }
+        foreach (var constant in new[] { (Name: "Unit", Bits: 0x3f800000u), (Name: "NegativeZero", Bits: 0x80000000u),
+            (Name: "Largest", Bits: 0x7f7fffffu), (Name: "Infinite", Bits: 0x7f800000u),
+            (Name: "NotANumber", Bits: 0xffc00000u), (Name: "Smallest", Bits: 1u) })
+        {
+            MethodInfo method = methods.Values.Single(m => m.Name == constant.Name);
+            Check(recovered, method, null, null, Array.Empty<object>(), Array.Empty<object>(), equal: SameFloatBits);
+            object actual = recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!.Invoke(null, Array.Empty<object>());
+            if (actual is not float value || unchecked((uint)BitConverter.SingleToInt32Bits(value)) != constant.Bits)
+                throw new Exception("Float constant bits were not retained");
+        }
+        MethodInfo divide = methods.Values.Single(m => m.Name == "Divide");
+        MethodInfo divideSnapshot = methods.Values.Single(m => m.Name == "DivideSnapshot");
+        foreach (float numerator in floats)
+        foreach (float denominator in floats)
+        {
+            Check(recovered, divide, null, null, new object[] { numerator, denominator }, new object[] { numerator, denominator }, equal: SameFloatBits);
+            foreach (float replacement in new[] { 0f, -1f })
+            {
+                object a = New(cell), b = New(clone);
+                Set(a, "Number", numerator); Set(b, "Number", numerator);
+                Check(recovered, divideSnapshot, a, b, new object[] { denominator, replacement }, new object[] { denominator, replacement }, () => {
+                    if (!SameFloatBits(Get(a, "Number"), Get(b, "Number"))) throw new Exception("Division snapshot lost following store");
+                }, SameFloatBits);
+            }
+        }
+        Check(recovered, divideSnapshot, null, null, new object[] { 0f, 1f }, new object[] { 0f, 1f });
         MethodInfo snapshot = methods.Values.Single(m => m.Name == "ConvertedSnapshot");
         foreach (int initial in i4)
         foreach (int replacement in i4)
@@ -372,7 +400,7 @@ internal static class ReferenceRoundtrip
         }
         Check(recovered, replace, null, null, new object[] { 1f }, new object[] { 1f });
         Check(recovered, snapshot, null, null, new object[] { 1 }, new object[] { 1 });
-        Console.WriteLine($"Float conversions: bitwise binary32 outputs, signed stack interpretation, snapshots; local .NET runtime carrier, native width {IntPtr.Size * 8}, no cross-runtime F-precision claim.");
+        Console.WriteLine($"Floats: bitwise binary32 conversion/constants/division, IEEE special values and snapshots; local .NET runtime carrier, native width {IntPtr.Size * 8}, no cross-runtime F-precision claim.");
     }
 
     static void Exceptions(Assembly recovered, Dictionary<int, MethodInfo> methods)

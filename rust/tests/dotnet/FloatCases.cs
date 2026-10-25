@@ -42,6 +42,20 @@ public class Cells
         Count = replacement;
         return old;
     }
+    public static float Unit() => 1.0f;
+    public static float NegativeZero() => -0.0f;
+    public static float Largest() => float.MaxValue;
+    public static float Infinite() => float.PositiveInfinity;
+    public static float NotANumber() => float.NaN;
+    public static float Smallest() => float.Epsilon;
+    public static float Divide(float numerator, float denominator) => numerator / denominator;
+    public static float Scale(int value) => value / (float)int.MaxValue;
+    public float DivideSnapshot(float denominator, float replacement)
+    {
+        float result = Number / denominator;
+        Number = replacement;
+        return result;
+    }
     public static float UnsupportedUnsigned(uint value) => value;
     public static double UnsupportedDouble(double value) => value;
 }

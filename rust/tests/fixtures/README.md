@@ -109,13 +109,16 @@ without a separate hash manifest.
 The float snapshots (`float-release.bin`, `float-debug.bin`) come from
 `../dotnet/FloatCases.cs`. Regenerate with `python3 rust/tests/build-float-fixtures.py`
 and execute class bodies with `reference-roundtrip.py --floats --from-class`.
-Ten recovered bodies cover signed integer-to-binary32 conversion, exact rounding
-boundaries, float bit-preserving copies/selection/storage and old-value snapshots.
-Debug/Release passed 687 return/exception/state comparisons per configuration.
+Nineteen recovered bodies cover signed integer-to-binary32 conversion, exact
+rounding boundaries, raw constant bits, floating division, bit-preserving
+copies/selection/storage and old-value snapshots. Debug/Release passed 1,737
+return/exception/state comparisons per configuration, including signed zeros,
+subnormals, infinities, NaN payloads and zero denominators.
 The test-only `FloatSemantics.cs` adapter uses a Single carrier on the local
 64-bit .NET 10 runtime; original methods are invoked independently by exact IL
 calls. This does not test other runtimes' internal F precision. R8, unsigned
-conversion and floating arithmetic remain negative cases. Git pins snapshots.
+conversion, unsigned/mixed-category division and other floating arithmetic remain
+negative cases. Git pins snapshots.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated

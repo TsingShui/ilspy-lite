@@ -46,7 +46,7 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             );
         }
         let class = decompile_type(bytes, "FloatCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 11);
+        assert_eq!(class.summary.decompiled, 20);
         assert_eq!(class.summary.partial, 2);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
         for name in ["UnsupportedUnsigned", "UnsupportedDouble"] {
@@ -55,6 +55,60 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             assert!(result.text.contains("IL FALLBACK"));
         }
     }
+}
+
+#[test]
+fn float_constants_and_division_keep_bits_and_target_runtime_precision() {
+    for bytes in IMAGES {
+        for (name, bits) in [
+            ("Unit", "0x3F800000u"),
+            ("NegativeZero", "0x80000000u"),
+            ("Largest", "0x7F7FFFFFu"),
+            ("Infinite", "0x7F800000u"),
+            ("NotANumber", "0xFFC00000u"),
+            ("Smallest", "0x00000001u"),
+        ] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("__cil_ldc_r4_bits("));
+            assert!(result.text.contains(bits), "{name}: {}", result.text);
+        }
+        for name in ["Divide", "Scale", "DivideSnapshot"] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("__cil_div_F("));
+            assert!(
+                result
+                    .text
+                    .contains("CLI F precision is target-runtime-defined")
+            );
+        }
+    }
+}
+
+#[test]
+fn unsigned_or_mixed_float_division_remains_unsupported() {
+    let bytes = IMAGES[0];
+    let method = token(bytes, "Divide");
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md.tables().method_def(method & 0xffffff).unwrap();
+    let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+    let division = body
+        .instructions()
+        .map(Result::unwrap)
+        .find(|i| i.opcode.name() == "div")
+        .unwrap();
+    let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[start + division.offset as usize] = 0x5c; // div.un not a floating operation.
+    assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
+    let signature = md.blobs().get(row.signature).unwrap();
+    assert_eq!(signature, &[0x00, 0x02, 0x0c, 0x0c, 0x0c]);
+    let offset = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset + 4] = 0x08; // F / I4 is not an implicit conversion.
+    assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
 }
 
 #[test]

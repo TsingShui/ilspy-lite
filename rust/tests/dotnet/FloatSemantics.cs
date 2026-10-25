@@ -20,6 +20,8 @@
 // implementation-independent definition of CLI F or a production runtime library.
 public static class CilFloat
 {
+    public static float __cil_ldc_r4_bits(uint bits) => System.BitConverter.Int32BitsToSingle(unchecked((int)bits));
+    public static float __cil_div_F(float numerator, float denominator) => numerator / denominator;
     public static float __cil_conv_r4(int value) => unchecked((float)value);
     public static float __cil_conv_r4(long value) => unchecked((float)value);
     public static float __cil_conv_r4(nint value) => unchecked((float)value);
