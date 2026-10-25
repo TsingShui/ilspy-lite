@@ -935,6 +935,13 @@ fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
 // Rewrite generated C# identifiers without touching string/character literals.
 // Fully qualified names remain qualified; this is not source-name binding.
 fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
+    // Generated declarations start with a type. Preserve that syntactic slot
+    // separately even after an earlier pass removed its global:: qualifier.
+    let type_end = if value_declaration(text).is_some() {
+        text.split_once(" = ").and_then(|(left, _)| left.rfind(' '))
+    } else {
+        None
+    };
     let mut out = String::new();
     let mut chars = text.char_indices().peekable();
     while let Some((start, c)) = chars.next() {
@@ -963,7 +970,7 @@ fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
             let word = &text[start..end];
             let member_slot =
                 text[..start].trim_end().ends_with('.') || text[..start].trim_end().ends_with("::");
-            if member_slot {
+            if member_slot || type_end.is_some_and(|end| start < end) {
                 out.push_str(
                     word.strip_prefix('@')
                         .filter(|s| !keyword(s))
@@ -974,6 +981,30 @@ fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
             if word == "global" && text[end..].starts_with("::") {
                 chars.next();
                 chars.next();
+                while let Some(&(_, ch)) = chars.peek() {
+                    if ch == '.' || ch == '_' || ch == '@' || ch.is_ascii_alphanumeric() {
+                        let (start, _) = chars.next().unwrap();
+                        let mut end = start + ch.len_utf8();
+                        if ch == '@' || ch == '_' || ch.is_ascii_alphabetic() {
+                            while let Some(&(i, c)) = chars.peek() {
+                                if c == '_' || c.is_ascii_alphanumeric() {
+                                    chars.next();
+                                    end = i + c.len_utf8();
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                        let part = &text[start..end];
+                        out.push_str(
+                            part.strip_prefix('@')
+                                .filter(|s| !keyword(s))
+                                .unwrap_or(part),
+                        );
+                    } else {
+                        break;
+                    }
+                }
                 continue;
             }
             out.push_str(names.get(word).map(String::as_str).unwrap_or_else(|| {

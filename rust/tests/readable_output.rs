@@ -196,6 +196,23 @@ fn argument_renaming_does_not_rewrite_a_field_named_like_a_generated_argument() 
 }
 
 #[test]
+fn type_namespace_segments_are_not_substituted_as_generated_arguments() {
+    let bytes = include_bytes!("fixtures/reference-release.bin");
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let row = md.tables().type_def(2).unwrap();
+    let namespace = md.strings().str(row.type_namespace).unwrap().as_bytes();
+    assert_eq!(namespace, b"ReferenceCases");
+    let offset = namespace.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset..offset + namespace.len()].fill(0);
+    patched[offset..offset + 2].copy_from_slice(b"a0");
+    let result = decompile_type_with_style(&patched, "a0.Cell", OutputStyle::Readable).unwrap();
+    assert!(!result.text.contains("this.Cell"), "{}", result.text);
+    assert!(!result.text.contains("target.Cell"), "{}", result.text);
+    assert!(result.text.contains("namespace a0;"));
+}
+
+#[test]
 fn fallback_parameter_names_cannot_collide_with_existing_source_parameters() {
     let result =
         decompile_type_with_style(IMAGE, "ClassCases.PresentationCases", OutputStyle::Readable)
