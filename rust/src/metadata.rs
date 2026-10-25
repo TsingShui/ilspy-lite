@@ -1503,6 +1503,33 @@ impl<'a> Image<'a> {
             .map(crate::ir::Ty::from_param)
             .collect::<Result<Vec<_>>>()?;
         let ret = crate::ir::Ty::from_param(&sig.return_type)?;
+        if t.table() == Some(TableId::MemberRef)
+            && args
+                .iter()
+                .chain(std::iter::once(&ret))
+                .any(|ty| ty.kind() == crate::ir::StackKind::Float)
+        {
+            let reference = self.md.tables().member_ref(t.rid())?;
+            if self.core_type_name(reference.class)? != "Math"
+                || name != "Abs"
+                || sig.raw != [0x00, 0x01, 0x0c, 0x0c]
+            {
+                return Err(
+                    "external float call needs exact core Math.Abs(float32) identity/signature"
+                        .into(),
+                );
+            }
+            return Ok(MethodRef {
+                token: t.0,
+                receiver: None,
+                target: format!("__cil_abs_r4_{:08X}", t.0),
+                args,
+                ret,
+                core_object_constructor: None,
+                tick_count: false,
+                local_constructor: false,
+            });
+        }
         Ok(MethodRef {
             token: t.0,
             receiver,

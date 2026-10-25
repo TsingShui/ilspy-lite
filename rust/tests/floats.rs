@@ -46,7 +46,7 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             );
         }
         let class = decompile_type(bytes, "FloatCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 20);
+        assert_eq!(class.summary.decompiled, 22);
         assert_eq!(class.summary.partial, 2);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
         for name in ["UnsupportedUnsigned", "UnsupportedDouble"] {
@@ -82,6 +82,62 @@ fn float_constants_and_division_keep_bits_and_target_runtime_precision() {
                     .text
                     .contains("CLI F precision is target-runtime-defined")
             );
+        }
+    }
+}
+
+#[test]
+fn external_float_call_keeps_the_exact_core_abs_r4_overload() {
+    for bytes in IMAGES {
+        for name in ["Absolute", "AbsoluteSnapshot"] {
+            let method = token(bytes, name);
+            let result = decompile(bytes, method).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("__cil_abs_r4_0A"), "{}", result.text);
+            assert!(result.text.contains("System.Math::Abs"));
+            assert!(
+                result.text.contains("__cil_call_arg_r4(")
+                    && result.text.contains("__cil_call_result_r4(")
+            );
+        }
+        let method = token(bytes, "Absolute");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(method & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let call = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let reference = md
+            .tables()
+            .member_ref(call.operand.token().unwrap().rid())
+            .unwrap();
+        let owner = md.tables().type_ref(reference.class.rid()).unwrap();
+        let assembly = md
+            .tables()
+            .assembly_ref(owner.resolution_scope.rid())
+            .unwrap();
+        let sig = md.blobs().get(reference.signature).unwrap();
+        assert_eq!(sig, &[0x00, 0x01, 0x0c, 0x0c]);
+        for data in [
+            md.strings().str(assembly.name).unwrap().as_bytes(),
+            md.blobs().get(assembly.public_key_or_token).unwrap(),
+            md.strings().str(owner.type_name).unwrap().as_bytes(),
+            md.strings().str(reference.name).unwrap().as_bytes(),
+            &sig[2..],
+        ] {
+            let start = data.as_ptr() as usize - bytes.as_ptr() as usize;
+            let mut patched = bytes.to_vec();
+            patched[start] ^= 1;
+            let result = decompile(&patched, method).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
         }
     }
 }

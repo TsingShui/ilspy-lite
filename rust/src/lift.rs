@@ -739,10 +739,12 @@ impl Writer<'_, '_> {
                 if method.ret == Ty::Void {
                     self.lines.push(format!("{expression};"));
                 } else {
-                    self.push(
-                        method.ret.stack(),
-                        method.ret.load(&expression, self.image)?,
-                    )?;
+                    let result = if method.ret == Ty::R4 {
+                        format!("__cil_call_result_r4({expression})")
+                    } else {
+                        method.ret.load(&expression, self.image)?
+                    };
+                    self.push(method.ret.stack(), result)?;
                 }
             }
             "ldfld" | "stfld" => {

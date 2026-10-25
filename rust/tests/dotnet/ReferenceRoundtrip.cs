@@ -68,6 +68,12 @@ internal static class ReferenceRoundtrip
             Console.WriteLine($"default: {checks} return/exception/state comparisons passed");
             return;
         }
+        if (job.Kind == "random-float")
+        {
+            RandomFloat(recovered, members);
+            Console.WriteLine($"random-float: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "random-ranges")
         {
             RandomRanges(recovered, members);
@@ -113,6 +119,7 @@ internal static class ReferenceRoundtrip
         var clocks = new HashSet<int>();
         var strings = new HashSet<int>();
         var exceptions = new HashSet<int>();
+        var absoluteCalls = new HashSet<int>();
         bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
@@ -172,6 +179,16 @@ internal static class ReferenceRoundtrip
                         .SequenceEqual(new[] { typeof(string), typeof(string) }))
                     throw new Exception("Exception allocation target mismatch");
                 exceptions.Add(token);
+            }
+            foreach (Match match in Regex.Matches(source, @"__cil_abs_r4_([0-9A-F]{8})\("))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                MethodBase target = original.ManifestModule.ResolveMethod(token)!;
+                if (target is not MethodInfo absolute || absolute.DeclaringType != typeof(Math)
+                    || absolute.Name != "Abs" || !absolute.IsStatic || absolute.ReturnType != typeof(float)
+                    || !absolute.GetParameters().Select(p => p.ParameterType).SequenceEqual(new[] { typeof(float) }))
+                    throw new Exception("Float absolute-call target mismatch");
+                absoluteCalls.Add(token);
             }
             string declaration = method is ConstructorInfo ? $"__cil_ctor_body_{entry.Token:X8}(" : "@" + method.Name + "(";
             if (source.Split(declaration).Length != 2) throw new Exception("Ambiguous method declaration");
@@ -233,6 +250,12 @@ internal static class ReferenceRoundtrip
             code.Add("public static global::System.Action<int, string, string> ExceptionAllocationObserver;");
             foreach (int token in exceptions)
                 code.Add($"public static global::System.ArgumentOutOfRangeException __cil_newobj_{token:X8}(string parameter, string message) {{ ExceptionAllocationObserver?.Invoke({token}, parameter, message); return new global::System.ArgumentOutOfRangeException(parameter, message); }}");
+        }
+        if (absoluteCalls.Count != 0)
+        {
+            code.Add("public static global::System.Action<int, float> AbsoluteCallObserver;");
+            foreach (int token in absoluteCalls)
+                code.Add($"public static float __cil_abs_r4_{token:X8}(float value) {{ AbsoluteCallObserver?.Invoke({token}, value); return global::System.Math.Abs(value); }}");
         }
         string floatImports = hasFloat ? "using __cil_F = System.Single;\nusing static CilFloat;\n" : "";
         File.WriteAllText(output, floatImports + string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
@@ -316,7 +339,7 @@ internal static class ReferenceRoundtrip
     static void Floats(Assembly recovered, Dictionary<int, MethodInfo> methods)
     {
         string[] names = { "FromI4", "FromU4Bits", "FromI8", "FromU8Bits", "FromNative", "FromUNativeBits", "Identity", "Choose", "Replace", "ConvertedSnapshot",
-            "Unit", "NegativeZero", "Largest", "Infinite", "NotANumber", "Smallest", "Divide", "Scale", "DivideSnapshot" };
+            "Unit", "NegativeZero", "Largest", "Infinite", "NotANumber", "Smallest", "Divide", "Scale", "DivideSnapshot", "Absolute", "AbsoluteSnapshot" };
         if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
             throw new Exception("Float conversion selection drift");
         int[] i4 = { int.MinValue, -16777219, -16777217, -1, 0, 1, 16777215, 16777216, 16777217, 16777219, int.MaxValue };
@@ -400,6 +423,25 @@ internal static class ReferenceRoundtrip
         }
         Check(recovered, replace, null, null, new object[] { 1f }, new object[] { 1f });
         Check(recovered, snapshot, null, null, new object[] { 1 }, new object[] { 1 });
+        MethodInfo absoluteSnapshot = methods.Values.Single(m => m.Name == "AbsoluteSnapshot");
+        foreach (float initial in floats)
+        foreach (float replacement in floats)
+        {
+            object a = New(cell), b = New(clone);
+            Set(a, "Number", initial); Set(b, "Number", initial);
+            int calls = 0;
+            recovered.GetType("Recovered")!.GetField("AbsoluteCallObserver")!.SetValue(null, (Action<int, float>)((token, value) => {
+                if (!SameFloatBits(value, initial) || !SameFloatBits(Get(b, "Number"), replacement))
+                    throw new Exception("Absolute call moved across field mutation or lost old bits");
+                calls++;
+            }));
+            Check(recovered, absoluteSnapshot, a, b, new object[] { replacement }, new object[] { replacement }, () => {
+                if (calls != 1 || !SameFloatBits(Get(a, "Number"), Get(b, "Number")))
+                    throw new Exception("Absolute call missing or duplicated");
+            }, SameFloatBits);
+        }
+        recovered.GetType("Recovered")!.GetField("AbsoluteCallObserver")!.SetValue(null, null);
+        Check(recovered, absoluteSnapshot, null, null, new object[] { 1f }, new object[] { 1f });
         Console.WriteLine($"Floats: bitwise binary32 conversion/constants/division, IEEE special values and snapshots; local .NET runtime carrier, native width {IntPtr.Size * 8}, no cross-runtime F-precision claim.");
     }
 
@@ -904,6 +946,65 @@ internal static class ReferenceRoundtrip
         foreach (var test in cases)
             Check(recovered, test.Method, null, null, test.Args, test.Args, detailedExceptions: true);
         Console.WriteLine("Ranges: negative/degenerate/ordered-overflow bounds, detailed high parameter faults, full state and generation boundary effects; recovered seed/state dependencies only.");
+    }
+
+    static void RandomFloat(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        if (methods.Count != 4 || methods.Values.Count(m => m is ConstructorInfo) != 1)
+            throw new Exception("Random float selection drift");
+        ConstructorInfo constructor = (ConstructorInfo)methods.Values.Single(m => m is ConstructorInfo);
+        MethodInfo method = (MethodInfo)methods.Values.Single(m => m.Name == "NextFloat");
+        Type cell = constructor.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        if (methods.Values.Any(m => m.DeclaringType != cell) || method.ReturnType != typeof(float)
+            || method.GetParameters().Length != 0) throw new Exception("Random float signature drift");
+        Type bodies = recovered.GetType("Recovered")!;
+        bodies.GetField("CoreConstructorCall")!.SetValue(null, CoreObjectCall());
+        MethodInfo initialize = bodies.GetMethod($"M_{constructor.MetadataToken:X8}")!;
+        string[] scalars = { "index", "Last", "TotalCount" };
+        object[] noArgs = Array.Empty<object>();
+        foreach (int seed in new[] { 0, 1, -1, int.MinValue, int.MaxValue })
+        {
+            object a = New(cell), b = New(clone);
+            if (Original(constructor, a, new object[] { seed }) != null
+                || initialize.Invoke(null, new object[] { b, seed }) != null)
+                throw new Exception("Float gate seed initialization failed");
+            uint[] left = (uint[])Get(a, "mt"), right = (uint[])Get(b, "mt");
+            SameArray(left, right);
+            for (int draw = 0; draw < 1250; draw++)
+            {
+                int priorCount = (int)Get(b, "TotalCount");
+                int absoluteCalls = 0;
+                bodies.GetField("AbsoluteCallObserver")!.SetValue(null, (Action<int, float>)((token, value) => {
+                    if ((int)Get(b, "TotalCount") != unchecked(priorCount + 1)
+                        || float.IsNaN(value) || value < 0f || value > 1f)
+                        throw new Exception("Absolute call moved before random state update or changed its input");
+                    absoluteCalls++;
+                }));
+                Check(recovered, method, a, b, noArgs, noArgs, () => {
+                    SameFields(a, b, scalars); SameArray(left, right);
+                    if (left.Length != 624 || right.Length != 624 || !ReferenceEquals(Get(a, "mt"), left)
+                        || !ReferenceEquals(Get(b, "mt"), right) || absoluteCalls != 1)
+                        throw new Exception("NextFloat state identity or absolute-call count mismatch");
+                }, (x, y) => x is float && y is float && SameFloatBits(x, y));
+            }
+        }
+        bodies.GetField("AbsoluteCallObserver")!.SetValue(null, null);
+        foreach (int length in new[] { -1, 0, 1, 624 })
+        foreach (int index in new[] { -1, 0, 1, 623, 624 })
+        foreach (int total in new[] { int.MinValue, int.MaxValue })
+        {
+            object a = New(cell), b = New(clone);
+            uint[] left = length < 0 ? null : new uint[length], right = (uint[])left?.Clone();
+            Set(a, "mt", left); Set(b, "mt", right);
+            Set(a, "index", index); Set(b, "index", index);
+            Set(a, "Last", -19); Set(b, "Last", -19);
+            Set(a, "TotalCount", total); Set(b, "TotalCount", total);
+            Check(recovered, method, a, b, noArgs, noArgs, () => {
+                SameFields(a, b, scalars); SameArray(left, right);
+            }, SameFloatBits, detailedExceptions: true);
+        }
+        Check(recovered, method, null, null, noArgs, noArgs, detailedExceptions: true);
+        Console.WriteLine("NextFloat: 1,250 bitwise results per seed, all state after each call, exact Abs(float) dependency; local .NET 10 F carrier only.");
     }
 
     static void RandomState(Assembly recovered, Dictionary<int, MethodInfo> methods)

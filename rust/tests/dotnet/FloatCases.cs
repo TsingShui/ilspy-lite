@@ -56,6 +56,13 @@ public class Cells
         Number = replacement;
         return result;
     }
+    public static float Absolute(float value) => System.Math.Abs(value);
+    public float AbsoluteSnapshot(float replacement)
+    {
+        float old = Number;
+        Number = replacement;
+        return System.Math.Abs(old);
+    }
     public static float UnsupportedUnsigned(uint value) => value;
     public static double UnsupportedDouble(double value) => value;
 }

@@ -37,7 +37,9 @@ behavior; [RANDOM_SEED.md](RANDOM_SEED.md) also validates recovered seed
 allocation/initialization without copying original state.
 [RANDOM_DEFAULT.md](RANDOM_DEFAULT.md) validates controlled-clock default
 construction. [RANDOM_RANGES.md](RANDOM_RANGES.md) closes both range overloads
-and detailed exceptions/state. Floating contracts remain pending.
+and detailed exceptions/state. [RANDOM_FLOAT.md](RANDOM_FLOAT.md) closes NextFloat
+with exact Abs(float) target and bitwise/full-state comparisons. Combined
+milestone and independent-class delivery gates remain pending.
 
 ## Pinned input and provenance
 

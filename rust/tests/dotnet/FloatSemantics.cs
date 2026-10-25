@@ -30,5 +30,6 @@ public static class CilFloat
     public static float __cil_load_r4(float value) => value;
     public static float __cil_store_r4(float value) => value;
     public static float __cil_call_arg_r4(float value) => value;
+    public static float __cil_call_result_r4(float value) => value;
     public static float __cil_return_r4(float value) => value;
 }

@@ -99,7 +99,9 @@ retain raw code bytes in a `Failed` result.
   `__cil_ldc_r4_bits(bits)`; `div` on two nominal R4 values uses `__cil_div_F`,
   retaining target CLI precision and IEEE special values without integer checks
   or an extra storage rounding. Float-to-integer, unsigned `conv.r.un`, R8 and
-  other floating arithmetic remain unsupported.
+  other floating arithmetic remain unsupported. External floating calls admit
+  only the exact core `Math.Abs(float32)` overload, preserving its token and
+  argument/result boundaries through `__cil_abs_r4_TOKEN`.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Instance `.ctor` initialization bodies use `__cil_ctor_body_TOKEN`, distinct
@@ -286,12 +288,14 @@ The separate seed gate executes the recovered allocation/initialization body,
 compares all 624 words and follows it through continuous draws without copying
 original state. Default construction also passes its controlled-clock/delegation
 gate. Both range overloads also pass their return/detailed-exception/full-state
-gate, including original unchecked boundary behavior. Floating closure remains
-pending; see
+gate, including original unchecked boundary behavior. NextFloat also passes
+1,250 bitwise results per seed with full state and exact Abs(float) call checks.
+The combined milestone and independent-class gates remain pending; see
 [random state](acceptance/openra/RANDOM_STATE.md),
 [seed initialization](acceptance/openra/RANDOM_SEED.md) and
 [default constructor](acceptance/openra/RANDOM_DEFAULT.md) and
-[ranges](acceptance/openra/RANDOM_RANGES.md). The corpus is optional, downloaded
+[ranges](acceptance/openra/RANDOM_RANGES.md) and
+[floating closure](acceptance/openra/RANDOM_FLOAT.md). The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
 the selected bodies extracted from class output. This gate reuses verified local
