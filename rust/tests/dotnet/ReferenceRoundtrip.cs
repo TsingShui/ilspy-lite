@@ -62,7 +62,8 @@ internal static class ReferenceRoundtrip
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
-        if (job.Kind == "openra") OpenRa(original, recovered, methods);
+        if (job.Kind == "random-state") RandomState(recovered, methods);
+        else if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
         else if (job.Kind == "native") Native(recovered, methods);
         else if (job.Kind == "conversions") Conversions(recovered, methods);
@@ -170,6 +171,75 @@ internal static class ReferenceRoundtrip
     {
         foreach (string name in names)
             if (!Equals(Get(left, name), Get(right, name))) throw new Exception($"Field mismatch: {name}");
+    }
+
+    static void RandomState(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 2 || !methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] { "Generate", "Next" }.Order())
+            || methods.Values.Any(m => m.IsStatic || m.GetParameters().Length != 0))
+            throw new Exception("Random state method selection drift");
+        MethodInfo generate = methods.Values.Single(m => m.Name == "Generate");
+        MethodInfo next = methods.Values.Single(m => m.Name == "Next");
+        Type cell = next.DeclaringType!;
+        if (generate.DeclaringType != cell) throw new Exception("Random methods have different owners");
+        Type clone = recovered.GetType(cell.FullName!)!;
+        ConstructorInfo seedConstructor = cell.GetConstructor(new[] { typeof(int) })
+            ?? throw new Exception("Missing independent seed oracle");
+        string[] scalars = { "index", "Last", "TotalCount" };
+        object[] noArgs = Array.Empty<object>();
+        object CopyState(object original)
+        {
+            object copy = New(clone);
+            Set(copy, "mt", ((uint[])Get(original, "mt"))?.Clone());
+            foreach (string name in scalars) Set(copy, name, Get(original, name));
+            return copy;
+        }
+        void Step(MethodInfo method, object a, object b, bool returnsInt = false, bool expectSuccess = false)
+        {
+            uint[] left = (uint[])Get(a, "mt"), right = (uint[])Get(b, "mt");
+            Check(recovered, method, a, b, noArgs, noArgs, () => {
+                SameFields(a, b, scalars);
+                if (!ReferenceEquals(Get(a, "mt"), left) || !ReferenceEquals(Get(b, "mt"), right))
+                    throw new Exception("Random method replaced the state array");
+                if (left == null ? right != null : right == null || left.Length != right.Length)
+                    throw new Exception("Random state extent mismatch");
+                if (left != null)
+                    for (int i = 0; i < left.Length; i++)
+                        if (left[i] != right[i]) throw new Exception($"Random state mismatch at word {i}");
+            }, returnsInt ? (x, y) => x is int && y is int && Equals(x, y)
+                : expectSuccess ? (x, y) => x == null && y == null : null);
+        }
+        foreach (int seed in new[] { 0, 1, -1, int.MinValue, int.MaxValue })
+        {
+            // Setup only: copy the independent original constructor's initial state.
+            // This is not a recovered seed constructor or an initialization gate.
+            object a = seedConstructor.Invoke(new object[] { seed }), b = CopyState(a);
+            if (((uint[])Get(a, "mt")).Length != 624) throw new Exception("Pinned state extent drift");
+            for (int pass = 0; pass < 3; pass++) Step(generate, a, b, expectSuccess: true);
+            a = seedConstructor.Invoke(new object[] { seed }); b = CopyState(a);
+            for (int draw = 0; draw < 1250; draw++) Step(next, a, b, returnsInt: true);
+        }
+        foreach (int pattern in new[] { 0, 1, 2, 3 })
+        foreach (int length in new[] { -1, 0, 1, 623, 624, 625 })
+        {
+            uint[] state = length < 0 ? null : Enumerable.Range(0, length)
+                .Select(i => pattern == 0 ? 0u : pattern == 1 ? uint.MaxValue : pattern == 2
+                    ? (i % 2 == 0 ? 0x80000000u : 0x7fffffffu) : unchecked((uint)i * 2654435761u)).ToArray();
+            foreach (MethodInfo method in new[] { generate, next })
+            foreach (int index in new[] { int.MinValue, -1, 0, 1, 623, 624, int.MaxValue })
+            foreach (int total in new[] { int.MinValue, int.MaxValue })
+            {
+                object a = New(cell), b = New(clone);
+                Set(a, "mt", state?.Clone()); Set(b, "mt", state?.Clone());
+                Set(a, "index", index); Set(b, "index", index);
+                Set(a, "Last", -19); Set(b, "Last", -19);
+                Set(a, "TotalCount", total); Set(b, "TotalCount", total);
+                Step(method, a, b);
+            }
+        }
+        Check(recovered, generate, null, null, noArgs, noArgs);
+        Check(recovered, next, null, null, noArgs, noArgs);
+        Console.WriteLine("Random state: full words/scalars after each step; 1,250 consecutive draws per seed; original constructor used only as setup oracle, not recovered.");
     }
 
     static void OpenRa(Assembly original, Assembly recovered, Dictionary<int, MethodInfo> methods)

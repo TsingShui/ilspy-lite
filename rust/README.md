@@ -224,9 +224,11 @@ A pinned, external real-world corpus is described in
 [acceptance/openra/README.md](acceptance/openra/README.md). Its first milestone
 is four resource/ammo methods plus one supporting getter, not the whole game.
 These five bodies lower and pass a bounded behavioral gate. `MersenneTwister.Next`
-also lowers after the first array step, but its `Generate` call dependency is
-still unsupported and it has no behavioral acceptance yet. The other five
-primary candidates remain IL fallbacks. The corpus is optional, downloaded
+and its `Generate` dependency also lower and pass the separate full-state gate:
+1,250 consecutive calls per fixed seed, with each return and all state checked.
+Seed construction is only an independent setup oracle here, not recovered.
+Constructors, range/exception and floating closure remain pending; see
+[random state results](acceptance/openra/RANDOM_STATE.md). The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
 the selected bodies extracted from class output. This gate reuses verified local

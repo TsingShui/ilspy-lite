@@ -32,6 +32,8 @@ ignored `report/openra/class-inventory/`; only identities/contracts are tracked.
 metadata, including ownership, signatures, accessor relationships and status/exit
 accounting. Matching inventory is not successful semantic decompilation or a
 behavior gate. Results: [CLASS_MILESTONE.md](CLASS_MILESTONE.md).
+The separate [RANDOM_STATE.md](RANDOM_STATE.md) gate closes Generate/Next state
+behavior, not the still-pending constructor, range and floating contracts.
 
 ## Pinned input and provenance
 
