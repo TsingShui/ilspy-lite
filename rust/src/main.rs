@@ -1,11 +1,13 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{DependencyContext, OutputStyle, ReferenceSearchOptions, Result, Summary};
+use ilspy_lite::{
+    DependencyContext, OutputStyle, ReferenceSearchOptions, ReferenceVersionPolicy, Result, Summary,
+};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001> [--details]\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nDecompile options: --reference <assembly>, --reference-dir <directory> (repeatable), --no-auto-references.\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
+const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001> [--details]\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nDecompile options: --reference <assembly>, --reference-dir <directory> (repeatable), --no-auto-references, --reference-version-policy <exact|same-major>.\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
 
 fn main() -> std::process::ExitCode {
     match run() {
@@ -22,6 +24,7 @@ fn run() -> Result<u8> {
     let mut style = OutputStyle::Readable;
     let mut references = Vec::new();
     let mut reference_dirs = Vec::new();
+    let mut version_policy = ReferenceVersionPolicy::Exact;
     let mut automatic = args.first().is_some_and(|arg| arg == "decompile");
     if args.first().is_some_and(|arg| arg == "decompile") && args.len() >= 4 {
         let mut index = 4;
@@ -30,6 +33,13 @@ fn run() -> Result<u8> {
                 style = OutputStyle::Details;
             } else if args[index] == "--no-auto-references" {
                 automatic = false;
+            } else if args[index] == "--reference-version-policy" {
+                index += 1;
+                version_policy = match args.get(index).and_then(|s| s.to_str()) {
+                    Some("exact") => ReferenceVersionPolicy::Exact,
+                    Some("same-major") => ReferenceVersionPolicy::SameMajor,
+                    _ => return Err("--reference-version-policy needs exact or same-major".into()),
+                };
             } else if args[index] == "--reference" || args[index] == "--reference-dir" {
                 let directory = args[index] == "--reference-dir";
                 index += 1;
@@ -91,6 +101,7 @@ fn run() -> Result<u8> {
                 files: references,
                 directories: reference_dirs,
                 environment,
+                version_policy,
             },
         )?;
         reference_warnings.extend(

@@ -4,7 +4,10 @@
 mod members;
 pub use members::{PropertyAccessor, ResolvedMethod};
 
-use super::{AssemblyIdentity, DependencyContext, assembly_identity, reference_identity};
+use super::{
+    AssemblyIdentity, DependencyContext, ReferenceVersionPolicy, assembly_identity,
+    reference_identity,
+};
 use crate::{Result, metadata::Image};
 use cildec::{CodedIndex, TableId, Token};
 use std::collections::{BTreeMap, BTreeSet};
@@ -22,6 +25,8 @@ pub struct ResolvedType {
     pub definition: DefinitionLocation,
     pub name: String,
     pub flags: u32,
+    /// False when any assembly hop used an explicit metadata-version substitute.
+    pub exact_identity: bool,
 }
 
 impl DependencyContext {
@@ -72,6 +77,29 @@ impl DependencyContext {
                 found.push(index + 1);
             }
         }
+        if found.is_empty() && self.version_policy == ReferenceVersionPolicy::SameMajor {
+            let version = self
+                .candidates
+                .iter()
+                .filter(|(_, _, identity)| {
+                    requested.same_contract_scope(identity)
+                        && requested.version[0] == identity.version[0]
+                        && requested.version <= identity.version
+                })
+                .map(|(_, _, identity)| identity.version)
+                .min();
+            if let Some(version) = version {
+                found.extend(
+                    self.candidates
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, (_, _, identity))| {
+                            requested.same_contract_scope(identity) && identity.version == version
+                        })
+                        .map(|(index, _)| index + 1),
+                );
+            }
+        }
         found
     }
 
@@ -115,8 +143,14 @@ impl DependencyContext {
                     )?;
                     let namespace = image.md.strings().str(reference.type_namespace)?;
                     let name = image.md.strings().str(reference.type_name)?;
+                    let mut exact_identity = true;
                     let (target, parent) = match scope.table() {
-                        Some(TableId::AssemblyRef) => (self.binding_assembly(module, scope)?, None),
+                        Some(TableId::AssemblyRef) => {
+                            let target = self.binding_assembly(module, scope)?;
+                            exact_identity = reference_identity(&image, scope.rid())?
+                                .matches(&self.identity_source(target)?.0);
+                            (target, None)
+                        }
                         Some(TableId::Module) if scope.rid() == 1 => {
                             image.md.tables().module(1)?;
                             (module, None)
@@ -127,12 +161,15 @@ impl DependencyContext {
                             }
                             let (parent_module, parent) =
                                 self.bind_type_in(module, scope, visiting)?;
+                            exact_identity = parent.exact_identity;
                             (parent_module, Some(parent.definition.token & 0xffffff))
                         }
                         _ => return Err("unsupported type resolution scope".into()),
                     };
                     let rid = self.find_type(target, namespace, name, parent)?;
-                    Ok((target, self.describe_type(target, rid)?))
+                    let mut resolved = self.describe_type(target, rid)?;
+                    resolved.exact_identity = exact_identity;
+                    Ok((target, resolved))
                 }
                 _ => Err("type binding needs a TypeDef or TypeRef".into()),
             }
@@ -200,6 +237,7 @@ impl DependencyContext {
                 format!("{namespace}.{name}")
             },
             flags,
+            exact_identity: true,
         })
     }
 }

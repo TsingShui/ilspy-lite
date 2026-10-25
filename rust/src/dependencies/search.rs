@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use super::{AssemblyResolution, DependencyContext};
+use super::{AssemblyResolution, DependencyContext, ReferenceVersionPolicy};
 use crate::{
     Result,
     discovery_paths::{DiscoveryEnvironment, candidates_for},
@@ -19,6 +19,7 @@ pub struct ReferenceSearchOptions {
     pub files: Vec<PathBuf>,
     pub directories: Vec<PathBuf>,
     pub environment: DiscoveryEnvironment,
+    pub version_policy: ReferenceVersionPolicy,
 }
 
 impl Default for ReferenceSearchOptions {
@@ -28,6 +29,7 @@ impl Default for ReferenceSearchOptions {
             files: Vec::new(),
             directories: Vec::new(),
             environment: DiscoveryEnvironment::default(),
+            version_policy: ReferenceVersionPolicy::Exact,
         }
     }
 }
@@ -40,6 +42,7 @@ impl DependencyContext {
         input: &Path,
         options: &ReferenceSearchOptions,
     ) -> Result<()> {
+        self.version_policy = options.version_policy;
         let mut seen = BTreeSet::new();
         for path in &options.files {
             self.search_file(path, "ExplicitFile", &mut seen);
@@ -59,7 +62,7 @@ impl DependencyContext {
         let requests = self.references.clone();
         for reference in requests {
             if !matches!(
-                self.resolve(reference.token)?,
+                self.resolve_exact(reference.token)?,
                 AssemblyResolution::Missing { .. }
             ) {
                 continue;
@@ -99,7 +102,7 @@ impl DependencyContext {
             }
             for (path, origin) in paths {
                 if !matches!(
-                    self.resolve(reference.token)?,
+                    self.resolve_exact(reference.token)?,
                     AssemblyResolution::Missing { .. }
                 ) {
                     break;

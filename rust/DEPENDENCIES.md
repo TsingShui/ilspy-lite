@@ -57,12 +57,28 @@ cannot masquerade as a complete cached image. A distinct filesystem alias can be
 conservatively rejected near the read budget; complete byte inputs still deduplicate
 without charging image bytes again, and canonical same-path cache hits avoid I/O.
 
-## Automatic discovery and binding (pending)
+## Discovery integration and version policy (in progress)
 
-Neighboring-file discovery is implemented and can be disabled. The confirmed
-goal additionally requires system/package discovery, strict
-versus explicit compatible-version policy, actual type/member/property binding,
-reference-versus-implementation classification and bounded type-forwarder chains.
+Common candidate-path discovery is integrated: static framework attributes guide
+local/deps/NuGet/shared/reference-pack/Framework/GAC/Mono probes. In embedding,
+`ReferenceSearchOptions::default()` uses empty injected roots; the CLI injects
+filesystem-only host discovery. No dotnet process or SDK is required. Explicit
+files precede explicit directories, then automatic families. Every candidate still
+passes complete-byte identity checks. Transitive discovery, reference-image
+classification and bounded forwarder chains remain separate milestones.
+
+Version policy defaults to `exact`; `--reference-version-policy same-major` is an
+explicit metadata-only opt-in to the nearest nonolder version with the same major,
+name, culture, token and content type. Search completes exact matching across all
+candidate locations before selecting an alternative. Every substitution is reported
+as requested versus selected identity and provenance, with a readable warning.
+This is not an API-compatibility or runtime-behavior guarantee; type bindings carry
+`exact_identity=false` through substituted assembly hops. Exact mode never takes
+this fallback. Same-version conflicting explicit snapshots remain conflicting.
+
+Type/member/property binding is implemented incrementally against explicit cached
+bytes; reference-versus-implementation classification and bounded type-forwarder
+chains are still pending. A resolved assembly is not proof that every member binds.
 Do not infer these from a resolved AssemblyRef status in the explicit-context
 milestone. `--no-auto-references` preserves the isolated mode as discovery is added.
 

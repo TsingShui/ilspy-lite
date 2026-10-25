@@ -24,8 +24,11 @@ pub struct AssemblyIdentity {
 
 impl AssemblyIdentity {
     fn matches(&self, other: &Self) -> bool {
+        self.version == other.version && self.same_contract_scope(other)
+    }
+
+    fn same_contract_scope(&self, other: &Self) -> bool {
         self.name.eq_ignore_ascii_case(&other.name)
-            && self.version == other.version
             && self.culture.eq_ignore_ascii_case(&other.culture)
             && self.public_key_token == other.public_key_token
             && self.content_type == other.content_type
@@ -74,6 +77,15 @@ pub struct ReferenceFailure {
     pub raw_row: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum ReferenceVersionPolicy {
+    #[default]
+    Exact,
+    /// Explicit opt-in metadata substitution to the nearest nonolder same-major
+    /// identity. This does not certify API compatibility or runtime behavior.
+    SameMajor,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AssemblyResolution {
     Resolved {
@@ -89,6 +101,12 @@ pub enum AssemblyResolution {
     },
     Invalid {
         failure: ReferenceFailure,
+    },
+    Substituted {
+        requested: AssemblyIdentity,
+        selected: AssemblyIdentity,
+        source: String,
+        policy: ReferenceVersionPolicy,
     },
 }
 
@@ -120,6 +138,7 @@ pub struct DependencyContext {
     limits: DependencyLimits,
     search_evidence: Vec<String>,
     search_diagnostics: Vec<String>,
+    version_policy: ReferenceVersionPolicy,
 }
 
 impl DependencyContext {
@@ -163,6 +182,7 @@ impl DependencyContext {
             limits,
             search_evidence: Vec::new(),
             search_diagnostics: Vec::new(),
+            version_policy: ReferenceVersionPolicy::Exact,
         })
     }
 
@@ -237,6 +257,22 @@ impl DependencyContext {
                     format!("requested={:?} sources={sources:?}", requested.to_string()),
                     Some(format!(
                         "Dependency conflicting: {requested}; no candidate selected."
+                    )),
+                ),
+                AssemblyResolution::Substituted {
+                    requested,
+                    selected,
+                    source,
+                    policy,
+                } => (
+                    "substituted",
+                    format!(
+                        "requested={:?} selected={:?} source={source:?} policy={policy:?} evidence=metadata-only",
+                        requested.to_string(),
+                        selected.to_string()
+                    ),
+                    Some(format!(
+                        "Dependency version substituted: {requested} -> {selected}; {policy:?}, metadata only, not original-runtime behavior proof."
                     )),
                 ),
                 AssemblyResolution::Invalid { failure } => (
@@ -328,6 +364,49 @@ impl DependencyContext {
     }
 
     pub fn resolve(&self, reference_token: u32) -> Result<AssemblyResolution> {
+        let exact = self.resolve_exact(reference_token)?;
+        let AssemblyResolution::Missing { requested } = exact else {
+            return Ok(exact);
+        };
+        if self.version_policy == ReferenceVersionPolicy::Exact {
+            return Ok(AssemblyResolution::Missing { requested });
+        }
+        let selected = self
+            .candidates
+            .iter()
+            .filter(|(_, _, identity)| {
+                requested.same_contract_scope(identity)
+                    && requested.version[0] == identity.version[0]
+                    && requested.version <= identity.version
+            })
+            .map(|(_, _, identity)| identity.version)
+            .min();
+        let Some(version) = selected else {
+            return Ok(AssemblyResolution::Missing { requested });
+        };
+        let candidates = self
+            .candidates
+            .iter()
+            .filter(|(_, _, identity)| {
+                requested.same_contract_scope(identity) && identity.version == version
+            })
+            .collect::<Vec<_>>();
+        if candidates.len() != 1 {
+            return Ok(AssemblyResolution::Conflicting {
+                requested,
+                sources: candidates.iter().map(|(s, _, _)| s.clone()).collect(),
+            });
+        }
+        let (source, _, selected) = candidates[0];
+        Ok(AssemblyResolution::Substituted {
+            requested,
+            selected: selected.clone(),
+            source: source.clone(),
+            policy: self.version_policy,
+        })
+    }
+
+    fn resolve_exact(&self, reference_token: u32) -> Result<AssemblyResolution> {
         if let Some(failure) = self
             .reference_failures
             .iter()
