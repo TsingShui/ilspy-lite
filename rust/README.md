@@ -39,6 +39,11 @@ Constants preserve decoded values and original bytes (strings as UTF-16 units,
 floating constants as bits). Field layout and marshalling descriptors are retained;
 RVA data is read only for a known primitive or fieldless explicit-layout extent,
 otherwise its location and unresolved extent are shown without guessing.
+Every method also has an original metadata signature/flags header, implementation
+flags, parameter rows/defaults and an explicit lowering status. P/Invoke mappings
+retain the exact entry name and module identity without loading the library.
+If a method signature is unreadable but its body can be parsed, failed output
+keeps raw body bytes and all independently decodable IL evidence.
 Output is not a compilable class or project.
 
 Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:

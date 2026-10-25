@@ -24,7 +24,20 @@ pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
 }
 
 fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<DecompiledMethod> {
-    let name = image.name(token)?;
+    let name = match image.name(token) {
+        Ok(name) => name,
+        Err(error) => {
+            let Some(body) = image.body(token)? else {
+                return Err(error);
+            };
+            return Ok(failed_body(
+                image,
+                &format!("// token 0x{token:08X}\n"),
+                &body,
+                &error.to_string(),
+            ));
+        }
+    };
     let Some(body) = image.body(token)? else {
         return Ok(DecompiledMethod {
             status: Status::Declaration,
@@ -44,18 +57,12 @@ fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<Decompile
             let raw = match image.disassemble(token) {
                 Ok(raw) => raw,
                 Err(decode_error) => {
-                    return Ok(DecompiledMethod {
-                        status: Status::Failed,
-                        text: format!(
-                            "{banner}// FAILED: {}\n// Raw IL bytes (undecoded): {:02X?}\n// Header: maxstack={} flags={:?} locals={:?}\n// EH: {:?}\n",
-                            metadata::escape_line(&decode_error.to_string()),
-                            body.code,
-                            body.max_stack,
-                            body.flags,
-                            body.local_var_sig,
-                            body.exception_handlers
-                        ),
-                    });
+                    return Ok(failed_body(
+                        image,
+                        &banner,
+                        &body,
+                        &decode_error.to_string(),
+                    ));
                 }
             };
             let commented = raw.lines().map(|s| format!("// {s}\n")).collect::<String>();
@@ -67,6 +74,39 @@ fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<Decompile
                 ),
             })
         }
+    }
+}
+
+fn failed_body(
+    image: &metadata::Image<'_>,
+    banner: &str,
+    body: &cildec::MethodBody<'_>,
+    error: &str,
+) -> DecompiledMethod {
+    let mut text = format!(
+        "{banner}// FAILED: {}\n// Raw IL bytes (undecoded): {:02X?}\n// Header: maxstack={} flags={:?} locals={:?}\n// EH: {:?}\n// Unknown sections: {:?}\n",
+        metadata::escape_line(error),
+        body.code,
+        body.max_stack,
+        body.flags,
+        body.local_var_sig,
+        body.exception_handlers,
+        body.unknown_sections
+    );
+    match image.body_evidence(body) {
+        Ok(evidence) => {
+            for line in evidence.lines() {
+                text.push_str(&format!("// {line}\n"));
+            }
+        }
+        Err(error) => text.push_str(&format!(
+            "// Body evidence decoding failed: {}\n",
+            metadata::escape_line(&error.to_string())
+        )),
+    }
+    DecompiledMethod {
+        status: Status::Failed,
+        text,
     }
 }
 
@@ -114,6 +154,19 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
             }
         }
         for token in ty.methods {
+            match image.method_declaration(token, &ty.name) {
+                Ok((declaration, failures)) => {
+                    text.push_str(&declaration);
+                    summary.metadata_failed += failures;
+                }
+                Err(error) => {
+                    summary.metadata_failed += 1;
+                    text.push_str(&format!(
+                        ".method 0x{token:08X}\n// FAILED metadata: {}\n",
+                        metadata::escape_line(&error.to_string())
+                    ));
+                }
+            }
             let result = match decompile_method(&image, token) {
                 Ok(result) => result,
                 Err(error) => DecompiledMethod {
@@ -125,6 +178,10 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 },
             };
             summary.record(&result.status);
+            text.push_str(&format!(
+                ".method-status 0x{token:08X} {:?}\n",
+                result.status
+            ));
             text.push_str(&result.text);
             text.push('\n');
         }

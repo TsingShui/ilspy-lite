@@ -68,3 +68,14 @@ public static class DataFields
 {
     public static int[] Values() => new[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 }
+public abstract class Methods
+{
+    private static int Hidden(int value) => value;
+    public static int Pick(int value) => value;
+    public static long Pick(long value) => value;
+    public abstract int Abstract(int input);
+    public static int Optional(int amount = -7) => amount;
+    public static void ByRef(ref int input, out int output) { output = input; }
+    [System.Runtime.InteropServices.DllImport("fixture-native", EntryPoint = "native_count")]
+    public static extern int Native(int count);
+}

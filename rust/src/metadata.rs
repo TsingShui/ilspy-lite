@@ -76,6 +76,15 @@ impl<'a> Image<'a> {
             }
             prior = start;
         }
+        let param_limit = tables.row_count(TableId::Param) + 1;
+        let mut prior = 1;
+        for (_, method) in tables.iter::<MethodDefRow>() {
+            let start = method?.param_list.get();
+            if start < prior || start > param_limit {
+                return Err("invalid or overlapping method parameter ownership ranges".into());
+            }
+            prior = start;
+        }
         let mut parents = vec![None; rows.len()];
         for (_, row) in tables.iter::<NestedClassRow>() {
             let row = row?;
@@ -385,38 +394,9 @@ impl<'a> Image<'a> {
                 )
             }
         };
-        let constants = self
-            .md
-            .tables()
-            .rows_for_parent(TableId::Constant, Token(token))?;
-        if constants.len() > 1 || (row.flags & 0x8000 != 0) != !constants.is_empty() {
-            failures += 1;
-            text.push_str("// FAILED metadata: inconsistent field constant association\n");
-        }
-        for rid in constants {
-            let constant = self.md.tables().row::<cildec::tables::ConstantRow>(rid)?;
-            let raw = self.md.blobs().get(constant.value);
-            let evidence = match &raw {
-                Ok(bytes) => format!("bytes={bytes:02X?}"),
-                Err(_) => format!("value-blob-index=0x{:08X}", constant.value.get()),
-            };
-            let value = raw
-                .map_err(Into::into)
-                .and_then(|raw| constant_value(constant.type_raw, raw));
-            match value {
-                Ok(value) => text.push_str(&format!(
-                    ".constant 0x{:08X} parent=0x{token:08X} type=0x{:04X} value={value} {evidence}\n",
-                    0x0b000000 | rid, constant.type_raw
-                )),
-                Err(error) => {
-                    failures += 1;
-                    text.push_str(&format!(
-                        ".constant 0x{:08X} parent=0x{token:08X} type=0x{:04X} {evidence}\n// FAILED metadata: {}\n",
-                        0x0b000000 | rid, constant.type_raw, escape_line(&error.to_string())
-                    ));
-                }
-            }
-        }
+        let (constants, errors) = self.constant_metadata(token, row.flags & 0x8000 != 0)?;
+        text.push_str(&constants);
+        failures += errors;
         for rid in self
             .md
             .tables()
@@ -527,6 +507,200 @@ impl<'a> Image<'a> {
         })
     }
 
+    pub fn method_declaration(&self, token: u32, owner: &str) -> Result<(String, usize)> {
+        let row = self.row(token)?;
+        let name = self.md.strings().str(row.name)?;
+        let blob = self.md.blobs().get(row.signature);
+        let evidence = match &blob {
+            Ok(bytes) => format!("signature-bytes={bytes:02X?}"),
+            Err(_) => format!("signature-blob-index=0x{:08X}", row.signature.get()),
+        };
+        let signature: Result<MethodSig<'_>> = blob
+            .map_err(Into::into)
+            .and_then(|bytes| MethodSig::parse(bytes).map_err(Into::into));
+        let mut failures = 0;
+        let mut text = format!(
+            ".method 0x{token:08X} flags=0x{:04X} impl-flags=0x{:04X} rva=0x{:08X} {} ",
+            row.flags,
+            row.impl_flags,
+            row.rva,
+            method_flags(row.flags)
+        );
+        match &signature {
+            Ok(sig) => {
+                let mut references = Vec::new();
+                let checked = (|| -> Result<()> {
+                    for param in std::iter::once(&sig.return_type)
+                        .chain(&sig.params)
+                        .chain(&sig.vararg_params)
+                    {
+                        self.signature_references(&param.type_, 0, &mut references)?;
+                        for modifier in &param.custom_mods {
+                            references.push(self.type_reference(modifier.type_token, 0)?);
+                        }
+                    }
+                    Ok(())
+                })();
+                text.push_str(&format!(
+                    "{} // {evidence} parsed={sig:?} references=[{}]\n",
+                    escape_line(&Names::new(&self.md).method_sig(sig, &format!("{owner}::{name}"))),
+                    references.join("; ")
+                ));
+                if let Err(error) = checked {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "// FAILED metadata: {}\n",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    "{}::{} // {evidence}\n// FAILED metadata: {}\n",
+                    escape_line(owner),
+                    escape_line(name),
+                    escape_line(&error.to_string())
+                ));
+            }
+        }
+        text.push_str(&format!(
+            ".implementation 0x{token:08X} {}\n",
+            implementation_flags(row.impl_flags)
+        ));
+        let tables = self.md.tables();
+        let start = row.param_list.get();
+        let end = if token & 0xffffff == tables.row_count(TableId::MethodDef) {
+            tables.row_count(TableId::Param) + 1
+        } else {
+            tables.method_def((token & 0xffffff) + 1)?.param_list.get()
+        };
+        if start == 0 || start > end || end > tables.row_count(TableId::Param) + 1 {
+            failures += 1;
+            text.push_str(&format!(
+                "// FAILED metadata: invalid parameter range {start}..{end}\n"
+            ));
+        } else {
+            let mut sequences = std::collections::BTreeSet::new();
+            for rid in start..end {
+                let param = tables.param(rid)?;
+                let name = match self.md.strings().str(param.name) {
+                    Ok(name) => escape_line(name),
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!(
+                            "// FAILED metadata: {}\n",
+                            escape_line(&error.to_string())
+                        ));
+                        format!("<unreadable name-index=0x{:08X}>", param.name.get())
+                    }
+                };
+                text.push_str(&format!(
+                    ".param 0x{:08X} method=0x{token:08X} sequence={} flags=0x{:04X} name={}\n",
+                    0x08000000 | rid,
+                    param.sequence,
+                    param.flags,
+                    name
+                ));
+                if !sequences.insert(param.sequence)
+                    || signature
+                        .as_ref()
+                        .is_ok_and(|sig| usize::from(param.sequence) > sig.params.len())
+                {
+                    failures += 1;
+                    text.push_str("// FAILED metadata: invalid or duplicate parameter sequence\n");
+                }
+                match self.constant_metadata(0x08000000 | rid, param.flags & 0x1000 != 0) {
+                    Ok((constants, errors)) => {
+                        text.push_str(&constants);
+                        failures += errors;
+                    }
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!(
+                            "// FAILED metadata: {}\n",
+                            escape_line(&error.to_string())
+                        ));
+                    }
+                }
+            }
+        }
+        let imports = tables.rows_for_parent(TableId::ImplMap, Token(token))?;
+        if imports.len() > 1 || (row.flags & 0x2000 != 0) != !imports.is_empty() {
+            failures += 1;
+            text.push_str("// FAILED metadata: inconsistent method import association\n");
+        }
+        for rid in imports {
+            let import = tables.row::<cildec::tables::ImplMapRow>(rid)?;
+            text.push_str(&format!(
+                ".pinvoke 0x{:08X} method=0x{token:08X} flags=0x{:04X} scope=0x{:08X} ",
+                0x1c000000 | rid,
+                import.mapping_flags,
+                0x1a000000 | import.import_scope.get()
+            ));
+            let target = (|| -> Result<String> {
+                let module = tables.module_ref(import.import_scope.get())?;
+                Ok(format!(
+                    "name={} module={}\n",
+                    escape_line(self.md.strings().str(import.import_name)?),
+                    escape_line(self.md.strings().str(module.name)?)
+                ))
+            })();
+            match target {
+                Ok(target) => text.push_str(&target),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "name-index=0x{:08X}\n// FAILED metadata: {}\n",
+                        import.import_name.get(),
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        Ok((text, failures))
+    }
+
+    fn constant_metadata(&self, parent: u32, has_default: bool) -> Result<(String, usize)> {
+        let constants = self
+            .md
+            .tables()
+            .rows_for_parent(TableId::Constant, Token(parent))?;
+        let mut text = String::new();
+        let mut failures = 0;
+        if constants.len() > 1 || has_default != !constants.is_empty() {
+            failures += 1;
+            text.push_str("// FAILED metadata: inconsistent constant association\n");
+        }
+        for rid in constants {
+            let constant = self.md.tables().row::<cildec::tables::ConstantRow>(rid)?;
+            let raw = self.md.blobs().get(constant.value);
+            let evidence = match &raw {
+                Ok(bytes) => format!("bytes={bytes:02X?}"),
+                Err(_) => format!("value-blob-index=0x{:08X}", constant.value.get()),
+            };
+            let value = raw
+                .map_err(Into::into)
+                .and_then(|raw| constant_value(constant.type_raw, raw));
+            text.push_str(&format!(
+                ".constant 0x{:08X} parent=0x{parent:08X} type=0x{:04X} ",
+                0x0b000000 | rid,
+                constant.type_raw
+            ));
+            match value {
+                Ok(value) => text.push_str(&format!("value={value} {evidence}\n")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "{evidence}\n// FAILED metadata: {}\n",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        Ok((text, failures))
+    }
+
     pub fn row(&self, token: u32) -> Result<MethodDefRow> {
         if token >> 24 != 6 || token & 0xffffff == 0 {
             return Err("expected nonzero MethodDef token (0x06xxxxxx)".into());
@@ -579,11 +753,16 @@ impl<'a> Image<'a> {
             out.push_str("// no IL body (abstract, extern, or runtime supplied)\n");
             return Ok(out);
         };
-        out.push_str(&format!(
+        out.push_str(&self.body_evidence(&body)?);
+        Ok(out)
+    }
+
+    pub fn body_evidence(&self, body: &MethodBody<'_>) -> Result<String> {
+        let mut out = format!(
             ".maxstack {}\n.initlocals {}\n",
             body.max_stack,
             body.flags.init_locals()
-        ));
+        );
         for (chunk, bytes) in body.code.chunks(24).enumerate() {
             out.push_str(&format!(
                 ".code-bytes IL_{:04X}: {:02X?}\n",
@@ -899,6 +1078,66 @@ pub(crate) struct MethodRef {
     pub target: String,
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
+}
+
+fn method_flags(flags: u16) -> String {
+    let mut names = vec![
+        [
+            "privatescope",
+            "private",
+            "famandassem",
+            "assembly",
+            "family",
+            "famorassem",
+            "public",
+            "reserved-access",
+        ][(flags & 7) as usize],
+    ];
+    for (bit, name) in [
+        (0x10, "static"),
+        (0x20, "final"),
+        (0x40, "virtual"),
+        (0x80, "hidebysig"),
+        (0x100, "newslot"),
+        (0x200, "strict"),
+        (0x400, "abstract"),
+        (0x800, "specialname"),
+        (0x1000, "rtspecialname"),
+        (0x2000, "pinvokeimpl"),
+        (0x4000, "hassecurity"),
+        (0x8000, "reqsecobj"),
+    ] {
+        if flags & bit != 0 {
+            names.push(name);
+        }
+    }
+    names.join(" ")
+}
+
+fn implementation_flags(flags: u16) -> String {
+    let mut names = vec![
+        ["cil", "native", "optil", "runtime"][(flags & 3) as usize],
+        if flags & 4 == 0 {
+            "managed"
+        } else {
+            "unmanaged"
+        },
+    ];
+    for (bit, name) in [
+        (0x8, "noinlining"),
+        (0x10, "forwardref"),
+        (0x20, "synchronized"),
+        (0x40, "nooptimization"),
+        (0x80, "preservesig"),
+        (0x100, "aggressiveinlining"),
+        (0x200, "aggressiveoptimization"),
+        (0x1000, "internalcall"),
+    ] {
+        if flags & bit != 0 {
+            names.push(name);
+        }
+    }
+    names.join(" ")
 }
 
 fn constant_value(kind: u16, bytes: &[u8]) -> Result<String> {

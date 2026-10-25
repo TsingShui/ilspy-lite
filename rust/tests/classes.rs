@@ -359,7 +359,7 @@ fn legitimate_bodyless_member_keeps_declaration_status() {
     let (offset, token) = method_row_offset(bytes, "ClassCases.Mixed", "Unsupported");
     let mut patched = bytes.to_vec();
     patched[offset..offset + 4].copy_from_slice(&0u32.to_le_bytes());
-    patched[offset + 6..offset + 8].copy_from_slice(&0x2016u16.to_le_bytes()); // PInvokeImpl
+    patched[offset + 4..offset + 6].copy_from_slice(&0x0003u16.to_le_bytes()); // Runtime-supplied body.
     let result = decompile_type(&patched, "ClassCases.Mixed").unwrap();
     assert_eq!(result.summary.decompiled, 1);
     assert_eq!(result.summary.declarations, 1);
