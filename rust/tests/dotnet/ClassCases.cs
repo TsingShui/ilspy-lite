@@ -104,3 +104,19 @@ public class Constrained<T> where T : class, IMarker, new()
     public class Nested<U> where U : struct { public U Value; }
 }
 public interface IVariance<in T, out R> { }
+[System.AttributeUsage(System.AttributeTargets.All, AllowMultiple = true)]
+public sealed class EvidenceAttribute : System.Attribute
+{
+    public EvidenceAttribute(string label) { }
+}
+[Evidence("type")]
+public class Attached<[Evidence("generic")] T> where T : IMarker
+{
+    [Evidence("field")] public int Value;
+    [Evidence("method")]
+    [return: Evidence("return")]
+    public int Read([Evidence("parameter")] int amount) => unchecked(Value + amount);
+    [Evidence("property")] public int Count => Value;
+    [Evidence("event")] public event Changed Updated { add { } remove { } }
+    [Evidence("nested")] public class Nested { public int Read() => 3; }
+}

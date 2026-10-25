@@ -17,6 +17,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
@@ -70,6 +71,45 @@ internal static class ClassInventory
                 flags = (int)parameter.Attributes, constraints = parameter.GetConstraints().Select(c =>
                     Token(md.GetGenericParameterConstraint(c).Type)).ToArray() };
         }).ToArray();
+        object[] Attributes(TypeDefinitionHandle handle)
+        {
+            var type = md.GetTypeDefinition(handle);
+            var parents = new HashSet<EntityHandle> { handle, MetadataTokens.EntityHandle(0x00000001) };
+            if (md.IsAssembly) parents.Add(MetadataTokens.EntityHandle(0x20000001));
+            void AddGenerics(GenericParameterHandleCollection generics)
+            {
+                foreach (var generic in generics)
+                {
+                    parents.Add(generic);
+                    foreach (var constraint in md.GetGenericParameter(generic).GetConstraints()) parents.Add(constraint);
+                }
+            }
+            AddGenerics(type.GetGenericParameters());
+            foreach (var field in type.GetFields()) parents.Add(field);
+            foreach (var property in type.GetProperties()) parents.Add(property);
+            foreach (var evt in type.GetEvents()) parents.Add(evt);
+            foreach (var relation in type.GetInterfaceImplementations()) parents.Add(relation);
+            foreach (var method in type.GetMethods())
+            {
+                parents.Add(method);
+                var definition = md.GetMethodDefinition(method);
+                foreach (var parameter in definition.GetParameters()) parents.Add(parameter);
+                foreach (var security in definition.GetDeclarativeSecurityAttributes()) parents.Add(security);
+                AddGenerics(definition.GetGenericParameters());
+            }
+            foreach (var security in type.GetDeclarativeSecurityAttributes()) parents.Add(security);
+            if (md.IsAssembly)
+                foreach (var security in md.GetAssemblyDefinition().GetDeclarativeSecurityAttributes()) parents.Add(security);
+            return md.CustomAttributes.Where(h => parents.Contains(md.GetCustomAttribute(h).Parent)).Select(h => {
+                var attribute = md.GetCustomAttribute(h);
+                BlobHandle signature = attribute.Constructor.Kind == HandleKind.MethodDefinition
+                    ? md.GetMethodDefinition((MethodDefinitionHandle)attribute.Constructor).Signature
+                    : md.GetMemberReference((MemberReferenceHandle)attribute.Constructor).Signature;
+                return (object)new { token = Token(h), parent = Token(attribute.Parent), constructor = Token(attribute.Constructor),
+                    value_blob_index = MetadataTokens.GetHeapOffset(attribute.Value), value = Blob(attribute.Value),
+                    constructor_signature = Blob(signature), raw_row = Convert.ToHexString(Row(TableIndex.CustomAttribute, MetadataTokens.GetRowNumber(h))) };
+            }).ToArray();
+        }
         var root = md.TypeDefinitions.Single(h => TypeName(h) == args[1]);
         bool Owned(TypeDefinitionHandle handle)
         {
@@ -84,6 +124,7 @@ internal static class ClassInventory
                 parent = Token(type.GetDeclaringType()), base_type = Token(type.BaseType),
                 interfaces = type.GetInterfaceImplementations().Select(i => Token(md.GetInterfaceImplementation(i).Interface)).ToArray(),
                 class_layout = Layouts(handle),
+                custom_attributes = Attributes(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);

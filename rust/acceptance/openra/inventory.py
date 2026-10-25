@@ -85,6 +85,18 @@ def check_output(snapshot, text, stderr, code):
                              ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
                             for layout in ty["class_layout"]]
         require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
+        attributes = members(block, "custom-attribute", ty["custom_attributes"])
+        for attribute in ty["custom_attributes"]:
+            line = attributes[attribute["token"]]
+            encoded = ", ".join(attribute["value"][i:i + 2] for i in range(0, len(attribute["value"]), 2))
+            row_bytes = ", ".join(attribute["raw_row"][i:i + 2] for i in range(0, len(attribute["raw_row"]), 2))
+            require(f"parent={attribute['parent']} constructor={attribute['constructor']} " in line
+                    and f"value-blob-index=0x{attribute['value_blob_index']:08X} " in line
+                    and f"value-bytes=[{encoded}] " in line and f"raw-row-bytes=[{row_bytes}] " in line
+                    and "payload=uninterpreted" in line, f"Custom attribute record mismatch: {attribute['token']}")
+            require(any(l.startswith(".attribute-constructor " + attribute["constructor"] + " ")
+                        and raw(attribute["constructor_signature"]) in l for l in block.splitlines()),
+                    f"Attribute constructor identity/signature missing: {attribute['token']}")
         generics(block, ty["token"], ty["generic_parameters"])
         fields = members(block, "field", ty["fields"])
         for field in ty["fields"]:

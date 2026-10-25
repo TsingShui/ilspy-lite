@@ -138,6 +138,20 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
+        match image.custom_attributes(&ty) {
+            Ok((attributes, failures)) => {
+                text.push_str(&attributes);
+                summary.metadata_failed += failures;
+            }
+            Err(error) => {
+                summary.metadata_failed += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata attributes for type 0x{:08X}: {}\n",
+                    ty.token,
+                    metadata::escape_line(&error.to_string())
+                ));
+            }
+        }
         for &token in &ty.properties {
             match image.property_declaration(token, &ty) {
                 Ok((declaration, failures)) => {

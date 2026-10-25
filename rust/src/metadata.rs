@@ -316,6 +316,176 @@ impl<'a> Image<'a> {
         Ok((text, failures))
     }
 
+    /// The selected type's member and relation tokens that can own attached records.
+    fn attached_parents(&self, ty: &SelectedType) -> Result<std::collections::BTreeSet<u32>> {
+        let tables = self.md.tables();
+        let mut parents = std::collections::BTreeSet::from([ty.token]);
+        parents.extend(
+            ty.fields
+                .iter()
+                .chain(&ty.methods)
+                .chain(&ty.properties)
+                .chain(&ty.events)
+                .copied(),
+        );
+        // Image-level attributes affect every type; retain them as contextual evidence.
+        for table in [TableId::Module, TableId::Assembly] {
+            for rid in 1..=tables.row_count(table) {
+                parents.insert(Token::new(table, rid).0);
+            }
+        }
+        for &method in &ty.methods {
+            let row = tables.method_def(method & 0xffffff)?;
+            let end = if method & 0xffffff == tables.row_count(TableId::MethodDef) {
+                tables.row_count(TableId::Param) + 1
+            } else {
+                tables.method_def((method & 0xffffff) + 1)?.param_list.get()
+            };
+            parents.extend((row.param_list.get()..end).map(|rid| 0x08000000 | rid));
+        }
+        let owners = std::iter::once(ty.token)
+            .chain(ty.methods.iter().copied())
+            .collect::<Vec<_>>();
+        for owner in owners {
+            for rid in tables.generic_params(Token(owner))? {
+                parents.insert(0x2a000000 | rid);
+                parents.extend(
+                    tables
+                        .generic_param_constraints(Rid::new(rid))?
+                        .into_iter()
+                        .map(|rid| 0x2c000000 | rid),
+                );
+            }
+        }
+        parents.extend(
+            tables
+                .interface_impls(Rid::new(ty.token & 0xffffff))?
+                .into_iter()
+                .map(|rid| 0x09000000 | rid),
+        );
+        // DeclSecurity rows can themselves carry custom attributes.
+        for owner in std::iter::once(ty.token)
+            .chain(ty.methods.iter().copied())
+            .chain((1..=tables.row_count(TableId::Assembly)).map(|rid| 0x20000000 | rid))
+        {
+            parents.extend(
+                tables
+                    .rows_for_parent(TableId::DeclSecurity, Token(owner))?
+                    .into_iter()
+                    .map(|rid| 0x0e000000 | rid),
+            );
+        }
+        Ok(parents)
+    }
+
+    pub fn custom_attributes(&self, ty: &SelectedType) -> Result<(String, usize)> {
+        let parents = self.attached_parents(ty)?;
+        let tables = self.md.tables();
+        let mut text = String::new();
+        let mut failures = 0;
+        // Raw parent/constructor columns are independent: one broken constructor must
+        // not hide its parent, payload or later attached records.
+        for rid in 1..=tables.row_count(TableId::CustomAttribute) {
+            let raw_parent = tables.raw_column(TableId::CustomAttribute, rid, 0)?;
+            let parent = cildec::CodedIndex::HasCustomAttribute.decode(raw_parent, 0);
+            if parent
+                .as_ref()
+                .is_ok_and(|parent| !parents.contains(&parent.0))
+            {
+                continue;
+            }
+            let raw = tables.row_bytes(TableId::CustomAttribute, rid)?;
+            let constructor = tables.raw_column(TableId::CustomAttribute, rid, 1)?;
+            let blob = tables.raw_column(TableId::CustomAttribute, rid, 2)?;
+            text.push_str(&format!(".custom-attribute 0x{:08X} ", 0x0c000000 | rid));
+            match parent {
+                Ok(parent) => text.push_str(&format!("parent=0x{:08X} ", parent.0)),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "parent-encoded=0x{raw_parent:08X} // FAILED metadata: {} ",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            let constructor = cildec::CodedIndex::CustomAttributeType.decode(constructor, 0);
+            match &constructor {
+                Ok(token) => text.push_str(&format!("constructor=0x{:08X} ", token.0)),
+                Err(_) => text.push_str(&format!(
+                    "constructor-encoded=0x{:08X} ",
+                    tables.raw_column(TableId::CustomAttribute, rid, 1)?
+                )),
+            }
+            text.push_str(&format!("value-blob-index=0x{blob:08X} "));
+            match self.md.blobs().get(cildec::BlobIndex(blob)) {
+                Ok(bytes) => text.push_str(&format!("value-bytes={bytes:02X?} ")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "// FAILED metadata: {} ",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+            text.push_str(&format!("raw-row-bytes={raw:02X?} payload=uninterpreted; attribute arguments and runtime effects are not decoded or executed\n"));
+            match constructor
+                .map_err(Into::into)
+                .and_then(|token| self.metadata_method_identity(token))
+            {
+                Ok(identity) => text.push_str(&format!(".attribute-constructor {identity}\n")),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        "// FAILED metadata: {}\n",
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        Ok((text, failures))
+    }
+
+    /// Metadata identity only: no lowering admission, dependency loading or execution.
+    fn metadata_method_identity(&self, token: Token) -> Result<String> {
+        let (name, owner, blob) = match token.table() {
+            Some(TableId::MethodDef) if token.rid() != 0 => {
+                let row = self.row(token.0)?;
+                let owner = self
+                    .md
+                    .tables()
+                    .type_of_method(Rid::new(token.rid()))?
+                    .ok_or("missing metadata method owner")?;
+                (
+                    self.md.strings().str(row.name)?,
+                    Token(0x02000000 | owner.get()),
+                    row.signature,
+                )
+            }
+            Some(TableId::MemberRef) if token.rid() != 0 => {
+                let row = self.md.tables().member_ref(token.rid())?;
+                (self.md.strings().str(row.name)?, row.class, row.signature)
+            }
+            _ => return Err("metadata method reference needs MethodDef or MemberRef".into()),
+        };
+        let bytes = self.md.blobs().get(blob)?;
+        let signature = MethodSig::parse(bytes)?;
+        let mut references = Vec::new();
+        for parameter in std::iter::once(&signature.return_type)
+            .chain(&signature.params)
+            .chain(&signature.vararg_params)
+        {
+            self.signature_references(&parameter.type_, 0, &mut references)?;
+        }
+        Ok(format!(
+            "0x{:08X} {}::{} owner={} signature-bytes={bytes:02X?} parsed={signature:?} references=[{}]",
+            token.0,
+            escape_line(&Names::new(&self.md).try_token(owner)?),
+            escape_line(name),
+            self.type_reference(owner, 0)?,
+            references.join("; ")
+        ))
+    }
+
     fn type_reference(&self, token: Token, depth: usize) -> Result<String> {
         if depth == 32 || token.rid() == 0 {
             return Err("invalid or excessive type reference".into());
