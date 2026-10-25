@@ -274,6 +274,78 @@ fn member_signature_mismatch_is_not_a_name_only_binding() {
 }
 
 #[test]
+fn constructed_generic_member_owners_keep_type_arguments_and_nested_positions() {
+    for (main, dependency) in [
+        (
+            include_bytes!("fixtures/binding-release.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-release.bin").as_slice(),
+        ),
+        (
+            include_bytes!("fixtures/binding-debug.bin").as_slice(),
+            include_bytes!("fixtures/binding-library-debug.bin").as_slice(),
+        ),
+    ] {
+        let mut context = DependencyContext::new(main.to_vec()).unwrap();
+        context
+            .add_reference("BindingLibrary.dll", dependency.to_vec())
+            .unwrap();
+        let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+        for (rid, row) in md.tables().iter::<cildec::tables::MemberRefRow>() {
+            let row = row.unwrap();
+            if row.class.table() != Some(cildec::TableId::TypeSpec)
+                || md.strings().str(row.name).unwrap() == "Right"
+            {
+                continue;
+            }
+            let resolved = context.resolve_method(0x0a000000 | rid).unwrap();
+            if resolved.name == "Read" {
+                assert_eq!(resolved.owner.name, "BindingLibrary.Outer`1/Inner`1");
+                assert_eq!(resolved.owner.generic_arguments, ["I4", "String"]);
+            } else {
+                assert_eq!(resolved.owner.name, "BindingLibrary.Generic`1");
+                assert_eq!(resolved.owner.generic_arguments, ["I4"]);
+                assert!(matches!(resolved.name.as_str(), "get_Item" | "Echo"));
+            }
+            assert!(resolved.signature_identity.contains("I4"));
+            assert!(!resolved.signature_identity.contains("var:0"));
+            if resolved.name == "get_Item" {
+                assert_eq!(
+                    context
+                        .resolve_property_accessor(0x0a000000 | rid)
+                        .unwrap()
+                        .unwrap()
+                        .name,
+                    "Item"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn generic_field_reference_uses_the_instantiated_owner_signature() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let dependency = include_bytes!("fixtures/binding-library-release.bin");
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .add_reference("BindingLibrary.dll", dependency.to_vec())
+        .unwrap();
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let rid = md
+        .tables()
+        .iter::<cildec::tables::MemberRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "Right")
+        .unwrap()
+        .0;
+    let bound = context.resolve_field(0x0a000000 | rid).unwrap();
+    assert_eq!(bound.name, "Right");
+    assert_eq!(bound.owner.name, "BindingLibrary.Outer`1/Inner`1");
+    assert_eq!(bound.owner.generic_arguments, ["I4", "String"]);
+    assert!(bound.signature_identity.contains("String"));
+    assert_eq!(bound.reference_signature, bound.definition_signature);
+}
+
+#[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     let reference = type_reference(MAIN, "ExternalLibrary", "Base");

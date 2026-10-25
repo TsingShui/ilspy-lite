@@ -3,7 +3,9 @@
 
 mod binding;
 mod search;
-pub use binding::{DefinitionLocation, PropertyAccessor, ResolvedMethod, ResolvedType};
+pub use binding::{
+    DefinitionLocation, PropertyAccessor, ResolvedField, ResolvedMethod, ResolvedType,
+};
 pub use search::ReferenceSearchOptions;
 
 use crate::{DecompiledMethod, DecompiledType, OutputStyle, Result, metadata::Image};

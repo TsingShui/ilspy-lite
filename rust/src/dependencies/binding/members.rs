@@ -19,6 +19,17 @@ pub struct ResolvedMethod {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ResolvedField {
+    pub definition: DefinitionLocation,
+    pub owner: ResolvedType,
+    pub name: String,
+    pub flags: u16,
+    pub reference_signature: Vec<u8>,
+    pub definition_signature: Vec<u8>,
+    pub signature_identity: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PropertyAccessor {
     pub definition: DefinitionLocation,
     pub owner: ResolvedType,
@@ -29,6 +40,87 @@ pub struct PropertyAccessor {
 }
 
 impl DependencyContext {
+    pub fn resolve_field(&self, token: u32) -> Result<ResolvedField> {
+        let image = self.binding_image(0)?;
+        let token = Token(token);
+        let (module, owner, name, raw) = match token.table() {
+            Some(TableId::Field) => {
+                let row = image.md.tables().field(token.rid())?;
+                let owner = image
+                    .md
+                    .tables()
+                    .type_of_field(cildec::Rid::new(token.rid()))?
+                    .ok_or("field has no owner")?;
+                (
+                    0,
+                    self.describe_type(0, owner.get())?,
+                    image.md.strings().str(row.name)?,
+                    image.md.blobs().get(row.signature)?,
+                )
+            }
+            Some(TableId::MemberRef) => {
+                let row = image.md.tables().member_ref(token.rid())?;
+                let parent = image.metadata_coded_token(
+                    CodedIndex::MemberRefParent,
+                    image
+                        .md
+                        .tables()
+                        .raw_column(TableId::MemberRef, token.rid(), 0)?,
+                )?;
+                let (module, owner) = self.bind_type_in(0, parent, &mut BTreeSet::new())?;
+                (
+                    module,
+                    owner,
+                    image.md.strings().str(row.name)?,
+                    image.md.blobs().get(row.signature)?,
+                )
+            }
+            _ => return Err("field binding needs a Field or MemberRef".into()),
+        };
+        let signature = cildec::FieldSig::parse(raw)?;
+        let signature_key = |module, signature: &cildec::FieldSig<'_>| -> Result<String> {
+            Ok(format!(
+                "{:?}:{:?}",
+                self.modifier_keys(module, &signature.custom_mods, &owner.generic_arguments, 0)?,
+                self.type_key(module, &signature.type_, &owner.generic_arguments, 0)?
+            ))
+        };
+        let requested = signature_key(0, &signature)?;
+        let target = self.binding_image(module)?;
+        let selected = target.selected_types(&owner.name)?;
+        let root = selected.first().ok_or("field owner selection is empty")?;
+        if root.token != owner.definition.token {
+            return Err("field owner identity changed".into());
+        }
+        let mut found = None;
+        for &candidate in &root.fields {
+            let row = target.md.tables().field(candidate & 0xffffff)?;
+            if target.md.strings().str(row.name)? != name {
+                continue;
+            }
+            let bytes = target.md.blobs().get(row.signature)?;
+            if signature_key(module, &cildec::FieldSig::parse(bytes)?)? != requested {
+                continue;
+            }
+            if found.is_some() {
+                return Err("ambiguous field definition in resolved type".into());
+            }
+            found = Some(ResolvedField {
+                definition: DefinitionLocation {
+                    token: candidate,
+                    ..owner.definition.clone()
+                },
+                owner: owner.clone(),
+                name: name.to_string(),
+                flags: row.flags,
+                reference_signature: raw.to_vec(),
+                definition_signature: bytes.to_vec(),
+                signature_identity: requested.clone(),
+            });
+        }
+        found.ok_or_else(|| "field definition missing for exact name and scoped signature".into())
+    }
+
     pub fn resolve_property_accessor(&self, token: u32) -> Result<Option<PropertyAccessor>> {
         let method = self.resolve_method(token)?;
         let module = self
@@ -81,18 +173,19 @@ impl DependencyContext {
             {
                 return Err("property/accessor flags or calling convention conflict".into());
             }
+            let args = &method.owner.generic_arguments;
             let params = property_sig
                 .params
                 .iter()
-                .map(|p| self.parameter_key(module, p, 0))
+                .map(|p| self.parameter_key(module, p, args, 0))
                 .collect::<Result<Vec<_>>>()?;
             let mut actual = signature
                 .params
                 .iter()
-                .map(|p| self.parameter_key(module, p, 0))
+                .map(|p| self.parameter_key(module, p, args, 0))
                 .collect::<Result<Vec<_>>>()?;
-            let value = self.parameter_key(module, &property_sig.return_type, 0)?;
-            let returned = self.parameter_key(module, &signature.return_type, 0)?;
+            let value = self.parameter_key(module, &property_sig.return_type, args, 0)?;
+            let returned = self.parameter_key(module, &signature.return_type, args, 0)?;
             let valid = if role == "get" {
                 actual == params && returned == value
             } else {
@@ -162,7 +255,7 @@ impl DependencyContext {
         };
         let signature = MethodSig::parse(raw)
             .map_err(|e| format!("method reference signature {raw:02X?}: {e}"))?;
-        let requested = self.method_signature_key(0, &signature, 0)?;
+        let requested = self.method_signature_key(0, &signature, &owner.generic_arguments, 0)?;
         let target = self.binding_image(module)?;
         let selected = target.selected_types(&owner.name)?;
         let root = selected.first().ok_or("method owner selection is empty")?;
@@ -178,7 +271,9 @@ impl DependencyContext {
             let bytes = target.md.blobs().get(row.signature)?;
             let definition = MethodSig::parse(bytes)
                 .map_err(|e| format!("method definition signature {bytes:02X?}: {e}"))?;
-            if self.method_signature_key(module, &definition, 0)? != requested {
+            if self.method_signature_key(module, &definition, &owner.generic_arguments, 0)?
+                != requested
+            {
                 continue;
             }
             if row.is_static() == definition.has_this {
@@ -207,21 +302,22 @@ impl DependencyContext {
         &self,
         module: usize,
         sig: &MethodSig<'_>,
+        args: &[String],
         depth: usize,
     ) -> Result<String> {
         if depth > 32 {
             return Err("excessive method signature binding depth".into());
         }
-        let parameter = self.parameter_key(module, &sig.return_type, depth + 1)?;
+        let parameter = self.parameter_key(module, &sig.return_type, args, depth + 1)?;
         let parameters = sig
             .params
             .iter()
-            .map(|p| self.parameter_key(module, p, depth + 1))
+            .map(|p| self.parameter_key(module, p, args, depth + 1))
             .collect::<Result<Vec<_>>>()?;
         let varargs = sig
             .vararg_params
             .iter()
-            .map(|p| self.parameter_key(module, p, depth + 1))
+            .map(|p| self.parameter_key(module, p, args, depth + 1))
             .collect::<Result<Vec<_>>>()?;
         Ok(format!(
             "{:?}:{}:{}:{parameter:?}:{parameters:?}:{varargs:?}",
@@ -229,12 +325,18 @@ impl DependencyContext {
         ))
     }
 
-    fn parameter_key(&self, module: usize, param: &Param<'_>, depth: usize) -> Result<String> {
+    fn parameter_key(
+        &self,
+        module: usize,
+        param: &Param<'_>,
+        args: &[String],
+        depth: usize,
+    ) -> Result<String> {
         Ok(format!(
             "{}:{:?}:{:?}",
             param.by_ref,
-            self.modifier_keys(module, &param.custom_mods, depth)?,
-            self.type_key(module, &param.type_, depth)?
+            self.modifier_keys(module, &param.custom_mods, args, depth)?,
+            self.type_key(module, &param.type_, args, depth)?
         ))
     }
 
@@ -242,24 +344,37 @@ impl DependencyContext {
         &self,
         module: usize,
         mods: &[cildec::CustomMod],
+        args: &[String],
         depth: usize,
     ) -> Result<Vec<(bool, String)>> {
         mods.iter()
             .map(|m| {
                 Ok((
                     m.required,
-                    self.type_key(module, &Type::Class(m.type_token), depth + 1)?,
+                    self.type_key(module, &Type::Class(m.type_token), args, depth + 1)?,
                 ))
             })
             .collect()
     }
 
-    fn type_key(&self, module: usize, ty: &Type<'_>, depth: usize) -> Result<String> {
+    pub(super) fn type_key(
+        &self,
+        module: usize,
+        ty: &Type<'_>,
+        arguments: &[String],
+        depth: usize,
+    ) -> Result<String> {
         if depth > 32 {
             return Err("excessive type signature binding depth".into());
         }
         Ok(match ty {
             Type::Class(token) | Type::ValueType(token) => {
+                if token.table() == Some(TableId::TypeSpec) {
+                    let image = self.binding_image(module)?;
+                    let row = image.md.tables().type_spec(token.rid())?;
+                    let sig = cildec::TypeSpecSig::parse(image.md.blobs().get(row.signature)?)?;
+                    return self.type_key(module, &sig.type_, arguments, depth + 1);
+                }
                 let (_, bound) = self.bind_type_in(module, *token, &mut BTreeSet::new())?;
                 format!(
                     "{:?}:{}:0x{:08X}",
@@ -273,10 +388,13 @@ impl DependencyContext {
                 args,
                 is_value_type,
             } => {
+                if !matches!(def.table(), Some(TableId::TypeDef | TableId::TypeRef)) {
+                    return Err("generic signature needs a TypeDef or TypeRef definition".into());
+                }
                 let (_, bound) = self.bind_type_in(module, *def, &mut BTreeSet::new())?;
                 let args = args
                     .iter()
-                    .map(|a| self.type_key(module, a, depth + 1))
+                    .map(|a| self.type_key(module, a, arguments, depth + 1))
                     .collect::<Result<Vec<_>>>()?;
                 format!(
                     "{is_value_type}:{:?}:0x{:08X}:{args:?}",
@@ -291,21 +409,36 @@ impl DependencyContext {
                 };
                 format!(
                     "{kind}:{:?}:{:?}",
-                    self.modifier_keys(module, mods, depth + 1)?,
-                    self.type_key(module, inner, depth + 1)?
+                    self.modifier_keys(module, mods, arguments, depth + 1)?,
+                    self.type_key(module, inner, arguments, depth + 1)?
                 )
             }
             Type::Array(inner, shape) => format!(
                 "array:{shape:?}:{:?}",
-                self.type_key(module, inner, depth + 1)?
+                self.type_key(module, inner, arguments, depth + 1)?
             ),
-            Type::ByRef(inner) => format!("byref:{:?}", self.type_key(module, inner, depth + 1)?),
-            Type::Pinned(inner) => format!("pinned:{:?}", self.type_key(module, inner, depth + 1)?),
+            Type::ByRef(inner) => format!(
+                "byref:{:?}",
+                self.type_key(module, inner, arguments, depth + 1)?
+            ),
+            Type::Pinned(inner) => format!(
+                "pinned:{:?}",
+                self.type_key(module, inner, arguments, depth + 1)?
+            ),
             Type::FnPtr(sig) => format!(
                 "fnptr:{:?}",
-                self.method_signature_key(module, sig, depth + 1)?
+                self.method_signature_key(module, sig, arguments, depth + 1)?
             ),
-            Type::Var(n) => format!("var:{n}"),
+            Type::Var(n) => {
+                if arguments.is_empty() {
+                    format!("var:{n}")
+                } else {
+                    arguments
+                        .get(*n as usize)
+                        .ok_or("generic type parameter position out of range")?
+                        .clone()
+                }
+            }
             Type::MVar(n) => format!("mvar:{n}"),
             Type::Void
             | Type::Boolean

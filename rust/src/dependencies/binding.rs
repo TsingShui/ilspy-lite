@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 mod members;
-pub use members::{PropertyAccessor, ResolvedMethod};
+pub use members::{PropertyAccessor, ResolvedField, ResolvedMethod};
 
 use super::{
     AssemblyIdentity, DependencyContext, ReferenceVersionPolicy, assembly_identity,
@@ -27,6 +27,8 @@ pub struct ResolvedType {
     pub flags: u32,
     /// False when any assembly hop used an explicit metadata-version substitute.
     pub exact_identity: bool,
+    /// Scoped metadata signature identities in the definition's generic positions.
+    pub generic_arguments: Vec<String>,
 }
 
 impl DependencyContext {
@@ -171,7 +173,39 @@ impl DependencyContext {
                     resolved.exact_identity = exact_identity;
                     Ok((target, resolved))
                 }
-                _ => Err("type binding needs a TypeDef or TypeRef".into()),
+                Some(TableId::TypeSpec) => {
+                    let row = image.md.tables().type_spec(token.rid())?;
+                    let signature =
+                        cildec::TypeSpecSig::parse(image.md.blobs().get(row.signature)?)?;
+                    let cildec::Type::GenericInst { def, args, .. } = signature.type_ else {
+                        return Err("type owner binding needs a named generic TypeSpec".into());
+                    };
+                    if !matches!(def.table(), Some(TableId::TypeDef | TableId::TypeRef)) {
+                        return Err("generic definition must be a TypeDef or TypeRef".into());
+                    }
+                    let (target, mut bound) = self.bind_type_in(module, def, visiting)?;
+                    let definition = self.binding_image(target)?;
+                    let count = definition
+                        .md
+                        .tables()
+                        .iter::<cildec::tables::GenericParamRow>()
+                        .map(|(_, r)| r)
+                        .collect::<std::result::Result<Vec<_>, _>>()?
+                        .iter()
+                        .filter(|r| r.owner.0 == bound.definition.token)
+                        .count();
+                    if args.len() != count {
+                        return Err(
+                            "generic argument count differs from definition positions".into()
+                        );
+                    }
+                    bound.generic_arguments = args
+                        .iter()
+                        .map(|a| self.type_key(module, a, &[], 1))
+                        .collect::<Result<Vec<_>>>()?;
+                    Ok((target, bound))
+                }
+                _ => Err("type binding needs a TypeDef, TypeRef or named generic TypeSpec".into()),
             }
         })();
         visiting.remove(&(module, token.0));
@@ -238,6 +272,7 @@ impl DependencyContext {
             },
             flags,
             exact_identity: true,
+            generic_arguments: Vec::new(),
         })
     }
 }
