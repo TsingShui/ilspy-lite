@@ -214,6 +214,18 @@ fn fallback_parameter_names_cannot_collide_with_existing_source_parameters() {
 }
 
 #[test]
+fn out_parameter_contract_is_retained_even_when_the_body_falls_back() {
+    let result =
+        decompile_type_with_style(IMAGE, "ClassCases.Methods", OutputStyle::Readable).unwrap();
+    assert!(
+        result.text.contains("ByRef(ref int input, out int output)"),
+        "{}",
+        result.text
+    );
+    assert!(!result.text.contains("ByRef(ref int input, ref int output)"));
+}
+
+#[test]
 fn readable_fields_and_nested_types_remain_visible() {
     let fields =
         decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();

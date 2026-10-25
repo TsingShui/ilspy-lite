@@ -305,10 +305,13 @@ fn method_header(
             .and_then(|(rid, _)| default_value(image, 0x08000000 | rid).ok().flatten())
             .map(|v| format!(" = {v}"))
             .unwrap_or_default();
-        params.push(format!(
-            "{} {name}{default}",
+        let parameter_type = if param.by_ref && original.is_some_and(|(_, row)| row.flags & 3 == 2)
+        {
+            format!("out {}", cs_type(image, &param.type_, owner, token)?)
+        } else {
             cs_param(image, param, owner, token)?
-        ));
+        };
+        params.push(format!("{parameter_type} {name}{default}"));
     }
     let modifiers = if row.flags & 0x10 != 0 {
         "static "
