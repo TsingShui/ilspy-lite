@@ -432,16 +432,291 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         return "// Unreadable rendered body; see --details.".into();
     };
     let body = body.strip_suffix("}\n").unwrap_or(body);
-    let mut out = String::new();
-    for line in body.lines() {
-        let line = line.trim();
-        if line.starts_with("//") {
-            continue;
+    let lines = body
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.starts_with("//"))
+        .map(str::to_owned)
+        .collect();
+    compact_lines(lines)
+        .into_iter()
+        .map(|line| rewrite(&line, names) + "\n")
+        .collect()
+}
+
+fn generated_value(name: &str) -> bool {
+    name.strip_prefix('v')
+        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+fn identifiers(text: &str) -> Vec<String> {
+    let mut result = Vec::new();
+    let mut chars = text.char_indices().peekable();
+    while let Some((start, c)) = chars.next() {
+        if c == '\"' || c == '\'' {
+            while let Some((_, ch)) = chars.next() {
+                if ch == '\\' {
+                    chars.next();
+                } else if ch == c {
+                    break;
+                }
+            }
+        } else if c == '@' || c == '_' || c.is_ascii_alphabetic() {
+            let mut end = start + c.len_utf8();
+            while let Some(&(i, ch)) = chars.peek() {
+                if ch == '_' || ch.is_ascii_alphanumeric() {
+                    chars.next();
+                    end = i + ch.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            result.push(text[start..end].to_owned());
         }
-        out.push_str(&rewrite(line, names));
-        out.push('\n');
     }
-    out
+    result
+}
+
+fn value_declaration(line: &str) -> Option<(&str, &str)> {
+    let (left, right) = line.split_once(" = ")?;
+    let name = left.split_whitespace().last()?;
+    if !generated_value(name) || left.split_whitespace().count() < 2 {
+        return None;
+    }
+    Some((name, right.strip_suffix(';')?))
+}
+
+// Only generated immutable snapshots can be substituted. Calls/field reads,
+// allocation, managed addresses and checked or runtime operations stay at their
+// original statement, even when their result is unused.
+fn control_barrier(line: &str) -> bool {
+    line.ends_with(": ;")
+        || line.starts_with("goto ")
+        || line.starts_with("if ")
+        || line.starts_with("switch ")
+        || line.starts_with("case ")
+        || line.starts_with("default:")
+        || line.starts_with('}')
+        || line == "{"
+}
+
+fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
+    loop {
+        let mut changed = false;
+        for i in 0..lines.len() {
+            let Some((name, expression)) = value_declaration(&lines[i]) else {
+                continue;
+            };
+            let name = name.to_owned();
+            let expression = expression.to_owned();
+            let uses = lines
+                .iter()
+                .enumerate()
+                .filter(|(n, _)| *n != i)
+                .map(|(_, l)| identifiers(l).iter().filter(|v| *v == &name).count())
+                .sum::<usize>();
+            let literal = expression == "null"
+                || expression.parse::<i32>().is_ok()
+                || expression
+                    .strip_suffix('L')
+                    .is_some_and(|n| n.parse::<i64>().is_ok());
+            let last_use = lines
+                .iter()
+                .enumerate()
+                .filter(|(n, l)| *n != i && identifiers(l).contains(&name))
+                .map(|(n, _)| n)
+                .max()
+                .unwrap_or(i);
+            let forward_region =
+                last_use >= i && lines[i + 1..=last_use].iter().all(|l| !control_barrier(l));
+            let stable = generated_value(&expression) && forward_region
+                || expression.strip_prefix('a').is_some_and(|n| {
+                    !n.is_empty()
+                        && n.bytes().all(|b| b.is_ascii_digit())
+                        && !lines
+                            .iter()
+                            .any(|l| l.starts_with(&format!("{expression} = ")))
+                });
+            // Adjacent pure arithmetic can move into its one immediate use. No
+            // mutable local/argument or effectful nested operation is admitted.
+            let words = identifiers(&expression);
+            let arithmetic = expression.starts_with("unchecked(")
+                && words.iter().all(|w| {
+                    w == "unchecked"
+                        || w == "int"
+                        || w == "long"
+                        || w == "uint"
+                        || w == "ulong"
+                        || generated_value(w)
+                        || w.strip_prefix('a').is_some_and(|n| {
+                            !n.is_empty()
+                                && n.bytes().all(|b| b.is_ascii_digit())
+                                && !lines.iter().any(|l| l.starts_with(&format!("{w} = ")))
+                        })
+                })
+                && !expression.contains(['/', '%', '[', '.', '?']);
+            let adjacent = uses == 1
+                && lines
+                    .get(i + 1)
+                    .is_some_and(|l| identifiers(l).contains(&name))
+                && lines[i + 1].starts_with("return ");
+            if !(literal || stable || arithmetic && adjacent) {
+                continue;
+            }
+            if uses == 0 && !literal && !stable {
+                continue;
+            }
+            let replacement = expression;
+            let map = BTreeMap::from([(name, replacement)]);
+            for (n, line) in lines.iter_mut().enumerate() {
+                if n != i {
+                    *line = rewrite(line, &map);
+                }
+            }
+            lines.remove(i);
+            changed = true;
+            break;
+        }
+        if !changed {
+            break;
+        }
+    }
+    // Boolean 0/1 encodings may collapse at their one adjacent Boolean use.
+    // Do not turn arbitrary integer truth tests into Boolean expressions.
+    let mut i = 0;
+    while i + 1 < lines.len() {
+        if let Some((name, expr)) = value_declaration(&lines[i]) {
+            if let Some(condition) = expr
+                .strip_prefix('(')
+                .and_then(|s| s.strip_suffix(" ? 1 : 0)"))
+            {
+                let uses = lines
+                    .iter()
+                    .enumerate()
+                    .filter(|(n, _)| *n != i)
+                    .map(|(_, l)| identifiers(l).iter().filter(|id| *id == name).count())
+                    .sum::<usize>();
+                let next = &lines[i + 1];
+                let replacement = if next == &format!("return ({name} != 0);") {
+                    Some(format!("return ({condition});"))
+                } else if next == &format!("if ({name} == 0) {{") {
+                    Some(format!("if (!({condition})) {{"))
+                } else if next == &format!("if ({name} != 0) {{") {
+                    Some(format!("if ({condition}) {{"))
+                } else {
+                    None
+                };
+                if uses == 1
+                    && let Some(replacement) = replacement
+                {
+                    lines[i + 1] = replacement;
+                    lines.remove(i);
+                    continue;
+                }
+            }
+        }
+        if lines[i] == "return (1 != 0);" {
+            lines[i] = "return true;".into();
+        }
+        if lines[i] == "return (0 != 0);" {
+            lines[i] = "return false;".into();
+        }
+        i += 1;
+    }
+    for line in &mut lines {
+        if line == "return (1 != 0);" {
+            *line = "return true;".into();
+        }
+        if line == "return (0 != 0);" {
+            *line = "return false;".into();
+        }
+    }
+    // Eliminate a local written once only when its stored source is already an
+    // immutable snapshot. This preserves the read point across field mutations.
+    let mut i = 0;
+    while i < lines.len() {
+        let Some((local, value)) = lines[i].split_once(" = ") else {
+            i += 1;
+            continue;
+        };
+        if local
+            .strip_prefix('l')
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+        {
+            let value = value.strip_suffix(';').unwrap_or("");
+            let last_use = lines
+                .iter()
+                .enumerate()
+                .filter(|(n, l)| {
+                    *n != i
+                        && identifiers(l).contains(&local.to_owned())
+                        && !l.ends_with(" = default;")
+                })
+                .map(|(n, _)| n)
+                .max()
+                .unwrap_or(i);
+            let no_earlier_use = lines[..i]
+                .iter()
+                .all(|l| !identifiers(l).contains(&local.to_owned()) || l.ends_with(" = default;"));
+            let region =
+                last_use >= i && lines[i + 1..=last_use].iter().all(|l| !control_barrier(l));
+            if generated_value(value)
+                && no_earlier_use
+                && region
+                && lines
+                    .iter()
+                    .filter(|l| l.starts_with(&format!("{local} = ")))
+                    .count()
+                    == 1
+            {
+                let map = BTreeMap::from([(local.to_owned(), value.to_owned())]);
+                let declaration = lines
+                    .iter()
+                    .find(|l| l.ends_with(&format!(" {local} = default;")))
+                    .cloned()
+                    .unwrap_or_default();
+                let local = local.to_owned();
+                let mut retained = Vec::new();
+                for (n, line) in lines.iter().enumerate() {
+                    if n == i || line == &declaration {
+                        continue;
+                    }
+                    retained.push(rewrite(line, &map));
+                }
+                if !retained.iter().any(|l| identifiers(l).contains(&local)) {
+                    lines = retained;
+                    i = 0;
+                    continue;
+                }
+            }
+        }
+        i += 1;
+    }
+    // A goto immediately followed by its target is just fall-through. Keep all
+    // other labels and edges; no control-flow or loop reconstruction is assumed.
+    let mut i = 0;
+    while i + 1 < lines.len() {
+        if lines[i]
+            .strip_prefix("goto ")
+            .and_then(|s| s.strip_suffix(';'))
+            .is_some_and(|target| lines[i + 1] == format!("{target}: ;"))
+        {
+            lines.remove(i);
+        } else {
+            i += 1;
+        }
+    }
+    let targets = lines
+        .iter()
+        .filter_map(|l| {
+            l.trim()
+                .strip_prefix("goto ")
+                .and_then(|s| s.strip_suffix(';'))
+        })
+        .map(str::to_owned)
+        .collect::<BTreeSet<_>>();
+    lines.retain(|line| !line.ends_with(": ;") || targets.contains(line.trim_end_matches(": ;")));
+    lines
 }
 
 // Rewrite generated C# identifiers without touching string/character literals.
