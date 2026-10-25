@@ -74,11 +74,19 @@ internal static class ClassInventory
         string MethodSignature(EntityHandle handle) => Blob(handle.Kind == HandleKind.MethodDefinition
             ? md.GetMethodDefinition((MethodDefinitionHandle)handle).Signature
             : md.GetMemberReference((MemberReferenceHandle)handle).Signature);
+        string MethodName(EntityHandle handle) => md.GetString(handle.Kind == HandleKind.MethodDefinition
+            ? md.GetMethodDefinition((MethodDefinitionHandle)handle).Name
+            : md.GetMemberReference((MemberReferenceHandle)handle).Name);
+        string MethodOwner(EntityHandle handle) => Token(handle.Kind == HandleKind.MethodDefinition
+            ? md.GetMethodDefinition((MethodDefinitionHandle)handle).GetDeclaringType()
+            : md.GetMemberReference((MemberReferenceHandle)handle).Parent);
         object[] Implementations(TypeDefinitionHandle handle) => md.GetTypeDefinition(handle).GetMethodImplementations().Select(h => {
             var record = md.GetMethodImplementation(h);
             return (object)new { token = Token(h), @class = Token(record.Type), body = Token(record.MethodBody),
                 declaration = Token(record.MethodDeclaration), body_signature = MethodSignature(record.MethodBody),
                 declaration_signature = MethodSignature(record.MethodDeclaration),
+                body_name = MethodName(record.MethodBody), body_owner = MethodOwner(record.MethodBody),
+                declaration_name = MethodName(record.MethodDeclaration), declaration_owner = MethodOwner(record.MethodDeclaration),
                 raw_row = Convert.ToHexString(Row(TableIndex.MethodImpl, MetadataTokens.GetRowNumber(h))) };
         }).ToArray();
         object[] Security(TypeDefinitionHandle handle)
@@ -130,7 +138,8 @@ internal static class ClassInventory
                     : md.GetMemberReference((MemberReferenceHandle)attribute.Constructor).Signature;
                 return (object)new { token = Token(h), parent = Token(attribute.Parent), constructor = Token(attribute.Constructor),
                     value_blob_index = MetadataTokens.GetHeapOffset(attribute.Value), value = Blob(attribute.Value),
-                    constructor_signature = Blob(signature), raw_row = Convert.ToHexString(Row(TableIndex.CustomAttribute, MetadataTokens.GetRowNumber(h))) };
+                    constructor_signature = Blob(signature), constructor_name = MethodName(attribute.Constructor), constructor_owner = MethodOwner(attribute.Constructor),
+                    raw_row = Convert.ToHexString(Row(TableIndex.CustomAttribute, MetadataTokens.GetRowNumber(h))) };
             }).ToArray();
         }
         var root = md.TypeDefinitions.Single(h => TypeName(h) == args[1]);

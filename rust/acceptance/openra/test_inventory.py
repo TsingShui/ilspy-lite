@@ -53,18 +53,21 @@ class ClassOutputGate(unittest.TestCase):
         snapshot = copy.deepcopy(self.snapshot)
         snapshot["types"][0]["custom_attributes"] = [{"token": "0x0C000001", "parent": "0x02000001",
             "constructor": "0x0A000001", "value_blob_index": 7, "value": "01000000",
-            "constructor_signature": "200001", "raw_row": "23000B000700"}]
+            "constructor_signature": "200001", "constructor_name": ".ctor", "constructor_owner": "0x01000001",
+            "raw_row": "23000B000700"}]
         record = (".custom-attribute 0x0C000001 parent=0x02000001 constructor=0x0A000001 "
                   "value-blob-index=0x00000007 value-bytes=[01, 00, 00, 00] "
                   "raw-row-bytes=[23, 00, 0B, 00, 07, 00] payload=uninterpreted\n"
-                  ".attribute-constructor 0x0A000001 Attribute::.ctor signature-bytes=[20, 00, 01]\n")
+                  ".attribute-constructor 0x0A000001 Attribute::.ctor owner=0x01000001 Attribute signature-bytes=[20, 00, 01]\n")
         text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
         self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
         for invalid in [self.text, text.replace("parent=0x02000001", "parent=0x02000002"),
                         text.replace("constructor=0x0A000001", "constructor=0x0A000002"),
                         text.replace("value-bytes=[01", "value-bytes=[00"),
                         text.replace("payload=uninterpreted", "payload=decoded"),
-                        text.replace("signature-bytes=[20, 00, 01]", "signature-bytes=[20, 01, 01]")]:
+                        text.replace("signature-bytes=[20, 00, 01]", "signature-bytes=[20, 01, 01]"),
+                        text.replace("Attribute::.ctor", "Unrelated::NotAConstructor"),
+                        text.replace("owner=0x01000001", "owner=0x02000000")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 
@@ -88,7 +91,8 @@ class ClassOutputGate(unittest.TestCase):
         snapshot = copy.deepcopy(self.snapshot)
         snapshot["types"][0]["method_implementations"] = [{"token": "0x19000001", "class": "0x02000001",
             "body": "0x06000001", "declaration": "0x0A000001", "body_signature": "200008",
-            "declaration_signature": "200008", "raw_row": "010002000300"}]
+            "declaration_signature": "200008", "body_name": "Read", "body_owner": "0x02000001",
+            "declaration_name": "Read", "declaration_owner": "0x01000001", "raw_row": "010002000300"}]
         record = (".method-impl 0x19000001 class=0x02000001 body=0x06000001 declaration=0x0A000001 "
                   "raw-row-bytes=[01, 00, 02, 00, 03, 00]; dispatch/access/ancestry validation is not performed\n"
                   ".method-impl-body 0x06000001 Type::Read owner=0x02000001 signature-bytes=[20, 00, 08]\n"
@@ -99,7 +103,11 @@ class ClassOutputGate(unittest.TestCase):
                         text.replace("declaration=0x0A000001", "declaration=0x0A000002"),
                         text.replace("body=0x06000001", "body=0x06000002"),
                         text.replace("signature-bytes=[20, 00, 08]", "signature-bytes=[20, 01, 08]"),
-                        text.replace("dispatch/access/ancestry validation is not performed", "override resolved")]:
+                        text.replace("dispatch/access/ancestry validation is not performed", "override resolved"),
+                        text.replace("Type::Read", "Unrelated::Different"),
+                        text.replace("Interface::Read", "Unrelated::Different"),
+                        text.replace("owner=0x02000001", "owner=0x02000000"),
+                        text.replace("owner=0x01000001", "owner=0x02000000")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 

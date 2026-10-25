@@ -44,6 +44,14 @@ def check_output(snapshot, text, stderr, code):
     def raw(blob):
         return "signature-bytes=[" + ", ".join(blob[i:i + 2] for i in range(0, len(blob), 2)) + "]"
 
+    def escaped_name(name):
+        special = {"\t": r"\t", "\r": r"\r", "\n": r"\n", "\\": r"\\", "'": r"\'", '"': r'\"'}
+        return "".join(special.get(c, c if 0x20 <= ord(c) <= 0x7e else f"\\u{{{ord(c):x}}}") for c in name)
+
+    def endpoint(block, keyword, token, name, owner, signature):
+        pattern = r"^\." + keyword + " " + token + r" .*::" + re.escape(escaped_name(name)) + r" owner=" + owner + r"(?: |$)"
+        return any(re.search(pattern, line) and raw(signature) in line for line in block.splitlines())
+
     def members(block, keyword, expected):
         matches = re.findall(r"^\." + keyword + r" (0x[0-9A-F]{8})(?: |$)([^\n]*)", block, re.M)
         require(len(matches) == len({t for t, _ in matches}), f"Duplicate {keyword} declaration")
@@ -94,8 +102,8 @@ def check_output(snapshot, text, stderr, code):
                     and "dispatch/access/ancestry validation is not performed" in line,
                     f"Method implementation mapping mismatch: {record['token']}")
             for kind in ("body", "declaration"):
-                require(any(l.startswith(f".method-impl-{kind} {record[kind]} ")
-                            and "owner=" in l and raw(record[kind + "_signature"]) in l for l in block.splitlines()),
+                require(endpoint(block, "method-impl-" + kind, record[kind], record[kind + "_name"],
+                                 record[kind + "_owner"], record[kind + "_signature"]),
                         f"Method implementation {kind} identity missing: {record['token']}")
         security = members(block, "decl-security", ty["security_declarations"])
         for record in ty["security_declarations"]:
@@ -116,8 +124,8 @@ def check_output(snapshot, text, stderr, code):
                     and f"value-blob-index=0x{attribute['value_blob_index']:08X} " in line
                     and f"value-bytes=[{encoded}] " in line and f"raw-row-bytes=[{row_bytes}] " in line
                     and "payload=uninterpreted" in line, f"Custom attribute record mismatch: {attribute['token']}")
-            require(any(l.startswith(".attribute-constructor " + attribute["constructor"] + " ")
-                        and raw(attribute["constructor_signature"]) in l for l in block.splitlines()),
+            require(endpoint(block, "attribute-constructor", attribute["constructor"], attribute["constructor_name"],
+                             attribute["constructor_owner"], attribute["constructor_signature"]),
                     f"Attribute constructor identity/signature missing: {attribute['token']}")
         generics(block, ty["token"], ty["generic_parameters"])
         fields = members(block, "field", ty["fields"])
