@@ -378,6 +378,53 @@ impl<'a> Image<'a> {
         Ok(parents)
     }
 
+    pub fn method_implementations(&self, ty: &SelectedType) -> Result<(String, usize)> {
+        let tables = self.md.tables();
+        let mut text = String::new();
+        let mut failures = 0;
+        for rid in tables.rows_for_parent(TableId::MethodImpl, Token(ty.token))? {
+            let class = tables.raw_column(TableId::MethodImpl, rid, 0)?;
+            let body = tables.raw_column(TableId::MethodImpl, rid, 1)?;
+            let declaration = tables.raw_column(TableId::MethodImpl, rid, 2)?;
+            let raw = tables.row_bytes(TableId::MethodImpl, rid)?;
+            // Decode endpoints independently; an invalid declaration cannot conceal
+            // the implementing body or turn it into an absent mapping.
+            let body = cildec::CodedIndex::MethodDefOrRef.decode(body, 0);
+            let declaration = cildec::CodedIndex::MethodDefOrRef.decode(declaration, 0);
+            text.push_str(&format!(
+                ".method-impl 0x{:08X} class=0x{:08X} ",
+                0x19000000 | rid,
+                0x02000000 | class
+            ));
+            for (kind, token, column) in [("body", &body, 1), ("declaration", &declaration, 2)] {
+                match token {
+                    Ok(token) => text.push_str(&format!("{kind}=0x{:08X} ", token.0)),
+                    Err(_) => text.push_str(&format!(
+                        "{kind}-encoded=0x{:08X} ",
+                        tables.raw_column(TableId::MethodImpl, rid, column)?
+                    )),
+                }
+            }
+            text.push_str(&format!("raw-row-bytes={raw:02X?}; explicit metadata mapping, not a name-based override guess; dispatch/access/ancestry validation is not performed\n"));
+            for (kind, token) in [("body", body), ("declaration", declaration)] {
+                match token
+                    .map_err(Into::into)
+                    .and_then(|token| self.metadata_method_identity(token))
+                {
+                    Ok(identity) => text.push_str(&format!(".method-impl-{kind} {identity}\n")),
+                    Err(error) => {
+                        failures += 1;
+                        text.push_str(&format!(
+                            "// FAILED metadata MethodImpl {kind}: {}\n",
+                            escape_line(&error.to_string())
+                        ));
+                    }
+                }
+            }
+        }
+        Ok((text, failures))
+    }
+
     pub fn security_declarations(&self, ty: &SelectedType) -> Result<(String, usize)> {
         let tables = self.md.tables();
         let parents = std::iter::once(ty.token)

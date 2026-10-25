@@ -138,6 +138,20 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
+        match image.method_implementations(&ty) {
+            Ok((mappings, failures)) => {
+                text.push_str(&mappings);
+                summary.metadata_failed += failures;
+            }
+            Err(error) => {
+                summary.metadata_failed += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata method implementations for type 0x{:08X}: {}\n",
+                    ty.token,
+                    metadata::escape_line(&error.to_string())
+                ));
+            }
+        }
         match image.security_declarations(&ty) {
             Ok((security, failures)) => {
                 text.push_str(&security);

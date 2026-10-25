@@ -40,6 +40,19 @@ public static class Mixed
     public static string Unsupported(string value) => value.ToUpperInvariant();
 }
 public interface IMarker { }
+public interface IExplicit
+{
+    int Read(int value);
+    uint Read(uint value);
+}
+public class ExplicitMethods : IExplicit, System.IDisposable, System.IComparable<int>
+{
+    int IExplicit.Read(int value) => unchecked(value + 1);
+    uint IExplicit.Read(uint value) => unchecked(value + 2);
+    void System.IDisposable.Dispose() { }
+    int System.IComparable<int>.CompareTo(int value) => value;
+    public int Read() => 29;
+}
 public abstract class Base : IMarker { }
 public sealed class Derived : Base { public int Read() => 17; }
 public sealed class ExternalBase : System.Exception { }

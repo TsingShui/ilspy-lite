@@ -13,7 +13,7 @@ class ClassOutputGate(unittest.TestCase):
         self.snapshot = {"root": "0x02000001", "types": [{
             "token": "0x02000001", "name": "Example", "flags": 1,
             "parent": "0x00000000", "base_type": "0x00000000", "interfaces": [],
-            "class_layout": [], "custom_attributes": [], "security_declarations": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
+            "class_layout": [], "custom_attributes": [], "security_declarations": [], "method_implementations": [], "generic_parameters": [], "fields": [], "properties": [], "events": [],
             "methods": [{"token": "0x06000001", "name": "Read", "flags": 22,
                          "impl_flags": 0, "signature": "000008", "has_rva": True,
                          "generic_parameters": [], "parameters": []}]
@@ -81,6 +81,25 @@ class ClassOutputGate(unittest.TestCase):
                         text.replace("action=0x0002", "action=0x0003"), text.replace("[2E, 00]", "[2E, 01]"),
                         text.replace("payload=uninterpreted", "payload=decoded"),
                         text.replace("security enforcement is runtime-owned", "security ignored")]:
+            with self.assertRaises(ValueError):
+                self.check(text=invalid, snapshot=snapshot)
+
+    def test_method_mapping_endpoints_signatures_and_limit_are_required(self):
+        snapshot = copy.deepcopy(self.snapshot)
+        snapshot["types"][0]["method_implementations"] = [{"token": "0x19000001", "class": "0x02000001",
+            "body": "0x06000001", "declaration": "0x0A000001", "body_signature": "200008",
+            "declaration_signature": "200008", "raw_row": "010002000300"}]
+        record = (".method-impl 0x19000001 class=0x02000001 body=0x06000001 declaration=0x0A000001 "
+                  "raw-row-bytes=[01, 00, 02, 00, 03, 00]; dispatch/access/ancestry validation is not performed\n"
+                  ".method-impl-body 0x06000001 Type::Read owner=0x02000001 signature-bytes=[20, 00, 08]\n"
+                  ".method-impl-declaration 0x0A000001 Interface::Read owner=0x01000001 signature-bytes=[20, 00, 08]\n")
+        text = self.text.replace(".method 0x06000001", record + ".method 0x06000001")
+        self.assertEqual(self.check(text=text, snapshot=snapshot)["decompiled"], 1)
+        for invalid in [self.text, text.replace("class=0x02000001", "class=0x02000002"),
+                        text.replace("declaration=0x0A000001", "declaration=0x0A000002"),
+                        text.replace("body=0x06000001", "body=0x06000002"),
+                        text.replace("signature-bytes=[20, 00, 08]", "signature-bytes=[20, 01, 08]"),
+                        text.replace("dispatch/access/ancestry validation is not performed", "override resolved")]:
             with self.assertRaises(ValueError):
                 self.check(text=invalid, snapshot=snapshot)
 

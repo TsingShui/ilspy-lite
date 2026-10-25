@@ -85,6 +85,18 @@ def check_output(snapshot, text, stderr, code):
                              ", ".join(layout["raw_row"][i:i + 2] for i in range(0, len(layout["raw_row"]), 2)))
                             for layout in ty["class_layout"]]
         require(layouts == expected_layouts, f"Class layout record mismatch: {ty['token']}")
+        mappings = members(block, "method-impl", ty["method_implementations"])
+        for record in ty["method_implementations"]:
+            line = mappings[record["token"]]
+            row_bytes = ", ".join(record["raw_row"][i:i + 2] for i in range(0, len(record["raw_row"]), 2))
+            require(f"class={record['class']} body={record['body']} declaration={record['declaration']} " in line
+                    and f"raw-row-bytes=[{row_bytes}];" in line
+                    and "dispatch/access/ancestry validation is not performed" in line,
+                    f"Method implementation mapping mismatch: {record['token']}")
+            for kind in ("body", "declaration"):
+                require(any(l.startswith(f".method-impl-{kind} {record[kind]} ")
+                            and "owner=" in l and raw(record[kind + "_signature"]) in l for l in block.splitlines()),
+                        f"Method implementation {kind} identity missing: {record['token']}")
         security = members(block, "decl-security", ty["security_declarations"])
         for record in ty["security_declarations"]:
             line = security[record["token"]]

@@ -71,6 +71,16 @@ internal static class ClassInventory
                 flags = (int)parameter.Attributes, constraints = parameter.GetConstraints().Select(c =>
                     Token(md.GetGenericParameterConstraint(c).Type)).ToArray() };
         }).ToArray();
+        string MethodSignature(EntityHandle handle) => Blob(handle.Kind == HandleKind.MethodDefinition
+            ? md.GetMethodDefinition((MethodDefinitionHandle)handle).Signature
+            : md.GetMemberReference((MemberReferenceHandle)handle).Signature);
+        object[] Implementations(TypeDefinitionHandle handle) => md.GetTypeDefinition(handle).GetMethodImplementations().Select(h => {
+            var record = md.GetMethodImplementation(h);
+            return (object)new { token = Token(h), @class = Token(record.Type), body = Token(record.MethodBody),
+                declaration = Token(record.MethodDeclaration), body_signature = MethodSignature(record.MethodBody),
+                declaration_signature = MethodSignature(record.MethodDeclaration),
+                raw_row = Convert.ToHexString(Row(TableIndex.MethodImpl, MetadataTokens.GetRowNumber(h))) };
+        }).ToArray();
         object[] Security(TypeDefinitionHandle handle)
         {
             var type = md.GetTypeDefinition(handle);
@@ -139,6 +149,7 @@ internal static class ClassInventory
                 class_layout = Layouts(handle),
                 custom_attributes = Attributes(handle),
                 security_declarations = Security(handle),
+                method_implementations = Implementations(handle),
                 generic_parameters = Generics(type.GetGenericParameters()),
                 fields = type.GetFields().Select(h => {
                     var field = md.GetFieldDefinition(h);
