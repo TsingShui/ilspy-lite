@@ -21,6 +21,38 @@ def run(*args, **kwargs):
     return subprocess.run(list(map(str, args)), check=True, text=True, timeout=120, **kwargs)
 
 
+def adapt_readable_body(readable, details):
+    """Execute readable statements, using only unchanged detailed header/identity evidence.
+
+    No selected body is substituted. Parameter/receiver names are rebound to the
+    existing test shell signature; field token comments identify shell state only.
+    """
+    readable = readable.rstrip() + "\n"
+    detailed = re.search(r"^public static [^\n]+\n\{\n", details, re.M)
+    rendered = re.search(r"^[^\n]+\n\{\n", readable)
+    if detailed is None or rendered is None or not readable.endswith("}\n"):
+        raise ValueError("Readable body needs a supported ordinary declaration")
+    original_header = detailed.group(0)
+    header = readable[:rendered.end()].splitlines()[0]
+    parameters = header[header.index("(") + 1:header.rindex(")")]
+    names = [p.strip().split(" = ", 1)[0].split()[-1] for p in parameters.split(",") if p.strip()]
+    if len(names) != len(set(names)):
+        raise ValueError("Readable parameter names are ambiguous")
+    bindings = re.findall(r"\ba\d+\b", original_header)
+    if len(names) == len(bindings) - 1:
+        mapping = {"this": bindings[0], **dict(zip(names, bindings[1:]))}
+    elif len(names) == len(bindings):
+        mapping = dict(zip(names, bindings))
+    else:
+        raise ValueError("Readable parameter shape differs from detailed signature")
+    statements = readable[rendered.end():-2]
+    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|@?[A-Za-z_][A-Za-z_0-9]*')
+    statements = lexical.sub(lambda m: m.group(0) if statements[:m.start()].rstrip().endswith((".", "::"))
+                             else mapping.get(m.group(0), m.group(0)), statements)
+    comments = "\n".join(line for line in details.splitlines() if line.strip().startswith("// field token "))
+    return comments + "\n" + original_header + statements + "}\n"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     corpus_choice = parser.add_mutually_exclusive_group()
@@ -45,6 +77,7 @@ def main():
     corpus_choice.add_argument("--floats", action="store_true", help="execute owned nominal R4 conversion and snapshots")
     corpus_choice.add_argument("--external", action="store_true", help="execute owned opaque external-reference identity bodies")
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
+    parser.add_argument("--readable", action="store_true", help="execute actual readable bodies; detailed metadata supplies test shell identities only")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
     if args.random_class and not args.from_class:
@@ -182,6 +215,7 @@ def main():
         directory.mkdir(parents=True, exist_ok=True)
         entries = []
         class_bodies = {}
+        readable_classes = {}
         if args.from_class:
             owners = sorted({s.split("::", 1)[0].split()[-1] for _, s in selected})
             for owner in owners:
@@ -190,6 +224,13 @@ def main():
                 if result.returncode not in (0, 2) or (args.random_class and result.returncode != 0):
                     raise ValueError(f"Class selection failed: {owner}: {result.stderr}")
                 (directory / f"{owner}.class.txt").write_text(result.stdout)
+                if args.readable:
+                    readable = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner],
+                                              capture_output=True, text=True, timeout=120)
+                    if readable.returncode != result.returncode or readable.stderr != result.stderr:
+                        raise ValueError("Readable presentation changed method admission/summary")
+                    readable_classes[owner] = "\n".join(line.strip() for line in readable.stdout.splitlines())
+                    (directory / f"{owner}.readable.txt").write_text(readable.stdout)
                 for match in re.finditer(
                         r"^\.method-status (0x[0-9A-F]{8}) (\w+)\n(.*?)(?=^\.method 0x|^// type token 0x|\Z)",
                         result.stdout, re.M | re.S):
@@ -207,6 +248,13 @@ def main():
                 if "decompiled=1 declarations=0 partial=0 failed=0" != result.stderr.strip():
                     raise ValueError(f"Not a decompiled method: {signature}")
                 body = result.stdout
+            if args.readable:
+                readable = run(cli, "decompile", assembly, "--method", token, capture_output=True).stdout
+                (directory / f"{token}.readable.txt").write_text(readable)
+                normalized = "\n".join(line.strip() for line in readable.rstrip().splitlines())
+                if args.from_class and not any(normalized in text for text in readable_classes.values()):
+                    raise ValueError("Selected method view differs from actual readable class body")
+                body = adapt_readable_body(readable, body)
             source = directory / f"{token}.cs.txt"
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
