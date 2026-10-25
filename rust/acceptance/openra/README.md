@@ -38,8 +38,10 @@ allocation/initialization without copying original state.
 [RANDOM_DEFAULT.md](RANDOM_DEFAULT.md) validates controlled-clock default
 construction. [RANDOM_RANGES.md](RANDOM_RANGES.md) closes both range overloads
 and detailed exceptions/state. [RANDOM_FLOAT.md](RANDOM_FLOAT.md) closes NextFloat
-with exact Abs(float) target and bitwise/full-state comparisons. Combined
-milestone and independent-class delivery gates remain pending.
+with exact Abs(float) target and bitwise/full-state comparisons.
+[SEMANTIC_MILESTONE.md](SEMANTIC_MILESTONE.md) records the combined seven-method
+gate and retained resource/ammo acceptance. Independent-class delivery gates
+remain pending.
 
 ## Pinned input and provenance
 

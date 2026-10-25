@@ -290,7 +290,9 @@ original state. Default construction also passes its controlled-clock/delegation
 gate. Both range overloads also pass their return/detailed-exception/full-state
 gate, including original unchecked boundary behavior. NextFloat also passes
 1,250 bitwise results per seed with full state and exact Abs(float) call checks.
-The combined milestone and independent-class gates remain pending; see
+The combined seven-method semantic milestone passed; frozen independent-class
+behavior/reading gates remain pending. See
+[semantic milestone](acceptance/openra/SEMANTIC_MILESTONE.md) and
 [random state](acceptance/openra/RANDOM_STATE.md),
 [seed initialization](acceptance/openra/RANDOM_SEED.md) and
 [default constructor](acceptance/openra/RANDOM_DEFAULT.md) and

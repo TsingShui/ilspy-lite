@@ -62,6 +62,12 @@ internal static class ReferenceRoundtrip
         }
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
+        if (job.Kind == "random-class")
+        {
+            RandomClass(recovered, members);
+            Console.WriteLine($"random-class: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "default")
         {
             DefaultConstructor(recovered, members);
@@ -816,6 +822,26 @@ internal static class ReferenceRoundtrip
         }
         loweredType.GetField("ConstructorCallObserver")!.SetValue(null, null);
         Console.WriteLine("Default: original IL replay changes only clock boundary; recovered bodies keep one clock/delegation/core call in order, including null receiver paths.");
+    }
+
+    static void RandomClass(Assembly recovered, Dictionary<int, MethodBase> members)
+    {
+        if (members.Count != 7 || members.Values.Count(m => m is ConstructorInfo) != 2
+            || members.Values.Count(m => m.Name == "Next") != 3
+            || members.Values.Count(m => m.Name == "Generate") != 1
+            || members.Values.Count(m => m.Name == "NextFloat") != 1
+            || members.Values.Select(m => m.DeclaringType).Distinct().Count() != 1)
+            throw new Exception("Complete random class selection drift");
+        Dictionary<int, MethodBase> Select(Func<MethodBase, bool> predicate) => members
+            .Where(p => predicate(p.Value)).ToDictionary(p => p.Key, p => p.Value);
+        bool Seed(MethodBase m) => m is ConstructorInfo && m.GetParameters().Length == 1;
+        bool State(MethodBase m) => m.Name == "Generate" || (m.Name == "Next" && m.GetParameters().Length == 0);
+        RandomSeed(recovered, Select(m => Seed(m) || State(m)));
+        DefaultConstructor(recovered, Select(m => m is ConstructorInfo || State(m)));
+        RandomRanges(recovered, Select(m => Seed(m) || m.Name == "Next" || m.Name == "Generate"));
+        RandomFloat(recovered, Select(m => Seed(m) || State(m) || m.Name == "NextFloat"));
+        RandomState(recovered, Select(State).ToDictionary(p => p.Key, p => (MethodInfo)p.Value));
+        Console.WriteLine("All seven public class bodies checked in one recovered assembly with closed constructor/state/range/float dependencies.");
     }
 
     static void RandomSeed(Assembly recovered, Dictionary<int, MethodBase> methods)
