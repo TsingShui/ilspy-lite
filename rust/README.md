@@ -96,6 +96,11 @@ retain raw code bytes in a `Failed` result.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
   fields, locals and returns; `ldelem.i4` / `ldelem.u4` and `stelem.i4` with
   I4 indices. Array loads and stores stay at their original IL position.
+- `newarr` for these arrays with an I4 length and an admitted core element
+  TypeRef allocates a fresh zero-initialized array at the original instruction.
+  Negative-length and runtime allocation failures stay there; native/I8 lengths
+  and other array shapes remain unsupported. Resource exhaustion is a runtime
+  possibility, not a deterministic memory-limit guarantee.
 - `ldlen` for these arrays produces a native-sized bit pattern, read immediately
   with its original null check. Explicit `conv.i4` / `conv.i8` / `conv.u8` retain
   the original conversion chain; native length is not silently an I4 value.
@@ -159,7 +164,7 @@ If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
-element types, multidimensional/jagged arrays, `newarr`, other indirect access,
+element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
 floating point, native integer arithmetic/comparisons, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
 value types, prefixes, exception regions and

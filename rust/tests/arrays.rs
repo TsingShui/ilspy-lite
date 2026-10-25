@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{Status, decompile, list_methods};
+use ilspy_lite::{Status, decompile, decompile_type, list_methods};
 
 const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/array-release.bin"),
@@ -30,6 +30,107 @@ fn with_code(name: &str, code: &[u8]) -> (Vec<u8>, u32) {
     patched[start - 1] = ((code.len() as u8) << 2) | 2;
     patched[start..start + code.len()].copy_from_slice(code);
     (patched, method.token)
+}
+
+#[test]
+fn allocation_is_a_typed_zero_initialized_array_at_the_original_instruction() {
+    for bytes in IMAGES {
+        for (name, element) in [
+            ("AllocateSigned", "int"),
+            ("AllocateUnsigned", "uint"),
+            ("AllocateAfterEffect", "uint"),
+            ("AllocateThenEffect", "uint"),
+        ] {
+            let method = list_methods(bytes)
+                .unwrap()
+                .into_iter()
+                .find(|m| m.simple_name == name)
+                .unwrap();
+            let result = decompile(bytes, method.token).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains(&format!(" = new {element}[v")),
+                "{}",
+                result.text
+            );
+            assert!(result.text.contains("// element type token 0x01"));
+            assert!(result.text.contains("newarr"));
+        }
+        let result = decompile_type(bytes, "ArrayCases.Cells").unwrap();
+        assert_eq!(result.summary.decompiled, 21);
+        assert_eq!(result.summary.partial, 1);
+        assert_eq!(result.summary.failed + result.summary.metadata_failed, 0);
+    }
+}
+
+#[test]
+fn newarr_checks_element_identity_and_requires_an_i4_length() {
+    let bytes = IMAGES[0];
+    let methods = list_methods(bytes).unwrap();
+    let method = methods
+        .iter()
+        .find(|m| m.simple_name == "AllocateSigned")
+        .unwrap();
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md.tables().method_def(method.token & 0xffffff).unwrap();
+    let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+    let element = body
+        .instructions()
+        .map(Result::unwrap)
+        .find(|i| i.opcode.name() == "newarr")
+        .unwrap()
+        .operand
+        .token()
+        .unwrap()
+        .0;
+    for (prefix, token) in [
+        (&[0x14][..], element),
+        (&[][..], element),
+        (&[0x02][..], 0),
+        (&[0x02][..], method.token),
+    ] {
+        let mut code = prefix.to_vec();
+        code.push(0x8d);
+        code.extend(token.to_le_bytes());
+        code.push(0x2a);
+        let (patched, token) = with_code("AllocateSigned", &code);
+        let result = decompile(&patched, token).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(result.text.contains("IL FALLBACK"));
+    }
+    let signature = md.blobs().get(row.signature).unwrap();
+    assert_eq!(signature, &[0x00, 0x01, 0x1d, 0x08, 0x08]);
+    let start = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    for parameter in [0x0a, 0x18] {
+        // I8 and native lengths are outside this model.
+        let mut patched = bytes.to_vec();
+        patched[start + 4] = parameter;
+        assert_eq!(
+            decompile(&patched, method.token).unwrap().status,
+            Status::Partial
+        );
+    }
+    let other = methods
+        .iter()
+        .find(|m| m.simple_name == "AllocateUnsigned")
+        .unwrap();
+    let row = md.tables().method_def(other.token & 0xffffff).unwrap();
+    let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+    let other_element = body
+        .instructions()
+        .map(Result::unwrap)
+        .find(|i| i.opcode.name() == "newarr")
+        .unwrap()
+        .operand
+        .token()
+        .unwrap()
+        .0;
+    let mut code = vec![0x02, 0x8d];
+    code.extend(other_element.to_le_bytes());
+    code.push(0x2a);
+    let (patched, token) = with_code("AllocateSigned", &code);
+    assert_eq!(decompile(&patched, token).unwrap().status, Status::Partial); // No uint[] -> int[] return coercion.
 }
 
 #[test]

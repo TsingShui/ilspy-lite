@@ -437,6 +437,66 @@ internal static class ReferenceRoundtrip
                     });
             }
         }
+        foreach (int length in new[] { int.MinValue, -1, 0, 1, 4, 624 })
+        {
+            bool EqualAllocation(object x, object y)
+            {
+                if (length < 0) return Equals(x, y) && x is string;
+                if (x is not Array left || y is not Array right || ReferenceEquals(left, right)
+                    || left.Length != length || right.Length != length) return false;
+                SameArray(left, right);
+                return left.Cast<object>().All(v => Equals(v, left.GetType() == typeof(uint[]) ? (object)0u : 0));
+            }
+            foreach (string name in new[] { "AllocateSigned", "AllocateUnsigned" })
+            {
+                Check(recovered, methods.Values.Single(m => m.Name == name), null, null,
+                    new object[] { length }, new object[] { length }, equal: EqualAllocation);
+                if (length >= 0)
+                {
+                    MethodInfo method = methods.Values.Single(m => m.Name == name);
+                    object left1 = Original(method, null, new object[] { length });
+                    object left2 = Original(method, null, new object[] { length });
+                    MethodInfo lowered = recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!;
+                    object right1 = lowered.Invoke(null, new object[] { length });
+                    object right2 = lowered.Invoke(null, new object[] { length });
+                    if (ReferenceEquals(left1, left2) || ReferenceEquals(right1, right2))
+                        throw new Exception("Allocation reused an array identity");
+                }
+            }
+            foreach (uint[] state in states)
+            {
+                object a = New(cell), b = New(clone);
+                uint[] left = (uint[])state?.Clone(), right = (uint[])state?.Clone();
+                Set(a, "Values", left); Set(b, "Values", right);
+                Set(a, "Effects", 7); Set(b, "Effects", 7);
+                Check(recovered, methods.Values.Single(m => m.Name == "AllocateAfterEffect"), a, b,
+                    new object[] { length }, new object[] { length }, () => {
+                        SameFields(a, b, "Effects"); SameArray(left, right);
+                        uint[] al = (uint[])Get(a, "Values"), ar = (uint[])Get(b, "Values");
+                        if (length < 0)
+                        {
+                            if ((int)Get(a, "Effects") != 8 || !ReferenceEquals(al, left) || !ReferenceEquals(ar, right))
+                                throw new Exception("Failed allocation moved effects or replaced the old array");
+                        }
+                        else if ((int)Get(a, "Effects") != 9 || al == null || ar == null
+                            || ReferenceEquals(al, left) || ReferenceEquals(ar, right) || al.Length != length || ar.Length != length
+                            || al.Any(v => v != 0) || ar.Any(v => v != 0))
+                            throw new Exception("Array allocation lost identity or zero initialization");
+                    }, (x, y) => length < 0 ? Equals(x, y) && x is string : ReferenceEquals(x, left) && ReferenceEquals(y, right));
+            }
+            object ca = New(cell), cb = New(clone);
+            Set(ca, "Effects", 7); Set(cb, "Effects", 7);
+            Check(recovered, methods.Values.Single(m => m.Name == "AllocateThenEffect"), ca, cb,
+                new object[] { length }, new object[] { length }, () => {
+                    SameFields(ca, cb, "Effects");
+                    if ((int)Get(ca, "Effects") != (length < 0 ? 7 : 8))
+                        throw new Exception("Call moved across allocation failure");
+                }, EqualAllocation);
+        }
+        foreach (string name in new[] { "AllocateAfterEffect", "AllocateThenEffect" })
+        foreach (int length in new[] { -1, 0, 1 })
+            Check(recovered, methods.Values.Single(m => m.Name == name), null, null,
+                new object[] { length }, new object[] { length });
         Check(recovered, methods.Values.Single(m => m.Name == "LengthAfterEffect"), null, null,
             Array.Empty<object>(), Array.Empty<object>());
         Check(recovered, methods.Values.Single(m => m.Name == "LengthSnapshot"), null, null,
@@ -449,7 +509,8 @@ internal static class ReferenceRoundtrip
         Check(recovered, methods.Values.Single(m => m.Name == "Null"), null, null, Array.Empty<object>(), Array.Empty<object>());
         if (methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
             "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice",
-            "LengthSigned", "LengthUnsigned", "WideLength", "LengthAfterEffect", "LengthSnapshot", "CountLoop"
+            "LengthSigned", "LengthUnsigned", "WideLength", "LengthAfterEffect", "LengthSnapshot", "CountLoop",
+            "AllocateSigned", "AllocateUnsigned", "AllocateAfterEffect", "AllocateThenEffect"
         }.Order()) == false) throw new Exception("Array method selection drift");
     }
 

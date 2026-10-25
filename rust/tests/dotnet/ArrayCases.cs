@@ -56,6 +56,22 @@ public class Cells
         Values = replacement;
         return old.Length;
     }
+    public static int[] AllocateSigned(int length) => new int[length];
+    public static uint[] AllocateUnsigned(int length) => new uint[length];
+    public uint[] AllocateAfterEffect(int length)
+    {
+        Bump();
+        uint[] old = Values;
+        Values = new uint[length];
+        Bump();
+        return old;
+    }
+    public uint[] AllocateThenEffect(int length)
+    {
+        uint[] result = new uint[length];
+        Bump();
+        return result;
+    }
     public static int CountLoop(uint[] values)
     {
         int count = 0;

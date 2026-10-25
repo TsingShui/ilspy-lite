@@ -12,13 +12,16 @@ third-party test assemblies are checked in here.
 | integer-release.bin | ../dotnet/IntegerCases.cs | optimized, Roslyn .NET 10 | 4,608 |
 | integer-debug.bin | ../dotnet/IntegerCases.cs | unoptimized, Roslyn .NET 10 | 4,608 |
 
-The array snapshots (`array-release.bin`, `array-debug.bin`) contain 12 methods
-each from `../dotnet/ArrayCases.cs`: 11 exercised bodies and one unsupported
-constructor. They test signed/unsigned element reads and writes, array fields,
-locals, joins, aliasing and side-effect/exception order. Regenerate with
-`python3 rust/tests/build-array-fixtures.py`, then run
-`python3 rust/tests/reference-roundtrip.py --arrays`. Snapshot revisions are
-pinned by Git; their regeneration does not require a separate hash manifest.
+The array snapshots (`array-release.bin`, `array-debug.bin`) contain 21 exercised
+bodies and one unsupported constructor from `../dotnet/ArrayCases.cs`. They test
+signed/unsigned elements, fields, locals, joins, aliasing, native length conversion
+chains and typed I4-length allocation. Allocation checks cover negative lengths,
+zero initialization, fresh empty/nonempty identity and effects on either side of
+failure; memory exhaustion is not forced. Regenerate with
+`python3 rust/tests/build-array-fixtures.py`, then execute public class output
+with `python3 rust/tests/reference-roundtrip.py --arrays --from-class`.
+The Debug/Release gate passed 557 return/exception/state comparisons per
+configuration. Git pins snapshots without a separate hash manifest.
 
 The class-selection snapshots (`class-release.bin`, `class-debug.bin`) come from
 `../dotnet/ClassCases.cs`. They contain empty/empty-generic types, nested types,

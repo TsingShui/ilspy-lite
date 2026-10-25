@@ -331,6 +331,29 @@ impl Writer<'_, '_> {
                 self.lines
                     .push(format!("{dest} = {};", ty.store(&value.name, self.image)?));
             }
+            "newarr" => {
+                let token = i.operand.token().ok_or("missing element type token")?;
+                let element = self.image.array_element_type(token)?;
+                let length = self.pop()?;
+                expect(length.ty, Ty::I4)?;
+                self.lines.push(format!(
+                    "// element type token 0x{:08X}: {}",
+                    token.0,
+                    crate::metadata::escape_line(
+                        &cildec::Names::new(&self.image.md).try_token(token)?
+                    )
+                ));
+                self.lines.push("// Allocate a fresh zero-initialized array here; runtime length/allocation failures remain at this instruction.".into());
+                let array = if element == Ty::I4 {
+                    Ty::I4Array
+                } else {
+                    Ty::U4Array
+                };
+                self.push(
+                    array,
+                    format!("new {}[{}]", element.cs(self.image)?, length.name),
+                )?;
+            }
             "ldlen" => {
                 let array = self.pop()?;
                 array_element(array.ty)?;
