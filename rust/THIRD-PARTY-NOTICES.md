@@ -1,6 +1,11 @@
 # Third-party notices
 
-Direct dependencies are pinned `cildec 0.1.0` and `sha1 0.10.7`.
+Direct dependencies are pinned `cildec 0.1.0`, `sha1 0.10.7` and
+`serde_json 1.0.154`. `serde_json` parses bounded local dependency manifests;
+its lockfile closure includes itoa, memchr, serde, serde_core, serde_derive,
+proc-macro2, quote, syn, unicode-ident and zmij. The full MIT notices for that
+closure, plus unicode-ident's required Unicode-3.0 notice, are retained in
+[licenses/dependency-licenses.txt](licenses/dependency-licenses.txt).
 `cildec` supplies the PE/CLI, metadata/signature and IL decoder; its default `std`
 feature introduces no other normal dependencies. `sha1` implements the legacy
 ECMA-335 public-key-token identity calculation, not signature authentication or
