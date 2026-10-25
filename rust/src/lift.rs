@@ -7,7 +7,7 @@ use crate::{
     metadata::{Image, identifier},
 };
 use cildec::{FlowControl, Instruction, MethodBody, Operand};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 
 pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Result<String> {
     if !body.exception_handlers.is_empty() || !body.unknown_sections.is_empty() {
@@ -236,6 +236,23 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     {
         out.push_str("// __cil_F is a nominal R4 evaluation/local value; CLI F precision is target-runtime-defined, not analyzer-host-defined.\n");
         out.push_str("// conv.r4 rounds to binary32 (nearest); local/argument snapshots do not add a storage rounding. Field storage and return/call boundaries stay explicit.\n");
+    }
+    let external_types = writer
+        .args
+        .iter()
+        .chain(&writer.locals)
+        .chain(std::iter::once(&writer.ret))
+        .filter_map(|ty| {
+            if let Ty::ExternalClass(token) = ty {
+                Some(*token)
+            } else {
+                None
+            }
+        })
+        .collect::<BTreeSet<_>>();
+    for token in external_types {
+        out.push_str(&format!("// external class token 0x{token:08X}: {} = {}; opaque identity, no dependency loaded.\n",
+            image.external_class_name(token)?, image.external_class_context(token)?));
     }
     let body_name = if constructor_owner.is_some() {
         out.push_str("// Instance constructor initialization body on an existing receiver; does not allocate or certify a complete constructor chain.\n");
@@ -826,11 +843,12 @@ impl Writer<'_, '_> {
             }
             "throw" => {
                 let value = self.pop()?;
-                if !matches!(value.ty, Ty::CoreException(_) | Ty::Null) {
-                    return Err("throw needs an admitted exception reference or null".into());
-                }
-                if value.ty != Ty::Null {
-                    value.ty.cs(self.image)?;
+                match value.ty {
+                    Ty::ExternalClass(token) => {
+                        self.image.core_exception_name(token)?;
+                    }
+                    Ty::Null => {}
+                    _ => return Err("throw needs an admitted exception reference or null".into()),
                 }
                 self.lines.push(format!("throw {};", value.name));
                 // CLI throw empties the evaluation stack, including values below the object.

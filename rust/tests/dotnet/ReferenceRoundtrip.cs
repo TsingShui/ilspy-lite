@@ -107,7 +107,8 @@ internal static class ReferenceRoundtrip
             return;
         }
         var methods = members.ToDictionary(p => p.Key, p => (MethodInfo)p.Value);
-        if (job.Kind == "activity") ActivityQueue(recovered, methods);
+        if (job.Kind == "external") ExternalReferences(recovered, methods);
+        else if (job.Kind == "activity") ActivityQueue(recovered, methods);
         else if (job.Kind == "floats") Floats(recovered, methods);
         else if (job.Kind == "exceptions") Exceptions(recovered, methods);
         else if (job.Kind == "strings") Strings(recovered, methods);
@@ -135,6 +136,7 @@ internal static class ReferenceRoundtrip
         var strings = new HashSet<int>();
         var exceptions = new HashSet<int>();
         var absoluteCalls = new HashSet<int>();
+        var externalTypes = new Dictionary<int, Type>();
         bool hasFloat = false;
         foreach (Entry entry in job.Methods)
         {
@@ -142,6 +144,15 @@ internal static class ReferenceRoundtrip
             types.Add(method.DeclaringType!);
             string source = File.ReadAllText(entry.Source);
             hasFloat |= source.Contains("__cil_F", StringComparison.Ordinal);
+            foreach (Match match in Regex.Matches(source, @"\b__cil_type_([0-9A-F]{8})\b"))
+            {
+                int token = Convert.ToInt32(match.Groups[1].Value, 16);
+                Type external = original.ManifestModule.ResolveType(token);
+                if (!external.IsClass || external.IsGenericType || external.IsNested)
+                    throw new Exception("Unsupported opaque external test shell");
+                externalTypes[token] = external;
+                types.Add(external);
+            }
             foreach (Match match in Regex.Matches(source, @"// field token 0x([0-9A-F]{8})"))
             {
                 int token = Convert.ToInt32(match.Groups[1].Value, 16);
@@ -273,7 +284,8 @@ internal static class ReferenceRoundtrip
                 code.Add($"public static float __cil_abs_r4_{token:X8}(float value) {{ AbsoluteCallObserver?.Invoke({token}, value); return global::System.Math.Abs(value); }}");
         }
         string floatImports = hasFloat ? "using __cil_F = System.Single;\nusing static CilFloat;\n" : "";
-        File.WriteAllText(output, floatImports + string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
+        string externalImports = string.Join("\n", externalTypes.Select(p => $"using __cil_type_{p.Key:X8} = {TypeName(p.Value)};")) + "\n";
+        File.WriteAllText(output, floatImports + externalImports + string.Join("\n", shells) + "\npublic static class Recovered {\n" + string.Join("\n", code) + "\n}\n");
     }
 
     static object Original(MethodBase method, object receiver, object[] args)
@@ -346,6 +358,34 @@ internal static class ReferenceRoundtrip
         il.Emit(OpCodes.Call, typeof(object).GetConstructor(Type.EmptyTypes)!);
         il.Emit(OpCodes.Ret);
         return (Action<object>)dm.CreateDelegate(typeof(Action<object>));
+    }
+
+    static void ExternalReferences(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        if (methods.Count != 3 || !methods.Values.Select(m => m.Name).Order()
+            .SequenceEqual(new[] { "Unused", "Identity", "Other" }.Order()))
+            throw new Exception("Opaque external selection drift");
+        foreach (MethodInfo method in methods.Values)
+        foreach (bool nullArgument in new[] { false, true })
+        {
+            Type argument = method.GetParameters().Single().ParameterType;
+            object left = nullArgument ? null : New(argument);
+            object right = nullArgument ? null : New(recovered.GetType(argument.FullName!)!);
+            if (method.IsStatic)
+                Check(recovered, method, null, null, new[] { left }, new[] { right },
+                    equal: (x, y) => ReferenceEquals(x, left) && ReferenceEquals(y, right));
+            else
+                foreach (int value in new[] { int.MinValue, -1, 0, 1, int.MaxValue })
+                foreach (bool nullReceiver in new[] { false, true })
+                {
+                    object a = nullReceiver ? null : New(method.DeclaringType!);
+                    object b = nullReceiver ? null : New(recovered.GetType(method.DeclaringType!.FullName!)!);
+                    if (!nullReceiver) { Set(a, "Value", value); Set(b, "Value", value); }
+                    Check(recovered, method, a, b, new[] { left }, new[] { right },
+                        () => { if (!nullReceiver) SameFields(a, b, "Value"); });
+                }
+        }
+        Console.WriteLine("Opaque external references: exact token aliases, null/distinct identity and unused-argument state; no external hierarchy inferred.");
     }
 
     static void ActivityQueue(Assembly recovered, Dictionary<int, MethodInfo> methods)

@@ -1308,6 +1308,34 @@ impl<'a> Image<'a> {
         }
     }
 
+    pub fn external_class_context(&self, token: u32) -> Result<String> {
+        let t = Token(token);
+        if t.table() != Some(TableId::TypeRef) || t.rid() == 0 {
+            return Err("opaque external class needs a TypeRef".into());
+        }
+        let row = self.md.tables().type_ref(t.rid())?;
+        let name = self.md.strings().str(row.type_name)?;
+        if name.is_empty()
+            || name.contains('`')
+            || row.resolution_scope.table() != Some(TableId::AssemblyRef)
+            || row.resolution_scope.rid() == 0
+        {
+            return Err("nested/generic/unresolved external class needs IL fallback".into());
+        }
+        self.type_reference(t, 0)
+    }
+
+    pub fn external_class_name(&self, token: u32) -> Result<String> {
+        self.external_class_context(token)?;
+        if self
+            .core_type_name(Token(token))
+            .is_ok_and(|name| name == "ArgumentOutOfRangeException")
+        {
+            return self.core_exception_name(token);
+        }
+        Ok(format!("__cil_type_{token:08X}"))
+    }
+
     pub fn core_exception_name(&self, token: u32) -> Result<String> {
         if self.core_type_name(Token(token))? != "ArgumentOutOfRangeException" {
             return Err(
@@ -1328,7 +1356,7 @@ impl<'a> Image<'a> {
         {
             return Err("newobj needs exact instance void exception .ctor(string, string)".into());
         }
-        Ok(crate::ir::Ty::CoreException(member.class.0))
+        Ok(crate::ir::Ty::ExternalClass(member.class.0))
     }
 
     pub fn receiver(&self, method: u32) -> Result<crate::ir::Ty> {
@@ -1348,7 +1376,7 @@ impl<'a> Image<'a> {
             || (actual == Ty::Null
                 && matches!(
                     expected,
-                    Ty::String | Ty::CoreException(_) | Ty::Class(_) | Ty::I4Array | Ty::U4Array
+                    Ty::String | Ty::ExternalClass(_) | Ty::Class(_) | Ty::I4Array | Ty::U4Array
                 ))
         {
             return Ok(());

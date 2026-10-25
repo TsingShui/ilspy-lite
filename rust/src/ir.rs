@@ -22,7 +22,7 @@ pub(crate) enum Ty {
     R4,
     F4,
     String,
-    CoreException(u32),
+    ExternalClass(u32),
     Class(u32),
     I4Array,
     U4Array,
@@ -62,7 +62,7 @@ impl Ty {
             T::R4 => Self::R4,
             T::String => Self::String,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
-            T::Class(t) if t.table() == Some(cildec::TableId::TypeRef) => Self::CoreException(t.0),
+            T::Class(t) if t.table() == Some(cildec::TableId::TypeRef) => Self::ExternalClass(t.0),
             T::SzArray(mods, element) if mods.is_empty() => match element.as_ref() {
                 T::I4 => Self::I4Array,
                 T::U4 => Self::U4Array,
@@ -96,7 +96,7 @@ impl Ty {
             Self::F4 => "__cil_F",
             Self::String => "string",
             Self::Class(t) => return image.class_name(t),
-            Self::CoreException(t) => return image.core_exception_name(t),
+            Self::ExternalClass(t) => return image.external_class_name(t),
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
             Self::I4Address => "ref int",
@@ -113,7 +113,7 @@ impl Ty {
             Self::R4 | Self::F4 => StackKind::Float,
             Self::I4Address | Self::U4Address => StackKind::Address,
             Self::String
-            | Self::CoreException(_)
+            | Self::ExternalClass(_)
             | Self::Class(_)
             | Self::I4Array
             | Self::U4Array
@@ -125,7 +125,7 @@ impl Ty {
         match self {
             Self::Void
             | Self::String
-            | Self::CoreException(_)
+            | Self::ExternalClass(_)
             | Self::Class(_)
             | Self::I4Array
             | Self::U4Array
@@ -142,7 +142,7 @@ impl Ty {
         Ok(match self {
             Self::R4 => format!("__cil_load_r4({expression})"),
             Self::F4 => expression.into(),
-            Self::CoreException(_) => {
+            Self::ExternalClass(_) => {
                 self.cs(image)?;
                 expression.into()
             }
@@ -165,7 +165,7 @@ impl Ty {
         Ok(match self {
             Self::R4 => format!("__cil_store_r4({expression})"),
             Self::F4 => expression.into(),
-            Self::CoreException(_) => {
+            Self::ExternalClass(_) => {
                 self.cs(image)?;
                 expression.into()
             }

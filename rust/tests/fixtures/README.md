@@ -121,6 +121,15 @@ calls. This does not test other runtimes' internal F precision. R8, unsigned
 conversion, unsigned/mixed-category division and other floating arithmetic remain
 negative cases. Git pins snapshots.
 
+The external-reference snapshots (`external-{release,debug}.bin` and
+`external-library-{release,debug}.bin`) come from `../dotnet/ExternalCases.cs`.
+Regenerate with `python3 rust/tests/build-external-fixtures.py`; the DEPENDENCY
+compiler define produces a separate owned ExternalLibrary assembly. The
+`reference-roundtrip.py --external --from-class` gate initially exercises three
+opaque-reference bodies (24 comparisons/configuration), without external calls.
+Aliases retain the original image-scoped TypeRef and full assembly identity;
+different types are not inferred assignable. Git pins the snapshots.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

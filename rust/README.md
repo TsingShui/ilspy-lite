@@ -139,7 +139,10 @@ retain raw code bytes in a `Failed` result.
   prior effects. Throwing null raises NullReferenceException; general object
   throw, rethrow and catch/finally remain unsupported.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
-  reference joins, and locally provable base-class assignment.
+  reference joins, and locally provable base-class assignment. Nongeneric
+  assembly-scoped external Class TypeRefs are opaque `__cil_type_TOKEN` aliases
+  with original names/full scopes. Copies/null assignments preserve identity;
+  dependencies are not loaded and external inheritance is not inferred.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
   fields, locals and returns; `ldelem.i4` / `ldelem.u4` and `stelem.i4` with
   I4 indices. Array loads and stores stay at their original IL position.
@@ -213,7 +216,7 @@ bytes, decoded offsets/opcodes/tokens, locals, method/header flags and EH clause
 If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
-Currently unsupported: general/external object types, string operations, other array
+Currently unsupported: general external object operations, string operations, other array
 element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
 other floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
