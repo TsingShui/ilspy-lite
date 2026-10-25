@@ -9,8 +9,8 @@ mod metadata;
 mod readable;
 
 pub use dependencies::{
-    AssemblyIdentity, AssemblyReference, AssemblyResolution, DependencyContext, DependencyLimits,
-    ReferenceFailure,
+    AssemblyIdentity, AssemblyReference, AssemblyResolution, DefinitionLocation, DependencyContext,
+    DependencyLimits, ReferenceFailure, ResolvedType,
 };
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.

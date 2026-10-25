@@ -1,6 +1,9 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
+mod binding;
+pub use binding::{DefinitionLocation, ResolvedType};
+
 use crate::{DecompiledMethod, DecompiledType, OutputStyle, Result, metadata::Image};
 use cildec::TableId;
 use sha1::Digest;
