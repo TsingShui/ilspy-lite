@@ -83,6 +83,18 @@ including target/argument/count/order and null/dirty-state cases. Static constru
 generic/value-type constructors remain unsupported. Git pins the snapshots
 without a separate hash manifest.
 
+The base-constructor snapshots (`base-constructor-{release,debug}.bin` and
+`base-constructor-library-{release,debug}.bin`) come from
+`../dotnet/BaseConstructorCases.cs`. Regenerate with
+`python3 rust/tests/build-base-constructor-fixtures.py`. The
+`reference-roundtrip.py --base-constructors --readable --from-class` gate executes
+actual readable local/external derived constructor bodies, their recovered local
+base and argument methods, and an independent exact external base leaf. Pre-base
+field initializers, ordered effectful parameters, base exceptions, dirty state,
+integer boundaries and null-check timing pass 48 comparisons per configuration.
+These cases also prohibit moving initialization across field/argument effects
+merely to print a source-style initializer. Snapshots are pinned by Git.
+
 The string snapshots (`string-release.bin`, `string-debug.bin`) come from
 `../dotnet/StringCases.cs`. Regenerate with `python3 rust/tests/build-string-fixtures.py`
 and execute class output with `reference-roundtrip.py --strings --from-class`.

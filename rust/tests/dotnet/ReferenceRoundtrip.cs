@@ -76,6 +76,12 @@ internal static class ReferenceRoundtrip
         };
         Assembly recovered = recoveredContext.LoadFromAssemblyPath(args[2]);
         InstallMemberCalls(job, original, recovered);
+        if (job.Kind == "base-constructors")
+        {
+            BaseConstructors(recovered, members);
+            Console.WriteLine($"base-constructors: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "wait-constructors")
         {
             WaitConstructors(recovered, members);
@@ -491,6 +497,65 @@ internal static class ReferenceRoundtrip
             }, name == "DirectVirtual" ? (x, y) => Equals(x, 41) && Equals(y, 41) : null);
         }
         Console.WriteLine("External references/calls: token aliases, exact runtime leaves, null receiver without added checks, side effects and direct virtual target; no external hierarchy inferred.");
+    }
+
+    static void BaseConstructors(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        if (methods.Count != 4 || methods.Values.OfType<ConstructorInfo>().Count() != 3)
+            throw new Exception("Owned base construction selection drift");
+        MethodInfo mark = methods.Values.OfType<MethodInfo>().Single(m => m.Name == "Mark");
+        Type originalProbe = mark.DeclaringType!, recoveredProbe = recovered.GetType(originalProbe.FullName!)!;
+        FieldInfo observer = recovered.GetType("Recovered")!.GetField("ConstructorCallObserver")!;
+        recovered.GetType("Recovered")!.GetField("CoreConstructorCall")!.SetValue(null, CoreObjectCall());
+        foreach (ConstructorInfo constructor in methods.Values.OfType<ConstructorInfo>().Where(c => c.DeclaringType!.Name != "Base"))
+        foreach (var values in new[] { (First: -17, Second: 9), (First: 5, Second: -19), (First: int.MinValue, Second: int.MaxValue),
+            (First: 0, Second: 0), (First: int.MaxValue, Second: int.MinValue), (First: 3, Second: 7) })
+        foreach (bool dirty in new[] { false, true })
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            object a = nullReceiver ? null : New(constructor.DeclaringType!);
+            object b = nullReceiver ? null : New(recovered.GetType(constructor.DeclaringType!.FullName!)!);
+            foreach (Type probe in new[] { originalProbe, recoveredProbe })
+            {
+                Field(probe, "Trace").SetValue(null, 0);
+                Field(probe, "Calls").SetValue(null, 0);
+            }
+            if (dirty && !nullReceiver)
+                foreach (object receiver in new[] { a, b })
+                {
+                    Set(receiver, "Before", 44); Set(receiver, "After", 55);
+                    Set(receiver, "First", 99); Set(receiver, "Second", 98); Set(receiver, "Calls", int.MaxValue);
+                }
+            int calls = 0;
+            observer.SetValue(null, (Action<int, object, object[]>)((token, self, arguments) => {
+                if (!ReferenceEquals(self, b) || !arguments.SequenceEqual(new object[] { values.First, values.Second })
+                    || (int)Get(self, "Before") != 1 || (int)Get(self, "After") != (dirty ? 55 : 0)
+                    || (int)Get(self, "Calls") != (dirty ? int.MaxValue : 0)
+                    || (int)Field(recoveredProbe, "Calls").GetValue(null) != 3
+                    || (int)Field(recoveredProbe, "Trace").GetValue(null) != unchecked((31 + values.First) * 31 + values.Second))
+                    throw new Exception("Base call crossed initializer/argument effects or changed identity");
+                calls++;
+            }));
+            object[] arguments = { values.First, values.Second };
+            Check(recovered, constructor, a, b, arguments, arguments, () => {
+                if (calls != (nullReceiver ? 0 : 1)) throw new Exception("Base initialization missing or duplicated");
+                foreach (string name in new[] { "Trace", "Calls" })
+                    if (!Equals(Field(originalProbe, name).GetValue(null), Field(recoveredProbe, name).GetValue(null)))
+                        throw new Exception("Constructor argument side-effect order changed");
+                bool failed = values.First == -17 || values.Second == -19;
+                if ((int)Field(recoveredProbe, "Calls").GetValue(null) != (nullReceiver ? 1 : failed ? 3 : 4))
+                    throw new Exception("Constructor effects crossed a failure");
+                if (!nullReceiver)
+                {
+                    SameFields(a, b, "Before", "After", "First", "Second", "Calls");
+                    if ((int)Get(b, "Before") != 1 || (int)Get(b, "After") != (failed ? (dirty ? 55 : 0) : 7)
+                        || (int)Get(b, "Calls") != (dirty ? int.MinValue : 1))
+                        throw new Exception("Base initialization or subsequent write was lost");
+                }
+            }, detailedExceptions: true);
+        }
+        observer.SetValue(null, null);
+        Console.WriteLine("Local/external base constructors: original receiver, pre-base initializer, ordered effectful parameters, base exceptions, dirty state and null timing; local base/argument methods are recovered, external base is an independent exact leaf.");
     }
 
     static void WaitConstructors(Assembly recovered, Dictionary<int, MethodBase> methods)

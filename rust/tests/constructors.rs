@@ -447,6 +447,34 @@ fn delegated_constructor_rejects_ordinary_other_receiver_and_invalid_target_cont
 }
 
 #[test]
+fn base_calls_preserve_preinitialization_and_ordered_effectful_arguments() {
+    for bytes in [
+        include_bytes!("fixtures/base-constructor-release.bin").as_slice(),
+        include_bytes!("fixtures/base-constructor-debug.bin").as_slice(),
+    ] {
+        for owner in [
+            "BaseConstructorCases.Local",
+            "BaseConstructorCases.External",
+        ] {
+            let token = list_methods(bytes)
+                .unwrap()
+                .into_iter()
+                .find(|m| m.declaring_type == owner && m.simple_name == ".ctor")
+                .unwrap()
+                .token;
+            let result = decompile(bytes, token).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+            let before = result.text.find(".@Before = ").unwrap();
+            let call = result.text.find("__cil_ctor_call_").unwrap();
+            let after = result.text.find(".@After = ").unwrap();
+            assert!(before < call && call < after, "{}", result.text);
+            assert_eq!(result.text[..call].matches(".@Mark(").count(), 3);
+            assert_eq!(result.text[call..].matches(".@Mark(").count(), 1);
+        }
+    }
+}
+
+#[test]
 fn local_base_initialization_rejects_other_or_reassigned_receivers_and_ordinary_callers() {
     for bytes in IMAGES {
         let methods = list_methods(bytes).unwrap();
