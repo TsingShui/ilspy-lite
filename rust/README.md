@@ -91,6 +91,13 @@ retain raw code bytes in a `Failed` result.
   conversions remain unsupported.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
+- Instance `.ctor` initialization bodies use `__cil_ctor_body_TOKEN`, distinct
+  from ordinary methods and allocation. Initonly instance writes require the
+  field's exact owning constructor and a direct, unchanged entry-this load;
+  receiver aliases/joins are not inferred. This this-only restriction is a
+  conservative subset, not an extra CLI requirement. Static initonly writes and
+  constructor calls still fall back; successful body lowering does not certify
+  base-chain initialization.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
@@ -153,7 +160,7 @@ not sufficient to compile it. `callvirt` is still a fallback.
 Reference identities are metadata tokens scoped to the one input image, not
 strings compared across assemblies. Local ancestor checks stop at external
 bases; no external inheritance compatibility is assumed. Interfaces, value
-types, generic reference types and constructors remain unsupported. Reference
+types and generic reference types remain unsupported. Reference
 comparisons/conditional tests and mixed-reference joins are not yet lowered.
 
 Unsupported signatures/instructions/regions cause **whole-method fallback**,

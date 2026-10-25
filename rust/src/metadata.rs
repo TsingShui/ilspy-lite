@@ -1332,6 +1332,9 @@ impl<'a> Image<'a> {
         {
             return Err("instance/generic/vararg call needs IL fallback".into());
         }
+        if name == ".ctor" || name == ".cctor" {
+            return Err("constructor call needs IL fallback".into());
+        }
         identifier(&name)?;
         let receiver = if sig.has_this {
             if t.table() != Some(TableId::MethodDef) {
@@ -1364,7 +1367,7 @@ impl<'a> Image<'a> {
         })
     }
 
-    pub fn static_field(&self, t: Token) -> Result<(String, crate::ir::Ty)> {
+    pub fn static_field(&self, t: Token) -> Result<(String, crate::ir::Ty, bool)> {
         if t.table() != Some(TableId::Field) {
             return Err("external field needs IL fallback".into());
         }
@@ -1389,6 +1392,7 @@ impl<'a> Image<'a> {
                 cs_owner(&Names::new(&self.md).type_def(owner)?)?
             ),
             crate::ir::Ty::from_sig(&sig.type_)?,
+            row.flags & 0x20 != 0,
         ))
     }
 }

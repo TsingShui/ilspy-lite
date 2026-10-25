@@ -62,6 +62,16 @@ passed 1,892 return/exception/state comparisons per configuration. Other
 indirect operations and cross-block address propagation remain unsupported.
 Git pins the snapshots without a separate hash manifest.
 
+The constructor snapshots (`constructor-release.bin`, `constructor-debug.bin`)
+come from `../dotnet/ConstructorCases.cs`. Regenerate with
+`python3 rust/tests/build-constructor-fixtures.py`. Public method/class tests
+patch owned bodies to isolate constructor identity and initonly permission:
+exact field ownership, unchanged entry this, ordinary/derived/other-receiver
+negatives and visible unsupported constructor calls. A constructor fragment
+without a base call tests permission only, not a valid complete initialization
+chain. Static constructors and generic/value-type constructors remain unsupported.
+Git pins the snapshots without a separate hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

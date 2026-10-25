@@ -7,7 +7,7 @@ use crate::{
     metadata::{Image, identifier},
 };
 use cildec::{FlowControl, Instruction, MethodBody, Operand};
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Result<String> {
     if !body.exception_handlers.is_empty() || !body.unknown_sections.is_empty() {
@@ -22,7 +22,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         return Err("method-body parser diagnostics need IL fallback".into());
     }
     let name = image.md.strings().str(row.name)?;
-    identifier(name)?;
+    if name != ".ctor" {
+        identifier(name)?;
+    }
     let sig = image.signature(token)?;
     if sig.explicit_this
         || sig.calling_convention != cildec::CallConv::Default
@@ -42,6 +44,18 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         args.insert(0, image.receiver(token)?);
     }
     let ret = Ty::from_param(&sig.return_type)?;
+    let constructor_owner = if name == ".ctor" {
+        if !sig.has_this
+            || row.flags & 0x1800 != 0x1800
+            || row.flags & 0x440 != 0
+            || ret != Ty::Void
+        {
+            return Err("invalid instance constructor context needs IL fallback".into());
+        }
+        Some(args[0])
+    } else {
+        None
+    };
     for ty in args.iter().chain(std::iter::once(&ret)) {
         ty.cs(image)?;
     }
@@ -54,6 +68,13 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         .collect::<std::result::Result<Vec<_>, _>>()?;
     if instructions.len() > 100_000 {
         return Err("instruction limit exceeded".into());
+    }
+    if constructor_owner.is_some()
+        && instructions
+            .iter()
+            .any(|i| i.opcode.canonical().name() == "starg" && matches!(i.operand, Operand::Var(0)))
+    {
+        return Err("constructor receiver reassignment needs IL fallback".into());
     }
     let blocks = crate::cfg::build(&instructions, body.code.len())?;
     let mut entries: Vec<Option<Vec<Ty>>> = vec![None; blocks.len()];
@@ -78,6 +99,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             args: args.clone(),
             locals: locals.clone(),
             ret,
+            constructor_owner,
+            original_this: HashSet::new(),
         };
         for ins in &instructions[blocks[n].start..blocks[n].end] {
             w.instruction(ins)?;
@@ -112,6 +135,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         args,
         locals,
         ret,
+        constructor_owner,
+        original_this: HashSet::new(),
     };
     for (n, b) in blocks.iter().enumerate() {
         writer.stack = entries[n]
@@ -199,8 +224,14 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             "// nint/nuint use the target runtime pointer width, not the analyzer host width.\n",
         );
     }
+    let body_name = if constructor_owner.is_some() {
+        out.push_str("// Instance constructor initialization body on an existing receiver; does not allocate or certify a complete constructor chain.\n");
+        format!("__cil_ctor_body_{token:08X}")
+    } else {
+        format!("@{name}")
+    };
     out.push_str(&format!(
-        "public static {} @{name}({parameters})\n{{\n",
+        "public static {} {body_name}({parameters})\n{{\n",
         ret.cs(image)?
     ));
     for (i, t) in writer.locals.iter().enumerate() {
@@ -233,6 +264,8 @@ struct Writer<'i, 'a> {
     args: Vec<Ty>,
     locals: Vec<Ty>,
     ret: Ty,
+    constructor_owner: Option<Ty>,
+    original_this: HashSet<String>,
 }
 impl Writer<'_, '_> {
     fn pop(&mut self) -> Result<Value> {
@@ -312,6 +345,10 @@ impl Writer<'_, '_> {
                     )
                 };
                 self.push(ty.stack(), ty.load(&expr, self.image)?)?;
+                if op == "ldarg" && idx == 0 && self.constructor_owner.is_some() {
+                    self.original_this
+                        .insert(self.stack.last().unwrap().name.clone());
+                }
             }
             "starg" | "stloc" => {
                 let idx = var(i)?;
@@ -609,7 +646,10 @@ impl Writer<'_, '_> {
                     crate::metadata::escape_line(&cildec::Names::new(&self.image.md).try_token(t)?)
                 ));
                 if let Some(v) = value {
-                    if field.readonly {
+                    if field.readonly
+                        && (self.constructor_owner != Some(field.owner)
+                            || !self.original_this.contains(&receiver.name))
+                    {
                         return Err("readonly field write needs IL fallback".into());
                     }
                     self.image.assignable(v.ty, field.ty.stack())?;
@@ -623,11 +663,14 @@ impl Writer<'_, '_> {
             }
             "ldsfld" | "stsfld" => {
                 let t = i.operand.token().ok_or("missing field token")?;
-                let (field, ty) = self.image.static_field(t)?;
+                let (field, ty, readonly) = self.image.static_field(t)?;
                 self.lines.push(format!("// field token 0x{:08X}", t.0));
                 if op == "ldsfld" {
                     self.push(ty.stack(), ty.load(&field, self.image)?)?;
                 } else {
+                    if readonly {
+                        return Err("readonly static field write needs IL fallback".into());
+                    }
                     let v = self.pop()?;
                     if ty.kind() == StackKind::Native {
                         self.image.assignable(v.ty, ty.stack())?;
