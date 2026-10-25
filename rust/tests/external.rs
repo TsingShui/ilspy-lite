@@ -40,6 +40,95 @@ fn opaque_external_classes_keep_image_scoped_identity_without_loading_dependenci
 }
 
 #[test]
+fn external_direct_base_constructor_preserves_original_receiver_and_scoped_target() {
+    for bytes in IMAGES {
+        let ctor = token(bytes, ".ctor");
+        let result = decompile(bytes, ctor).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(
+            result.text.contains("__cil_ctor_call_0A"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("ExternalLibrary.Base::.ctor"));
+        assert!(result.text.contains("exact direct-base constructor"));
+        assert!(
+            result.text.contains("no allocation") && result.text.contains("no added null check")
+        );
+        assert!(!result.text.contains("__cil_core_object_ctor_"));
+        assert!(!result.text.contains("unresolved core type identity"));
+        assert!(!result.text.contains("new "));
+    }
+}
+
+#[test]
+fn external_constructor_rejects_null_receivers_callvirt_and_unrelated_owners() {
+    for bytes in IMAGES {
+        let ctor = token(bytes, ".ctor");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md.tables().method_def(ctor & 0xffffff).unwrap();
+        let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+        let instructions = body.instructions().map(Result::unwrap).collect::<Vec<_>>();
+        let load = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "ldarg.0")
+            .unwrap();
+        let call = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+        for (offset, opcode) in [(load.offset, 0x14), (call.offset, 0x6f)] {
+            let mut patched = bytes.to_vec();
+            patched[start + offset as usize] = opcode;
+            assert_eq!(decompile(&patched, ctor).unwrap().status, Status::Partial);
+        }
+        let target = call.operand.token().unwrap();
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::MemberRef, target.rid())
+            .unwrap();
+        assert_eq!(raw.len(), 6);
+        let offset = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+        let actor = md
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, r)| md.strings().str(r.as_ref().unwrap().type_name).unwrap() == "Actor")
+            .unwrap()
+            .0;
+        let mut patched = bytes.to_vec();
+        patched[offset..offset + 2].copy_from_slice(&(((actor << 3) | 1) as u16).to_le_bytes());
+        let result = decompile(&patched, ctor).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(!result.text.contains("unresolved core type identity"));
+        let ordinary = token(bytes, "DirectConstant");
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(ordinary & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let call = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let offset =
+            body.code.as_ptr() as usize - bytes.as_ptr() as usize + call.offset as usize + 1;
+        let mut patched = bytes.to_vec();
+        patched[offset..offset + 4].copy_from_slice(&target.0.to_le_bytes());
+        let result = decompile(&patched, ordinary).unwrap();
+        assert_eq!(result.status, Status::Partial);
+        assert!(
+            result.text.contains("outside constructor context"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn direct_memberref_calls_keep_full_identity_signature_and_no_virtual_dispatch() {
     for bytes in IMAGES {
         for name in ["DirectFlag", "DirectConstant", "DirectVirtual"] {

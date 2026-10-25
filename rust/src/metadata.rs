@@ -2111,7 +2111,17 @@ impl<'a> Image<'a> {
         }
         if name == ".ctor" && t.table() == Some(TableId::MemberRef) {
             let reference = self.md.tables().member_ref(t.rid())?;
-            if self.core_type_name(reference.class)? == "Object" && sig.raw == [0x20, 0x00, 0x01] {
+            self.external_class_context(reference.class.0)?;
+            let declaring_type = self.md.tables().type_ref(reference.class.rid())?;
+            if self.md.strings().str(declaring_type.type_namespace)? == "System"
+                && self.md.strings().str(declaring_type.type_name)? == "Object"
+            {
+                self.core_type_name(reference.class)?;
+                if sig.raw != [0x20, 0x00, 0x01] {
+                    return Err(
+                        "core Object constructor needs exact instance void signature".into(),
+                    );
+                }
                 return Ok(MethodRef {
                     token: t.0,
                     receiver: None,
@@ -2120,9 +2130,29 @@ impl<'a> Image<'a> {
                     ret: crate::ir::Ty::Void,
                     core_object_constructor: Some(reference.class.0),
                     tick_count: false,
-                    local_constructor: false,
+                    constructor: false,
                 });
             }
+            if !sig.has_this || crate::ir::Ty::from_param(&sig.return_type)? != crate::ir::Ty::Void
+            {
+                return Err(
+                    "external constructor needs an ordinary instance void signature".into(),
+                );
+            }
+            return Ok(MethodRef {
+                token: t.0,
+                receiver: Some(crate::ir::Ty::ExternalClass(reference.class.0)),
+                target: format!("__cil_ctor_call_{:08X}", t.0),
+                args: sig
+                    .params
+                    .iter()
+                    .map(crate::ir::Ty::from_param)
+                    .collect::<Result<Vec<_>>>()?,
+                ret: crate::ir::Ty::Void,
+                core_object_constructor: None,
+                tick_count: false,
+                constructor: true,
+            });
         }
         if name == ".ctor" && t.table() == Some(TableId::MethodDef) {
             let row = self.row(t.0)?;
@@ -2146,7 +2176,7 @@ impl<'a> Image<'a> {
                 ret: crate::ir::Ty::Void,
                 core_object_constructor: None,
                 tick_count: false,
-                local_constructor: true,
+                constructor: true,
             });
         }
         if name == ".ctor" || name == ".cctor" {
@@ -2169,7 +2199,7 @@ impl<'a> Image<'a> {
                 ret: crate::ir::Ty::I4,
                 core_object_constructor: None,
                 tick_count: true,
-                local_constructor: false,
+                constructor: false,
             });
         }
         identifier(&name)?;
@@ -2218,7 +2248,7 @@ impl<'a> Image<'a> {
                 ret,
                 core_object_constructor: None,
                 tick_count: false,
-                local_constructor: false,
+                constructor: false,
             });
         }
         Ok(MethodRef {
@@ -2235,7 +2265,7 @@ impl<'a> Image<'a> {
             ret,
             core_object_constructor: None,
             tick_count: false,
-            local_constructor: false,
+            constructor: false,
         })
     }
 
@@ -2295,7 +2325,7 @@ pub(crate) struct MethodRef {
     pub ret: crate::ir::Ty,
     pub core_object_constructor: Option<u32>,
     pub tick_count: bool,
-    pub local_constructor: bool,
+    pub constructor: bool,
 }
 
 fn generic_flags(flags: u16) -> String {

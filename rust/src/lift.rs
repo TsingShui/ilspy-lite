@@ -743,7 +743,7 @@ impl Writer<'_, '_> {
                 } else if let Some(owner) = method.receiver {
                     let receiver = self.pop()?;
                     self.image.assignable(receiver.ty, owner)?;
-                    if method.local_constructor {
+                    if method.constructor {
                         let current = self
                             .constructor_owner
                             .ok_or("constructor call outside constructor context")?;
@@ -756,7 +756,9 @@ impl Writer<'_, '_> {
                         if current == owner {
                             self.lines.push("// Exact same-type constructor delegation on the same original receiver; no allocation or added null check.".into());
                         } else {
-                            let (Ty::Class(current), Ty::Class(base)) = (current, owner) else {
+                            let (Ty::Class(current), Ty::Class(base) | Ty::ExternalClass(base)) =
+                                (current, owner)
+                            else {
                                 return Err("constructor call needs a reference-class owner".into());
                             };
                             if self
@@ -770,7 +772,7 @@ impl Writer<'_, '_> {
                             {
                                 return Err("constructor call is not the immediate base".into());
                             }
-                            self.lines.push("// Initialize the existing original receiver via an exact direct-base constructor; no allocation, virtual dispatch or added null check.".into());
+                            self.lines.push("// Initialize the existing original receiver via an exact direct-base constructor; no allocation, no virtual dispatch, no added null check.".into());
                         }
                     } else {
                         self.lines.push("// __cil_direct: exact IL call target; no virtual dispatch or added null check.".into());
