@@ -43,9 +43,46 @@ fn exception_allocation_keeps_exact_target_arguments_and_position() {
             Status::Decompiled
         );
         let class = decompile_type(bytes, "ExceptionCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 6); // Five methods and core-base constructor.
+        assert_eq!(class.summary.decompiled, 9); // Includes three throw bodies and core-base constructor.
         assert_eq!(class.summary.partial, 2);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
+    }
+}
+
+#[test]
+fn throw_keeps_the_existing_object_and_terminates_with_an_empty_stack() {
+    for bytes in IMAGES {
+        for name in ["Raise", "ThrowExisting", "ThrowNull"] {
+            let result = decompile(bytes, token(bytes, name)).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("throw ") && result.text.contains("throw"));
+            assert!(!result.text.contains("return;"));
+            if name == "ThrowExisting" {
+                assert!(!result.text.contains("__cil_newobj_"));
+            }
+        }
+    }
+    let bytes = IMAGES[0];
+    let method = token(bytes, "Discard");
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let body =
+        cildec::MethodBody::from_image(&pe, &md.tables().method_def(method & 0xffffff).unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(body.kind, cildec::HeaderKind::Tiny);
+    let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+    for (code, status) in [
+        (&[0x17, 0x14, 0x7a][..], Status::Decompiled), // throw clears lower stack slots.
+        (&[0x17, 0x7a][..], Status::Partial),          // Integer cannot be thrown.
+        (&[0x03, 0x7a][..], Status::Partial), // General/string throw outside admitted subset.
+        (&[0x7a][..], Status::Partial),       // Underflow.
+    ] {
+        let mut patched = bytes.to_vec();
+        patched[start - 1] = ((code.len() as u8) << 2) | 2;
+        patched[start..start + code.len()].copy_from_slice(code);
+        let result = decompile(&patched, method).unwrap();
+        assert_eq!(result.status, status, "{}", result.text);
     }
 }
 

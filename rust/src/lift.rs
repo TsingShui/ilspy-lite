@@ -748,6 +748,18 @@ impl Writer<'_, '_> {
                         .push(format!("{field} = {};", ty.store(&v.name, self.image)?));
                 }
             }
+            "throw" => {
+                let value = self.pop()?;
+                if !matches!(value.ty, Ty::CoreException(_) | Ty::Null) {
+                    return Err("throw needs an admitted exception reference or null".into());
+                }
+                if value.ty != Ty::Null {
+                    value.ty.cs(self.image)?;
+                }
+                self.lines.push(format!("throw {};", value.name));
+                // CLI throw empties the evaluation stack, including values below the object.
+                self.stack.clear();
+            }
             "ret" => {
                 if self.ret == Ty::Void {
                     self.lines.push("return;".into());

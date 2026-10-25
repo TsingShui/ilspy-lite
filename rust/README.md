@@ -121,7 +121,10 @@ retain raw code bytes in a `Failed` result.
   `__cil_newobj_TOKEN(...)` is one allocation/constructor operation, not exception
   throwing or an ordinary call. That exception type retains its image-scoped
   TypeRef in signatures/locals/returns; other external types and constructor
-  overloads remain unsupported.
+  overloads remain unsupported. `throw` terminates on that exception reference
+  or null, empties the evaluation stack and retains the existing object and
+  prior effects. Throwing null raises NullReferenceException; general object
+  throw, rethrow and catch/finally remain unsupported.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
 - One-dimensional zero-based `int[]` / `uint[]` references in parameters,
@@ -270,10 +273,13 @@ and its `Generate` dependency also lower and pass the separate full-state gate:
 The separate seed gate executes the recovered allocation/initialization body,
 compares all 624 words and follows it through continuous draws without copying
 original state. Default construction also passes its controlled-clock/delegation
-gate. Range/exception and floating closure remain pending; see
+gate. Both range overloads also pass their return/detailed-exception/full-state
+gate, including original unchecked boundary behavior. Floating closure remains
+pending; see
 [random state](acceptance/openra/RANDOM_STATE.md),
 [seed initialization](acceptance/openra/RANDOM_SEED.md) and
-[default constructor](acceptance/openra/RANDOM_DEFAULT.md). The corpus is optional, downloaded
+[default constructor](acceptance/openra/RANDOM_DEFAULT.md) and
+[ranges](acceptance/openra/RANDOM_RANGES.md). The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra --from-class` gate executes only
 the selected bodies extracted from class output. This gate reuses verified local

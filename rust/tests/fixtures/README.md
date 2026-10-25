@@ -97,12 +97,13 @@ bytes or converting surrogates lossily. Git pins snapshots without a hash manife
 The exception snapshots (`exception-release.bin`, `exception-debug.bin`) come
 from `../dotnet/ExceptionCases.cs`. Regenerate with
 `python3 rust/tests/build-exception-fixtures.py` and execute class output with
-`reference-roundtrip.py --exceptions --from-class`. Five bodies exercise exact
+`reference-roundtrip.py --exceptions --from-class`. Eight bodies exercise exact
 core two-string exception construction, fresh identity, null/UTF-16 argument
-content and allocation position even for a discarded result. Debug/Release
-passed 182 return/exception/state comparisons per configuration. Type/scope/
-signature spoofs, wrong stack arguments and ordinary-call substitution remain
-negative cases. This gate does not yet include throw or EH. Git pins snapshots
+content, allocation position for discarded results, existing-object throw and
+throw-null behavior. Debug/Release passed 259 return/exception/state comparisons
+per configuration, including detailed faults and prior state. Type/scope/signature
+spoofs, wrong stack arguments and ordinary-call substitution remain negative
+cases. Catch/finally/rethrow and general object throwing remain unsupported. Git pins snapshots
 without a separate hash manifest.
 
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,

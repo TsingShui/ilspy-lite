@@ -39,6 +39,17 @@ public class Cells
         _ = new ArgumentOutOfRangeException(parameter, message);
         Effects = 2;
     }
+    public void Raise(string parameter, string message)
+    {
+        Effects = 1;
+        throw new ArgumentOutOfRangeException(parameter, message);
+    }
+    public void ThrowExisting(ArgumentOutOfRangeException error)
+    {
+        Effects = 1;
+        throw error;
+    }
+    public static void ThrowNull() => throw (ArgumentOutOfRangeException)null;
     public static ArgumentOutOfRangeException UnsupportedOverload(string parameter) => new ArgumentOutOfRangeException(parameter);
     public static Exception UnsupportedType(string message) => new Exception(message);
 }

@@ -28,6 +28,7 @@ def main():
     corpus_choice.add_argument("--random-state", action="store_true", help="execute pinned Generate/Next on controlled state; seed construction is not recovered")
     corpus_choice.add_argument("--random-seed", action="store_true", help="execute recovered pinned seed initialization and Generate/Next closure")
     corpus_choice.add_argument("--random-default", action="store_true", help="validate pinned default constructor with controlled clock and recovered seed body")
+    corpus_choice.add_argument("--random-ranges", action="store_true", help="execute pinned range overloads with recovered seed and state dependencies")
     corpus_choice.add_argument("--arrays", action="store_true", help="execute the owned integer-array corpus")
     corpus_choice.add_argument("--native", action="store_true", help="execute the owned native-integer storage corpus")
     corpus_choice.add_argument("--conversions", action="store_true", help="execute the owned integer-conversion corpus")
@@ -40,7 +41,7 @@ def main():
     parser.add_argument("--from-class", action="store_true", help="execute bodies extracted from the public --type output")
     parser.add_argument("--verify-inputs", action="store_true", help="explicitly rehash the pinned OpenRA inputs before execution")
     args = parser.parse_args()
-    if args.verify_inputs and not (args.openra or args.random_state or args.random_seed or args.random_default):
+    if args.verify_inputs and not (args.openra or args.random_state or args.random_seed or args.random_default or args.random_ranges):
         parser.error("--verify-inputs requires an OpenRA behavior selection")
     dotnet = Path(os.environ.get("DOTNET_ROOT", Path.home() / ".dotnet10"))
     def latest(path):
@@ -68,7 +69,7 @@ def main():
     run("cargo", "build", "--release", "--locked", cwd=ROOT)
     cli = ROOT / "target/release/ilspy-lite"
     jobs = []
-    if args.openra or args.random_state or args.random_seed or args.random_default:
+    if args.openra or args.random_state or args.random_seed or args.random_default or args.random_ranges:
         manifest = json.loads((ROOT / "acceptance/openra/manifest.json").read_text())
         corpus = ROOT / "report/openra"
         assembly = corpus / "assemblies" / ("OpenRA.Mods.Common.dll" if args.openra else "OpenRA.Game.dll")
@@ -80,19 +81,25 @@ def main():
                 path = corpus / "runtime-deps" / name
                 if hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
                     raise ValueError(f"OpenRA runtime dependency mismatch: {name}")
-        if args.random_state or args.random_seed or args.random_default:
+        if args.random_state or args.random_seed or args.random_default or args.random_ranges:
             targets = {"random-next", "random-generate"}
-            if args.random_seed or args.random_default:
+            if args.random_seed or args.random_default or args.random_ranges:
                 targets.add("random-seed")
             selected = [m for m in manifest["methods"] if m["id"] in targets]
             if {m["id"] for m in selected} != targets or len(selected) != len(targets):
                 raise ValueError("Random method selection drift")
+            if args.random_ranges:
+                frozen = json.loads((ROOT / "acceptance/openra/classes.json").read_text())
+                random = next(c for c in frozen["classes"] if c["id"] == "random")
+                for method_name, signature in [("Next(int32,int32)", "int32, int32"), ("Next(int32)", "int32")]:
+                    token = random["required_methods"][random["required_method_names"].index(method_name)]
+                    selected.append({"token": token, "signature": f'instance int32 {random["name"]}::Next({signature})'})
             if args.random_default:
                 frozen = json.loads((ROOT / "acceptance/openra/classes.json").read_text())
                 random = next(c for c in frozen["classes"] if c["id"] == "random")
                 token = random["required_methods"][random["required_method_names"].index(".ctor()")]
                 selected.append({"token": token, "signature": f'instance void {random["name"]}::.ctor()'})
-            name = "random-default" if args.random_default else "random-seed" if args.random_seed else "random-state"
+            name = "random-ranges" if args.random_ranges else "random-default" if args.random_default else "random-seed" if args.random_seed else "random-state"
         else:
             selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
             name = "openra"
@@ -117,14 +124,14 @@ def main():
                 elif "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature or "::Anchor" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 5 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
+            expected_count = 8 if args.exceptions else 11 if args.strings else 2 if args.delegated else 1 if args.clock else 2 if args.constructors else 15 if args.addresses else 16 if args.conversions else 7 if args.native else 21 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
             name = f"exception-{config}" if args.exceptions else f"string-{config}" if args.strings else f"delegated-{config}" if args.delegated else f"clock-{config}" if args.clock else f"{corpus_name}-{config}" if args.constructors or args.addresses or args.conversions or args.native or args.arrays else config
             jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
-        directory = ROOT / "report/openra" / name if args.random_state or args.random_seed or args.random_default else out / name
+        directory = ROOT / "report/openra" / name if args.random_state or args.random_seed or args.random_default or args.random_ranges else out / name
         directory.mkdir(parents=True, exist_ok=True)
         entries = []
         class_bodies = {}
@@ -157,7 +164,7 @@ def main():
             source.write_text(body)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        kind = "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
+        kind = "random-ranges" if args.random_ranges else "exceptions" if args.exceptions else "strings" if args.strings else "default" if args.delegated or args.random_default else "clock" if args.clock else "constructors" if args.constructors else "random-seed" if args.random_seed else "random-state" if args.random_state else "openra" if args.openra else "addresses" if args.addresses else "conversions" if args.conversions else "native" if args.native else "arrays" if args.arrays else "references"
         job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"

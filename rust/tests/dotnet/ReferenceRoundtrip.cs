@@ -68,6 +68,12 @@ internal static class ReferenceRoundtrip
             Console.WriteLine($"default: {checks} return/exception/state comparisons passed");
             return;
         }
+        if (job.Kind == "random-ranges")
+        {
+            RandomRanges(recovered, members);
+            Console.WriteLine($"random-ranges: {checks} return/exception/state comparisons passed");
+            return;
+        }
         if (job.Kind == "random-seed")
         {
             RandomSeed(recovered, members);
@@ -257,11 +263,24 @@ internal static class ReferenceRoundtrip
         try { return action(); }
         catch (Exception e) { return (e is TargetInvocationException t ? t.InnerException! : e).GetType().FullName; }
     }
-    static void Check(Assembly recovered, MethodBase method, object left, object right, object[] leftArgs, object[] rightArgs,
-        Action stateCheck = null, Func<object, object, bool> equal = null)
+    record Fault(string Type, string Parameter, string Message, int HResult, object ActualValue);
+    static object DetailedOutcome(Func<object> action)
     {
-        object expected = Outcome(() => Original(method, left, leftArgs));
-        object actual = Outcome(() => recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!
+        try { return action(); }
+        catch (Exception e)
+        {
+            Exception error = e is TargetInvocationException t ? t.InnerException! : e;
+            var range = error as ArgumentOutOfRangeException;
+            return new Fault(error.GetType().FullName, (error as ArgumentException)?.ParamName,
+                error.Message, error.HResult, range?.ActualValue);
+        }
+    }
+    static void Check(Assembly recovered, MethodBase method, object left, object right, object[] leftArgs, object[] rightArgs,
+        Action stateCheck = null, Func<object, object, bool> equal = null, bool detailedExceptions = false)
+    {
+        Func<Func<object>, object> capture = detailedExceptions ? DetailedOutcome : Outcome;
+        object expected = capture(() => Original(method, left, leftArgs));
+        object actual = capture(() => recovered.GetType("Recovered")!.GetMethod($"M_{method.MetadataToken:X8}")!
             .Invoke(null, method.IsStatic ? rightArgs : new[] { right }.Concat(rightArgs).ToArray()));
         if (!(equal?.Invoke(expected, actual) ?? Equals(expected, actual)))
             throw new Exception($"{method.DeclaringType}.{method.Name}: expected {expected}, got {actual}");
@@ -289,7 +308,7 @@ internal static class ReferenceRoundtrip
 
     static void Exceptions(Assembly recovered, Dictionary<int, MethodInfo> methods)
     {
-        string[] names = { "Make", "Literal", "Null", "Build", "Discard" };
+        string[] names = { "Make", "Literal", "Null", "Build", "Discard", "Raise", "ThrowExisting", "ThrowNull" };
         if (methods.Count != names.Length || !methods.Values.Select(m => m.Name).Order().SequenceEqual(names.Order()))
             throw new Exception("Exception object selection drift");
         bool EqualObject(object x, object y)
@@ -338,7 +357,41 @@ internal static class ReferenceRoundtrip
         object first = body.Invoke(null, new object[] { "parameter", "message" });
         object second = body.Invoke(null, new object[] { "parameter", "message" });
         if (ReferenceEquals(first, second)) throw new Exception("Exception allocation reused object identity");
-        Console.WriteLine("Exception objects: exact core constructor, argument order, fresh identity, content and allocation position; throw/EH not included.");
+        foreach (string parameter in values)
+        foreach (string message in values)
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            MethodInfo method = methods.Values.Single(m => m.Name == "Raise");
+            object a = nullReceiver ? null : New(method.DeclaringType!), b = nullReceiver ? null : New(recovered.GetType(method.DeclaringType!.FullName!)!);
+            Check(recovered, method, a, b, new object[] { parameter, message }, new object[] { parameter, message },
+                () => { if (!nullReceiver) { SameFields(a, b, "Effects"); if ((int)Get(a, "Effects") != 1) throw new Exception("Throw lost prior effect"); } },
+                detailedExceptions: true);
+        }
+        MethodInfo existing = methods.Values.Single(m => m.Name == "ThrowExisting");
+        foreach (bool nullError in new[] { false, true })
+        foreach (bool nullReceiver in new[] { false, true })
+        {
+            object a = nullReceiver ? null : New(existing.DeclaringType!), b = nullReceiver ? null : New(recovered.GetType(existing.DeclaringType!.FullName!)!);
+            var error = nullError ? null : new ArgumentOutOfRangeException("original", "message");
+            Check(recovered, existing, a, b, new object[] { error }, new object[] { error },
+                () => { if (!nullReceiver) SameFields(a, b, "Effects"); }, detailedExceptions: true);
+            if (!nullError && !nullReceiver)
+            {
+                Exception Catch(Func<object> action)
+                {
+                    try { action(); }
+                    catch (Exception e) { return e is TargetInvocationException t ? t.InnerException! : e; }
+                    throw new Exception("Expected the original exception reference");
+                }
+                var originalError = Catch(() => Original(existing, a, new object[] { error }));
+                var loweredError = Catch(() => recovered.GetType("Recovered")!.GetMethod($"M_{existing.MetadataToken:X8}")!.Invoke(null, new[] { b, error }));
+                if (!ReferenceEquals(originalError, error) || !ReferenceEquals(loweredError, error))
+                    throw new Exception("Throw substituted a different exception object");
+            }
+        }
+        Check(recovered, methods.Values.Single(m => m.Name == "ThrowNull"), null, null,
+            Array.Empty<object>(), Array.Empty<object>(), detailedExceptions: true);
+        Console.WriteLine("Exceptions: allocation/arguments/identity/order and throw/null/prior state; detailed exception parameters preserved; EH not included.");
     }
 
     static void Strings(Assembly recovered, Dictionary<int, MethodInfo> methods)
@@ -695,6 +748,65 @@ internal static class ReferenceRoundtrip
         Check(recovered, constructor, null, null, new object[] { 1 }, new object[] { 1 });
         if (nullCoreCalls != 0) throw new Exception("Seed constructor null failure moved past its field store");
         Console.WriteLine("Random seed: all 624 words and scalars; recovered allocation/init body; 1,250 draws per boundary seed; no original-state copying.");
+    }
+
+    static void RandomRanges(Assembly recovered, Dictionary<int, MethodBase> methods)
+    {
+        if (methods.Count != 5 || methods.Values.Count(m => m is ConstructorInfo) != 1)
+            throw new Exception("Random range selection drift");
+        ConstructorInfo constructor = (ConstructorInfo)methods.Values.Single(m => m is ConstructorInfo);
+        MethodInfo range = (MethodInfo)methods.Values.Single(m => m.Name == "Next" && m.GetParameters().Length == 2);
+        MethodInfo highOnly = (MethodInfo)methods.Values.Single(m => m.Name == "Next" && m.GetParameters().Length == 1);
+        Type cell = constructor.DeclaringType!, clone = recovered.GetType(cell.FullName!)!;
+        if (methods.Values.Any(m => m.DeclaringType != cell)) throw new Exception("Random range owner drift");
+        Type bodies = recovered.GetType("Recovered")!;
+        bodies.GetField("CoreConstructorCall")!.SetValue(null, CoreObjectCall());
+        MethodInfo initialize = bodies.GetMethod($"M_{constructor.MetadataToken:X8}")!;
+        int[] bounds = { int.MinValue, int.MinValue + 1, -17, -1, 0, 1, 2, 17, int.MaxValue - 1, int.MaxValue };
+        string[] scalars = { "index", "Last", "TotalCount" };
+        var cases = bounds.SelectMany(low => bounds.Select(high => (Method: range, Low: low, High: high,
+            Args: new object[] { low, high })))
+            .Concat(bounds.Select(high => (Method: highOnly, Low: 0, High: high, Args: new object[] { high }))).ToArray();
+        void SameState(object a, object b, uint[] left, uint[] right)
+        {
+            SameFields(a, b, scalars);
+            SameArray(left, right);
+            if (!ReferenceEquals(Get(a, "mt"), left) || !ReferenceEquals(Get(b, "mt"), right)
+                || left.Length != 624 || right.Length != 624)
+                throw new Exception("Range call changed array identity/extent");
+        }
+        foreach (int seed in new[] { 0, 1, -1, int.MinValue, int.MaxValue })
+        foreach (int index in new[] { 0, 1, 623 })
+        foreach (int total in new[] { 0, int.MaxValue })
+        foreach (var test in cases)
+        {
+            object a = New(cell), b = New(clone);
+            if (Original(constructor, a, new object[] { seed }) != null
+                || initialize.Invoke(null, new object[] { b, seed }) != null)
+                throw new Exception("Range setup initialization failed");
+            Set(a, "index", index); Set(b, "index", index);
+            Set(a, "Last", -19); Set(b, "Last", -19);
+            Set(a, "TotalCount", total); Set(b, "TotalCount", total);
+            uint[] left = (uint[])Get(a, "mt"), right = (uint[])Get(b, "mt");
+            SameState(a, b, left, right);
+            uint[] before = (uint[])left.Clone();
+            // Retain the original unchecked subtraction, even when ordered bounds wrap.
+            bool noDraw = test.High < test.Low || unchecked(test.High - test.Low) <= 1;
+            Check(recovered, test.Method, a, b, test.Args, test.Args, () => {
+                SameState(a, b, left, right);
+                if (noDraw && ((int)Get(a, "index") != index || (int)Get(a, "Last") != -19
+                    || (int)Get(a, "TotalCount") != total || !before.SequenceEqual(left)))
+                    throw new Exception("Invalid or degenerate range consumed random state");
+            }, (x, y) => {
+                if (test.High < test.Low)
+                    return x is Fault fault && fault.Type == typeof(ArgumentOutOfRangeException).FullName
+                        && fault.Parameter == "high" && fault.ActualValue == null && Equals(x, y);
+                return x is int && y is int && Equals(x, y);
+            }, detailedExceptions: true);
+        }
+        foreach (var test in cases)
+            Check(recovered, test.Method, null, null, test.Args, test.Args, detailedExceptions: true);
+        Console.WriteLine("Ranges: negative/degenerate/ordered-overflow bounds, detailed high parameter faults, full state and generation boundary effects; recovered seed/state dependencies only.");
     }
 
     static void RandomState(Assembly recovered, Dictionary<int, MethodInfo> methods)
