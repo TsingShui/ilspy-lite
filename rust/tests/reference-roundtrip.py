@@ -84,7 +84,7 @@ def main():
                 if "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature or "::Unsupported" in signature:
                     continue
                 selected.append((token, signature))
-            expected_count = 11 if args.conversions else 7 if args.native else 11 if args.arrays else 14
+            expected_count = 16 if args.conversions else 7 if args.native else 11 if args.arrays else 14
             if len(selected) != expected_count:
                 raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
             name = f"{corpus_name}-{config}" if args.conversions or args.native or args.arrays else config

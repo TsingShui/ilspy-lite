@@ -83,7 +83,10 @@ retain raw code bytes in a `Failed` result.
   arithmetic, comparisons and implicit width changes still fall back.
 - `conv.i4` from I4/I8/native values: retain low 32 bits without overflow checking.
   `conv.i8` sign-extends I4/native stack values and preserves I8 bit patterns.
-  Conversion rules come from the opcode and source stack category, not parameter
+  `conv.u8` zero-extends I4/native bits at their source width and preserves I8
+  bits; native inputs pass through `nuint` before widening (32-bit and 64-bit
+  targets must not be conflated). Local native execution is verified at 64 bits
+  only. Conversion rules come from the opcode and source stack category, not parameter
   names or declared unsigned storage. Reference/floating sources and checked
   conversions remain unsupported.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /

@@ -40,6 +40,16 @@ public class Cells
         value = replacement;
         return old;
     }
+    public static ulong ZeroExtendI4(int value) => unchecked((ulong)(uint)value);
+    public static ulong ZeroExtendU4(uint value) => value;
+    public static ulong ZeroExtendNative(nint value) => unchecked((ulong)(nuint)value);
+    public static ulong ZeroExtendUNative(nuint value) => value;
+    public static ulong ZeroSnapshot(int value, int replacement)
+    {
+        int old = value;
+        value = replacement;
+        return unchecked((ulong)(uint)old);
+    }
     public long Wide;
     public int ReadThenWrite(long replacement)
     {

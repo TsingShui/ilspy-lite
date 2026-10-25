@@ -9,6 +9,69 @@ const IMAGES: [&[u8]; 2] = [
 ];
 
 #[test]
+fn conv_u8_zero_extends_at_source_width_before_canonical_i8_storage() {
+    for bytes in IMAGES {
+        for (name, cast) in [
+            ("ZeroExtendI4", "unchecked((long)(uint)(v"),
+            ("ZeroExtendU4", "unchecked((long)(uint)(v"),
+            ("ZeroExtendNative", "unchecked((long)(ulong)(nuint)(v"),
+            ("ZeroExtendUNative", "unchecked((long)(ulong)(nuint)(v"),
+            ("ZeroSnapshot", "unchecked((long)(uint)(v"),
+        ] {
+            let method = list_methods(bytes)
+                .unwrap()
+                .into_iter()
+                .find(|m| m.simple_name == name)
+                .unwrap();
+            let result = decompile(bytes, method.token).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains("conv.u8"), "{name}: {}", result.text);
+            assert!(result.text.contains(cast), "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
+fn conv_u8_preserves_i8_bits_and_rejects_unsupported_sources() {
+    let bytes = IMAGES[0];
+    let token = list_methods(bytes)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.simple_name == "FromI8")
+        .unwrap()
+        .token;
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md.tables().method_def(token & 0xffffff).unwrap();
+    let signature = md.blobs().get(row.signature).unwrap();
+    assert_eq!(signature, &[0x00, 0x01, 0x08, 0x0a]);
+    let signature_start = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+    assert_eq!(body.kind, cildec::HeaderKind::Tiny);
+    let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+    for (code, status) in [
+        (&[0x02, 0x6e, 0x2a][..], Status::Decompiled), // I8 bits preserved
+        (&[0x14, 0x6e, 0x2a][..], Status::Partial),    // reference source
+        (&[0x6e, 0x2a][..], Status::Partial),          // empty stack
+        (&[0x02, 0xba, 0x2a][..], Status::Partial),    // checked conversion separate
+    ] {
+        assert!(code.len() <= body.code.len());
+        let mut patched = bytes.to_vec();
+        patched[signature_start + 2] = 0x0b; // Declared ulong return.
+        patched[start - 1] = ((code.len() as u8) << 2) | 2;
+        patched[start..start + code.len()].copy_from_slice(code);
+        let result = decompile(&patched, token).unwrap();
+        assert_eq!(result.status, status, "{}", result.text);
+        if status == Status::Decompiled {
+            assert!(result.text.contains("long v1 = v0;"));
+            assert!(result.text.contains("return unchecked((ulong)(v1));"));
+        } else {
+            assert!(result.text.contains("IL FALLBACK"));
+        }
+    }
+}
+
+#[test]
 fn conv_i8_sign_extends_stack_values_without_using_declared_unsignedness() {
     for bytes in IMAGES {
         for name in [
@@ -143,7 +206,7 @@ fn conv_i4_preserves_low_bits_and_evaluation_order() {
             );
         }
         let result = decompile_type(bytes, "ConversionCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 11);
+        assert_eq!(result.summary.decompiled, 16);
         assert_eq!(result.summary.partial, 1); // Constructor not lowered.
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);

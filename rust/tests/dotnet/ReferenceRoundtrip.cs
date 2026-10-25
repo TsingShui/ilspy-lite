@@ -386,7 +386,7 @@ internal static class ReferenceRoundtrip
                 Check(recovered, method, null, null, new object[] { 1L }, new object[] { 1L });
             }
         }
-        if (methods.Count != 11) throw new Exception("Conversion method selection drift");
+        if (methods.Count != 16) throw new Exception("Conversion method selection drift");
         Console.WriteLine($"Conversion execution width: {IntPtr.Size * 8} bits; no cross-width execution claim.");
     }
 

@@ -263,19 +263,26 @@ impl Writer<'_, '_> {
                 };
                 self.push(Ty::I8, format!("{n}L"))?;
             }
-            "conv.i4" | "conv.i8" => {
+            "conv.i4" | "conv.i8" | "conv.u8" => {
                 let value = self.pop()?;
-                if !matches!(
-                    value.ty.kind(),
-                    StackKind::I4 | StackKind::I8 | StackKind::Native
-                ) {
+                let kind = value.ty.kind();
+                if !matches!(kind, StackKind::I4 | StackKind::I8 | StackKind::Native) {
                     return Err(format!("{op} source category needs IL fallback").into());
                 }
                 let target = if op == "conv.i4" { Ty::I4 } else { Ty::I8 };
-                self.push(
-                    target,
-                    format!("unchecked(({})({}))", target.cs(self.image)?, value.name),
-                )?;
+                let expression = if op == "conv.u8" {
+                    // Reinterpret at source width before widening, including native width.
+                    match kind {
+                        StackKind::I4 => format!("unchecked((long)(uint)({}))", value.name),
+                        StackKind::Native => {
+                            format!("unchecked((long)(ulong)(nuint)({}))", value.name)
+                        }
+                        _ => value.name,
+                    }
+                } else {
+                    format!("unchecked(({})({}))", target.cs(self.image)?, value.name)
+                };
+                self.push(target, expression)?;
             }
             "ldarg" | "ldloc" => {
                 let idx = var(i)?;
