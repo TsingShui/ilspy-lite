@@ -1,9 +1,11 @@
 # Constructor and expression presentation acceptance
 
-This is a scoped extension of [READABLE_OUTPUT.md](../READABLE_OUTPUT.md), not an
-SDK/dependency resolver or a general C# source exporter. Production baseline:
-`39bd383ff`. The support contract below is frozen before evaluating the random
-sample's lowering results. A failed in-scope shape is a defect, not permission to
+This constructor/presentation acceptance extends
+[READABLE_OUTPUT.md](../READABLE_OUTPUT.md). Its original production baseline is
+`39bd383ff`; support shapes and the random sample were frozen before evaluating
+sample lowering. The user subsequently added static SDK/dependency discovery and
+binding to the goal; see [DEPENDENCIES.md](../../DEPENDENCIES.md). That extension
+does not replace the frozen sample or promise a general C# source exporter. A failed in-scope shape is a defect, not permission to
 narrow this contract or replace a sampled class.
 
 ## Frozen support contract
@@ -26,8 +28,9 @@ narrow this contract or replace a sampled class.
   compatible signature, plus a source expression that preserves exact call target,
   dispatch, receiver and null behavior. No inference from `get_`/`set_` naming.
   Local metadata is available; external relationships need evidence that is not
-  present in a lone MemberRef. If the Wait requirement needs external metadata,
-  stop that slice and ask before adding any explicit metadata input or resolver.
+  present in a lone MemberRef. The confirmed goal extension authorizes static
+  dependency input/discovery to obtain that evidence, without runtime loading or
+  name-based guessing.
 - Post-decrement for the existing supported integer field/local shapes: one stable
   old-value snapshot, unchecked subtraction by one, write to the same location,
   then old-value use. Compact only without moving reads/writes/checks across other

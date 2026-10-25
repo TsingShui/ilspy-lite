@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{AssemblyResolution, DependencyContext, DependencyLimits};
+use ilspy_lite::{AssemblyResolution, DependencyContext, DependencyLimits, OutputStyle};
 
 const MAIN: &[u8] = include_bytes!("fixtures/external-release.bin");
 const DEPENDENCY: &[u8] = include_bytes!("fixtures/external-library-release.bin");
@@ -95,7 +95,13 @@ fn full_public_keys_match_their_cli_tokens_but_not_different_tokens() {
 #[test]
 fn malformed_key_flags_and_token_lengths_are_not_normalized_into_valid_identities() {
     for (key, full) in [(vec![], true), (vec![1; 7], false)] {
-        assert!(DependencyContext::new(identity_key(MAIN, true, &key, full)).is_err());
+        let context = DependencyContext::new(identity_key(MAIN, true, &key, full)).unwrap();
+        assert_eq!(context.reference_failures().len(), 1);
+        let token = context.reference_failures()[0].token;
+        assert!(matches!(
+            context.resolve(token).unwrap(),
+            AssemblyResolution::Invalid { .. }
+        ));
     }
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
     assert!(
@@ -150,6 +156,7 @@ fn immutable_byte_cache_obeys_assembly_and_total_byte_limits() {
         DependencyLimits {
             max_assemblies: 2,
             max_bytes: MAIN.len() + DEPENDENCY.len(),
+            ..DependencyLimits::default()
         },
     )
     .unwrap();
@@ -197,6 +204,7 @@ fn immutable_byte_cache_obeys_assembly_and_total_byte_limits() {
         DependencyLimits {
             max_assemblies: 5,
             max_bytes: MAIN.len(),
+            ..DependencyLimits::default()
         },
     )
     .unwrap();
@@ -212,11 +220,63 @@ fn immutable_byte_cache_obeys_assembly_and_total_byte_limits() {
             MAIN.to_vec(),
             DependencyLimits {
                 max_assemblies: 0,
-                max_bytes: usize::MAX
+                max_bytes: usize::MAX,
+                ..DependencyLimits::default()
             }
         )
         .is_err()
     );
+}
+
+#[test]
+fn bounded_reader_cannot_register_a_truncated_prefix_as_a_cached_snapshot() {
+    let mut context = DependencyContext::with_limits(
+        MAIN.to_vec(),
+        DependencyLimits {
+            max_bytes: MAIN.len() + 2 * DEPENDENCY.len() - 1,
+            ..DependencyLimits::default()
+        },
+    )
+    .unwrap();
+    context
+        .add_reference("complete.dll", DEPENDENCY.to_vec())
+        .unwrap();
+    let remaining = context.remaining_bytes();
+    assert_eq!(remaining, DEPENDENCY.len() - 1);
+    let mut longer_file = DEPENDENCY.to_vec();
+    longer_file.push(0x42);
+    let error = context
+        .add_reference_reader("truncated-alias.dll", std::io::Cursor::new(longer_file))
+        .expect_err("an overflow sentinel must be rejected before cache lookup");
+    assert!(error.to_string().contains("read limit"));
+    assert_eq!(context.remaining_bytes(), remaining);
+    let details = context
+        .decompile_type("ExternalCases.Cells", OutputStyle::Details)
+        .unwrap();
+    assert!(
+        !details.text.contains("truncated-alias.dll"),
+        "{}",
+        details.text
+    );
+    // Complete bytes supplied directly still provide proof of an exact alias.
+    context
+        .add_reference("complete-copy.dll", DEPENDENCY.to_vec())
+        .unwrap();
+    assert_eq!(context.remaining_bytes(), remaining);
+}
+
+#[test]
+fn dependency_reference_tables_are_bounded_before_collecting_identities() {
+    let error = DependencyContext::with_limits(
+        MAIN.to_vec(),
+        DependencyLimits {
+            max_references_per_image: 1,
+            ..DependencyLimits::default()
+        },
+    )
+    .err()
+    .expect("two references must exceed a one-reference bound");
+    assert!(error.to_string().contains("reference limit"));
 }
 
 #[test]
@@ -268,6 +328,292 @@ fn wrong_version_culture_or_file_name_cannot_override_metadata_identity() {
             AssemblyResolution::Resolved { .. }
         ));
     }
+}
+
+#[test]
+fn context_decompilation_keeps_bodies_and_reports_dependency_provenance_separately() {
+    let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();
+    context
+        .add_reference("fixture-library.dll", DEPENDENCY.to_vec())
+        .unwrap();
+    let details = context
+        .decompile_type("ExternalCases.Cells", OutputStyle::Details)
+        .unwrap();
+    let isolated = ilspy_lite::decompile_type(MAIN, "ExternalCases.Cells").unwrap();
+    assert_eq!(details.summary, isolated.summary);
+    assert!(details.text.starts_with(&isolated.text));
+    assert!(
+        details.text.contains("status=resolved") && details.text.contains("fixture-library.dll")
+    );
+    assert!(details.text.contains("status=missing") && details.text.contains("System.Runtime"));
+    assert!(
+        details.text.contains(".dependency-candidate ")
+            && details.text.contains("identity=\"ExternalLibrary,")
+    );
+    let readable = context
+        .decompile_type("ExternalCases.Cells", OutputStyle::Readable)
+        .unwrap();
+    assert_eq!(readable.summary, details.summary);
+    assert!(readable.text.contains("public class Cells"));
+    assert!(readable.text.contains("Dependency unresolved:"));
+    assert!(!readable.text.contains(".dependency "));
+}
+
+#[test]
+fn cli_explicit_reference_reports_identity_and_keeps_missing_dependencies_nonfatal() {
+    let fixture = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/");
+    let main = format!("{fixture}external-release.bin");
+    let dependency = format!("{fixture}external-library-release.bin");
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+        .args([
+            "decompile",
+            &main,
+            "--type",
+            "ExternalCases.Cells",
+            "--reference",
+            &dependency,
+            "--no-auto-references",
+            "--details",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(
+        result.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let text = String::from_utf8(result.stdout).unwrap();
+    assert!(
+        text.contains("status=resolved") && text.contains("external-library-release.bin"),
+        "{text}"
+    );
+    assert!(text.contains("status=missing") && text.contains("System.Runtime"));
+    assert!(!text.contains("IL FALLBACK"));
+    let method = ilspy_lite::list_methods(MAIN)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.simple_name == "DirectFlag")
+        .unwrap()
+        .token;
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+        .args([
+            "decompile",
+            &main,
+            "--method",
+            &format!("0x{method:08X}"),
+            "--details",
+            "--reference",
+            &dependency,
+            "--no-auto-references",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(
+        result.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(
+        String::from_utf8(result.stdout)
+            .unwrap()
+            .contains("status=resolved")
+    );
+}
+
+#[test]
+fn cli_reference_directories_try_later_exact_identity_and_explicit_files_take_precedence() {
+    let root = std::env::temp_dir().join(format!("ilspy-dependency-dirs-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let first = root.join("first");
+    let second = root.join("second");
+    std::fs::create_dir(&first).unwrap();
+    std::fs::create_dir(&second).unwrap();
+    // A matching filename is not a matching assembly.
+    std::fs::write(first.join("ExternalLibrary.dll"), MAIN).unwrap();
+    std::fs::write(second.join("ExternalLibrary.dll"), DEPENDENCY).unwrap();
+    let main = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/external-release.bin"
+    );
+    let explicit = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/external-library-debug.bin"
+    );
+    for use_explicit in [false, true] {
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"));
+        command
+            .args([
+                "decompile",
+                main,
+                "--type",
+                "ExternalCases.Cells",
+                "--no-auto-references",
+                "--details",
+                "--reference-dir",
+            ])
+            .arg(&first)
+            .arg("--reference-dir")
+            .arg(&second);
+        if use_explicit {
+            command.args(["--reference", explicit]);
+        }
+        let result = command.output().unwrap();
+        assert_eq!(
+            result.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let text = String::from_utf8(result.stdout).unwrap();
+        let resolved = text
+            .lines()
+            .find(|l| l.contains("status=resolved") && l.contains("ExternalLibrary"))
+            .unwrap();
+        assert!(
+            resolved.contains(if use_explicit {
+                "external-library-debug.bin"
+            } else {
+                "second"
+            }),
+            "{resolved}"
+        );
+        assert!(!text.contains("status=conflicting"), "{text}");
+    }
+    std::fs::write(
+        first.join("ExternalLibrary.dll"),
+        include_bytes!("fixtures/external-library-debug.bin"),
+    )
+    .unwrap();
+    for (leading, later, expected) in [(&first, &second, "first"), (&second, &first, "second")] {
+        let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+            .args([
+                "decompile",
+                main,
+                "--type",
+                "ExternalCases.Cells",
+                "--reference-dir",
+            ])
+            .arg(leading)
+            .arg("--reference-dir")
+            .arg(later)
+            .args(["--no-auto-references", "--details"])
+            .output()
+            .unwrap();
+        assert_eq!(result.status.code(), Some(0));
+        let text = String::from_utf8(result.stdout).unwrap();
+        let selected = text
+            .lines()
+            .find(|l| l.contains("status=resolved") && l.contains("ExternalLibrary"))
+            .unwrap();
+        assert!(selected.contains(expected), "{selected}");
+    }
+    std::fs::write(first.join("ExternalLibrary.dll"), b"broken PE").unwrap();
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+        .args([
+            "decompile",
+            main,
+            "--type",
+            "ExternalCases.Cells",
+            "--reference-dir",
+        ])
+        .arg(&first)
+        .arg("--reference-dir")
+        .arg(&second)
+        .args(["--no-auto-references", "--details"])
+        .output()
+        .unwrap();
+    assert_eq!(result.status.code(), Some(0));
+    assert!(
+        String::from_utf8(result.stdout)
+            .unwrap()
+            .contains("Dependency input rejected:")
+    );
+    assert!(
+        String::from_utf8(result.stderr)
+            .unwrap()
+            .contains("dependency warning:")
+    );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn metadata_reference_names_cannot_escape_a_supplied_directory() {
+    let pe = cildec::PeImage::parse(MAIN).unwrap();
+    let md = pe.metadata().unwrap();
+    let row = md
+        .tables()
+        .iter::<cildec::tables::AssemblyRefRow>()
+        .find(|(_, r)| md.strings().str(r.as_ref().unwrap().name).unwrap() == "ExternalLibrary")
+        .unwrap()
+        .1
+        .unwrap();
+    let name = md.strings().str(row.name).unwrap().as_bytes();
+    let offset = name.as_ptr() as usize - MAIN.as_ptr() as usize;
+    let mut bytes = MAIN.to_vec();
+    bytes[offset..offset + name.len()].fill(0);
+    bytes[offset..offset + 10].copy_from_slice(b"../outside");
+    let root =
+        std::env::temp_dir().join(format!("ilspy-reference-traversal-{}", std::process::id()));
+    let directory = root.join("references");
+    std::fs::create_dir_all(&directory).unwrap();
+    let input = root.join("input.bin");
+    std::fs::write(&input, bytes).unwrap();
+    std::fs::write(root.join("outside.dll"), DEPENDENCY).unwrap();
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+        .arg("decompile")
+        .arg(input)
+        .args(["--type", "ExternalCases.Cells", "--reference-dir"])
+        .arg(directory)
+        .args(["--no-auto-references", "--details"])
+        .output()
+        .unwrap();
+    let text = String::from_utf8(result.stdout).unwrap();
+    assert!(text.contains("unsafe assembly filename"), "{text}");
+    assert!(!text.contains("outside.dll"), "{text}");
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn unreadable_reference_identity_does_not_hide_independently_decompilable_bodies() {
+    let bytes = identity_key(MAIN, true, &[], true);
+    let isolated = ilspy_lite::decompile_type(&bytes, "ExternalCases.Cells").unwrap();
+    let path = std::env::temp_dir().join(format!(
+        "ilspy-invalid-reference-{}.bin",
+        std::process::id()
+    ));
+    std::fs::write(&path, &bytes).unwrap();
+    let dependency = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/external-library-release.bin"
+    );
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+        .arg("decompile")
+        .arg(&path)
+        .args([
+            "--type",
+            "ExternalCases.Cells",
+            "--reference",
+            dependency,
+            "--no-auto-references",
+            "--details",
+        ])
+        .output()
+        .unwrap();
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(
+        result.status.code(),
+        Some(i32::from(isolated.summary.exit_code())),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    let text = String::from_utf8(result.stdout).unwrap();
+    assert!(text.starts_with(&isolated.text), "{text}");
+    assert!(
+        text.contains("status=invalid") && text.contains("raw-row="),
+        "{text}"
+    );
 }
 
 #[test]

@@ -63,6 +63,18 @@ Choose presentation with `decompile_with_style`/`decompile_type_with_style` and
 while giving the CLI a readable default. Validation:
 [readable output acceptance](acceptance/READABLE_OUTPUT.md).
 
+### Explicit dependency metadata
+
+`--reference <file>` and `--reference-dir <directory>` supply static dependency
+metadata; both repeat. `--no-auto-references` preserves isolated lookup. Explicit
+files precede ordered directory searches, and identities are checked from metadata,
+not filenames. Missing/conflicting/rejected dependencies are reported separately
+without hiding independently recovered bodies. The byte-only library APIs keep
+their no-filesystem behavior; `DependencyContext` is the explicit library interface.
+See [DEPENDENCIES.md](DEPENDENCIES.md) for implemented behavior and the remaining
+automatic-discovery/binding milestones. Resolving an assembly alone does not yet
+turn external calls into property syntax.
+
 ### Detailed metadata contract
 
 The library entry `decompile_type(bytes, name)` parses the image once and returns
