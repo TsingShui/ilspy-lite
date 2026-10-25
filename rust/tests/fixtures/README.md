@@ -95,6 +95,15 @@ integer boundaries and null-check timing pass 48 comparisons per configuration.
 These cases also prohibit moving initialization across field/argument effects
 merely to print a source-style initializer. Snapshots are pinned by Git.
 
+The property snapshots (`property-release.bin`, `property-debug.bin`) come from
+`../dotnet/PropertyCases.cs`, referencing the existing owned BindingLibrary.
+Regenerate with `python3 rust/tests/build-property-fixtures.py`. They include a
+hidden property, virtual/constant receiver calls, helper-looking user method
+names and a helper-looking string literal. Public tests mutate only owned
+metadata/IL to check keyword escaping, lexical call-site roles and receiver
+provenance. Static output checks are not execution evidence. Snapshots are pinned
+by Git without a separate hash manifest.
+
 The string snapshots (`string-release.bin`, `string-debug.bin`) come from
 `../dotnet/StringCases.cs`. Regenerate with `python3 rust/tests/build-string-fixtures.py`
 and execute class output with `reference-roundtrip.py --strings --from-class`.

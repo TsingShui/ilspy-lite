@@ -23,7 +23,7 @@ pub(super) fn rewrite(context: &DependencyContext, caller: u32, body: &str) -> S
             }
             let prefix = ["__cil_memberref_call_", "__cil_direct_"]
                 .into_iter()
-                .find(|prefix| rest.starts_with(prefix));
+                .find(|prefix| rest.starts_with(prefix) && helper_slot(statement, position));
             if let Some(prefix) = prefix {
                 let token_start = position + prefix.len();
                 if let Some(hex) = statement.get(token_start..token_start + 8) {
@@ -89,6 +89,15 @@ pub(super) fn rewrite(context: &DependencyContext, caller: u32, body: &str) -> S
         out.push('\n');
     }
     out
+}
+
+fn helper_slot(text: &str, position: usize) -> bool {
+    let preceding = &text[..position];
+    !preceding
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '@'))
+        && !preceding.trim_end().ends_with(['.', ':'])
 }
 
 fn literal_end(text: &str, start: usize) -> usize {

@@ -1216,6 +1216,21 @@ fn keyword(name: &str) -> bool {
             | "lock"
             | "get"
             | "set"
+            | "byte"
+            | "sbyte"
+            | "char"
+            | "short"
+            | "ushort"
+            | "decimal"
+            | "foreach"
+            | "volatile"
+            | "explicit"
+            | "implicit"
+            | "stackalloc"
+            | "__arglist"
+            | "__makeref"
+            | "__reftype"
+            | "__refvalue"
     )
 }
 fn line(out: &mut String, indent: usize, value: &str) {
