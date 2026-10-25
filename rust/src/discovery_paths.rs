@@ -193,7 +193,7 @@ pub fn candidates_for(
     let hint = target_framework.and_then(FrameworkHint::parse);
     search.dotnet(requested, hint.as_ref(), environment);
     search.framework_and_gac(requested, hint.as_ref(), environment);
-    search.mono(requested, environment);
+    search.mono(requested, hint.as_ref(), environment);
     search.result
 }
 
@@ -684,9 +684,17 @@ impl Search {
         }
     }
 
-    fn mono(&mut self, requested: &AssemblyIdentity, env: &DiscoveryEnvironment) {
+    fn mono(
+        &mut self,
+        requested: &AssemblyIdentity,
+        hint: Option<&FrameworkHint>,
+        env: &DiscoveryEnvironment,
+    ) {
+        let version_hint = hint
+            .filter(|h| h.family == ".NETFramework")
+            .map(|h| &h.version);
         for root in env.mono_roots.iter().take(MAX_ROOTS) {
-            for version in self.versions(root, "", None) {
+            for version in self.versions(root, "", version_hint) {
                 self.pair(&version, &requested.name, CandidateOrigin::Mono);
                 self.pair(
                     &version.join("Facades"),

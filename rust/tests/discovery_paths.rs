@@ -642,3 +642,42 @@ fn deps_symlink_loop_is_diagnosed_without_stopping_other_families() {
             .any(|s| s.contains("cannot inspect deps asset"))
     );
 }
+
+#[test]
+fn mono_versions_prefer_framework_hint_but_not_modern_dotnet_hint() {
+    let f = Fixture::new();
+    let older = f.file("lib/mono/4.5/Widget.dll");
+    let matching = f.file("lib/mono/4.8/Widget.dll");
+    let modern_number = f.file("lib/mono/8.0/Widget.dll");
+    let env = DiscoveryEnvironment {
+        mono_roots: vec![f.0.join("lib/mono")],
+        ..Default::default()
+    };
+    let result = candidates_for(
+        &f.input(),
+        &identity(),
+        Some(".NETFramework,Version=v4.8"),
+        &env,
+    );
+    assert_eq!(
+        paths(&result),
+        vec![matching.as_path(), older.as_path(), modern_number.as_path()]
+    );
+    assert!(
+        result
+            .candidates
+            .iter()
+            .all(|c| c.origin == CandidateOrigin::Mono)
+    );
+    for hint in [
+        None,
+        Some(".NETCoreApp,Version=v8.0"),
+        Some(".NET,Version=v8.0"),
+    ] {
+        let result = candidates_for(&f.input(), &identity(), hint, &env);
+        assert_eq!(
+            paths(&result),
+            vec![older.as_path(), matching.as_path(), modern_number.as_path()]
+        );
+    }
+}
