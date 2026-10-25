@@ -342,6 +342,8 @@ internal static class ReferenceRoundtrip
             2147483647L, 2147483648L, 4294967295L, 4294967296L, long.MaxValue };
         object[] Domain(Type type)
         {
+            if (type == typeof(int)) return new object[] { int.MinValue, -1, 0, 1, int.MaxValue };
+            if (type == typeof(uint)) return new object[] { 0u, 1u, 0x7fffffffu, 0x80000000u, uint.MaxValue };
             if (type == typeof(long)) return wide.Cast<object>().ToArray();
             if (type == typeof(ulong)) return new object[] { 0UL, 1UL, 2147483648UL, 4294967295UL,
                 4294967296UL, 0x8000000000000000UL, ulong.MaxValue };
@@ -384,7 +386,7 @@ internal static class ReferenceRoundtrip
                 Check(recovered, method, null, null, new object[] { 1L }, new object[] { 1L });
             }
         }
-        if (methods.Count != 6) throw new Exception("Conversion method selection drift");
+        if (methods.Count != 11) throw new Exception("Conversion method selection drift");
         Console.WriteLine($"Conversion execution width: {IntPtr.Size * 8} bits; no cross-width execution claim.");
     }
 

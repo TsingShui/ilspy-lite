@@ -30,6 +30,16 @@ public class Cells
         value = replacement;
         return unchecked((int)old);
     }
+    public static long ExtendI4(int value) => value;
+    public static long ExtendU4Bits(uint value) => unchecked((long)(int)value);
+    public static long ExtendNative(nint value) => value;
+    public static long ExtendUNativeBits(nuint value) => unchecked((long)(nint)value);
+    public static long ExtendSnapshot(int value, int replacement)
+    {
+        int old = value;
+        value = replacement;
+        return old;
+    }
     public long Wide;
     public int ReadThenWrite(long replacement)
     {

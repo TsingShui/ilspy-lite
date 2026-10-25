@@ -82,7 +82,10 @@ retain raw code bytes in a `Failed` result.
   target runtime pointer width, not the width of the analyzer host. Native
   arithmetic, comparisons and implicit width changes still fall back.
 - `conv.i4` from I4/I8/native values: retain low 32 bits without overflow checking.
-  Reference/floating sources and checked conversions remain unsupported.
+  `conv.i8` sign-extends I4/native stack values and preserves I8 bit patterns.
+  Conversion rules come from the opcode and source stack category, not parameter
+  names or declared unsigned storage. Reference/floating sources and checked
+  conversions remain unsupported.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
