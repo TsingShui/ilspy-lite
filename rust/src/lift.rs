@@ -181,6 +181,17 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     } else {
         String::new()
     };
+    if writer
+        .args
+        .iter()
+        .chain(&writer.locals)
+        .chain(std::iter::once(&writer.ret))
+        .any(|ty| ty.kind() == StackKind::Native)
+    {
+        out.push_str(
+            "// nint/nuint use the target runtime pointer width, not the analyzer host width.\n",
+        );
+    }
     out.push_str(&format!(
         "public static {} @{name}({parameters})\n{{\n",
         ret.cs(image)?
@@ -503,7 +514,11 @@ impl Writer<'_, '_> {
                     self.push(ty.stack(), ty.load(&field, self.image)?)?;
                 } else {
                     let v = self.pop()?;
-                    expect(v.ty, ty.stack())?;
+                    if ty.kind() == StackKind::Native {
+                        self.image.assignable(v.ty, ty.stack())?;
+                    } else {
+                        expect(v.ty, ty.stack())?;
+                    }
                     self.lines
                         .push(format!("{field} = {};", ty.store(&v.name, self.image)?));
                 }

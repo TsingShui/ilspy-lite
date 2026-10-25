@@ -77,6 +77,10 @@ retain raw code bytes in a `Failed` result.
 
 - Static methods with integer/Boolean signatures and locals; I4/I8 evaluation
   stack categories, including unsigned reinterpretation at operation boundaries.
+- Native integers as a separate stack category: `nint` / `nuint` storage,
+  parameters, returns, same-category joins and direct calls. Their width is the
+  target runtime pointer width, not the width of the analyzer host. Native
+  arithmetic, comparisons, implicit width changes and conversions still fall back.
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
@@ -135,7 +139,7 @@ error instead of claiming to have recovered unavailable bytes.
 
 Currently unsupported: general/external object types, strings, other array
 element types, multidimensional/jagged arrays, `newarr`, `ldlen`, `ldelema`,
-floating point, native integers, conversions, constructors, external instance calls,
+floating point, native integer operations/conversions, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
@@ -181,6 +185,7 @@ Optional behavioral gate (Python 3 and .NET **10** SDK/runtime):
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --arrays
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --native --from-class
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root

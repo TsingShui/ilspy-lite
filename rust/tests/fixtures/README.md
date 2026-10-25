@@ -28,6 +28,14 @@ only owned metadata to check failure isolation and invalid ownership/ranges.
 They are parser/selection fixtures, not a semantic decompilation coverage claim.
 Snapshot revisions are pinned by Git without a separate hash manifest.
 
+The native-integer snapshots (`native-release.bin`, `native-debug.bin`) come from
+`../dotnet/NativeCases.cs`: native storage, fields, calls and conditional selection.
+Regenerate with `python3 rust/tests/build-native-fixtures.py`. The explicit
+`reference-roundtrip.py --native --from-class` gate compares the actual class
+output. Local execution uses a 64-bit .NET runtime; no 32-bit execution result is
+claimed. Native arithmetic and implicit width changes remain negative cases.
+Snapshot revisions are pinned by Git without a separate hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

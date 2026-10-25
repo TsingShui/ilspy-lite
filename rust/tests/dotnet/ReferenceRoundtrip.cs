@@ -37,7 +37,8 @@ internal static class ReferenceRoundtrip
     static int checks;
     static string TypeName(Type type) => type == typeof(void) ? "void" : type == typeof(int) ? "int" :
         type == typeof(bool) ? "bool" : type == typeof(long) ? "long" : type == typeof(uint) ? "uint" :
-        type == typeof(ulong) ? "ulong" : type.IsSZArray ? TypeName(type.GetElementType()!) + "[]" : "global::" + type.FullName;
+        type == typeof(ulong) ? "ulong" : type == typeof(nint) ? "nint" : type == typeof(nuint) ? "nuint" :
+        type.IsSZArray ? TypeName(type.GetElementType()!) + "[]" : "global::" + type.FullName;
     static string Alias(FieldInfo field) => Regex.IsMatch(field.Name, @"^[A-Za-z_][A-Za-z0-9_]*$") && !field.Name.StartsWith("__il_field_", StringComparison.Ordinal)
         ? "@" + field.Name : $"__il_field_{field.MetadataToken:X8}";
     static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
@@ -63,6 +64,7 @@ internal static class ReferenceRoundtrip
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
         if (job.Kind == "openra") OpenRa(original, recovered, methods);
         else if (job.Kind == "arrays") Arrays(recovered, methods);
+        else if (job.Kind == "native") Native(recovered, methods);
         else if (job.Kind == "references") References(original, recovered, methods);
         else throw new Exception("Unknown corpus kind");
         Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
@@ -100,6 +102,13 @@ internal static class ReferenceRoundtrip
             string parent = type.BaseType != null && types.Contains(type.BaseType) ? " : " + TypeName(type.BaseType) : "";
             string members = string.Join("\n", fields.Values.Where(f => f.DeclaringType == type).Select(f =>
                 $"public {(f.IsStatic ? "static " : "")}{TypeName(f.FieldType)} {Alias(f)};"));
+            // Static call adapters forward only to another recovered body.
+            foreach (MethodInfo method in methods.Values.Where(m => m.IsStatic && m.DeclaringType == type))
+            {
+                string parameters = string.Join(", ", method.GetParameters().Select((p, i) => TypeName(p.ParameterType) + " a" + i));
+                string arguments = string.Join(", ", method.GetParameters().Select((p, i) => "a" + i));
+                members += $"\npublic static {TypeName(method.ReturnType)} @{method.Name}({parameters}) => global::Recovered.M_{method.MetadataToken:X8}({arguments});";
+            }
             shells.Add($"namespace {type.Namespace} {{ public class {type.Name}{parent} {{ {members} }} }}");
         }
         foreach (var pair in methods)
@@ -324,6 +333,61 @@ internal static class ReferenceRoundtrip
         if (methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
             "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice"
         }.Order()) == false) throw new Exception("Array method selection drift");
+    }
+
+    static void Native(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        object[] signed = IntPtr.Size == 8
+            ? new object[] { (nint)0, (nint)1, (nint)(-1), unchecked((nint)0x80000000L), unchecked((nint)long.MinValue), unchecked((nint)long.MaxValue) }
+            : new object[] { (nint)0, (nint)1, (nint)(-1), (nint)int.MinValue, (nint)int.MaxValue };
+        object[] unsigned = IntPtr.Size == 8
+            ? new object[] { (nuint)0, (nuint)1, unchecked((nuint)0x100000000UL), unchecked((nuint)0x8000000000000000UL), unchecked((nuint)ulong.MaxValue) }
+            : new object[] { (nuint)0, (nuint)1, unchecked((nuint)0x80000000U), (nuint)uint.MaxValue };
+        foreach (MethodInfo method in methods.Values)
+        {
+            bool isUnsigned = method.ReturnType == typeof(nuint);
+            object[] domain = isUnsigned ? unsigned : signed;
+            if (method.Name == "Choose")
+            {
+                foreach (bool first in new[] { false, true })
+                foreach (object left in signed)
+                foreach (object right in signed)
+                    Check(recovered, method, null, null, new[] { (object)first, left, right }, new[] { (object)first, left, right });
+            }
+            else if (!method.IsStatic)
+            {
+                string field = isUnsigned ? "Unsigned" : "Signed";
+                foreach (object initial in domain)
+                foreach (object value in domain)
+                {
+                    object a = New(method.DeclaringType!), b = New(recovered.GetType(method.DeclaringType!.FullName!)!);
+                    Set(a, field, initial); Set(b, field, initial);
+                    Check(recovered, method, a, b, new[] { value }, new[] { value }, () => SameFields(a, b, field));
+                }
+                foreach (object value in domain)
+                    Check(recovered, method, null, null, new[] { value }, new[] { value });
+            }
+            else if (method.Name == "ReplaceStatic")
+            {
+                FieldInfo a = Field(method.DeclaringType!, "Slot"), b = Field(recovered.GetType(method.DeclaringType!.FullName!)!, "Slot");
+                foreach (object initial in signed)
+                foreach (object value in signed)
+                {
+                    a.SetValue(null, initial); b.SetValue(null, initial);
+                    Check(recovered, method, null, null, new[] { value }, new[] { value }, () => {
+                        if (!Equals(a.GetValue(null), b.GetValue(null))) throw new Exception("Native static field mismatch");
+                    });
+                }
+            }
+            else
+            {
+                if (method.Name is not ("Identity" or "UnsignedIdentity" or "Forward")) throw new Exception("Unexpected native method");
+                foreach (object value in domain)
+                    Check(recovered, method, null, null, new[] { value }, new[] { value });
+            }
+        }
+        if (methods.Count != 7) throw new Exception("Native method selection drift");
+        Console.WriteLine($"Native storage execution width: {IntPtr.Size * 8} bits; no cross-width execution claim.");
     }
 
     static void References(Assembly original, Assembly recovered, Dictionary<int, MethodInfo> methods)
