@@ -185,7 +185,7 @@ def main():
         if args.from_class:
             owners = sorted({s.split("::", 1)[0].split()[-1] for _, s in selected})
             for owner in owners:
-                result = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner],
+                result = subprocess.run([str(cli), "decompile", str(assembly), "--type", owner, "--details"],
                                         capture_output=True, text=True, timeout=120)
                 if result.returncode not in (0, 2) or (args.random_class and result.returncode != 0):
                     raise ValueError(f"Class selection failed: {owner}: {result.stderr}")
@@ -203,7 +203,7 @@ def main():
                 if status != "Decompiled":
                     raise ValueError(f"Not a decompiled class method: {signature}: {status}")
             else:
-                result = run(cli, "decompile", assembly, "--method", token, capture_output=True)
+                result = run(cli, "decompile", assembly, "--method", token, "--details", capture_output=True)
                 if "decompiled=1 declarations=0 partial=0 failed=0" != result.stderr.strip():
                     raise ValueError(f"Not a decompiled method: {signature}")
                 body = result.stdout

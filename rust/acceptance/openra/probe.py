@@ -69,7 +69,7 @@ def inspect(args):
         for marker in entry.get("required_il", []):
             if marker not in il.stdout:
                 raise ValueError(f"Missing IL evidence {marker}: {entry['id']}")
-        result = run(args.cli, "decompile", path, "--method", token)
+        result = run(args.cli, "decompile", path, "--method", token, "--details")
         summary = re.fullmatch(r"decompiled=(\d+) declarations=(\d+) partial=(\d+) failed=(\d+)\s*",
                                result.stderr)
         if not summary:

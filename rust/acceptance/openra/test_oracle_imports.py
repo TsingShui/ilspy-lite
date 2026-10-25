@@ -91,6 +91,6 @@ for config in ("release", "debug"):
         imports = snapshot["types"][0]["imports"]
         assert len(imports) == 1 and imports[0]["name"] == "entry" and imports[0]["module"] == "native", imports
         assert len(bytes.fromhex(imports[0]["raw_row"])) == 10
-        actual = subprocess.run([str(CLI), "decompile", str(path), "--type", "NativeOwner"], text=True, capture_output=True)
+        actual = subprocess.run([str(CLI), "decompile", str(path), "--type", "NativeOwner", "--details"], text=True, capture_output=True)
         inventory.check_output(snapshot, actual.stdout, actual.stderr, actual.returncode)
         print(f"{config}: small heap with encoded wide string indexes preserves exact native import/module evidence")

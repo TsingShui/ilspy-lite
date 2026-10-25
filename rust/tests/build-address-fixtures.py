@@ -51,7 +51,7 @@ for config in ("release", "debug"):
         "TakeSigned": prefix + b"\x03\x04\x8f" + pack(i4) + b"\x26" + finish + b"\x2a",
         "Duplicate": prefix + unsigned + b"\x25\x02\x28" + pack(int(tokens["Bump"], 16)) + b"\x26\x26\x26\x2a",
     }
-    declarations = subprocess.run([str(cli), "decompile", str(fixture), "--type", "AddressCases.Cells"],
+    declarations = subprocess.run([str(cli), "decompile", str(fixture), "--type", "AddressCases.Cells", "--details"],
                                   capture_output=True, text=True, timeout=30)
     assert declarations.returncode in (0, 2), declarations.stderr
     values = int(re.search(r"^\.field (0x[0-9A-F]{8}) .*@Values ", declarations.stdout, re.M)[1], 16)

@@ -1,10 +1,10 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{Result, Summary};
+use ilspy_lite::{OutputStyle, Result, Summary};
 use std::io::{Read, Write};
 
-const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --type <Namespace.Type>\n\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
+const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
 
 fn main() -> std::process::ExitCode {
     match run() {
@@ -17,7 +17,16 @@ fn main() -> std::process::ExitCode {
 }
 
 fn run() -> Result<u8> {
-    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    let mut args: Vec<_> = std::env::args_os().skip(1).collect();
+    let style = if args.last().is_some_and(|arg| arg == "--details") {
+        args.pop();
+        if args.first().is_none_or(|arg| arg != "decompile") {
+            return Err("--details is only valid with decompile".into());
+        }
+        OutputStyle::Details
+    } else {
+        OutputStyle::Readable
+    };
     let stdout = std::io::stdout();
     let mut out = std::io::BufWriter::new(stdout.lock());
     if args.len() == 1 && (args[0] == "--help" || args[0] == "-h") {
@@ -45,7 +54,7 @@ fn run() -> Result<u8> {
     }
     let value = args[3].to_str().ok_or("selector must be UTF-8")?;
     let summary = if args[2] == "--type" {
-        let result = ilspy_lite::decompile_type(&bytes, value)?;
+        let result = ilspy_lite::decompile_type_with_style(&bytes, value, style)?;
         write!(out, "{}", result.text)?;
         result.summary
     } else {
@@ -63,7 +72,7 @@ fn run() -> Result<u8> {
             return Ok(0);
         }
         let mut summary = Summary::default();
-        match ilspy_lite::decompile(&bytes, token) {
+        match ilspy_lite::decompile_with_style(&bytes, token, style) {
             Ok(result) => {
                 summary.record(&result.status);
                 writeln!(out, "{}", result.text)?;

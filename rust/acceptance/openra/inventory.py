@@ -253,7 +253,7 @@ def main():
             raise ValueError(f"Required methods missing: {entry['name']}")
         if args.check_cli:
             result = subprocess.run([str(args.cli), "decompile", str(args.root / "assemblies" / entry["assembly"]),
-                                     "--type", entry["name"]], text=True, capture_output=True, timeout=60)
+                                     "--type", entry["name"], "--details"], text=True, capture_output=True, timeout=60)
             (args.output / f"{entry['id']}.class.txt").write_text(result.stdout)
             counts = check_output(snapshot, result.stdout, result.stderr, result.returncode)
             report.append({"id": entry["id"], "counts": counts, "exit": result.returncode})

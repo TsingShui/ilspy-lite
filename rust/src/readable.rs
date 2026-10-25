@@ -1,0 +1,703 @@
+// Copyright (c) 2026 Tsingshui
+// SPDX-License-Identifier: MIT
+
+use crate::{
+    DecompiledMethod, Result, Status,
+    metadata::{Image, SelectedType},
+};
+use cildec::{Param, Rid, TableId, Token, Type};
+use std::collections::{BTreeMap, BTreeSet};
+
+pub(crate) fn type_view(
+    image: &Image<'_>,
+    types: &[SelectedType],
+    bodies: &BTreeMap<u32, DecompiledMethod>,
+) -> String {
+    let mut out = String::new();
+    let root = &types[0];
+    let namespace = image
+        .md
+        .tables()
+        .type_def(root.token & 0xffffff)
+        .ok()
+        .and_then(|row| image.md.strings().str(row.type_namespace).ok())
+        .unwrap_or("");
+    if !namespace.is_empty() {
+        out.push_str(&format!("namespace {namespace};\n\n"));
+    }
+    let mut emitted = BTreeSet::new();
+    render_type(image, root, types, bodies, 0, &mut emitted, &mut out);
+    out
+}
+
+fn render_type(
+    image: &Image<'_>,
+    ty: &SelectedType,
+    types: &[SelectedType],
+    bodies: &BTreeMap<u32, DecompiledMethod>,
+    indent: usize,
+    emitted: &mut BTreeSet<u32>,
+    out: &mut String,
+) {
+    if !emitted.insert(ty.token) {
+        return;
+    }
+    let header = type_header(image, ty).unwrap_or_else(|error| {
+        format!(
+            "class __type_{:08X} /* {} */",
+            ty.token,
+            crate::metadata::escape_line(&error.to_string())
+        )
+    });
+    line(out, indent, &header);
+    line(out, indent, "{");
+    for &token in &ty.fields {
+        match field_header(image, token, ty.token) {
+            Ok(header) => line(out, indent + 1, &header),
+            Err(_) => line(
+                out,
+                indent + 1,
+                &format!("// Unreadable field 0x{token:08X}; see --details."),
+            ),
+        }
+    }
+    if !ty.fields.is_empty() && !ty.methods.is_empty() {
+        out.push('\n');
+    }
+    for (index, &token) in ty.methods.iter().enumerate() {
+        let result = &bodies[&token];
+        render_method(image, token, ty.token, result, indent + 1, out);
+        if index + 1 != ty.methods.len() {
+            out.push('\n');
+        }
+    }
+    // Accessors remain methods; no automatic-property or event semantics are invented.
+    for (&token, kind) in ty
+        .properties
+        .iter()
+        .map(|t| (t, "property"))
+        .chain(ty.events.iter().map(|t| (t, "event")))
+    {
+        line(
+            out,
+            indent + 1,
+            &format!(
+                "// {kind} relationship 0x{token:08X}; accessors shown above, metadata in --details."
+            ),
+        );
+    }
+    for nested in types {
+        if image
+            .md
+            .tables()
+            .enclosing_type(Rid::new(nested.token & 0xffffff))
+            .ok()
+            .flatten()
+            .is_some_and(|p| p.get() == ty.token & 0xffffff)
+        {
+            out.push('\n');
+            render_type(image, nested, types, bodies, indent + 1, emitted, out);
+        }
+    }
+    line(out, indent, "}");
+}
+
+fn type_header(image: &Image<'_>, ty: &SelectedType) -> Result<String> {
+    let row = image.md.tables().type_def(ty.token & 0xffffff)?;
+    let name = image.md.strings().str(row.type_name)?;
+    let access = match row.flags & 7 {
+        1 | 2 => "public",
+        3 => "private",
+        4 => "protected",
+        7 => "protected internal",
+        6 => "private protected",
+        _ => "internal",
+    };
+    let kind = if row.flags & 0x20 != 0 {
+        "interface"
+    } else if cildec::Names::new(&image.md)
+        .try_token(row.extends)
+        .is_ok_and(|n| n.ends_with("System.ValueType"))
+    {
+        "struct"
+    } else {
+        "class"
+    };
+    let modifiers = if kind != "class" {
+        ""
+    } else if row.flags & 0x180 == 0x180 {
+        "static "
+    } else if row.flags & 0x80 != 0 {
+        "abstract "
+    } else if row.flags & 0x100 != 0 {
+        "sealed "
+    } else {
+        ""
+    };
+    let generics = generic_names(image, ty.token)?;
+    let suffix = if generics.is_empty() {
+        String::new()
+    } else {
+        format!("<{}>", generics.join(", "))
+    };
+    let mut bases = Vec::new();
+    if !row.extends.is_null() {
+        let base = named_type(image, row.extends)?;
+        if !matches!(base.as_str(), "System.Object" | "System.ValueType") {
+            bases.push(base);
+        }
+    }
+    for rid in image
+        .md
+        .tables()
+        .interface_impls(Rid::new(ty.token & 0xffffff))?
+    {
+        bases.push(named_type(
+            image,
+            image.md.tables().interface_impl(rid)?.interface,
+        )?);
+    }
+    Ok(format!(
+        "{access} {modifiers}{kind} {}{suffix}{}{}",
+        ident(name.split('`').next().unwrap_or(name)),
+        if bases.is_empty() {
+            String::new()
+        } else {
+            format!(" : {}", bases.join(", "))
+        },
+        constraints(image, ty.token, ty.token, 0)?
+    ))
+}
+
+fn generic_names(image: &Image<'_>, owner: u32) -> Result<Vec<String>> {
+    image
+        .md
+        .tables()
+        .generic_params(Token(owner))?
+        .into_iter()
+        .map(|rid| {
+            Ok(ident(
+                image
+                    .md
+                    .strings()
+                    .str(image.md.tables().generic_param(rid)?.name)?,
+            ))
+        })
+        .collect()
+}
+
+fn constraints(image: &Image<'_>, owner: u32, type_owner: u32, method: u32) -> Result<String> {
+    let mut text = String::new();
+    for rid in image.md.tables().generic_params(Token(owner))? {
+        let row = image.md.tables().generic_param(rid)?;
+        let mut values = Vec::new();
+        if row.flags & 8 != 0 {
+            values.push("struct".into());
+        } else if row.flags & 4 != 0 {
+            values.push("class".into());
+        }
+        for c in image.md.tables().generic_param_constraints(Rid::new(rid))? {
+            let token = image.md.tables().generic_param_constraint(c)?.constraint;
+            let value = named_type_with_owners(image, token, type_owner, method)?;
+            if value != "System.ValueType" {
+                values.push(value);
+            }
+        }
+        if row.flags & 16 != 0 && row.flags & 8 == 0 {
+            values.push("new()".into());
+        }
+        if !values.is_empty() {
+            text.push_str(&format!(
+                " where {} : {}",
+                ident(image.md.strings().str(row.name)?),
+                values.join(", ")
+            ));
+        }
+    }
+    Ok(text)
+}
+
+fn field_header(image: &Image<'_>, token: u32, owner: u32) -> Result<String> {
+    let row = image.md.tables().field(token & 0xffffff)?;
+    let sig = cildec::FieldSig::parse(image.md.blobs().get(row.signature)?)?;
+    let name = ident(image.md.strings().str(row.name)?);
+    let modifier = if row.flags & 0x40 != 0 {
+        "const "
+    } else if row.flags & 0x20 != 0 {
+        if row.flags & 0x10 != 0 {
+            "static readonly "
+        } else {
+            "readonly "
+        }
+    } else if row.flags & 0x10 != 0 {
+        "static "
+    } else {
+        ""
+    };
+    let value = if row.flags & 0x40 != 0 {
+        default_value(image, token)?
+            .map(|s| format!(" = {s}"))
+            .unwrap_or_else(|| " /* unresolved constant; see --details */".into())
+    } else {
+        String::new()
+    };
+    Ok(format!(
+        "{} {modifier}{} {name}{value};",
+        access(row.flags),
+        cs_type(image, &sig.type_, owner, 0)?
+    ))
+}
+
+fn access(flags: u16) -> &'static str {
+    match flags & 7 {
+        1 => "private",
+        2 => "private protected",
+        3 => "internal",
+        4 => "protected",
+        5 => "protected internal",
+        6 => "public",
+        _ => "private",
+    }
+}
+
+fn method_header(
+    image: &Image<'_>,
+    token: u32,
+    owner: u32,
+) -> Result<(String, BTreeMap<String, String>)> {
+    let row = image.row(token)?;
+    let name = image.md.strings().str(row.name)?;
+    let sig = image.signature(token)?;
+    let generic = generic_names(image, token)?;
+    let mut names = BTreeMap::new();
+    if sig.has_this {
+        names.insert("a0".into(), "this".into());
+    }
+    let parameter_rows = image.md.tables().param_range(Rid::new(token & 0xffffff))?;
+    let mut used = BTreeSet::new();
+    let mut params = Vec::new();
+    for (i, param) in sig.params.iter().enumerate() {
+        let original = parameter_rows.clone().find_map(|rid| {
+            let row = image.md.tables().param(rid).ok()?;
+            (usize::from(row.sequence) == i + 1).then_some((rid, row))
+        });
+        let proposed = original
+            .and_then(|(_, row)| image.md.strings().str(row.name).ok())
+            .filter(|s| !s.is_empty())
+            .map(ident)
+            .unwrap_or_else(|| format!("arg{i}"));
+        let name = if proposed.starts_with(['v', 'l', 's', 'e'])
+            && proposed[1..].starts_with(|c: char| c.is_ascii_digit())
+            || !used.insert(proposed.clone())
+        {
+            format!("arg{i}")
+        } else {
+            proposed
+        };
+        let index = i + usize::from(sig.has_this);
+        names.insert(format!("a{index}"), name.clone());
+        let default = original
+            .and_then(|(rid, _)| default_value(image, 0x08000000 | rid).ok().flatten())
+            .map(|v| format!(" = {v}"))
+            .unwrap_or_default();
+        params.push(format!(
+            "{} {name}{default}",
+            cs_param(image, param, owner, token)?
+        ));
+    }
+    let modifiers = if row.flags & 0x10 != 0 {
+        "static "
+    } else if row.flags & 0x400 != 0 {
+        "abstract "
+    } else if row.flags & 0x40 != 0 {
+        if row.flags & 0x100 == 0 {
+            "override "
+        } else {
+            "virtual "
+        }
+    } else {
+        ""
+    };
+    let modifiers = format!(
+        "{modifiers}{}",
+        if row.flags & 0x2000 != 0 {
+            "extern "
+        } else {
+            ""
+        }
+    );
+    let header = if name == ".ctor" || name == ".cctor" {
+        let ty = image.md.tables().type_def(owner & 0xffffff)?;
+        format!(
+            "{} {}{}({})",
+            if name == ".cctor" {
+                ""
+            } else {
+                access(row.flags)
+            },
+            if name == ".cctor" { "static " } else { "" },
+            ident(
+                image
+                    .md
+                    .strings()
+                    .str(ty.type_name)?
+                    .split('`')
+                    .next()
+                    .unwrap()
+            ),
+            params.join(", ")
+        )
+        .trim()
+        .to_string()
+    } else {
+        format!(
+            "{} {modifiers}{} {}{}({}){}",
+            access(row.flags),
+            cs_param(image, &sig.return_type, owner, token)?,
+            ident(name),
+            if generic.is_empty() {
+                String::new()
+            } else {
+                format!("<{}>", generic.join(", "))
+            },
+            params.join(", "),
+            constraints(image, token, owner, token)?
+        )
+    };
+    Ok((header, names))
+}
+
+fn render_method(
+    image: &Image<'_>,
+    token: u32,
+    owner: u32,
+    result: &DecompiledMethod,
+    indent: usize,
+    out: &mut String,
+) {
+    let (header, names) = method_header(image, token, owner)
+        .unwrap_or_else(|_| (format!("void __method_{token:08X}()"), BTreeMap::new()));
+    if result.status == Status::Declaration {
+        line(out, indent, &format!("{header};"));
+        return;
+    }
+    line(out, indent, &header);
+    line(out, indent, "{");
+    if result.status != Status::Decompiled {
+        let reason = result
+            .text
+            .lines()
+            .find_map(|l| {
+                l.strip_prefix("// IL FALLBACK:")
+                    .or_else(|| l.strip_prefix("// FAILED:"))
+            })
+            .unwrap_or("unreadable method body");
+        line(
+            out,
+            indent + 1,
+            &format!(
+                "// {}: {}; see --details for complete evidence.",
+                if result.status == Status::Partial {
+                    "IL fallback"
+                } else {
+                    "Failed"
+                },
+                reason.trim()
+            ),
+        );
+    } else {
+        let body = method_body(&result.text, &names);
+        for statement in body.lines() {
+            line(out, indent + 1, statement);
+        }
+    }
+    line(out, indent, "}");
+}
+
+pub(crate) fn method_view(image: &Image<'_>, token: u32, result: &DecompiledMethod) -> String {
+    let owner = image
+        .md
+        .tables()
+        .type_of_method(Rid::new(token & 0xffffff))
+        .ok()
+        .flatten()
+        .map_or(0, |r| 0x02000000 | r.get());
+    let mut out = String::new();
+    render_method(image, token, owner, result, 0, &mut out);
+    out
+}
+
+fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
+    let Some((_, body)) = text.split_once("\n{\n") else {
+        return "// Unreadable rendered body; see --details.".into();
+    };
+    let body = body.strip_suffix("}\n").unwrap_or(body);
+    let mut out = String::new();
+    for line in body.lines() {
+        let line = line.trim();
+        if line.starts_with("//") {
+            continue;
+        }
+        out.push_str(&rewrite(line, names));
+        out.push('\n');
+    }
+    out
+}
+
+// Rewrite generated C# identifiers without touching string/character literals.
+// Fully qualified names remain qualified; this is not source-name binding.
+fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
+    let mut out = String::new();
+    let mut chars = text.char_indices().peekable();
+    while let Some((start, c)) = chars.next() {
+        if c == '"' || c == '\'' {
+            out.push(c);
+            while let Some((_, ch)) = chars.next() {
+                out.push(ch);
+                if ch == '\\' {
+                    if let Some((_, escaped)) = chars.next() {
+                        out.push(escaped);
+                    }
+                } else if ch == c {
+                    break;
+                }
+            }
+        } else if c == '@' || c == '_' || c.is_ascii_alphabetic() {
+            let mut end = start + c.len_utf8();
+            while let Some(&(i, ch)) = chars.peek() {
+                if ch == '_' || ch.is_ascii_alphanumeric() {
+                    chars.next();
+                    end = i + ch.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            let word = &text[start..end];
+            if word == "global" && text[end..].starts_with("::") {
+                chars.next();
+                chars.next();
+                continue;
+            }
+            out.push_str(names.get(word).map(String::as_str).unwrap_or_else(|| {
+                if let Some(word) = word.strip_prefix('@') {
+                    if keyword(word) {
+                        &text[start..end]
+                    } else {
+                        word
+                    }
+                } else {
+                    word
+                }
+            }));
+        } else {
+            out.push(c);
+        }
+    }
+    out
+}
+
+fn ident(name: &str) -> String {
+    if crate::metadata::identifier(name).is_err() {
+        return format!(
+            "__name_{}",
+            name.bytes().map(|b| format!("{b:02X}")).collect::<String>()
+        );
+    }
+    if keyword(name) {
+        format!("@{name}")
+    } else {
+        name.into()
+    }
+}
+fn keyword(name: &str) -> bool {
+    matches!(
+        name,
+        "class"
+            | "namespace"
+            | "event"
+            | "base"
+            | "this"
+            | "ref"
+            | "out"
+            | "in"
+            | "return"
+            | "new"
+            | "default"
+            | "switch"
+            | "case"
+            | "goto"
+            | "if"
+            | "else"
+            | "while"
+            | "for"
+            | "do"
+            | "break"
+            | "continue"
+            | "public"
+            | "private"
+            | "protected"
+            | "internal"
+            | "static"
+            | "readonly"
+            | "const"
+            | "void"
+            | "bool"
+            | "int"
+            | "uint"
+            | "long"
+            | "ulong"
+            | "float"
+            | "double"
+            | "string"
+            | "object"
+            | "null"
+            | "true"
+            | "false"
+            | "checked"
+            | "unchecked"
+            | "throw"
+            | "try"
+            | "catch"
+            | "finally"
+            | "using"
+            | "struct"
+            | "interface"
+            | "enum"
+            | "delegate"
+            | "operator"
+            | "params"
+            | "virtual"
+            | "override"
+            | "sealed"
+            | "abstract"
+            | "extern"
+            | "unsafe"
+            | "fixed"
+            | "sizeof"
+            | "typeof"
+            | "is"
+            | "as"
+            | "lock"
+            | "get"
+            | "set"
+    )
+}
+fn line(out: &mut String, indent: usize, value: &str) {
+    out.push_str(&"    ".repeat(indent));
+    out.push_str(value);
+    out.push('\n');
+}
+
+fn cs_param(image: &Image<'_>, param: &Param<'_>, owner: u32, method: u32) -> Result<String> {
+    Ok(format!(
+        "{}{}",
+        if param.by_ref { "ref " } else { "" },
+        cs_type(image, &param.type_, owner, method)?
+    ))
+}
+fn named_type(image: &Image<'_>, token: Token) -> Result<String> {
+    named_type_with_owners(image, token, 0, 0)
+}
+fn named_type_with_owners(
+    image: &Image<'_>,
+    token: Token,
+    owner: u32,
+    method: u32,
+) -> Result<String> {
+    if token.table() == Some(TableId::TypeSpec) {
+        let row = image.md.tables().type_spec(token.rid())?;
+        return cs_type(
+            image,
+            &cildec::TypeSpecSig::parse(image.md.blobs().get(row.signature)?)?.type_,
+            owner,
+            method,
+        );
+    }
+    let names = cildec::Names::new(&image.md).try_token(token)?;
+    let name = names
+        .strip_prefix('[')
+        .and_then(|s| s.split_once(']').map(|(_, n)| n))
+        .unwrap_or(&names);
+    Ok(name.replace('/', "."))
+}
+fn cs_type(image: &Image<'_>, ty: &Type<'_>, owner: u32, method: u32) -> Result<String> {
+    Ok(match ty {
+        Type::Void => "void".into(),
+        Type::Boolean => "bool".into(),
+        Type::Char => "char".into(),
+        Type::I1 => "sbyte".into(),
+        Type::U1 => "byte".into(),
+        Type::I2 => "short".into(),
+        Type::U2 => "ushort".into(),
+        Type::I4 => "int".into(),
+        Type::U4 => "uint".into(),
+        Type::I8 => "long".into(),
+        Type::U8 => "ulong".into(),
+        Type::R4 => "float".into(),
+        Type::R8 => "double".into(),
+        Type::String => "string".into(),
+        Type::Object => "object".into(),
+        Type::IntPtr => "nint".into(),
+        Type::UIntPtr => "nuint".into(),
+        Type::Class(t) | Type::ValueType(t) => named_type_with_owners(image, *t, owner, method)?,
+        Type::Var(n) | Type::MVar(n) => generic_names(
+            image,
+            if matches!(ty, Type::Var(_)) {
+                owner
+            } else {
+                method
+            },
+        )?
+        .get(*n as usize)
+        .cloned()
+        .unwrap_or_else(|| format!("T{n}")),
+        Type::SzArray(_, t) => format!("{}[]", cs_type(image, t, owner, method)?),
+        Type::Array(t, shape) => format!(
+            "{}[{}]",
+            cs_type(image, t, owner, method)?,
+            ",".repeat(shape.rank.saturating_sub(1) as usize)
+        ),
+        Type::ByRef(t) => format!("ref {}", cs_type(image, t, owner, method)?),
+        Type::Ptr(_, t) => format!("{}*", cs_type(image, t, owner, method)?),
+        Type::Modified(_, t) | Type::Pinned(t) => cs_type(image, t, owner, method)?,
+        Type::GenericInst { def, args, .. } => format!(
+            "{}<{}>",
+            named_type(image, *def)?.split('`').next().unwrap(),
+            args.iter()
+                .map(|t| cs_type(image, t, owner, method))
+                .collect::<Result<Vec<_>>>()?
+                .join(", ")
+        ),
+        _ => return Err("type requires detailed signature notation".into()),
+    })
+}
+fn default_value(image: &Image<'_>, parent: u32) -> Result<Option<String>> {
+    let rows = image
+        .md
+        .tables()
+        .rows_for_parent(TableId::Constant, Token(parent))?;
+    let Some(&rid) = rows.first() else {
+        return Ok(None);
+    };
+    let row = image.md.tables().constant(rid)?;
+    let b = image.md.blobs().get(row.value)?;
+    Ok(Some(match row.type_raw {
+        0x02 if b.len() == 1 => (b[0] != 0).to_string(),
+        0x04 if b.len() == 1 => (b[0] as i8).to_string(),
+        0x05 if b.len() == 1 => b[0].to_string(),
+        0x06 if b.len() == 2 => i16::from_le_bytes(b.try_into()?).to_string(),
+        0x07 if b.len() == 2 => u16::from_le_bytes(b.try_into()?).to_string(),
+        0x08 if b.len() == 4 => i32::from_le_bytes(b.try_into()?).to_string(),
+        0x09 if b.len() == 4 => format!("{}u", u32::from_le_bytes(b.try_into()?)),
+        0x0a if b.len() == 8 => format!("{}L", i64::from_le_bytes(b.try_into()?)),
+        0x0b if b.len() == 8 => format!("{}UL", u64::from_le_bytes(b.try_into()?)),
+        0x0e if b.len() % 2 == 0 => format!(
+            "\"{}\"",
+            b.chunks_exact(2)
+                .map(|c| format!("\\u{:04X}", u16::from_le_bytes([c[0], c[1]])))
+                .collect::<String>()
+        ),
+        0x12 if b == [0, 0, 0, 0] => "null".into(),
+        _ => return Err("constant requires detailed notation".into()),
+    }))
+}

@@ -34,7 +34,7 @@ for config in ("release", "debug"):
     assembly = ROOT / f"tests/fixtures/class-{config}.bin"
     for name in ("ClassCases.MarshalMethods", "ClassCases.LayoutFields", "ClassCases.Mixed"):
         original = snapshot(assembly, name)
-        actual = subprocess.run([str(CLI), "decompile", str(assembly), "--type", name], text=True, capture_output=True)
+        actual = subprocess.run([str(CLI), "decompile", str(assembly), "--type", name, "--details"], text=True, capture_output=True)
         inventory.check_output(original, actual.stdout, actual.stderr, actual.returncode)
         print(f"{config} {name}: field/parameter/return marshal output matches independent oracle")
     original = snapshot(assembly, "ClassCases.MarshalMethods")

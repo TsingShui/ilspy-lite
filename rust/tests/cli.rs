@@ -23,7 +23,7 @@ fn type_selection_accepts_empty_and_generic_types_without_methods() {
         "ClassCases.EmptyGeneric`1",
         "ClassCases.Outer/EmptyNested",
     ] {
-        let out = run(&["decompile", fixture, "--type", name]);
+        let out = run(&["decompile", fixture, "--type", name, "--details"]);
         assert_eq!(
             out.status.code(),
             Some(0),
@@ -63,6 +63,7 @@ fn class_cli_reports_one_method_failure_without_hiding_other_bodies() {
         path.to_str().unwrap(),
         "--type",
         "ClassCases.Mixed",
+        "--details",
     ]);
     std::fs::remove_file(path).unwrap();
     assert_eq!(out.status.code(), Some(1));
@@ -102,6 +103,7 @@ fn invalid_class_metadata_is_not_counted_as_a_failed_method() {
         path.to_str().unwrap(),
         "--type",
         "ClassCases.Empty",
+        "--details",
     ]);
     std::fs::remove_file(path).unwrap();
     assert_eq!(out.status.code(), Some(1));
@@ -138,6 +140,7 @@ fn partial_type_preserves_inventory_and_returns_nonzero() {
         fixture(),
         "--type",
         "LiteSamples.ControlFlowSample",
+        "--details",
     ]);
     assert_eq!(out.status.code(), Some(2));
     let text = String::from_utf8_lossy(&out.stdout);

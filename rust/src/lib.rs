@@ -5,6 +5,14 @@ mod cfg;
 mod ir;
 mod lift;
 mod metadata;
+mod readable;
+
+/// Readable presentation is distinct from the complete diagnostic evidence view.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OutputStyle {
+    Readable,
+    Details,
+}
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -21,6 +29,20 @@ pub fn disassemble(bytes: &[u8], token: u32) -> Result<String> {
 /// Lower a supported method, or return a marked IL fallback without a fabricated body.
 pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
     decompile_method(&metadata::Image::parse(bytes)?, token)
+}
+
+/// Choose a presentation without changing method status or lowering admission.
+pub fn decompile_with_style(
+    bytes: &[u8],
+    token: u32,
+    style: OutputStyle,
+) -> Result<DecompiledMethod> {
+    let image = metadata::Image::parse(bytes)?;
+    let mut result = decompile_method(&image, token)?;
+    if style == OutputStyle::Readable {
+        result.text = readable::method_view(&image, token, &result);
+    }
+    Ok(result)
 }
 
 fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<DecompiledMethod> {
@@ -113,12 +135,22 @@ fn failed_body(
 /// Decompile an exact metadata type and its owned nested types using one image.
 /// Each unsupported or failed method remains visible; it does not suppress peers.
 pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
+    decompile_type_with_style(bytes, name, OutputStyle::Details)
+}
+
+/// Select the same class result with either readable presentation or full evidence.
+pub fn decompile_type_with_style(
+    bytes: &[u8],
+    name: &str,
+    style: OutputStyle,
+) -> Result<DecompiledType> {
     let image = metadata::Image::parse(bytes)?;
     let types = image.selected_types(name)?;
     let mut text =
         String::from("// Class-level C#-like analysis; not a compilable type declaration.\n");
     let mut summary = Summary::default();
-    for ty in types {
+    let mut bodies = std::collections::BTreeMap::new();
+    for ty in &types {
         text.push_str(&format!(
             "// type token 0x{:08X} {}\n",
             ty.token,
@@ -138,7 +170,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
-        match image.marshalling(&ty) {
+        match image.marshalling(ty) {
             Ok((marshalling, failures)) => {
                 text.push_str(&marshalling);
                 summary.metadata_failed += failures;
@@ -152,7 +184,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
-        match image.method_implementations(&ty) {
+        match image.method_implementations(ty) {
             Ok((mappings, failures)) => {
                 text.push_str(&mappings);
                 summary.metadata_failed += failures;
@@ -166,7 +198,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
-        match image.security_declarations(&ty) {
+        match image.security_declarations(ty) {
             Ok((security, failures)) => {
                 text.push_str(&security);
                 summary.metadata_failed += failures;
@@ -180,7 +212,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 ));
             }
         }
-        match image.custom_attributes(&ty) {
+        match image.custom_attributes(ty) {
             Ok((attributes, failures)) => {
                 text.push_str(&attributes);
                 summary.metadata_failed += failures;
@@ -195,7 +227,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
             }
         }
         for &token in &ty.properties {
-            match image.property_declaration(token, &ty) {
+            match image.property_declaration(token, ty) {
                 Ok((declaration, failures)) => {
                     text.push_str(&declaration);
                     summary.metadata_failed += failures;
@@ -210,7 +242,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
             }
         }
         for &token in &ty.events {
-            match image.event_declaration(token, &ty) {
+            match image.event_declaration(token, ty) {
                 Ok((declaration, failures)) => {
                     text.push_str(&declaration);
                     summary.metadata_failed += failures;
@@ -224,7 +256,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 }
             }
         }
-        for token in ty.fields {
+        for &token in &ty.fields {
             match image.field_declaration(token) {
                 Ok((declaration, failures)) => {
                     text.push_str(&declaration);
@@ -239,7 +271,7 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
                 }
             }
         }
-        for token in ty.methods {
+        for &token in &ty.methods {
             match image.method_declaration(token, &ty.name) {
                 Ok((declaration, failures)) => {
                     text.push_str(&declaration);
@@ -270,6 +302,15 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
             ));
             text.push_str(&result.text);
             text.push('\n');
+            bodies.insert(token, result);
+        }
+    }
+    if style == OutputStyle::Readable {
+        text = readable::type_view(&image, &types, &bodies);
+        if summary.metadata_failed != 0 {
+            text.push_str(
+                "\n// Metadata could not be fully read; use --details for retained evidence.\n",
+            );
         }
     }
     Ok(DecompiledType { text, summary })
