@@ -15,6 +15,7 @@ cargo build --release --locked
 ./target/release/ilspy-lite il tests/fixtures/release.bin --method 0x06000019
 ./target/release/ilspy-lite decompile tests/fixtures/release.bin --method 0x06000019
 ./target/release/ilspy-lite decompile tests/fixtures/release.bin --type LiteSamples.ControlFlowSample
+./target/release/ilspy-lite decompile tests/fixtures/release.bin --type LiteSamples.ControlFlowSample --details
 ```
 
 The last example deliberately exits **2**: nine methods decompile, but `Divide`
@@ -27,6 +28,38 @@ types can be selected; generic names include the metadata arity suffix (for
 example ``Namespace.Type`1``). Nested names use `/`, as shown by `list`.
 Compiler-generated methods are never hidden; an async type selection includes
 its nested state machine, not just the kickoff method.
+
+### Readable by default, evidence on request
+
+Default decompile output is a C#-like class/method view: namespaces, original
+member modifiers and parameter names, `this`, constants and owned nested types.
+Raw rows/signatures, per-instruction comments, repetitive banners and explicit
+status records are not mixed into supported bodies. Safe immutable copies,
+Boolean encodings, unused labels and bounded return-only branches are simplified;
+field reads, addresses, allocations, exact calls and fault-producing operations
+are not erased or freely inlined. Some temporaries and labeled loops remain.
+
+Unsupported methods keep their declaration and a brief `IL fallback`/`Failed`
+notice pointing to `--details`. A comment-only fallback is not executable
+recovered logic. Properties/events have concise named relationship summaries;
+their accessor methods stay visible, without pretending to infer source sugar.
+Exact-call and target-runtime intrinsics remain where ordinary C# would change
+semantics. This is similar in presentation to ILSpy, not equivalent syntax
+coverage, resolver behavior or a promise of compilable source.
+
+Append `--details` to retain the complete analysis format described below,
+including full IL fallback, original tokens, raw metadata, interpretation limits
+and independent statuses. `list` and `il` keep their diagnostic formats. Both
+views have identical status counts/exit precedence. Evidence-consuming scripts
+must explicitly request `--details` rather than parse the readable view.
+
+Library `decompile`/`decompile_type` retain their existing detailed contracts.
+Choose presentation with `decompile_with_style`/`decompile_type_with_style` and
+`OutputStyle::{Readable, Details}`. This avoids changing existing evidence callers
+while giving the CLI a readable default. Validation:
+[readable output acceptance](acceptance/READABLE_OUTPUT.md).
+
+### Detailed metadata contract
 
 The library entry `decompile_type(bytes, name)` parses the image once and returns
 type-token/name sections, raw type flags with named meanings, enclosing type,
@@ -71,7 +104,7 @@ Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 | Code | Meaning |
 |---|---|
 | 0 | Every selected method rendered, or was a legitimate bodyless declaration |
-| 2 | At least one method has an explicitly marked IL fallback; none failed |
+| 2 | At least one method has an explicit fallback notice; none failed |
 | 1 | Invalid request/input, body/metadata failure, or output I/O failure |
 
 Library entry points in `src/lib.rs` accept assembly bytes and method tokens or

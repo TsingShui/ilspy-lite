@@ -4,7 +4,7 @@
 use ilspy_lite::{OutputStyle, Result, Summary};
 use std::io::{Read, Write};
 
-const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
+const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001> [--details]\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nExit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nOutput is C#-like; no promise of recompilable source.";
 
 fn main() -> std::process::ExitCode {
     match run() {

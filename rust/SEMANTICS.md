@@ -1,8 +1,27 @@
 # Agent-readable lowering semantics
 
-This output is an image-scoped class analysis record, not reconstructed C# source
-or a compilable project. Original metadata headers are authoritative. All
-operations below are semantic notation; the CLI does not ship a runtime adapter.
+Output is C#-like analysis, not reconstructed source or a compilable project.
+The CLI defaults to a readable class/method view; `--details` preserves the full
+image-scoped metadata/IL evidence record. Original metadata is authoritative.
+All operations below are semantic notation; the CLI does not ship a runtime adapter.
+
+## Presentation versus semantics
+
+Readable output shows original class/member declarations with parameter names and
+`this`, not the detailed static-carrier signature. It removes diagnostic comments
+and safely simplifies immutable copies, adjacent unchecked pure expressions,
+Boolean 0/1 encodings and a bounded set of return-only edges. Field/address/call/
+allocation snapshots, checks and target-runtime numeric operations remain ordered;
+not every expression or loop becomes source sugar. Fully qualified type names may
+remain to avoid pretending to have general C# binding.
+
+Unsupported/failed bodies have a concise notice, not an executable empty-body
+replacement. Use `--details` for complete IL, raw evidence, exact scope/token
+identities and interpretation limits. A readable declaration or successful body
+is not evidence that attribute/security/native policies were interpreted, nor
+that dependencies were recovered. Both presentations retain the same statuses and
+exit precedence. The detailed library entry points remain compatible; explicit
+`OutputStyle::Readable` selects the concise view.
 
 ## Identity, status and order
 
