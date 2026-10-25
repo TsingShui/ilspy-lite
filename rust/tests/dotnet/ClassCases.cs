@@ -141,6 +141,14 @@ public class Attached<[Evidence("generic")] T> where T : IMarker
     [Evidence("event")] public event Changed Updated { add { } remove { } }
     [Evidence("nested")] public class Nested { public int Read() => 3; }
 }
+public class PresentationCases
+{
+    public int v1;
+    public int a0;
+    public void Set() { v1 = 1; }
+    public static int Difference(int v0, int arg0) => unchecked(v0 - arg0);
+    public void SetArgument(int a0) { this.a0 = a0; }
+}
 public static class MarshalMethods
 {
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]

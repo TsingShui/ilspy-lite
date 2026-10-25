@@ -286,14 +286,19 @@ fn method_header(
             .filter(|s| !s.is_empty())
             .map(ident)
             .unwrap_or_else(|| format!("arg{i}"));
-        let name = if proposed.starts_with(['v', 'l', 's', 'e'])
+        let mut name = if proposed.starts_with(['v', 'l', 's', 'e'])
             && proposed[1..].starts_with(|c: char| c.is_ascii_digit())
-            || !used.insert(proposed.clone())
         {
             format!("arg{i}")
         } else {
             proposed
         };
+        let base = name.clone();
+        let mut suffix = 1;
+        while !used.insert(name.clone()) {
+            name = format!("{base}_{suffix}");
+            suffix += 1;
+        }
         let index = i + usize::from(sig.has_this);
         names.insert(format!("a{index}"), name.clone());
         let default = original

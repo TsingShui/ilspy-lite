@@ -195,6 +195,25 @@ fn argument_renaming_does_not_rewrite_a_field_named_like_a_generated_argument() 
 }
 
 #[test]
+fn fallback_parameter_names_cannot_collide_with_existing_source_parameters() {
+    let result =
+        decompile_type_with_style(IMAGE, "ClassCases.PresentationCases", OutputStyle::Readable)
+            .unwrap();
+    assert!(
+        !result.text.contains("Difference(int arg0, int arg0)"),
+        "{}",
+        result.text
+    );
+    assert!(
+        !result.text.contains("return unchecked(arg0 - arg0);"),
+        "{}",
+        result.text
+    );
+    assert!(result.text.contains("this.v1 = 1;"), "{}", result.text);
+    assert!(result.text.contains("this.a0 = a0;"), "{}", result.text);
+}
+
+#[test]
 fn readable_fields_and_nested_types_remain_visible() {
     let fields =
         decompile_type_with_style(IMAGE, "ClassCases.Fields", OutputStyle::Readable).unwrap();
