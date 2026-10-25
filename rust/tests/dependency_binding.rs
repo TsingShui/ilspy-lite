@@ -345,6 +345,81 @@ fn generic_field_reference_uses_the_instantiated_owner_signature() {
     assert_eq!(bound.reference_signature, bound.definition_signature);
 }
 
+fn rename_reference(bytes: &[u8], old: &str, replacement: &str) -> Vec<u8> {
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let rid = md
+        .tables()
+        .iter::<cildec::tables::AssemblyRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == old)
+        .unwrap()
+        .0;
+    // Assembly names and namespaces can share a heap entry. Reuse an unrelated
+    // method-name slot (or the facade's module-name slot) instead of renaming a namespace.
+    let slot = md
+        .tables()
+        .iter::<cildec::tables::MethodDefRow>()
+        .map(|(_, r)| r.unwrap().name)
+        .find(|index| md.strings().str(*index).unwrap().starts_with("get_Virtual"))
+        .unwrap_or(md.tables().module(1).unwrap().name);
+    let name = md.strings().str(slot).unwrap().as_bytes();
+    assert!(replacement.len() <= name.len());
+    let at = name.as_ptr() as usize - bytes.as_ptr() as usize;
+    let raw = md
+        .tables()
+        .row_bytes(cildec::TableId::AssemblyRef, rid)
+        .unwrap();
+    assert_eq!(raw.len(), 20);
+    let row_at = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut result = bytes.to_vec();
+    result[at..at + name.len()].fill(0);
+    result[at..at + replacement.len()].copy_from_slice(replacement.as_bytes());
+    result[row_at + 14..row_at + 16].copy_from_slice(&(slot.0 as u16).to_le_bytes());
+    result
+}
+
+#[test]
+fn type_forwarders_reach_the_defining_assembly_and_cycles_remain_unresolved() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let facade = include_bytes!("fixtures/binding-facade-release.bin");
+    let input = rename_reference(main, "BindingLibrary", "BindingFacade");
+    let token = type_reference(&input, "BindingLibrary", "Peer");
+    let mut context = DependencyContext::new(input.clone()).unwrap();
+    context
+        .add_reference("BindingFacade.dll", facade.to_vec())
+        .unwrap();
+    assert!(context.resolve_type(token).is_err());
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    let peer = context.resolve_type(token).unwrap();
+    assert_eq!(peer.definition.assembly.name, "BindingLibrary");
+    assert_eq!(peer.name, "BindingLibrary.Peer");
+    assert_eq!(peer.forwarders.len(), 1);
+    assert_eq!(peer.forwarders[0].assembly.name, "BindingFacade");
+    let inner = context
+        .resolve_type(type_reference(&input, "", "Inner`1"))
+        .unwrap();
+    assert_eq!(inner.name, "BindingLibrary.Outer`1/Inner`1");
+    assert_eq!(inner.forwarders.len(), 1);
+    let mut cyclic = DependencyContext::new(input).unwrap();
+    cyclic
+        .add_reference(
+            "cycle.dll",
+            rename_reference(facade, "BindingLibrary", "BindingFacade"),
+        )
+        .unwrap();
+    assert!(
+        cyclic
+            .resolve_type(token)
+            .unwrap_err()
+            .to_string()
+            .contains("cyclic")
+    );
+}
+
 #[test]
 fn assembly_scoped_type_reference_binds_to_the_supplied_definition() {
     let mut context = DependencyContext::new(MAIN.to_vec()).unwrap();

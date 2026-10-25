@@ -31,3 +31,12 @@ for config in ("release", "debug"):
             ]))
             subprocess.run([str(dotnet / "dotnet"), str(sdk / "Roslyn/bincore/csc.dll"), f"@{response}"], check=True)
         shutil.copyfile(dependency, root / f"tests/fixtures/binding-library-{config}.bin")
+        facade = Path(directory) / "BindingFacade.dll"
+        response = Path(directory) / "forwarder.rsp"
+        response.write_text("\n".join([
+            "-nologo", "-target:library", "-langversion:14", "-warnaserror+", "-deterministic+",
+            f'-out:"{facade}"', *[f'-r:"{p}"' for p in sorted(ref.glob("*.dll"))],
+            f'-r:"{dependency}"', f'"{root / "tests/dotnet/BindingForwarder.cs"}"',
+        ]))
+        subprocess.run([str(dotnet / "dotnet"), str(sdk / "Roslyn/bincore/csc.dll"), f"@{response}"], check=True)
+        shutil.copyfile(facade, root / f"tests/fixtures/binding-facade-{config}.bin")

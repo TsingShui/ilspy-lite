@@ -29,6 +29,8 @@ pub struct ResolvedType {
     pub exact_identity: bool,
     /// Scoped metadata signature identities in the definition's generic positions.
     pub generic_arguments: Vec<String>,
+    /// ExportedType rows followed before reaching this actual definition.
+    pub forwarders: Vec<DefinitionLocation>,
 }
 
 impl DependencyContext {
@@ -146,6 +148,7 @@ impl DependencyContext {
                     let namespace = image.md.strings().str(reference.type_namespace)?;
                     let name = image.md.strings().str(reference.type_name)?;
                     let mut exact_identity = true;
+                    let mut inherited_forwarders = Vec::new();
                     let (target, parent) = match scope.table() {
                         Some(TableId::AssemblyRef) => {
                             let target = self.binding_assembly(module, scope)?;
@@ -164,13 +167,16 @@ impl DependencyContext {
                             let (parent_module, parent) =
                                 self.bind_type_in(module, scope, visiting)?;
                             exact_identity = parent.exact_identity;
+                            inherited_forwarders = parent.forwarders;
                             (parent_module, Some(parent.definition.token & 0xffffff))
                         }
                         _ => return Err("unsupported type resolution scope".into()),
                     };
-                    let rid = self.find_type(target, namespace, name, parent)?;
-                    let mut resolved = self.describe_type(target, rid)?;
-                    resolved.exact_identity = exact_identity;
+                    let (target, mut resolved) =
+                        self.lookup_named_type(target, namespace, name, parent, visiting)?;
+                    resolved.exact_identity &= exact_identity;
+                    inherited_forwarders.append(&mut resolved.forwarders);
+                    resolved.forwarders = inherited_forwarders;
                     Ok((target, resolved))
                 }
                 Some(TableId::TypeSpec) => {
@@ -212,13 +218,14 @@ impl DependencyContext {
         result
     }
 
-    fn find_type(
+    fn lookup_named_type(
         &self,
         module: usize,
         namespace: &str,
         name: &str,
         parent: Option<u32>,
-    ) -> Result<u32> {
+        visiting: &mut BTreeSet<(usize, u32)>,
+    ) -> Result<(usize, ResolvedType)> {
         let image = self.binding_image(module)?;
         let parents = nested_parents(&image)?;
         let mut found = None;
@@ -234,7 +241,60 @@ impl DependencyContext {
                 found = Some(rid);
             }
         }
-        found.ok_or_else(|| "type definition missing from resolved assembly".into())
+        let mut export = None;
+        if parent.is_none() {
+            for (rid, row) in image.md.tables().iter::<cildec::tables::ExportedTypeRow>() {
+                let row = row?;
+                if image.md.strings().str(row.type_name)? == name
+                    && image.md.strings().str(row.type_namespace)? == namespace
+                {
+                    if export.is_some() || found.is_some() {
+                        return Err("ambiguous type definition or forwarding records".into());
+                    }
+                    if rid > 0x00ffffff {
+                        return Err("forwarder RID exceeds token width".into());
+                    }
+                    export = Some((rid, row));
+                }
+            }
+        }
+        if let Some(rid) = found {
+            return Ok((module, self.describe_type(module, rid)?));
+        }
+        let (rid, row) = export.ok_or("type definition missing from resolved assembly")?;
+        let key = (module, 0x27000000 | rid);
+        if visiting.len() >= 32 || !visiting.insert(key) {
+            return Err("cyclic or excessive type forwarder chain".into());
+        }
+        let result = (|| {
+            let implementation = image.metadata_coded_token(
+                CodedIndex::Implementation,
+                image
+                    .md
+                    .tables()
+                    .raw_column(TableId::ExportedType, rid, 4)?,
+            )?;
+            if row.flags & 0x00200000 == 0 || implementation.table() != Some(TableId::AssemblyRef) {
+                return Err("exported type needs an assembly-scoped forwarder; multi-module exports remain unresolved".into());
+            }
+            let target = self.binding_assembly(module, implementation)?;
+            let (definition, mut bound) =
+                self.lookup_named_type(target, namespace, name, None, visiting)?;
+            bound.exact_identity &= reference_identity(&image, implementation.rid())?
+                .matches(&self.identity_source(target)?.0);
+            let (assembly, source) = self.identity_source(module)?;
+            bound.forwarders.insert(
+                0,
+                DefinitionLocation {
+                    assembly,
+                    source,
+                    token: key.1,
+                },
+            );
+            Ok((definition, bound))
+        })();
+        visiting.remove(&key);
+        result
     }
 
     fn describe_type(&self, module: usize, rid: u32) -> Result<ResolvedType> {
@@ -273,6 +333,7 @@ impl DependencyContext {
             flags,
             exact_identity: true,
             generic_arguments: Vec::new(),
+            forwarders: Vec::new(),
         })
     }
 }
