@@ -49,6 +49,9 @@ retain raw code bytes in a `Failed` result.
   `stfld`, and direct instance `call` through MethodDef.
 - Local class references in parameters/locals/returns, `ldnull`, same-type
   reference joins, and locally provable base-class assignment.
+- One-dimensional zero-based `int[]` / `uint[]` references in parameters,
+  fields, locals and returns; `ldelem.i4` / `ldelem.u4` and `stelem.i4` with
+  I4 indices. Array loads and stores stay at their original IL position.
 - Constant/argument/local loads and stores, `dup`, `pop`, static field loads/stores.
 - Arithmetic, checked arithmetic (signed and unsigned), division/remainder,
   comparisons, bitwise operations and shifts.
@@ -98,8 +101,9 @@ bytes, decoded offsets/opcodes/tokens, locals, method/header flags and EH clause
 If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
-Currently unsupported: general/external object types, strings, arrays, floating
-point, native integers, conversions, constructors, external instance calls,
+Currently unsupported: general/external object types, strings, other array
+element types, multidimensional/jagged arrays, `newarr`, `ldlen`, `ldelema`,
+floating point, native integers, conversions, constructors, external instance calls,
 callvirt, indirect calls, generic method instantiation, managed references,
 value types, prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
@@ -144,6 +148,7 @@ Optional behavioral gate (Python 3 and .NET **10** SDK/runtime):
 ```sh
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/roundtrip.py
 DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py
+DOTNET_ROOT="$HOME/.dotnet10" python3 tests/reference-roundtrip.py --arrays
 ```
 
 It invokes the SDK's Roslyn compiler directly, without restore, modifying root
@@ -158,11 +163,14 @@ Measured results and boundaries: [RESULTS.md](RESULTS.md).
 A pinned, external real-world corpus is described in
 [acceptance/openra/README.md](acceptance/openra/README.md). Its first milestone
 is four resource/ammo methods plus one supporting getter, not the whole game.
-These five bodies now lower and pass a bounded behavioral gate; the other six
+These five bodies lower and pass a bounded behavioral gate. `MersenneTwister.Next`
+also lowers after the first array step, but its `Generate` call dependency is
+still unsupported and it has no behavioral acceptance yet. The other five
 primary candidates remain IL fallbacks. The corpus is optional, downloaded
 separately, and not part of ordinary Cargo tests. Its probe is static-only; the
 separate `tests/reference-roundtrip.py --openra` gate executes only the selected
-bodies. Details and limitations: [stage 1 results](acceptance/openra/STAGE1.md).
+bodies. Details and limitations: [stage 1 results](acceptance/openra/STAGE1.md)
+and [first array step](acceptance/openra/ARRAY_STEP.md).
 License/dependencies: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## Deliberate next steps

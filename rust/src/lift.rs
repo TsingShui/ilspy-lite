@@ -285,6 +285,28 @@ impl Writer<'_, '_> {
                 self.lines
                     .push(format!("{dest} = {};", ty.store(&value.name, self.image)?));
             }
+            "ldelem.i4" | "ldelem.u4" => {
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let element = array_element(array.ty)?;
+                let target = format!("{}[{}]", array.name, index.name);
+                self.push(Ty::I4, element.load(&target, self.image)?)?;
+            }
+            "stelem.i4" => {
+                let value = self.pop()?;
+                expect(value.ty, Ty::I4)?;
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let element = array_element(array.ty)?;
+                self.lines.push(format!(
+                    "{}[{}] = {};",
+                    array.name,
+                    index.name,
+                    element.store(&value.name, self.image)?
+                ));
+            }
             "dup" => {
                 let v = self.stack.last().ok_or("dup on empty stack")?.clone();
                 self.stack.push(v);
@@ -540,6 +562,13 @@ fn var(i: &Instruction) -> Result<usize> {
         Ok(n as usize)
     } else {
         Err("expected variable operand".into())
+    }
+}
+fn array_element(ty: Ty) -> Result<Ty> {
+    match ty {
+        Ty::I4Array => Ok(Ty::I4),
+        Ty::U4Array => Ok(Ty::U4),
+        _ => Err("expected int[] or uint[] evaluation-stack value".into()),
     }
 }
 fn integer(ty: Ty) -> Result<()> {

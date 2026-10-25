@@ -12,6 +12,14 @@ third-party test assemblies are checked in here.
 | integer-release.bin | ../dotnet/IntegerCases.cs | optimized, Roslyn .NET 10 | 4,608 |
 | integer-debug.bin | ../dotnet/IntegerCases.cs | unoptimized, Roslyn .NET 10 | 4,608 |
 
+The array snapshots (`array-release.bin`, `array-debug.bin`) contain 12 methods
+each from `../dotnet/ArrayCases.cs`: 11 exercised bodies and one unsupported
+constructor. They test signed/unsigned element reads and writes, array fields,
+locals, joins, aliasing and side-effect/exception order. Regenerate with
+`python3 rust/tests/build-array-fixtures.py`, then run
+`python3 rust/tests/reference-roundtrip.py --arrays`. Snapshot revisions are
+pinned by Git; their regeneration does not require a separate hash manifest.
+
 The reference snapshots add 18 methods each from `../dotnet/ReferenceCases.cs`,
 4,096 bytes per snapshot. They cover local reference receivers/fields, generated
 backing-field names, same-type joins, exact base calls and unsupported struct

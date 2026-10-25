@@ -268,7 +268,9 @@ impl<'a> Image<'a> {
 
     pub fn assignable(&self, actual: crate::ir::Ty, expected: crate::ir::Ty) -> Result<()> {
         use crate::ir::Ty;
-        if actual == expected || (actual == Ty::Null && matches!(expected, Ty::Class(_))) {
+        if actual == expected
+            || (actual == Ty::Null && matches!(expected, Ty::Class(_) | Ty::I4Array | Ty::U4Array))
+        {
             return Ok(());
         }
         if let (Ty::Class(a), Ty::Class(b)) = (actual, expected) {

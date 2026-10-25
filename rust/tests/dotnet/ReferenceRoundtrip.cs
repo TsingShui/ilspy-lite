@@ -37,7 +37,7 @@ internal static class ReferenceRoundtrip
     static int checks;
     static string TypeName(Type type) => type == typeof(void) ? "void" : type == typeof(int) ? "int" :
         type == typeof(bool) ? "bool" : type == typeof(long) ? "long" : type == typeof(uint) ? "uint" :
-        type == typeof(ulong) ? "ulong" : "global::" + type.FullName;
+        type == typeof(ulong) ? "ulong" : type.IsSZArray ? TypeName(type.GetElementType()!) + "[]" : "global::" + type.FullName;
     static string Alias(FieldInfo field) => Regex.IsMatch(field.Name, @"^[A-Za-z_][A-Za-z0-9_]*$") && !field.Name.StartsWith("__il_field_", StringComparison.Ordinal)
         ? "@" + field.Name : $"__il_field_{field.MetadataToken:X8}";
     static FieldInfo Field(Type type, string name) => type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
@@ -62,7 +62,9 @@ internal static class ReferenceRoundtrip
         if (args[0] != "run") throw new Exception("Unknown mode");
         Assembly recovered = new AssemblyLoadContext("recovered", isCollectible: true).LoadFromAssemblyPath(args[2]);
         if (job.Kind == "openra") OpenRa(original, recovered, methods);
-        else References(original, recovered, methods);
+        else if (job.Kind == "arrays") Arrays(recovered, methods);
+        else if (job.Kind == "references") References(original, recovered, methods);
+        else throw new Exception("Unknown corpus kind");
         Console.WriteLine($"{job.Kind}: {checks} return/exception/state comparisons passed");
     }
 
@@ -206,6 +208,122 @@ internal static class ReferenceRoundtrip
             }
             Check(recovered, method, null, null, Array.Empty<object>(), Array.Empty<object>());
         }
+    }
+
+    static void SameArray(Array left, Array right)
+    {
+        if (left == null ? right != null : right == null || left.GetType() != right.GetType() ||
+            !left.Cast<object>().SequenceEqual(right.Cast<object>())) throw new Exception("Array mismatch");
+    }
+
+    static void Arrays(Assembly recovered, Dictionary<int, MethodInfo> methods)
+    {
+        foreach (MethodInfo method in methods.Values.Where(m => m.Name.StartsWith("Read", StringComparison.Ordinal) ||
+            m.Name.StartsWith("Write", StringComparison.Ordinal)).Where(m => m.Name != "ReadChoice"))
+        {
+            bool unsigned = method.Name.EndsWith("Unsigned", StringComparison.Ordinal);
+            Array[] arrays = unsigned
+                ? new Array[] { null, Array.Empty<uint>(), new[] { 0u, 1u, 0x80000000u, uint.MaxValue } }
+                : new Array[] { null, Array.Empty<int>(), new[] { int.MinValue, -1, 0, int.MaxValue } };
+            object[] domain = method.Name.StartsWith("Write", StringComparison.Ordinal)
+                ? unsigned ? new object[] { 0u, 1u, 0x80000000u, uint.MaxValue } : new object[] { int.MinValue, -1, 0, int.MaxValue }
+                : new object[] { null };
+            foreach (Array values in arrays)
+            foreach (int index in new[] { int.MinValue, -1, 0, 1, 3, 4, int.MaxValue })
+            foreach (object value in domain)
+            {
+                Array left = (Array)values?.Clone(), right = (Array)values?.Clone();
+                object[] leftArgs = value == null ? new object[] { left, index } : new object[] { left, index, value };
+                object[] rightArgs = value == null ? new object[] { right, index } : new object[] { right, index, value };
+                Check(recovered, method, null, null, leftArgs, rightArgs,
+                    () => SameArray(left, right));
+            }
+        }
+        Type cell = methods.Values.Single(m => m.Name == "OldThenWrite").DeclaringType!;
+        Type clone = recovered.GetType(cell.FullName!)!;
+        int[] indices = { int.MinValue, -1, 0, 1, 3, 4, int.MaxValue };
+        uint[][] states = { null, Array.Empty<uint>(), new[] { 0u, 1u, 0x80000000u, uint.MaxValue } };
+        foreach (uint[] state in states)
+        foreach (int index in indices)
+        foreach (uint value in new[] { 0u, 1u, 0x80000000u, uint.MaxValue })
+        {
+            object a = New(cell), b = New(clone);
+            uint[] left = (uint[])state?.Clone(), right = (uint[])state?.Clone();
+            Set(a, "Values", left); Set(b, "Values", right);
+            Check(recovered, methods.Values.Single(m => m.Name == "OldThenWrite"), a, b,
+                new object[] { index, value }, new object[] { index, value }, () => {
+                    SameArray(left, right);
+                    if (!ReferenceEquals(Get(a, "Values"), left) || !ReferenceEquals(Get(b, "Values"), right))
+                        throw new Exception("Array field identity changed");
+                });
+        }
+        foreach (bool nullReceiver in new[] { false, true })
+        foreach (int index in indices)
+        {
+            object a = nullReceiver ? null : New(cell), b = nullReceiver ? null : New(clone);
+            Check(recovered, methods.Values.Single(m => m.Name == "OldThenWrite"), a, b,
+                new object[] { index, 1u }, new object[] { index, 1u });
+        }
+        int[][] signedStates = { null, Array.Empty<int>(), new[] { int.MinValue, -1, 0, int.MaxValue } };
+        foreach (int[] state in signedStates)
+        foreach (int index in indices)
+        {
+            object a = New(cell), b = New(clone);
+            int[] left = (int[])state?.Clone(), right = (int[])state?.Clone();
+            Set(a, "Numbers", left); Set(b, "Numbers", right);
+            Set(a, "Effects", 7); Set(b, "Effects", 7);
+            Check(recovered, methods.Values.Single(m => m.Name == "EffectfulStore"), a, b,
+                new object[] { index }, new object[] { index }, () => {
+                    SameArray(left, right); SameFields(a, b, "Effects");
+                    if (!ReferenceEquals(Get(a, "Numbers"), left) || !ReferenceEquals(Get(b, "Numbers"), right))
+                        throw new Exception("Array field identity changed");
+                });
+        }
+        Check(recovered, methods.Values.Single(m => m.Name == "EffectfulStore"), null, null,
+            new object[] { 0 }, new object[] { 0 });
+        foreach (bool first in new[] { false, true })
+        foreach (bool nullLeft in new[] { false, true })
+        foreach (bool nullRight in new[] { false, true })
+        {
+            uint[] a = nullLeft ? null : new[] { 1u }, b = (uint[])a?.Clone();
+            uint[] c = nullRight ? null : new[] { 2u }, d = (uint[])c?.Clone();
+            Check(recovered, methods.Values.Single(m => m.Name == "Choose"), null, null,
+                new object[] { first, a, c }, new object[] { first, b, d },
+                () => { SameArray(a, b); SameArray(c, d); },
+                (x, y) => ReferenceEquals(x, first ? a : c) && ReferenceEquals(y, first ? b : d));
+        }
+        foreach (bool first in new[] { false, true })
+        foreach (bool nullLeft in new[] { false, true })
+        foreach (bool nullRight in new[] { false, true })
+        foreach (int index in indices)
+        {
+            uint[] a = nullLeft ? null : new[] { 1u, 2u, 3u, 4u }, b = (uint[])a?.Clone();
+            uint[] c = nullRight ? null : new[] { uint.MaxValue, 0x80000000u, 0u, 9u }, d = (uint[])c?.Clone();
+            Check(recovered, methods.Values.Single(m => m.Name == "ReadChoice"), null, null,
+                new object[] { first, a, c, index }, new object[] { first, b, d, index },
+                () => { SameArray(a, b); SameArray(c, d); });
+        }
+        foreach (bool nullTarget in new[] { false, true })
+        foreach (bool nullSource in new[] { false, true })
+        foreach (bool alias in new[] { false, true })
+        foreach (int index in indices)
+        {
+            uint[] a = nullTarget ? null : new[] { 1u, 2u, 3u, 4u }, b = (uint[])a?.Clone();
+            uint[] c = nullSource ? null : alias ? a : new[] { 8u, 9u, 10u, 11u };
+            uint[] d = nullSource ? null : alias ? b : (uint[])c.Clone();
+            Check(recovered, methods.Values.Single(m => m.Name == "Copy"), null, null,
+                new object[] { a, c, index }, new object[] { b, d, index },
+                () => { SameArray(a, b); SameArray(c, d); });
+        }
+        object ba = New(cell), bb = New(clone);
+        Set(ba, "Effects", int.MaxValue); Set(bb, "Effects", int.MaxValue);
+        MethodInfo bump = methods.Values.Single(m => m.Name == "Bump");
+        Check(recovered, bump, ba, bb, Array.Empty<object>(), Array.Empty<object>(), () => SameFields(ba, bb, "Effects"));
+        Check(recovered, bump, null, null, Array.Empty<object>(), Array.Empty<object>());
+        Check(recovered, methods.Values.Single(m => m.Name == "Null"), null, null, Array.Empty<object>(), Array.Empty<object>());
+        if (methods.Values.Select(m => m.Name).Order().SequenceEqual(new[] {
+            "ReadSigned", "ReadUnsigned", "WriteSigned", "WriteUnsigned", "Null", "OldThenWrite", "Choose", "Bump", "EffectfulStore", "Copy", "ReadChoice"
+        }.Order()) == false) throw new Exception("Array method selection drift");
     }
 
     static void References(Assembly original, Assembly recovered, Dictionary<int, MethodInfo> methods)

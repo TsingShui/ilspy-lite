@@ -18,6 +18,8 @@ pub(crate) enum Ty {
     I8,
     U8,
     Class(u32),
+    I4Array,
+    U4Array,
     Null,
 }
 
@@ -45,6 +47,11 @@ impl Ty {
             T::I8 => Self::I8,
             T::U8 => Self::U8,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
+            T::SzArray(mods, element) if mods.is_empty() => match element.as_ref() {
+                T::I4 => Self::I4Array,
+                T::U4 => Self::U4Array,
+                _ => return Err("unsupported array element type needs IL fallback".into()),
+            },
             _ => return Err("unsupported signature type needs IL fallback".into()),
         })
     }
@@ -68,6 +75,8 @@ impl Ty {
             Self::I8 => "long",
             Self::U8 => "ulong",
             Self::Class(t) => return image.class_name(t),
+            Self::I4Array => "int[]",
+            Self::U4Array => "uint[]",
             Self::Null => "object",
         }
         .into())
@@ -76,27 +85,31 @@ impl Ty {
         match self {
             Self::Void => StackKind::Void,
             Self::I8 | Self::U8 => StackKind::I8,
-            Self::Class(_) | Self::Null => StackKind::Ref,
+            Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => StackKind::Ref,
             _ => StackKind::I4,
         }
     }
     pub fn stack(self) -> Self {
         match self {
-            Self::Void | Self::Class(_) | Self::Null => self,
+            Self::Void | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => self,
             Self::I8 | Self::U8 => Self::I8,
             _ => Self::I4,
         }
     }
     pub fn load(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
-            Self::I4 | Self::I8 | Self::Class(_) | Self::Null => expression.into(),
+            Self::I4 | Self::I8 | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => {
+                expression.into()
+            }
             Self::Bool => format!("({expression} ? 1 : 0)"),
             _ => format!("unchecked(({})({expression}))", self.stack().cs(image)?),
         })
     }
     pub fn store(self, expression: &str, image: &Image<'_>) -> Result<String> {
         Ok(match self {
-            Self::I4 | Self::I8 | Self::Class(_) | Self::Null => expression.into(),
+            Self::I4 | Self::I8 | Self::Class(_) | Self::I4Array | Self::U4Array | Self::Null => {
+                expression.into()
+            }
             Self::Bool => format!("({expression} != 0)"),
             _ => format!("unchecked(({})({expression}))", self.cs(image)?),
         })

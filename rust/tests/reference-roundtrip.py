@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Tsingshui
 # SPDX-License-Identifier: MIT
-"""Execute only pinned reference fixtures or the five OpenRA stage-1 bodies.
+"""Execute only owned reference/array fixtures or the five OpenRA stage-1 bodies.
 
 Generated state shells and direct-call adapters are test-only. Original bodies
 are called via Reflection.Emit IL call, independently of the recovered C# text.
@@ -22,7 +22,9 @@ def run(*args, **kwargs):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--openra", action="store_true", help="execute pinned stage-1 bodies; never launch the game")
+    corpus_choice = parser.add_mutually_exclusive_group()
+    corpus_choice.add_argument("--openra", action="store_true", help="execute pinned stage-1 bodies; never launch the game")
+    corpus_choice.add_argument("--arrays", action="store_true", help="execute the owned integer-array corpus")
     args = parser.parse_args()
     dotnet = Path(os.environ.get("DOTNET_ROOT", Path.home() / ".dotnet10"))
     def latest(path):
@@ -64,8 +66,9 @@ def main():
         selected = [m for m in manifest["methods"] + manifest["support_methods"] if m["stage"] == 1]
         jobs.append(("openra", assembly, corpus / "runtime-deps", [(m["token"], m["signature"]) for m in selected]))
     else:
+        corpus_name = "array" if args.arrays else "reference"
         for config in ("release", "debug"):
-            assembly = ROOT / f"tests/fixtures/reference-{config}.bin"
+            assembly = ROOT / f"tests/fixtures/{corpus_name}-{config}.bin"
             listing = run(cli, "list", assembly, capture_output=True).stdout.splitlines()
             selected = []
             for line in listing:
@@ -73,9 +76,11 @@ def main():
                 if "::.ctor(" in signature or "ReferenceCases.ValueCell::" in signature:
                     continue
                 selected.append((token, signature))
-            if len(selected) != 14:
-                raise ValueError(f"Reference fixture selection drift: {len(selected)}")
-            jobs.append((config, assembly, assembly.parent, selected))
+            expected_count = 11 if args.arrays else 14
+            if len(selected) != expected_count:
+                raise ValueError(f"{corpus_name} fixture selection drift: {len(selected)}")
+            name = f"array-{config}" if args.arrays else config
+            jobs.append((name, assembly, assembly.parent, selected))
 
     for name, assembly, dependencies, selected in jobs:
         directory = out / name
@@ -89,7 +94,8 @@ def main():
             source.write_text(result.stdout)
             entries.append({"token": int(token, 16), "source": str(source)})
         job = directory / "job.json"
-        job.write_text(json.dumps({"kind": "openra" if args.openra else "references", "assembly": str(assembly),
+        kind = "openra" if args.openra else "arrays" if args.arrays else "references"
+        job.write_text(json.dumps({"kind": kind, "assembly": str(assembly),
                                    "dependencies": str(dependencies), "methods": entries}, indent=2))
         source = directory / "Recovered.cs"
         run(dotnet / "dotnet", harness, "prepare", job, source)
