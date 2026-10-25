@@ -93,6 +93,33 @@ method disassemblies and both views are retained under
 These are static baseline checks, not semantic acceptance or method execution.
 Generated and iterator classes are retained in the sample despite fallback bodies.
 
+## Constructor implementation evidence
+
+`d84d07c1c` admits local direct-base initialization; `018a08360` adds scoped external
+base calls without a resolver. Public negative cases retain ordinary-call,
+unrelated-owner, null/changed-receiver and `callvirt` rejection. Wait no longer
+falls back on its base constructor. This is exact initialization notation, not a
+claim that the external constructor implementation was recovered.
+
+The actual readable Wait constructor/Tick gate passes 242 comparisons, including
+fresh/dirty states, both overloads, base fields, null failures and subsequent Tick.
+Deleting its base calls is rejected by the independent base-state comparison.
+Owned local/external base fixtures pass 48 comparisons per Debug/Release config,
+including pre-base field writes, ordered effectful parameters and base exceptions.
+Core/delegated constructor gates remain passing; full Rust Debug/Release and
+strict clippy passed after the admission changes.
+
+Readable initializer recovery uses an explicit `: base(...)` or `: this(...)` only
+when the exact initialization is the first rendered operation and arguments are
+unchanged parameters of the exact target types or admitted typed literals. Even
+parameterless `base()` remains explicit; it is not silently dropped. Earlier field
+initializers, allocations, calls, labels or other statements prevent the rewrite.
+This preserves unsupported source-binding cases as ordered intrinsic statements.
+The test adapter expands the initializer's actual arguments at body entry, using
+call-token comments only for target identity, never copying detailed statements.
+The Wait, owned base, core and delegated gates pass with these actual initializer
+outputs. Logs are under `report/constructor-presentation-*.log`.
+
 ## Evidence required before completion
 
 - Owned red/green public-interface tests for each support slice, including

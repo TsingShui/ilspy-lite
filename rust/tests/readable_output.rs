@@ -314,6 +314,84 @@ fn return_only_branch_targets_can_replace_gotos_without_reordering_operations() 
 }
 
 #[test]
+fn constructor_initializers_are_shown_only_when_no_prior_operation_is_crossed() {
+    for bytes in [
+        include_bytes!("fixtures/constructor-release.bin").as_slice(),
+        include_bytes!("fixtures/constructor-debug.bin").as_slice(),
+    ] {
+        let cells =
+            decompile_type_with_style(bytes, "ConstructorCases.Cells", OutputStyle::Readable)
+                .unwrap();
+        assert!(
+            cells
+                .text
+                .contains("public Cells(int length, int value) : base(value)"),
+            "{}",
+            cells.text
+        );
+        assert!(
+            cells.text.contains("public Cells() : this(3, 7)"),
+            "{}",
+            cells.text
+        );
+        let base = decompile_type_with_style(bytes, "ConstructorCases.Base", OutputStyle::Readable)
+            .unwrap();
+        assert!(
+            base.text.contains("public Base(int value) : base()"),
+            "{}",
+            base.text
+        );
+        let root = decompile_type_with_style(bytes, "ConstructorCases.Root", OutputStyle::Readable)
+            .unwrap();
+        assert!(
+            !root.text.contains("public Root(int value) : base()"),
+            "{}",
+            root.text
+        );
+        assert!(
+            root.text.contains("__cil_core_object_ctor_"),
+            "{}",
+            root.text
+        );
+        assert!(
+            root.text.find("this.Before = ").unwrap()
+                < root.text.find("__cil_core_object_ctor_").unwrap()
+        );
+    }
+    for bytes in [
+        include_bytes!("fixtures/external-release.bin").as_slice(),
+        include_bytes!("fixtures/external-debug.bin").as_slice(),
+    ] {
+        let result =
+            decompile_type_with_style(bytes, "ExternalCases.Cells", OutputStyle::Readable).unwrap();
+        assert!(
+            result.text.contains("public Cells() : base()"),
+            "{}",
+            result.text
+        );
+        assert!(!result.text.contains("__cil_ctor_call_"), "{}", result.text);
+    }
+    for bytes in [
+        include_bytes!("fixtures/base-constructor-release.bin").as_slice(),
+        include_bytes!("fixtures/base-constructor-debug.bin").as_slice(),
+    ] {
+        for name in ["Local", "External"] {
+            let result = decompile_type_with_style(
+                bytes,
+                &format!("BaseConstructorCases.{name}"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert!(!result.text.contains(") : base("), "{}", result.text);
+            assert!(
+                result.text.find("this.Before = ").unwrap()
+                    < result.text.find("__cil_ctor_call_").unwrap()
+            );
+        }
+    }
+}
+
+#[test]
 fn field_old_value_is_not_delayed_until_after_a_store() {
     for bytes in [
         include_bytes!("fixtures/reference-release.bin").as_slice(),

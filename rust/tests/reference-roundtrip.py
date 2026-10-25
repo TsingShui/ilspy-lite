@@ -26,6 +26,8 @@ def adapt_readable_body(readable, details):
 
     No selected body is substituted. Parameter/receiver names are rebound to the
     existing test shell signature; field token comments identify shell state only.
+    An explicit initializer becomes one same-receiver operation at body entry;
+    call-token metadata binds its target, never its arguments or detailed statements.
     """
     readable = readable.rstrip() + "\n"
     detailed = re.search(r"^public static [^\n]+\n\{\n", details, re.M)
@@ -34,6 +36,22 @@ def adapt_readable_body(readable, details):
         raise ValueError("Readable body needs a supported ordinary declaration")
     original_header = detailed.group(0)
     header = readable[:rendered.end()].splitlines()[0]
+    initializer = ""
+    if " : " in header:
+        header, suffix = header.split(" : ", 1)
+        match = re.fullmatch(r"(base|this)\(([^()]*)\)", suffix)
+        caller = re.search(r"^// token 0x[0-9A-F]{8} instance void (.+)::\.ctor\(", details, re.M)
+        if match is None or caller is None or "__cil_ctor_body_" not in original_header:
+            raise ValueError("Unsupported readable constructor initializer")
+        kind, arguments = match.groups()
+        targets = {(token, owner) for token, owner in re.findall(
+            r"^\s*// call token 0x([0-9A-F]{8}): (.+)::\.ctor$", details, re.M)
+            if (owner == caller[1]) == (kind == "this")}
+        if len(targets) != 1:
+            raise ValueError("Constructor initializer target metadata is missing or ambiguous")
+        token, owner = targets.pop()
+        operation = "core_object_ctor" if owner.rsplit("]", 1)[-1] == "System.Object" else "ctor_call"
+        initializer = f'    __cil_{operation}_{token}(this{", " + arguments if arguments else ""});\n'
     parameters = header[header.index("(") + 1:header.rindex(")")]
     names = [p.strip().split(" = ", 1)[0].split()[-1] for p in parameters.split(",") if p.strip()]
     if len(names) != len(set(names)):
@@ -45,7 +63,7 @@ def adapt_readable_body(readable, details):
         mapping = dict(zip(names, bindings))
     else:
         raise ValueError("Readable parameter shape differs from detailed signature")
-    statements = readable[rendered.end():-2]
+    statements = initializer + readable[rendered.end():-2]
     lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|@?[A-Za-z_][A-Za-z_0-9]*')
     statements = lexical.sub(lambda m: m.group(0) if statements[:m.start()].rstrip().endswith((".", "::"))
                              else mapping.get(m.group(0), m.group(0)), statements)

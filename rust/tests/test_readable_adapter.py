@@ -20,6 +20,21 @@ class ReadableAdapter(unittest.TestCase):
         self.assertIn('"this Value"', adapted)
         self.assertNotIn('a0.a1', adapted)
 
+    def test_constructor_initializer_uses_its_arguments_not_detailed_body_logic(self):
+        readable = 'public Child(int value) : base(value)\n{\n    this.Value = value;\n}\n'
+        details = ('// token 0x06000001 instance void Owned.Child::.ctor(int32)\n'
+                   '// call token 0x0A000001: [Dependency]Owned.Base::.ctor\n'
+                   '// field token 0x04000001\n'
+                   'public static void __cil_ctor_body_06000001(global::Owned.Child a0, int a1)\n{\n'
+                   '    throw new System.Exception("must not execute detail statements");\n}\n')
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('__cil_ctor_call_0A000001(a0, a1);', adapted)
+        self.assertLess(adapted.index('__cil_ctor_call_'), adapted.index('a0.Value = a1;'))
+        self.assertNotIn('must not execute', adapted)
+        ambiguous = details.replace('// field token', '// call token 0x0A000002: [Dependency]Owned.Base::.ctor\n// field token')
+        with self.assertRaises(ValueError):
+            roundtrip.adapt_readable_body(readable, ambiguous)
+
     def test_ambiguous_parameter_bindings_fail_instead_of_merging_values(self):
         details = 'public static int @Difference(int a0, int a1)\n{\n}\n'
         readable = 'public static int Difference(int value, int value)\n{\n    return value - value;\n}\n'

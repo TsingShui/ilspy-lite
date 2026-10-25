@@ -440,8 +440,19 @@ fn render_method(
     indent: usize,
     out: &mut String,
 ) {
-    let (header, names) = method_header(image, token, owner)
+    let (mut header, names) = method_header(image, token, owner)
         .unwrap_or_else(|_| (format!("void __method_{token:08X}()"), BTreeMap::new()));
+    let mut body = if result.status == Status::Decompiled {
+        method_body(&result.text, &names)
+    } else {
+        String::new()
+    };
+    if let Some((initializer, remaining)) =
+        constructor_initializer(image, token, owner, &names, &body)
+    {
+        header.push_str(&initializer);
+        body = remaining.to_string();
+    }
     if result.status == Status::Declaration {
         line(out, indent, &format!("{header};"));
         return;
@@ -471,7 +482,6 @@ fn render_method(
             }
         }
     } else {
-        let body = method_body(&result.text, &names);
         let mut nesting = 0usize;
         for statement in body.lines() {
             let leading = statement.chars().take_while(|c| *c == '}').count();
@@ -485,6 +495,71 @@ fn render_method(
         }
     }
     line(out, indent, "}");
+}
+
+// Only the first rendered operation can occupy an initializer. Parameter types
+// must match the target exactly so this does not introduce overload guesses.
+fn constructor_initializer<'b>(
+    image: &Image<'_>,
+    token: u32,
+    owner: u32,
+    names: &BTreeMap<String, String>,
+    body: &'b str,
+) -> Option<(String, &'b str)> {
+    use crate::ir::Ty;
+    if image.md.strings().str(image.row(token).ok()?.name).ok()? != ".ctor" {
+        return None;
+    }
+    let (first, remaining) = body.split_once('\n')?;
+    let call = first
+        .strip_prefix("__cil_ctor_call_")
+        .or_else(|| first.strip_prefix("__cil_core_object_ctor_"))?;
+    let (target, arguments) = call.strip_suffix(");")?.split_once('(')?;
+    if target.len() != 8 {
+        return None;
+    }
+    let target = image
+        .method_ref(Token(u32::from_str_radix(target, 16).ok()?))
+        .ok()?;
+    let target_owner = match (target.receiver, target.core_object_constructor) {
+        (Some(Ty::Class(t) | Ty::ExternalClass(t)), None) if target.constructor => t,
+        (None, Some(t)) => t,
+        _ => return None,
+    };
+    let kind = if target_owner == owner {
+        "this"
+    } else if image.md.tables().type_def(owner & 0xffffff).ok()?.extends.0 == target_owner {
+        "base"
+    } else {
+        return None;
+    };
+    let arguments = arguments.split(", ").collect::<Vec<_>>();
+    if arguments.first() != Some(&"this") || arguments.len() != target.args.len() + 1 {
+        return None;
+    }
+    let signature = image.signature(token).ok()?;
+    for (&argument, &expected) in arguments[1..].iter().zip(&target.args) {
+        if expected == Ty::I4 && argument.parse::<i32>().is_ok()
+            || expected == Ty::Bool && matches!(argument, "true" | "false")
+        {
+            continue;
+        }
+        let (slot, _) = names
+            .iter()
+            .find(|(slot, name)| slot.as_str() != "a0" && name.as_str() == argument)?;
+        let index = slot
+            .strip_prefix('a')?
+            .parse::<usize>()
+            .ok()?
+            .checked_sub(1)?;
+        if Ty::from_param(signature.params.get(index)?).ok()? != expected {
+            return None;
+        }
+    }
+    Some((
+        format!(" : {kind}({})", arguments[1..].join(", ")),
+        remaining,
+    ))
 }
 
 pub(crate) fn method_view(image: &Image<'_>, token: u32, result: &DecompiledMethod) -> String {
