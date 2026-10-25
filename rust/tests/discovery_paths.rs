@@ -257,8 +257,7 @@ fn reference_pack_provenance_is_separate_from_shared_implementation() {
     let f = Fixture::new();
     let shared = f.file("dotnet/shared/Microsoft.NETCore.App/8.0.0/Widget.dll");
     let contract = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/8.0.1/ref/net8.0/Widget.dll");
-    let alternate = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/9.0.0/ref/net8.0/Widget.dll");
-    f.file("dotnet/packs/Microsoft.NETCore.App.Ref/8.0.1/ref/net9.0/Widget.dll");
+    let alternate = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/9.0.0/ref/net9.0/Widget.dll");
     let env = DiscoveryEnvironment {
         dotnet_roots: vec![f.0.join("dotnet")],
         ..Default::default()
@@ -295,8 +294,46 @@ fn reference_pack_provenance_is_separate_from_shared_implementation() {
             Some(".NETStandard,Version=v2.1"),
             &env
         )),
-        vec![standard.as_path()]
+        vec![standard.as_path(), contract.as_path(), alternate.as_path()]
     );
+}
+
+#[test]
+fn reference_pack_tfm_hint_prioritizes_without_excluding_alternatives() {
+    let f = Fixture::new();
+    let earlier = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/8.0.0/ref/net6.0/Widget.dll");
+    let matching = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/8.0.0/ref/net8.0/Widget.dll");
+    let later = f.file("dotnet/packs/Microsoft.NETCore.App.Ref/9.0.0/ref/net9.0/Widget.dll");
+    f.file("dotnet/packs/Microsoft.NETCore.App.Ref/9.0.0/ref/unknown/Widget.dll");
+    let env = DiscoveryEnvironment {
+        dotnet_roots: vec![f.0.join("dotnet")],
+        ..Default::default()
+    };
+    let result = candidates_for(
+        &f.input(),
+        &identity(),
+        Some(".NETCoreApp,Version=v8.0"),
+        &env,
+    );
+    assert_eq!(
+        paths(&result),
+        vec![matching.as_path(), earlier.as_path(), later.as_path()]
+    );
+    assert!(
+        result
+            .candidates
+            .iter()
+            .all(|c| c.origin == CandidateOrigin::ReferencePack)
+    );
+    std::fs::remove_dir_all(f.0.join("dotnet/packs/Microsoft.NETCore.App.Ref/8.0.0")).unwrap();
+    let result = candidates_for(
+        &f.input(),
+        &identity(),
+        Some(".NETCoreApp,Version=v8.0"),
+        &env,
+    );
+    assert_eq!(paths(&result), vec![later.as_path()]);
+    assert_eq!(result.candidates[0].origin, CandidateOrigin::ReferencePack);
 }
 
 #[test]

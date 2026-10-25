@@ -544,6 +544,7 @@ impl Search {
                     self.pair(&version, &requested.name, CandidateOrigin::SharedFramework);
                 }
             }
+            let mut references = Vec::new();
             for pack in [
                 "Microsoft.NETCore.App.Ref",
                 "NETStandard.Library.Ref",
@@ -553,33 +554,29 @@ impl Search {
                 for version in
                     self.versions(&root.join("packs").join(pack), "", hint.map(|h| &h.version))
                 {
-                    let reference = version.join("ref");
-                    if let Some(hint) = hint {
-                        if let Some(tfm) = hint.tfm() {
-                            self.pair(
-                                &reference.join(tfm),
-                                &requested.name,
-                                CandidateOrigin::ReferencePack,
-                            );
-                        }
-                    } else {
-                        for tfm in self.directories(&reference) {
-                            let supported =
-                                tfm.file_name()
-                                    .and_then(|n| n.to_str())
-                                    .is_some_and(|name| {
-                                        ["netstandard", "netcoreapp", "net"].iter().any(|prefix| {
-                                            name.strip_prefix(prefix)
-                                                .and_then(Version::parse)
-                                                .is_some()
-                                        })
-                                    });
-                            if supported {
-                                self.pair(&tfm, &requested.name, CandidateOrigin::ReferencePack);
-                            }
+                    for tfm in self.directories(&version.join("ref")) {
+                        let supported =
+                            tfm.file_name()
+                                .and_then(|n| n.to_str())
+                                .is_some_and(|name| {
+                                    ["netstandard", "netcoreapp", "net"].iter().any(|prefix| {
+                                        name.strip_prefix(prefix).and_then(Version::parse).is_some()
+                                    })
+                                });
+                        if supported {
+                            references.push(tfm);
                         }
                     }
                 }
+            }
+            let target_tfm = hint.and_then(FrameworkHint::tfm);
+            references.sort_by_key(|path| {
+                !target_tfm
+                    .as_deref()
+                    .is_some_and(|target| path.file_name().and_then(|n| n.to_str()) == Some(target))
+            });
+            for reference in references {
+                self.pair(&reference, &requested.name, CandidateOrigin::ReferencePack);
             }
         }
     }
