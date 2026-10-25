@@ -146,6 +146,189 @@ impl<'a> Image<'a> {
         Ok(selected)
     }
 
+    pub fn type_context(&self, token: u32) -> Result<(String, usize)> {
+        let rid = token & 0xffffff;
+        let row = self.md.tables().type_def(rid)?;
+        let mut text = format!(
+            ".type-flags 0x{:08X} {}\n",
+            row.flags,
+            type_flags(row.flags)
+        );
+        let parent = self.md.tables().enclosing_type(Rid::new(rid))?;
+        let mut failures = 0;
+        let mut relation = |kind: &str, target: Token| match self.type_reference(target, 0) {
+            Ok(description) => text.push_str(&format!(".{kind} {description}\n")),
+            Err(error) => {
+                failures += 1;
+                text.push_str(&format!(
+                    ".{kind} 0x{:08X}\n// FAILED metadata: {}\n",
+                    target.0,
+                    escape_line(&error.to_string())
+                ));
+            }
+        };
+        if let Some(parent) = parent {
+            relation("enclosing-type", Token(0x02000000 | parent.get()));
+        }
+        if row.extends.is_null() {
+            text.push_str(".extends none\n");
+        } else {
+            relation("extends", row.extends);
+        }
+        for interface in self.md.tables().interface_impls(Rid::new(rid))? {
+            let row = self.md.tables().interface_impl(interface)?;
+            match self.type_reference(row.interface, 0) {
+                Ok(description) => text.push_str(&format!(
+                    ".implements {description} // InterfaceImpl 0x{:08X}\n",
+                    0x09000000 | interface
+                )),
+                Err(error) => {
+                    failures += 1;
+                    text.push_str(&format!(
+                        ".implements 0x{:08X} // InterfaceImpl 0x{:08X}\n// FAILED metadata: {}\n",
+                        row.interface.0,
+                        0x09000000 | interface,
+                        escape_line(&error.to_string())
+                    ));
+                }
+            }
+        }
+        Ok((text, failures))
+    }
+
+    fn type_reference(&self, token: Token, depth: usize) -> Result<String> {
+        if depth == 32 || token.rid() == 0 {
+            return Err("invalid or excessive type reference".into());
+        }
+        let tables = self.md.tables();
+        let names = Names::new(&self.md);
+        let description = match token.table() {
+            Some(TableId::TypeDef) => {
+                let row = tables.type_def(token.rid())?;
+                self.md.strings().str(row.type_name)?;
+                self.md.strings().str(row.type_namespace)?;
+                names.type_def(Rid::new(token.rid()))?
+            }
+            Some(TableId::TypeRef) => {
+                let row = tables.type_ref(token.rid())?;
+                let name = self.md.strings().str(row.type_name)?;
+                let ns = self.md.strings().str(row.type_namespace)?;
+                let local = if ns.is_empty() {
+                    name.into()
+                } else {
+                    format!("{ns}.{name}")
+                };
+                let scope = row.resolution_scope;
+                match scope.table() {
+                    Some(TableId::AssemblyRef) if scope.rid() != 0 => {
+                        let a = tables.assembly_ref(scope.rid())?;
+                        format!(
+                            "[{}]{local} // assembly-ref 0x{:08X} version={}.{}.{}.{} flags=0x{:08X} culture={:?} key-or-token={:02X?}",
+                            self.md.strings().str(a.name)?,
+                            scope.0,
+                            a.major_version,
+                            a.minor_version,
+                            a.build_number,
+                            a.revision_number,
+                            a.flags,
+                            self.md.strings().str(a.culture)?,
+                            self.md.blobs().get(a.public_key_or_token)?
+                        )
+                    }
+                    Some(TableId::TypeRef) if scope.rid() != 0 => {
+                        format!(
+                            "{local} // enclosing-reference {}",
+                            self.type_reference(scope, depth + 1)?
+                        )
+                    }
+                    Some(TableId::ModuleRef) if scope.rid() != 0 => {
+                        let module = tables.module_ref(scope.rid())?;
+                        format!(
+                            "{local} // module-ref 0x{:08X} {:?}",
+                            scope.0,
+                            self.md.strings().str(module.name)?
+                        )
+                    }
+                    Some(TableId::Module) if scope.rid() != 0 => {
+                        let module = tables.module(scope.rid())?;
+                        format!(
+                            "{local} // module 0x{:08X} {:?}",
+                            scope.0,
+                            self.md.strings().str(module.name)?
+                        )
+                    }
+                    _ if scope.is_null() => {
+                        format!("{local} // unresolved scope 0x{:08X}", scope.0)
+                    }
+                    _ => return Err("invalid type reference scope".into()),
+                }
+            }
+            Some(TableId::TypeSpec) => {
+                let row = tables.type_spec(token.rid())?;
+                let blob = self.md.blobs().get(row.signature)?;
+                let signature = cildec::TypeSpecSig::parse(blob)
+                    .map_err(|error| format!("signature-bytes={blob:02X?}: {error}"))?;
+                let mut references = Vec::new();
+                self.signature_references(&signature.type_, depth + 1, &mut references)
+                    .map_err(|error| format!("signature-bytes={blob:02X?}: {error}"))?;
+                format!(
+                    "{} // signature-bytes={blob:02X?} parsed={:?} references=[{}]",
+                    names.type_(&signature.type_),
+                    signature.type_,
+                    references.join("; ")
+                )
+            }
+            _ => return Err("expected TypeDef, TypeRef or TypeSpec".into()),
+        };
+        Ok(format!("0x{:08X} {}", token.0, escape_line(&description)))
+    }
+
+    fn signature_references(
+        &self,
+        ty: &cildec::Type<'_>,
+        depth: usize,
+        references: &mut Vec<String>,
+    ) -> Result<()> {
+        use cildec::Type as T;
+        if depth >= 32 {
+            return Err("excessive type signature reference depth".into());
+        }
+        match ty {
+            T::Class(token) | T::ValueType(token) => {
+                references.push(self.type_reference(*token, depth + 1)?);
+            }
+            T::GenericInst { def, args, .. } => {
+                references.push(self.type_reference(*def, depth + 1)?);
+                for arg in args {
+                    self.signature_references(arg, depth + 1, references)?;
+                }
+            }
+            T::Ptr(mods, inner) | T::SzArray(mods, inner) | T::Modified(mods, inner) => {
+                for modifier in mods {
+                    references.push(self.type_reference(modifier.type_token, depth + 1)?);
+                }
+                self.signature_references(inner, depth + 1, references)?;
+            }
+            T::ByRef(inner) | T::Array(inner, _) | T::Pinned(inner) => {
+                self.signature_references(inner, depth + 1, references)?;
+            }
+            T::FnPtr(sig) => {
+                for param in std::iter::once(&sig.return_type)
+                    .chain(&sig.params)
+                    .chain(&sig.vararg_params)
+                {
+                    for modifier in &param.custom_mods {
+                        references.push(self.type_reference(modifier.type_token, depth + 1)?);
+                    }
+                    self.signature_references(&param.type_, depth + 1, references)?;
+                }
+            }
+            // Primitive and generic-parameter types contain no metadata token.
+            _ => {}
+        }
+        Ok(())
+    }
+
     pub fn row(&self, token: u32) -> Result<MethodDefRow> {
         if token >> 24 != 6 || token & 0xffffff == 0 {
             return Err("expected nonzero MethodDef token (0x06xxxxxx)".into());
@@ -521,6 +704,48 @@ pub(crate) struct MethodRef {
     pub target: String,
     pub args: Vec<crate::ir::Ty>,
     pub ret: crate::ir::Ty,
+}
+
+fn type_flags(flags: u32) -> String {
+    let visibility = [
+        "notpublic",
+        "public",
+        "nested public",
+        "nested private",
+        "nested family",
+        "nested assembly",
+        "nested famandassem",
+        "nested famorassem",
+    ];
+    let layout = ["auto", "sequential", "explicit", "reserved-layout"];
+    let format = ["ansi", "unicode", "autochar", "customchar"];
+    let mut names = vec![
+        if flags & 0x20 != 0 {
+            "interface"
+        } else {
+            "class"
+        },
+        visibility[(flags & 7) as usize],
+        layout[((flags >> 3) & 3) as usize],
+        format[((flags >> 16) & 3) as usize],
+    ];
+    for (bit, name) in [
+        (0x80, "abstract"),
+        (0x100, "sealed"),
+        (0x400, "specialname"),
+        (0x800, "rtspecialname"),
+        (0x1000, "import"),
+        (0x2000, "serializable"),
+        (0x4000, "windowsruntime"),
+        (0x40000, "hassecurity"),
+        (0x100000, "beforefieldinit"),
+        (0x200000, "typeforwarder"),
+    ] {
+        if flags & bit != 0 {
+            names.push(name);
+        }
+    }
+    names.join(" ")
 }
 
 pub(crate) fn identifier(s: &str) -> Result<()> {

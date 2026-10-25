@@ -84,6 +84,20 @@ pub fn decompile_type(bytes: &[u8], name: &str) -> Result<DecompiledType> {
             ty.token,
             metadata::escape_line(&ty.name)
         ));
+        match image.type_context(ty.token) {
+            Ok((context, failures)) => {
+                text.push_str(&context);
+                summary.metadata_failed += failures;
+            }
+            Err(error) => {
+                summary.metadata_failed += 1;
+                text.push_str(&format!(
+                    "// FAILED metadata for type 0x{:08X}: {}\n",
+                    ty.token,
+                    metadata::escape_line(&error.to_string())
+                ));
+            }
+        }
         for token in ty.methods {
             let result = match decompile_method(&image, token) {
                 Ok(result) => result,
@@ -114,6 +128,8 @@ pub struct Summary {
     pub declarations: usize,
     pub partial: usize,
     pub failed: usize,
+    /// Metadata failures are separate from the number of failed method bodies.
+    pub metadata_failed: usize,
 }
 
 impl Summary {
@@ -127,7 +143,7 @@ impl Summary {
     }
 
     pub fn exit_code(&self) -> u8 {
-        if self.failed > 0 {
+        if self.failed > 0 || self.metadata_failed > 0 {
             1
         } else if self.partial > 0 {
             2

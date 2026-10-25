@@ -76,6 +76,46 @@ fn class_cli_reports_one_method_failure_without_hiding_other_bodies() {
 }
 
 #[test]
+fn invalid_class_metadata_is_not_counted_as_a_failed_method() {
+    let source = include_bytes!("fixtures/class-release.bin");
+    let pe = cildec::PeImage::parse(source).unwrap();
+    let md = pe.metadata().unwrap();
+    let rid = md
+        .tables()
+        .iter::<cildec::tables::TypeDefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Empty")
+        .unwrap()
+        .0;
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::TypeDef, rid)
+        .unwrap();
+    assert_eq!(row.len(), 14);
+    let offset = row.as_ptr() as usize - source.as_ptr() as usize;
+    let mut patched = source.to_vec();
+    patched[offset + 8..offset + 10].copy_from_slice(&0xfffdu16.to_le_bytes());
+    let path =
+        std::env::temp_dir().join(format!("ilspy-class-metadata-{}.bin", std::process::id()));
+    std::fs::write(&path, patched).unwrap();
+    let out = run(&[
+        "decompile",
+        path.to_str().unwrap(),
+        "--type",
+        "ClassCases.Empty",
+    ]);
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(out.status.code(), Some(1));
+    let text = String::from_utf8(out.stdout).unwrap();
+    assert!(text.contains("ClassCases.Empty"));
+    assert!(text.contains(".type-flags"));
+    assert!(text.contains("FAILED metadata"));
+    assert_eq!(
+        String::from_utf8(out.stderr).unwrap().trim(),
+        "decompiled=0 declarations=0 partial=0 failed=0\nmetadata_failed=1"
+    );
+}
+
+#[test]
 fn inventory_and_token_cli_work_without_dotnet() {
     let out = run(&["list", fixture()]);
     assert!(

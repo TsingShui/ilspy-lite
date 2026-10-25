@@ -84,5 +84,8 @@ fn run() -> Result<u8> {
         "decompiled={} declarations={} partial={} failed={}",
         summary.decompiled, summary.declarations, summary.partial, summary.failed
     );
+    if summary.metadata_failed > 0 {
+        eprintln!("metadata_failed={}", summary.metadata_failed);
+    }
     Ok(summary.exit_code())
 }

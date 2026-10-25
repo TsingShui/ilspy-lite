@@ -28,11 +28,13 @@ Compiler-generated methods are never hidden; an async type selection includes
 its nested state machine, not just the kickoff method.
 
 The library entry `decompile_type(bytes, name)` parses the image once and returns
-type-token/name sections, individual method results and a status summary. One
-unsupported or unreadable method does not suppress peers. This is the initial
-class-level entry, **not yet complete class context**: fields, base/interface
-information, properties, events and generic constraints are still being added.
-Output is not a compilable class or project.
+type-token/name sections, raw type flags with named meanings, enclosing type,
+base/interface identities, individual method results and a status summary.
+TypeRefs retain their assembly/module scope; TypeSpecs retain raw signature bytes
+and named-reference identities. No dependency assembly is loaded. One unsupported
+or unreadable method does not suppress peers. This is **not yet complete class
+context**: fields, properties, events and generic constraints are still being
+added. Output is not a compilable class or project.
 
 Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 
@@ -45,7 +47,10 @@ Output goes to stdout; decompilation counts/errors go to stderr. Exit codes:
 Library entry points in `src/lib.rs` accept assembly bytes and method tokens or
 an exact metadata type name. `DecompiledType.summary` counts each selected method;
 its `exit_code()` uses the same status precedence as the CLI. A valid type with no
-methods returns an empty method summary, not a missing-selector error.
+methods returns an empty method summary, not a missing-selector error. Metadata
+failures use the separate `metadata_failed` count, remain visible beside recovered
+methods, and force exit 1 without inflating the failed-method count. The CLI emits
+a `metadata_failed=N` diagnostic line only when that count is nonzero.
 `Status::{Decompiled, Declaration, Partial, Failed}` separates successful lowering
 from unsupported semantics and decoding failures. Errors that prevent identifying
 or parsing the method are returned as `Err`. Parsed bodies with undecodable IL

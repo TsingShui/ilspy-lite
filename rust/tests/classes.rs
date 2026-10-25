@@ -9,6 +9,169 @@ const IMAGES: [&[u8]; 2] = [
 ];
 
 #[test]
+fn class_context_keeps_flags_base_and_interface_relations() {
+    for bytes in IMAGES {
+        for (name, markers) in [
+            (
+                "ClassCases.Base",
+                vec![
+                    "abstract",
+                    ".extends ",
+                    "System.Object",
+                    ".implements ",
+                    "ClassCases.IMarker",
+                ],
+            ),
+            (
+                "ClassCases.Derived",
+                vec!["sealed", ".extends ", "ClassCases.Base", "@Read("],
+            ),
+            (
+                "ClassCases.ExternalBase",
+                vec![
+                    ".extends ",
+                    "System.Exception",
+                    "assembly-ref",
+                    "System.Runtime",
+                ],
+            ),
+            ("ClassCases.IMarker", vec!["interface", ".extends none"]),
+        ] {
+            let result = decompile_type(bytes, name).unwrap();
+            assert!(result.text.contains(".type-flags 0x"), "{}", result.text);
+            for marker in markers {
+                assert!(
+                    result.text.contains(marker),
+                    "missing {marker}: {}",
+                    result.text
+                );
+            }
+        }
+        let result = decompile_type(bytes, "ClassCases.Outer/Inner").unwrap();
+        assert!(
+            result.text.contains(".enclosing-type 0x02"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("ClassCases.Outer"));
+    }
+}
+
+#[test]
+fn generic_base_context_is_evidence_not_a_lowering_gate() {
+    for bytes in IMAGES {
+        let result = decompile_type(bytes, "ClassCases.GenericDerived").unwrap();
+        assert_eq!(result.summary.metadata_failed, 0, "{}", result.text);
+        assert!(
+            result.text.contains("ClassCases.GenericBase`1<int32>"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("signature-bytes="), "{}", result.text);
+        assert!(
+            result.text.contains("parsed=GenericInst"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains(".ctor"));
+    }
+}
+
+#[test]
+fn valid_typespec_with_invalid_named_reference_is_not_metadata_success() {
+    let bytes = IMAGES[0];
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let definition = md
+        .tables()
+        .iter::<cildec::tables::TypeDefRow>()
+        .find(|(_, row)| {
+            md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "GenericDerived"
+        })
+        .unwrap()
+        .1
+        .unwrap();
+    let row = md.tables().type_spec(definition.extends.rid()).unwrap();
+    let signature = md.blobs().get(row.signature).unwrap();
+    assert_eq!(&signature[..2], &[0x15, 0x12]); // GENERICINST CLASS
+    assert!(signature[2] < 0x80);
+    let offset = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset + 2] = 0x7d; // TypeRef RID 31, absent in this fixture.
+    let result = decompile_type(&patched, "ClassCases.GenericDerived").unwrap();
+    assert_eq!(result.summary.metadata_failed, 1, "{}", result.text);
+    assert_eq!(result.summary.exit_code(), 1);
+    assert!(result.text.contains("signature-bytes="));
+    assert!(result.text.contains("FAILED metadata"));
+    assert!(result.text.contains(".ctor"));
+}
+
+#[test]
+fn malformed_base_reference_does_not_hide_class_methods() {
+    let bytes = IMAGES[0];
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let rid = md
+        .tables()
+        .iter::<cildec::tables::TypeDefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Derived")
+        .unwrap()
+        .0;
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::TypeDef, rid)
+        .unwrap();
+    assert_eq!(row.len(), 14);
+    let offset = row.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset + 8..offset + 10].copy_from_slice(&0xfffdu16.to_le_bytes()); // nonexistent TypeRef
+    let result = decompile_type(&patched, "ClassCases.Derived").unwrap();
+    assert_eq!(result.summary.metadata_failed, 1);
+    assert_eq!(result.summary.exit_code(), 1);
+    assert!(result.text.contains(".type-flags"));
+    assert!(result.text.contains(".extends 0x01003FFF"));
+    assert!(result.text.contains("FAILED metadata"));
+    assert!(result.text.contains("::Read()"));
+}
+
+#[test]
+fn malformed_typespec_retains_raw_signature_and_methods() {
+    let bytes = IMAGES[0];
+    let pe = cildec::PeImage::parse(bytes).unwrap();
+    let md = pe.metadata().unwrap();
+    let definition = md
+        .tables()
+        .iter::<cildec::tables::TypeDefRow>()
+        .find(|(_, row)| {
+            md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "GenericDerived"
+        })
+        .unwrap()
+        .1
+        .unwrap();
+    assert_eq!(definition.extends.table(), Some(cildec::TableId::TypeSpec));
+    let row = md.tables().type_spec(definition.extends.rid()).unwrap();
+    let signature = md.blobs().get(row.signature).unwrap();
+    let offset = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut patched = bytes.to_vec();
+    patched[offset] = 0xff;
+    let result = decompile_type(&patched, "ClassCases.GenericDerived").unwrap();
+    assert!(result.summary.metadata_failed > 0);
+    assert_eq!(result.summary.exit_code(), 1);
+    assert!(
+        result
+            .text
+            .contains(&format!(".extends 0x{:08X}", definition.extends.0))
+    );
+    assert!(
+        result.text.contains("signature-bytes=[FF"),
+        "{}",
+        result.text
+    );
+    assert!(result.text.contains("FAILED metadata"));
+    assert!(result.text.contains(".ctor"));
+}
+
+#[test]
 fn class_entry_selects_types_with_no_methods() {
     for bytes in IMAGES {
         for name in [

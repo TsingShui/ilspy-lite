@@ -37,3 +37,9 @@ public static class Mixed
     public static int Good(int value) => unchecked(value + 1);
     public static string Unsupported(string value) => value;
 }
+public interface IMarker { }
+public abstract class Base : IMarker { }
+public sealed class Derived : Base { public int Read() => 17; }
+public sealed class ExternalBase : System.Exception { }
+public abstract class GenericBase<T> { }
+public sealed class GenericDerived : GenericBase<int> { }
