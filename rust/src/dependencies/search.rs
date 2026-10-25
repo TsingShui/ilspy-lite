@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use super::{AssemblyResolution, DependencyContext, ReferenceVersionPolicy};
+use super::{DependencyContext, ReferenceVersionPolicy};
 use crate::{
     Result,
     discovery_paths::{DiscoveryEnvironment, candidates_for},
@@ -59,57 +59,120 @@ impl DependencyContext {
                 None
             }
         };
-        let requests = self.references.clone();
-        for reference in requests {
-            if !matches!(
-                self.resolve_exact(reference.token)?,
-                AssemblyResolution::Missing { .. }
-            ) {
+        let mut queue = std::collections::VecDeque::from([(0usize, input.to_path_buf(), 0usize)]);
+        let mut visited = BTreeSet::new();
+        let mut work = 0usize;
+        'closure: while let Some((module, referrer, depth)) = queue.pop_front() {
+            if !visited.insert(module) {
                 continue;
             }
-            if !safe_name(&reference.identity.name) {
-                self.search_note(format!(
-                    "unsafe assembly filename: {:?}",
-                    reference.identity.name
-                ));
+            if depth > 32 {
+                self.search_note("dependency closure depth limit exceeded".into());
                 continue;
             }
-            let mut paths = Vec::new();
-            for directory in &options.directories {
-                for extension in ["dll", "exe"] {
-                    paths.push((
-                        directory.join(format!("{}.{extension}", reference.identity.name)),
-                        "ExplicitDirectory".to_string(),
+            let image = self.binding_image(module)?;
+            let count = super::reference_count(&image, self.limits)?;
+            if work + count as usize > 4096 {
+                drop(image);
+                self.search_note("dependency closure request limit exceeded".into());
+                break 'closure;
+            }
+            work += count as usize;
+            let mut requests = Vec::new();
+            let mut invalid = Vec::new();
+            for rid in 1..=count {
+                match super::reference_identity(&image, rid) {
+                    Ok(identity) => requests.push((rid, identity)),
+                    Err(error) => invalid.push((
+                        rid,
+                        error.to_string(),
+                        image
+                            .md
+                            .tables()
+                            .row_bytes(cildec::TableId::AssemblyRef, rid)?
+                            .to_vec(),
+                    )),
+                }
+            }
+            // Drop borrowed image metadata before extending immutable snapshots.
+            drop(image);
+            for (rid, reason, raw) in invalid {
+                self.search_evidence.push(format!(".dependency-request referrer={referrer:?} token=0x{:08X} status=invalid reason={reason:?} raw-row={raw:02X?}", 0x23000000 | rid));
+            }
+            for (rid, identity) in requests {
+                if !safe_name(&identity.name) {
+                    self.search_note(format!(
+                        "unsafe assembly filename in {referrer:?}: {:?}",
+                        identity.name
                     ));
+                    continue;
                 }
-            }
-            if options.automatic {
-                let found = candidates_for(
-                    input,
-                    &reference.identity,
-                    framework.as_deref(),
-                    &options.environment,
-                );
-                for diagnostic in found.diagnostics {
-                    self.search_note(diagnostic);
+                if self.exact_matching_modules(&identity).is_empty() {
+                    let mut paths = Vec::new();
+                    for directory in &options.directories {
+                        for extension in ["dll", "exe"] {
+                            paths.push((
+                                directory.join(format!("{}.{extension}", identity.name)),
+                                "ExplicitDirectory".to_string(),
+                            ));
+                        }
+                    }
+                    if options.automatic {
+                        let found = candidates_for(
+                            &referrer,
+                            &identity,
+                            framework.as_deref(),
+                            &options.environment,
+                        );
+                        for diagnostic in found.diagnostics {
+                            self.search_note(diagnostic);
+                        }
+                        paths.extend(
+                            found
+                                .candidates
+                                .into_iter()
+                                .map(|c| (c.path, format!("{:?}", c.origin))),
+                        );
+                    }
+                    for (path, origin) in paths {
+                        if !self.exact_matching_modules(&identity).is_empty() {
+                            break;
+                        }
+                        if seen.len() >= 4096 {
+                            self.search_note("dependency file probe limit exceeded".into());
+                            break 'closure;
+                        }
+                        if path.is_file() {
+                            self.search_file(&path, &origin, &mut seen);
+                        }
+                    }
                 }
-                paths.extend(
-                    found
-                        .candidates
-                        .into_iter()
-                        .map(|c| (c.path, format!("{:?}", c.origin))),
-                );
-            }
-            for (path, origin) in paths {
-                if !matches!(
-                    self.resolve_exact(reference.token)?,
-                    AssemblyResolution::Missing { .. }
-                ) {
-                    break;
-                }
-                if path.is_file() {
-                    self.search_file(&path, &origin, &mut seen);
-                }
+                let selected = self.matching_modules(&identity);
+                let mut selection = String::new();
+                let status = match selected.as_slice() {
+                    [target] => {
+                        let source = if *target == 0 {
+                            input.to_path_buf()
+                        } else {
+                            PathBuf::from(&self.candidates[*target - 1].0)
+                        };
+                        let (identity_selected, provenance) = self.identity_source(*target)?;
+                        selection = format!(
+                            " selected={:?} source={provenance:?} kind={:?}",
+                            identity_selected.to_string(),
+                            self.kinds[target]
+                        );
+                        queue.push_back((*target, source, depth + 1));
+                        if identity.matches(&identity_selected) {
+                            "resolved"
+                        } else {
+                            "substituted"
+                        }
+                    }
+                    [] => "missing",
+                    _ => "conflicting",
+                };
+                self.search_evidence.push(format!(".dependency-request referrer={referrer:?} token=0x{:08X} status={status} requested={:?}{selection}", 0x23000000 | rid, identity.to_string()));
             }
         }
         Ok(())
@@ -160,6 +223,9 @@ impl DependencyContext {
     }
 
     fn search_note(&mut self, note: String) {
+        if note.contains("limit") || note.contains("truncat") {
+            self.discovery_incomplete = true;
+        }
         if self.search_diagnostics.len() < 128 && !self.search_diagnostics.contains(&note) {
             self.search_diagnostics.push(note);
         }

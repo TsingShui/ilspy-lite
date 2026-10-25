@@ -173,6 +173,66 @@ fn reference_pack_origin_never_claims_a_runtime_implementation() {
 }
 
 #[test]
+fn forwarder_dependencies_are_discovered_from_their_own_reference_scope() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let reference = md
+        .tables()
+        .iter::<cildec::tables::AssemblyRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "BindingLibrary")
+        .unwrap()
+        .0;
+    let spare = md
+        .tables()
+        .iter::<cildec::tables::MethodDefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "get_VirtualFlag")
+        .unwrap()
+        .1
+        .unwrap()
+        .name;
+    let name = md.strings().str(spare).unwrap().as_bytes();
+    let row = md
+        .tables()
+        .row_bytes(cildec::TableId::AssemblyRef, reference)
+        .unwrap();
+    assert_eq!(row.len(), 20);
+    let offset = row.as_ptr() as usize - main.as_ptr() as usize;
+    let text = name.as_ptr() as usize - main.as_ptr() as usize;
+    let mut input = main.to_vec();
+    input[text..text + name.len()].fill(0);
+    input[text..text + 13].copy_from_slice(b"BindingFacade");
+    input[offset + 14..offset + 16].copy_from_slice(&(spare.0 as u16).to_le_bytes());
+    let root = std::env::temp_dir().join(format!("ilspy-forwarder-search-{}", std::process::id()));
+    std::fs::create_dir(&root).unwrap();
+    let path = root.join("input.dll");
+    std::fs::write(&path, &input).unwrap();
+    std::fs::write(
+        root.join("BindingFacade.dll"),
+        include_bytes!("fixtures/binding-facade-release.bin"),
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("BindingLibrary.dll"),
+        include_bytes!("fixtures/binding-library-release.bin"),
+    )
+    .unwrap();
+    let peer = md
+        .tables()
+        .iter::<cildec::tables::TypeRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Peer")
+        .unwrap()
+        .0;
+    let mut context = DependencyContext::new(input).unwrap();
+    context
+        .discover_references(&path, &ReferenceSearchOptions::default())
+        .unwrap();
+    let resolved = context.resolve_type(0x01000000 | peer).unwrap();
+    assert_eq!(resolved.definition.assembly.name, "BindingLibrary");
+    assert_eq!(resolved.forwarders.len(), 1);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn installed_layout_candidates_are_identity_checked_without_requiring_a_dotnet_process() {
     let root = std::env::temp_dir().join(format!("ilspy-reference-search-{}", std::process::id()));
     let app = root.join("app");

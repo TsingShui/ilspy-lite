@@ -34,7 +34,101 @@ pub struct ResolvedType {
     pub forwarders: Vec<DefinitionLocation>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeRelation {
+    pub reference_token: u32,
+    pub resolved: Option<ResolvedType>,
+    pub error: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeRelations {
+    pub owner: ResolvedType,
+    pub base_type: Option<TypeRelation>,
+    pub interfaces: Vec<TypeRelation>,
+}
+
 impl DependencyContext {
+    /// Return actual relation rows without turning a missing base/interface into
+    /// a fabricated definition or discarding the other readable relationships.
+    pub fn type_relations(&self, token: u32) -> Result<TypeRelations> {
+        let (module, owner) = self.bind_type_in(0, Token(token), &mut BTreeSet::new())?;
+        let image = self.binding_image(module)?;
+        let rid = owner.definition.token & 0xffffff;
+        let base = image.metadata_coded_token(
+            CodedIndex::TypeDefOrRef,
+            image.md.tables().raw_column(TableId::TypeDef, rid, 3)?,
+        )?;
+        let relation = |token: Token| -> TypeRelation {
+            let result = self.bind_type_in(module, token, &mut BTreeSet::new());
+            match result {
+                Ok((_, mut bound)) => {
+                    if token.table() == Some(TableId::TypeSpec)
+                        && !owner.generic_arguments.is_empty()
+                    {
+                        let specialized = (|| -> Result<Vec<String>> {
+                            let row = image.md.tables().type_spec(token.rid())?;
+                            let sig = crate::signature_guard::type_spec(
+                                image.md.blobs().get(row.signature)?,
+                            )?;
+                            let cildec::Type::GenericInst { args, .. } = sig.type_ else {
+                                return Err("relation TypeSpec is not a named instantiation".into());
+                            };
+                            args.iter()
+                                .map(|a| self.type_key(module, a, &owner.generic_arguments, 0))
+                                .collect()
+                        })();
+                        match specialized {
+                            Ok(args) => bound.generic_arguments = args,
+                            Err(error) => {
+                                return TypeRelation {
+                                    reference_token: token.0,
+                                    resolved: None,
+                                    error: Some(error.to_string()),
+                                };
+                            }
+                        }
+                    }
+                    TypeRelation {
+                        reference_token: token.0,
+                        resolved: Some(bound),
+                        error: None,
+                    }
+                }
+                Err(error) => TypeRelation {
+                    reference_token: token.0,
+                    resolved: None,
+                    error: Some(error.to_string()),
+                },
+            }
+        };
+        let mut interfaces = Vec::new();
+        for (interface_rid, row) in image.md.tables().iter::<cildec::tables::InterfaceImplRow>() {
+            let row = row?;
+            if row.class.get() != rid {
+                continue;
+            }
+            let reference = image.metadata_coded_token(
+                CodedIndex::TypeDefOrRef,
+                image
+                    .md
+                    .tables()
+                    .raw_column(TableId::InterfaceImpl, interface_rid, 1)?,
+            )?;
+            interfaces.push(relation(reference));
+        }
+        let base_type = if base.is_null() {
+            None
+        } else {
+            Some(relation(base))
+        };
+        Ok(TypeRelations {
+            owner,
+            base_type,
+            interfaces,
+        })
+    }
+
     /// Resolve an input-image type without loading or executing its assembly.
     pub fn resolve_type(&self, token: u32) -> Result<ResolvedType> {
         self.bind_type_in(0, Token(token), &mut BTreeSet::new())
@@ -68,7 +162,7 @@ impl DependencyContext {
         Ok((identity.clone(), source.clone()))
     }
 
-    pub(super) fn matching_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
+    pub(super) fn exact_matching_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
         let mut found = Vec::new();
         if self
             .binding_image(0)
@@ -82,7 +176,15 @@ impl DependencyContext {
                 found.push(index + 1);
             }
         }
-        if found.is_empty() && self.version_policy == ReferenceVersionPolicy::SameMajor {
+        found
+    }
+
+    pub(super) fn matching_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
+        let mut found = self.exact_matching_modules(requested);
+        if found.is_empty()
+            && self.version_policy == ReferenceVersionPolicy::SameMajor
+            && !self.discovery_incomplete
+        {
             let version = self
                 .candidates
                 .iter()

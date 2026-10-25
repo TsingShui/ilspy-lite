@@ -21,7 +21,7 @@
 #if DEPENDENCY
 namespace BindingLibrary;
 public class Peer { }
-public class Base
+public class Base : IFlag
 {
     public Peer Stored;
     public bool Ready;
@@ -38,6 +38,7 @@ public class Generic<T>
     public T Echo(T value) => value;
     public U Convert<U>(U value) => value;
 }
+public interface IFlag { bool VirtualFlag { get; } }
 public class Outer<T>
 {
     public class Inner<U>

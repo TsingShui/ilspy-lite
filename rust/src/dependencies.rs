@@ -6,6 +6,7 @@ mod classification;
 mod search;
 pub use binding::{
     DefinitionLocation, PropertyAccessor, ResolvedField, ResolvedMethod, ResolvedType,
+    TypeRelation, TypeRelations,
 };
 pub use classification::AssemblyKind;
 pub use search::ReferenceSearchOptions;
@@ -144,6 +145,7 @@ pub struct DependencyContext {
     search_diagnostics: Vec<String>,
     version_policy: ReferenceVersionPolicy,
     kinds: BTreeMap<usize, AssemblyKind>,
+    discovery_incomplete: bool,
 }
 
 impl DependencyContext {
@@ -198,6 +200,7 @@ impl DependencyContext {
             search_diagnostics: diagnostic.into_iter().collect(),
             version_policy: ReferenceVersionPolicy::Exact,
             kinds: BTreeMap::from([(0, kind)]),
+            discovery_incomplete: false,
         })
     }
 
@@ -394,7 +397,7 @@ impl DependencyContext {
         let AssemblyResolution::Missing { requested } = exact else {
             return Ok(exact);
         };
-        if self.version_policy == ReferenceVersionPolicy::Exact {
+        if self.version_policy == ReferenceVersionPolicy::Exact || self.discovery_incomplete {
             return Ok(AssemblyResolution::Missing { requested });
         }
         let selected = self

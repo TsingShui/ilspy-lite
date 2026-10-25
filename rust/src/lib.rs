@@ -14,6 +14,7 @@ pub use dependencies::{
     AssemblyIdentity, AssemblyKind, AssemblyReference, AssemblyResolution, DefinitionLocation,
     DependencyContext, DependencyLimits, PropertyAccessor, ReferenceFailure,
     ReferenceSearchOptions, ReferenceVersionPolicy, ResolvedField, ResolvedMethod, ResolvedType,
+    TypeRelation, TypeRelations,
 };
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.

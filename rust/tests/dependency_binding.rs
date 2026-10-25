@@ -84,7 +84,7 @@ fn nested_reference_scopes_and_local_definitions_keep_their_declaring_identity()
         let inner = type_reference(main, "", "Inner`1");
         let bound = context.resolve_type(inner).unwrap();
         assert_eq!(bound.name, "BindingLibrary.Outer`1/Inner`1");
-        assert_eq!(bound.definition.token, 0x02000006);
+        assert_eq!(bound.definition.token, 0x02000007);
         assert_eq!(bound.definition.assembly.name, "BindingLibrary");
         let local = context.resolve_type(0x02000002).unwrap();
         assert_eq!(local.name, "BindingCases.Derived");
@@ -516,6 +516,29 @@ fn generic_method_instantiations_preserve_method_argument_context() {
     assert_eq!(method.owner.generic_arguments, ["I4"]);
     assert_eq!(method.method_arguments, ["String"]);
     assert!(!method.instantiation_signature.is_empty());
+}
+
+#[test]
+fn base_and_interface_relations_keep_resolved_and_missing_evidence_separate() {
+    let main = include_bytes!("fixtures/binding-release.bin");
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    context
+        .add_reference(
+            "BindingLibrary.dll",
+            include_bytes!("fixtures/binding-library-release.bin").to_vec(),
+        )
+        .unwrap();
+    let base = type_reference(main, "BindingLibrary", "Base");
+    let relations = context.type_relations(base).unwrap();
+    assert_eq!(relations.owner.name, "BindingLibrary.Base");
+    assert_eq!(relations.interfaces.len(), 1);
+    let interface = relations.interfaces[0].resolved.as_ref().unwrap();
+    assert_eq!(interface.name, "BindingLibrary.IFlag");
+    assert_ne!(interface.flags & 0x20, 0);
+    let missing_base = relations.base_type.unwrap();
+    assert!(missing_base.resolved.is_none());
+    assert!(missing_base.error.is_some());
+    assert_eq!(missing_base.reference_token >> 24, 1);
 }
 
 #[test]
