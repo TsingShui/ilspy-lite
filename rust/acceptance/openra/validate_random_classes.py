@@ -95,13 +95,46 @@ def check_names(snapshot, text):
 
 
 def readable_alias(name):
-    """The public readable spelling: ASCII identifier or UTF-8 hexadecimal alias."""
-    return name if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) else "__name_" + name.encode("utf-8").hex().upper()
+    """Non-method display spelling from the independent metadata name."""
+    return name if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) and not name.startswith(
+        ("__name_", "__cil_", "__il_")) else "__name_" + name.encode("utf-8").hex().upper()
 
 
 def readable_type_alias(ty):
     name = ty["name"].rsplit("/", 1)[-1] if "/" in ty["name"] else ty["name"].rsplit(".", 1)[-1]
     return readable_alias(name.split("`", 1)[0])
+
+
+def readable_method_names(ty, types):
+    """Expected names from independent owner/member metadata, not rendered output."""
+    def friendly(raw):
+        match = re.fullmatch(r"<([^<>]+)>b__(\d+(?:_\d+)*)", raw, re.ASCII)
+        if not match:
+            return None
+        owner, index = match.groups()
+        if owner in (".ctor", ".cctor"):
+            owner = {".ctor": "Ctor", ".cctor": "StaticCtor"}[owner]
+        elif not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", owner) or owner.startswith(("__name_", "__cil_", "__il_")):
+            return None
+        return owner + "Lambda" + index
+
+    bases = {m["token"]: friendly(m["name"]) or readable_alias(m["name"]) for m in ty["methods"]}
+    occupied = {readable_type_alias(ty)}
+    occupied.update(readable_type_alias(t) for t in types if t["parent"] == ty["token"])
+    occupied.update("__il_field_" + f["token"][2:] if readable_alias(f["name"]) != f["name"] else f["name"] for f in ty["fields"])
+    occupied.update(readable_alias(m["name"]) for kind in ("properties", "events") for m in ty[kind])
+    names = {}
+    for method in ty["methods"]:
+        token = method["token"]
+        name = bases[token]
+        if friendly(method["name"]):
+            used = occupied | {value for key, value in bases.items() if key != token}
+            if name in used:
+                name += "__" + token[2:]
+                while name in used:
+                    name += "_"
+        names[token] = name
+    return names
 
 
 def signature_counts(blob):
@@ -291,12 +324,13 @@ def check_readable_inventory(snapshot, text, method_evidence=None):
             alias = "__il_field_" + field["token"][2:] if not re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", name) or name.startswith("__il_field_") else name
             fields.append({"token": field["token"], "name": alias})
         consume("fields", fields, lambda value: value.get("name"))
+        method_names = readable_method_names(ty, types)
         methods = []
         for method in ty["methods"]:
             parameters, generic = signature_counts(method["signature"])
             if generic != len(method["generic_parameters"]):
                 raise ValueError(f"Independent method generic arity inconsistent: {method['token']}")
-            methods.append({"token": method["token"], "name": expected_name if method["name"] in (".ctor", ".cctor") else readable_alias(method["name"]),
+            methods.append({"token": method["token"], "name": expected_name if method["name"] in (".ctor", ".cctor") else method_names[method["token"]],
                 "parameters": parameters, "generic_arity": generic, "static": bool(method["flags"] & 0x10),
                 "body_present": method["has_rva"]})
         for actual in node["methods"]:
@@ -333,7 +367,6 @@ def check_readable_inventory(snapshot, text, method_evidence=None):
         record["observed_fields"] = node["fields"]
         record["observed_methods"] = node["methods"]
         record["unreadable_type_token_marker"] = marker
-        method_names = {method["token"]: readable_alias(method["name"]) for method in ty["methods"]}
         for kind in ("properties", "events"):
             expected = []
             for member in ty[kind]:

@@ -60,7 +60,13 @@ def extract(text, catalog, owner, method, family):
     matches = [d for d in declarations if [p[2] for p in declarations if p[0] <= d[0] and d[1] <= p[1]] == wanted]
     require(len(matches) == 1, "Independent owner/default tree correspondence is ambiguous")
     start, end, _, indent = matches[0]
-    spelling = alias(method["name"])
+    friendly = {"0x060045A6": ("<.ctor>b__1", "CtorLambda1"),
+                "0x0600338F": ("<.ctor>b__2", "CtorLambda2")}
+    if method["token"] in friendly:
+        raw, spelling = friendly[method["token"]]
+        require(method["name"] == raw, "Independent selected generated method name changed")
+    else:
+        spelling = alias(method["name"])
     result_type = "string" if family == "string-getter" else "bool" if family == "negate-visible" else "int" if family == "excluded-cctor" else "void"
     parameters = "OpenRA.Actor self" if family == "empty-return" else ""
     pattern = (r"(?m)^" + re.escape(indent + "    ") + r"(private virtual|private|internal) " + result_type +

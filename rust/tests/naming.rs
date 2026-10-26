@@ -88,7 +88,7 @@ fn rename_field(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
 }
 
 fn rename_method(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
-    assert_eq!(old.len(), new.len());
+    assert!(new.len() <= old.len());
     let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
     let (rid, row) = md
         .tables()
@@ -99,8 +99,190 @@ fn rename_method(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
     let value = md.strings().str(row.name).unwrap();
     let at = value.as_ptr() as usize - bytes.as_ptr() as usize;
     let mut changed = bytes.to_vec();
-    changed[at..at + old.len()].copy_from_slice(new.as_bytes());
+    changed[at..at + old.len()].fill(0);
+    changed[at..at + new.len()].copy_from_slice(new.as_bytes());
     (changed, 0x06000000 | rid)
+}
+
+#[test]
+fn generated_lambda_names_are_readable_and_retain_original_metadata_names() {
+    for &bytes in IMAGES {
+        for (raw, expected) in [
+            ("<.ctor>b__1", "CtorLambda1"),
+            ("<.cctor>b__2", "StaticCtorLambda2"),
+            ("<Compute>b__0_1", "ComputeLambda0_1"),
+        ] {
+            let (changed, token) = rename_method(bytes, "<Accumulator>b__0", raw);
+            let methods = list_methods(&changed).unwrap();
+            assert_eq!(
+                methods
+                    .iter()
+                    .find(|m| m.token == token)
+                    .unwrap()
+                    .simple_name,
+                raw
+            );
+            for style in [OutputStyle::Readable, OutputStyle::Details] {
+                let actual = decompile_with_style(&changed, token, style).unwrap();
+                assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+                assert!(
+                    actual.text.contains(&format!(
+                        "int {}{expected}(",
+                        if style == OutputStyle::Details {
+                            "@"
+                        } else {
+                            ""
+                        }
+                    )),
+                    "{}",
+                    actual.text
+                );
+                assert!(
+                    actual.text.contains(&format!("// Metadata name: {raw}\n")),
+                    "{}",
+                    actual.text
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn friendly_lambda_names_avoid_members_and_share_exact_static_call_names() {
+    for &bytes in IMAGES {
+        let (changed, target) = rename_method(bytes, "GeneratedMethod", "<.ctor>b__1");
+        let (changed, other) = rename_method(&changed, "OtherGenerated", "<Ctor>b__1");
+        let actual =
+            decompile_type_with_style(&changed, "NamingCases.LambdaTargets", OutputStyle::Readable)
+                .unwrap();
+        for token in [target, other] {
+            let alias = format!("CtorLambda1__{token:08X}");
+            assert!(
+                actual.text.contains(&format!("int {alias}(int value)")),
+                "{}",
+                actual.text
+            );
+        }
+        assert!(
+            actual
+                .text
+                .contains(&format!("LambdaTargets.CtorLambda1__{target:08X}(value)")),
+            "{}",
+            actual.text
+        );
+        assert!(
+            actual.text.contains("int CtorLambda1(int value)"),
+            "{}",
+            actual.text
+        );
+        assert!(
+            actual.text.contains(
+                r#"Literal = "\u003C\u002E\u0063\u0074\u006F\u0072\u003E\u0062\u005F\u005F\u0031";"#
+            ),
+            "{}",
+            actual.text
+        );
+        let invoke = list_methods(&changed)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "NamingCases.LambdaTargets" && m.simple_name == "Invoke")
+            .unwrap();
+        let details = decompile_with_style(&changed, invoke.token, OutputStyle::Details).unwrap();
+        assert!(
+            details
+                .text
+                .contains(&format!("@CtorLambda1__{target:08X}(")),
+            "{}",
+            details.text
+        );
+        assert!(
+            details.text.contains(&format!("call token 0x{target:08X}")),
+            "{}",
+            details.text
+        );
+
+        let (field_collision, token) = rename_method(bytes, "GeneratedMethod", "<Compute>b__1");
+        let actual = decompile_with_style(&field_collision, token, OutputStyle::Readable).unwrap();
+        assert!(
+            actual
+                .text
+                .contains(&format!("ComputeLambda1__{token:08X}(")),
+            "{}",
+            actual.text
+        );
+    }
+}
+
+#[test]
+fn exact_module_local_memberrefs_share_the_friendly_definition_name() {
+    for &bytes in IMAGES {
+        let (mut changed, target) = rename_method(bytes, "GeneratedMethod", "<.ctor>b__1");
+        let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+        let tables = md.tables();
+        let owner = tables
+            .type_of_method(cildec::Rid::new(target & 0xffffff))
+            .unwrap()
+            .unwrap();
+        let (rid, reference) = tables
+            .iter::<cildec::tables::MemberRefRow>()
+            .map(|(rid, row)| (rid, row.unwrap()))
+            .find(|(_, row)| md.strings().str(row.name).unwrap() == "Abs")
+            .unwrap();
+        assert_eq!(
+            md.blobs().get(reference.signature).unwrap(),
+            md.blobs()
+                .get(tables.method_def(target & 0xffffff).unwrap().signature)
+                .unwrap()
+        );
+        let raw = tables.row_bytes(cildec::TableId::MemberRef, rid).unwrap();
+        assert_eq!(raw.len(), 6);
+        let at = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+        changed[at..at + 2]
+            .copy_from_slice(&u16::try_from(owner.get() << 3).unwrap().to_le_bytes());
+        let name = tables
+            .raw_column(cildec::TableId::MethodDef, target & 0xffffff, 3)
+            .unwrap();
+        changed[at + 2..at + 4].copy_from_slice(&u16::try_from(name).unwrap().to_le_bytes());
+        let invoke = list_methods(&changed)
+            .unwrap()
+            .into_iter()
+            .find(|m| {
+                m.declaring_type == "NamingCases.LambdaTargets" && m.simple_name == "ScopeAnchor"
+            })
+            .unwrap();
+        let actual = decompile_with_style(&changed, invoke.token, OutputStyle::Readable).unwrap();
+        assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        assert!(
+            actual
+                .text
+                .contains(&format!("LambdaTargets.CtorLambda1__{target:08X}(value)")),
+            "{}",
+            actual.text
+        );
+        let details = decompile_with_style(&changed, invoke.token, OutputStyle::Details).unwrap();
+        assert!(
+            details
+                .text
+                .contains(&format!("call token 0x{:08X}", 0x0a000000 | rid)),
+            "{}",
+            details.text
+        );
+    }
+}
+
+#[test]
+fn malformed_lambda_spellings_keep_safe_encoding_without_comment_injection() {
+    for raw in ["<.ctor>b__", "<.ctor>b__1_", "<.ctor>b__1\n", "<.ctor>b__A"] {
+        let (changed, token) = rename_method(IMAGES[0], "<Accumulator>b__0", raw);
+        let actual = decompile_with_style(&changed, token, OutputStyle::Readable).unwrap();
+        assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        assert!(actual.text.contains("int __name_"), "{}", actual.text);
+        assert!(
+            !actual.text.contains("// Metadata name:"),
+            "{}",
+            actual.text
+        );
+    }
 }
 
 #[test]

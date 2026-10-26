@@ -22,6 +22,155 @@ pub(crate) fn verbatim(raw: &str) -> String {
     format!("@{}", bare(raw))
 }
 
+pub(crate) fn method(image: &Image<'_>, token: Token, raw: &str, escaped: bool) -> String {
+    let name = lambda_name(raw)
+        .and_then(|candidate| scoped_lambda_name(image, token, &candidate).ok())
+        .unwrap_or_else(|| bare(raw));
+    if escaped || keyword(&name) {
+        format!("@{name}")
+    } else {
+        name
+    }
+}
+
+pub(crate) fn method_comment(raw: &str) -> Option<String> {
+    lambda_name(raw).map(|_| format!("// Metadata name: {raw}"))
+}
+
+fn lambda_name(raw: &str) -> Option<String> {
+    let (owner, index) = raw.strip_prefix('<')?.split_once(">b__")?;
+    if index
+        .split('_')
+        .any(|part| part.is_empty() || !part.bytes().all(|b| b.is_ascii_digit()))
+    {
+        return None;
+    }
+    let owner = match owner {
+        ".ctor" => "Ctor",
+        ".cctor" => "StaticCtor",
+        name if simple(name) && !reserved(name) => name,
+        _ => return None,
+    };
+    Some(format!("{owner}Lambda{index}"))
+}
+
+// Resolve only an exact in-module signature for presentation. Foreign scopes
+// retain their opaque spelling; aliases never choose the actual call target.
+fn local_method(image: &Image<'_>, token: Token) -> Result<Token> {
+    if token.table() == Some(TableId::MethodDef) {
+        return Ok(token);
+    }
+    if token.table() != Some(TableId::MemberRef) {
+        return Err("method presentation requires a definition or member reference".into());
+    }
+    let tables = image.md.tables();
+    let reference = tables.member_ref(token.rid())?;
+    let owner = match reference.class.table() {
+        Some(TableId::TypeDef) => reference.class,
+        Some(TableId::TypeRef) => image
+            .local_type_definition(reference.class)?
+            .ok_or("foreign method presentation scope")?,
+        _ => return Err("unresolved method presentation scope".into()),
+    };
+    let name = image.md.strings().str(reference.name)?;
+    let signature = image.md.blobs().get(reference.signature)?;
+    let mut found = None;
+    for rid in tables.method_range(Rid::new(owner.rid()))? {
+        let row = tables.method_def(rid)?;
+        if image.md.strings().str(row.name)? == name
+            && image.md.blobs().get(row.signature)? == signature
+        {
+            if found.is_some() {
+                return Err("ambiguous method presentation definition".into());
+            }
+            found = Some(Token(0x06000000 | rid));
+        }
+    }
+    found.ok_or_else(|| "missing method presentation definition".into())
+}
+
+fn scoped_lambda_name(image: &Image<'_>, token: Token, candidate: &str) -> Result<String> {
+    use cildec::tables::{EventMapRow, NestedClassRow, PropertyMapRow};
+    let token = local_method(image, token)?;
+    let tables = image.md.tables();
+    let owner = tables
+        .type_of_method(Rid::new(token.rid()))?
+        .ok_or("missing method presentation owner")?;
+    let ty = tables.type_def(owner.get())?;
+    let mut used = std::collections::BTreeSet::new();
+    used.insert(type_ident(
+        image.md.strings().str(ty.type_name)?,
+        !tables
+            .generic_params(Token(0x02000000 | owner.get()))?
+            .is_empty(),
+        false,
+    ));
+    for rid in tables.method_range(owner)? {
+        if rid != token.rid() {
+            let row = tables.method_def(rid)?;
+            let raw = image.md.strings().str(row.name)?;
+            used.insert(lambda_name(raw).unwrap_or_else(|| ident(raw)));
+        }
+    }
+    for rid in tables.field_range(owner)? {
+        let row = tables.field(rid)?;
+        used.insert(field(
+            0x04000000 | rid,
+            image.md.strings().str(row.name)?,
+            false,
+        ));
+    }
+    for (_, row) in tables.iter::<NestedClassRow>() {
+        let row = row?;
+        if row.enclosing_class == owner {
+            let nested = tables.type_def(row.nested_class.get())?;
+            used.insert(type_ident(
+                image.md.strings().str(nested.type_name)?,
+                !tables
+                    .generic_params(Token(0x02000000 | row.nested_class.get()))?
+                    .is_empty(),
+                false,
+            ));
+        }
+    }
+    for (rid, row) in tables.iter::<PropertyMapRow>() {
+        let row = row?;
+        if row.parent == owner {
+            let end = if rid < tables.row_count(TableId::PropertyMap) {
+                tables.property_map(rid + 1)?.property_list.get()
+            } else {
+                tables.row_count(TableId::Property) + 1
+            };
+            for property in row.property_list.get()..end {
+                used.insert(ident(
+                    image.md.strings().str(tables.property(property)?.name)?,
+                ));
+            }
+        }
+    }
+    for (rid, row) in tables.iter::<EventMapRow>() {
+        let row = row?;
+        if row.parent == owner {
+            let end = if rid < tables.row_count(TableId::EventMap) {
+                tables.event_map(rid + 1)?.event_list.get()
+            } else {
+                tables.row_count(TableId::Event) + 1
+            };
+            for event in row.event_list.get()..end {
+                used.insert(ident(image.md.strings().str(tables.event(event)?.name)?));
+            }
+        }
+    }
+    if !used.contains(candidate) {
+        return Ok(candidate.into());
+    }
+    let mut name = format!("{candidate}__{:08X}", token.0);
+    while used.contains(&name) {
+        name.push('_');
+    }
+    Ok(name)
+}
+
 fn bare(raw: &str) -> String {
     if simple(raw) && !reserved(raw) {
         raw.into()

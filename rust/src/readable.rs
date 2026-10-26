@@ -428,7 +428,7 @@ fn method_header(
             "{} {modifiers}{} {}{}({}){}",
             access(row.flags),
             cs_param(image, &sig.return_type, owner, token)?,
-            ident(name),
+            crate::symbol_names::method(image, Token(token), name, false),
             if generic.is_empty() {
                 String::new()
             } else {
@@ -468,6 +468,13 @@ fn render_method(
     {
         header.push_str(&initializer);
         body = remaining.to_string();
+    }
+    if let Ok(row) = image.row(token) {
+        if let Ok(raw) = image.md.strings().str(row.name) {
+            if let Some(comment) = crate::symbol_names::method_comment(raw) {
+                line(out, indent, &comment);
+            }
+        }
     }
     if result.status == Status::Declaration {
         line(out, indent, &format!("{header};"));

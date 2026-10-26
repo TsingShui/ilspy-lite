@@ -84,7 +84,8 @@ def extract(text, owner, constant):
                   "Actual constructor declaration, base initializer and body retained byte-for-byte",
                   "Actual internal constant declaration and body retained byte-for-byte when selected"]}
     if constant is not None:
-        result["constantName"] = alias(constant["name"])
+        require(constant["name"] == "<RenderPreviewSprites>b__7_1", "Independent selected constant name changed")
+        result["constantName"] = "RenderPreviewSpritesLambda7_1"
         result["constant"] = member(r"(?m)^    internal int " + re.escape(result["constantName"]) + r"\(\)\n    \{")
     return result
 

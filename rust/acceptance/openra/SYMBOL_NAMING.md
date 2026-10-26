@@ -83,7 +83,17 @@ method-local fallback checks for every frozen selection.
 - Simple ASCII names are retained, with C# keyword escaping. Other names use
   `__name_` plus uppercase UTF-8 hex. Literal user names beginning with
   `__name_`, `__cil_` or `__il_` are encoded too, so they cannot impersonate
-  tool names. The encoding is deterministic, not a prettier lambda reconstruction.
+  tool names. The encoding is deterministic, not a lambda reconstruction.
+- A subsequent display-only follow-up recognizes ordinary generated method
+  spellings: `<.ctor>b__1` becomes `CtorLambda1`, `<.cctor>b__2` becomes
+  `StaticCtorLambda2`, and `<Compute>b__0_1` becomes `ComputeLambda0_1`.
+  Headers retain `// Metadata name: ...`. Conflicts in the declaring scope use
+  the original MethodDef token as a suffix; local exact-signature references
+  share that name. Unrecognized spellings and foreign scopes retain safe hex
+  aliases. Real `.ctor`/`.cctor` semantics and body admission are unchanged.
+  This follow-up has targeted naming checks, owned execution and declaration
+  compilation; the full frozen/regression results below remain tied to their
+  explicitly recorded earlier revisions.
 - Field names requiring aliases use their original `__il_field_<FieldDef token>`
   alias consistently in declarations, instance accesses and static accesses.
   Details retains the original field/token/signature evidence.

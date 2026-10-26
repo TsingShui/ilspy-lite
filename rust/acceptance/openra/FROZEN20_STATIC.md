@@ -66,7 +66,11 @@ their own error and all available detailed raw evidence; they still fail the gat
 Names are predicted from catalog metadata, never learned from actual output:
 invalid ASCII identifiers use `__name_<uppercase UTF-8 hex>`; invalid/reserved-prefix
 field names use `__il_field_<eight-digit token>`. Leading `@` keyword escapes are
-normalized. Type names drop namespace/ownership and the metadata backtick suffix.
+normalized. Recognized generated method spellings use friendly labels such as
+`CtorLambda1`; conflicts are predicted from the independent declaring-scope
+inventory and disambiguated with the MethodDef token. Original metadata names,
+owner checks and complete method-local fallback requirements are unchanged.
+Type names drop namespace/ownership and the metadata backtick suffix.
 Explicit `__type_<token>`, `__method_<token>` and `// Unreadable field 0x<token>`
 markers can preserve declaration identity; method marker parameter/generic/static
 shape is unavailable, not certified. These markers remain visible in the report.

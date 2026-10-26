@@ -19,11 +19,11 @@ def latest10(path):
 
 
 def replace_string(image, old, new):
-    assert len(old) == len(new)
+    assert len(new) <= len(old)
     needle = old + b"\0"
     if image.count(needle) != 1:
         raise RuntimeError(f"Expected one owned string: {old!r}")
-    return image.replace(needle, new + b"\0")
+    return image.replace(needle, new + b"\0" * (len(old) - len(new) + 1))
 
 
 def main():
@@ -103,6 +103,25 @@ def main():
                 record["duplicateMutationExitCode"] = compile_source(directory, mutant, "Duplicate", True)
             records.append(record)
             print(f"{config}/{label}: actual declarations and references compile")
+    for config in ("release", "debug"):
+        directory = OUT / config / "friendly-lambdas"
+        directory.mkdir(parents=True, exist_ok=True)
+        image = (ROOT / f"tests/fixtures/naming-{config}.bin").read_bytes()
+        image = replace_string(image, b"GeneratedMethod", b"<.ctor>b__1")
+        image = replace_string(image, b"OtherGenerated", b"<Ctor>b__1")
+        assembly = directory / "Input.bin"
+        assembly.write_bytes(image)
+        command = [str(cli), "decompile", str(assembly), "--type", "NamingCases.LambdaTargets"]
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=120)
+        source = directory / "Actual.cs"
+        source.write_text(result.stdout)
+        (directory / "default.stderr.log").write_text(result.stderr)
+        if result.returncode or not re.search(r"^decompiled=5 declarations=0 partial=0 failed=0$", result.stderr, re.M):
+            raise RuntimeError(f"Friendly declaration/reference output not supported: {directory}")
+        compile_source(directory, source, "Actual")
+        records.append({"configuration": config, "variant": "friendly-lambdas", "command": command,
+                        "source": str(source), "compileExitCode": 0, "noRuntimeProof": True})
+        print(f"{config}/friendly-lambdas: collision-safe declarations and exact call references compile")
     for index, config in enumerate(("release", "debug")):
         directory = OUT / config / "module-local-reference"
         directory.mkdir(parents=True, exist_ok=True)

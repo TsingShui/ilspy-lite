@@ -2391,7 +2391,7 @@ impl<'a> Image<'a> {
                 format!(
                     "{}.{}",
                     crate::symbol_names::type_name(self, owner, true)?,
-                    crate::symbol_names::verbatim(&name)
+                    crate::symbol_names::method(self, t, &name, true)
                 )
             },
             args,

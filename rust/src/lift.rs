@@ -258,7 +258,11 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         out.push_str("// Instance constructor initialization body on an existing receiver; does not allocate or certify a complete constructor chain.\n");
         format!("__cil_ctor_body_{token:08X}")
     } else {
-        crate::symbol_names::verbatim(name)
+        if let Some(comment) = crate::symbol_names::method_comment(name) {
+            out.push_str(&comment);
+            out.push('\n');
+        }
+        crate::symbol_names::method(image, cildec::Token(token), name, true)
     };
     out.push_str(&format!(
         "public static {} {body_name}({parameters})\n{{\n",

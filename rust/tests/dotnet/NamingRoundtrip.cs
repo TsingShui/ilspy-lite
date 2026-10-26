@@ -62,7 +62,7 @@ internal static class NamingRoundtrip
             Constructor = Type.GetConstructor(Members, null, Type.EmptyTypes, null)!;
             Require(Constructor != null && Constructor.IsPublic && Type.GetConstructors(Members).Length == 1,
                 "single public parameterless instance constructor");
-            string member = recovered ? Alias("<Accumulator>b__0") : "<Accumulator>b__0";
+            string member = recovered ? "AccumulatorLambda0" : "<Accumulator>b__0";
             Method = Type.GetMethod(member, Members)!;
             Require(Method != null && !Method.IsStatic && !Method.IsGenericMethod && Method.IsAssembly &&
                 Method.ReturnType == typeof(int) && Method.GetParameters().Select(p => p.ParameterType).SequenceEqual(new[] { typeof(int) }) &&

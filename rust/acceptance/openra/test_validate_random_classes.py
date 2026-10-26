@@ -116,6 +116,17 @@ print(json.dumps(data[sys.argv[-1]]['snapshot']))
         self.assertIn("--reference", explicit)
         self.assertEqual(row["supported_methods"], [])
 
+    def test_friendly_generated_method_name_keeps_independent_inventory_binding(self):
+        row = self.data[self.entry["name"]]
+        row["snapshot"]["types"][0]["methods"][0]["name"] = "<.ctor>b__1"
+        row["details"] = row["details"].replace("::Read(", "::<.ctor>b__1(")
+        row["il"] = row["il"].replace("::Read(", "::<.ctor>b__1(")
+        row["readable"] = row["readable"].replace("    public static int Read()",
+            "    // Metadata name: <.ctor>b__1\n    public static int CtorLambda1()")
+        result, report = self.run_collector()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(report["static_pass_count"], 20)
+
     def test_lost_fallback_instruction_fails_but_preserves_all_rows(self):
         row = self.data[self.entry["name"]]
         row["details"] = row["details"].replace("// IL_0001: ret \n", "")

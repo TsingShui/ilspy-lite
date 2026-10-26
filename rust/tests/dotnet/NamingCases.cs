@@ -60,3 +60,14 @@ public sealed class Special
     static Special() { Value = 11; }
     public static int Read() => Value;
 }
+
+public static class LambdaTargets
+{
+    public static int GeneratedMethod(int value) => value;
+    public static int OtherGenerated(int value) => unchecked(value + 2);
+    public static int CtorLambda1(int value) => unchecked(value + 1);
+    public static int ComputeLambda1;
+    public static int Invoke(int value) => GeneratedMethod(value);
+    public const string Literal = "<.ctor>b__1";
+    public static int ScopeAnchor(int value) => System.Math.Abs(value);
+}
