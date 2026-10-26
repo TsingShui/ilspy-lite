@@ -15,6 +15,7 @@ def module(name, path):
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
 adapter = module("reference_roundtrip", ROOT / "tests/reference-roundtrip.py")
 leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
+generic = module("generic_declaring", ROOT / "tests/generic-declaring-roundtrip.py")
 
 SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
            + sorted((ROOT / "tests/dotnet").glob("*Behavior.cs")))
@@ -106,12 +107,33 @@ def main():
         aliases, helpers = leaves.plan(support, harness, fixture, OUT, snippets, "VirtualCallCases.Ops")
         carrier = aliases + "namespace VirtualCallCases\n{\npublic static class Recovered\n{\n" + helpers + "\n".join(snippets) + "\n}\n}\n"
         source = OUT / f"Recovered-{config}{'-readable' if args.readable else '-details'}.cs"
+        receiver_snippets = []
+        for owner, name in [("VirtualCallCases.Shape", "Describe"), ("VirtualCallCases.Value", "ToString")]:
+            token = next(token for token in names if owners[token] == owner and names[token] == name)
+            details = support.run([args.cli, "decompile", fixture, "--method", token, "--details", "--no-auto-references"]).stdout
+            readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
+            il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+            if "System.Int32::ToString" not in il: raise ValueError("Unexpected scalar receiver leaf")
+            body = generic.inline_structural_types(adapter.adapt_readable_body(readable, details))
+            receiver = "ref global::VirtualCallCases.Value a0" if owner.endswith(".Value") else "global::VirtualCallCases.Shape a0"
+            body = "public static string " + owner.rsplit(".", 1)[1] + "_Describe(" + receiver + ")" + body[body.index("\n{"):]
+            body = "\n".join(line if line.lstrip().startswith("//") else re.sub(r"\bthis\b", "a0", line) for line in body.splitlines())
+            body = re.sub(r"__cil_memberref_call_[0-9A-F]{8}\(ref (\w+)\)", r"\1.ToString()", body)
+            body = re.sub(r'__cil_ldstr_[0-9A-F]{8}\(("(?:shape|value)")\)', r"\1", body)
+            body = re.sub(r"__cil_callvirt_([0-9A-F]{8})\(([^()]*)\)", dispatch, body)
+            executable = "\n".join(line for line in body.splitlines() if not line.strip().startswith("//"))
+            if "__cil_" in support.without_boolean_helpers(executable): raise ValueError("Unbound recovered receiver body")
+            receiver_snippets.append(body)
+        receiver_source = "\nnamespace VirtualCallCases { public static class RecoveredReceivers {\n" + "\n".join(receiver_snippets) + "\n} }\n"
+        carrier += receiver_source
         support.write_changed(source, carrier)
         recovered = source.with_suffix(".dll")
         compile_ms += support.compile_cs(recovered, [source], references=[fixture])
         result = support.run([support.DOTNET / "dotnet", harness, fixture, "--virtual-check", recovered])
         print(config + ": " + result.stdout.strip(), flush=True)
-        rows.append({"configuration": config, "behavior": result.stdout.strip()})
+        receiver_result = support.run([support.DOTNET / "dotnet", harness, fixture, "--value-receiver-check", recovered])
+        print(config + ": " + receiver_result.stdout.strip(), flush=True)
+        rows.append({"configuration": config, "behavior": result.stdout.strip(), "receivers": receiver_result.stdout.strip()})
         if args.mutation_control:
             # A direct call to the declared method loses dispatch; the caller's
             # concrete override must then disagree.
@@ -127,6 +149,23 @@ def main():
             if negative.returncode == 0:
                 raise ValueError("downgraded dispatch was not detected")
             print(config + ": rejected direct-dispatch mutant", flush=True)
+            for label, result_expression in [("Shape", "a0.Describe()"), ("Value", '"value"')]:
+                pattern = r"(public static string " + label + r"_Describe\([^\n]+\)\n\{)(.*?)(\n\})"
+                target = re.search(pattern, carrier, re.S)
+                if target is None: raise ValueError("Receiver mutation target missing")
+                body, count = re.subn(r"return [^;]+;", "return " + result_expression + ";", target[2], count=1)
+                if count != 1: raise ValueError("Receiver mutation return missing")
+                path = OUT / f"Wrong-{label}-{config}.cs"
+                support.write_changed(path, carrier[:target.start(2)] + body + carrier[target.end(2):])
+                binary = path.with_suffix(".dll")
+                compile_ms += support.compile_cs(binary, [path], references=[fixture])
+                negative = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture),
+                    "--value-receiver-check", str(binary)], text=True, capture_output=True, timeout=120)
+                (OUT / f"Wrong-{label}-{config}.log").write_text(negative.stdout + negative.stderr)
+                if negative.returncode == 0 or "Recovered value receiver differs: " + label not in negative.stderr:
+                    raise ValueError("Receiver semantic mutant was not detected: " + negative.stdout + negative.stderr)
+                print(config + ": rejected " + label + " receiver mutant", flush=True)
+                rows.append({"configuration": config, "mutation": label + "-receiver", "detected": True})
     view = "readable" if args.readable else "details"
     (OUT / f"behavior-results-{view}.json").write_text(json.dumps({"configurations": rows, "compile_ms": compile_ms,
         "view": view, "mutation_control": args.mutation_control, "third_party_execution": False}, indent=2) + "\n")

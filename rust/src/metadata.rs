@@ -40,6 +40,7 @@ pub(crate) struct Image<'a> {
     pub md: Metadata<'a>,
     core_definition: std::cell::OnceCell<std::result::Result<bool, String>>,
     interface_edges: InterfaceEdges,
+    location_types: std::cell::RefCell<crate::locations::LocationTypes>,
     struct_types: StructTypes,
     pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
     enum_types: std::cell::RefCell<
@@ -97,6 +98,7 @@ impl<'a> Image<'a> {
             md,
             core_definition: std::cell::OnceCell::new(),
             interface_edges: std::cell::OnceCell::new(),
+            location_types: std::cell::RefCell::new(crate::locations::LocationTypes::new()?),
             struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
             enum_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
@@ -3384,6 +3386,136 @@ impl<'a> Image<'a> {
         Ok(crate::ir::Ty::Class(token))
     }
 
+    pub(crate) fn address_of(&self, element: crate::ir::Ty) -> Result<crate::ir::Ty> {
+        use crate::ir::{StackKind, Ty};
+        if element.kind() == StackKind::Address || matches!(element, Ty::Void | Ty::Null | Ty::F4) {
+            return Err("managed location needs an ordinary stored element type".into());
+        }
+        element.cs(self)?;
+        Ok(match element {
+            Ty::I4 => Ty::I4Address,
+            Ty::U4 => Ty::U4Address,
+            Ty::I8 => Ty::I8Address,
+            Ty::U8 => Ty::U8Address,
+            Ty::Value(id) => Ty::ValueAddress(id),
+            other => Ty::ManagedAddress(self.location_types.borrow_mut().intern(other)?),
+        })
+    }
+
+    pub(crate) fn address_element(&self, address: crate::ir::Ty) -> Result<crate::ir::Ty> {
+        use crate::ir::Ty;
+        match address {
+            Ty::I4Address => Ok(Ty::I4),
+            Ty::U4Address => Ok(Ty::U4),
+            Ty::I8Address => Ok(Ty::I8),
+            Ty::U8Address => Ok(Ty::U8),
+            Ty::ValueAddress(id) => Ok(Ty::Value(id)),
+            Ty::ManagedAddress(id) => self.location_types.borrow().element(id),
+            _ => Err("operation needs an acquired managed location".into()),
+        }
+    }
+
+    fn primitive_storage_type(&self, token: Token) -> Result<Option<crate::ir::Ty>> {
+        use crate::ir::Ty;
+        let name = match token.table() {
+            Some(TableId::TypeDef) => self.local_core_type_name(token)?,
+            Some(TableId::TypeRef) => self.core_type_name(token).ok(),
+            _ => None,
+        };
+        Ok(match name {
+            Some("Boolean") => Some(Ty::Bool),
+            Some("Char") => Some(Ty::Char),
+            Some("SByte") => Some(Ty::I1),
+            Some("Byte") => Some(Ty::U1),
+            Some("Int16") => Some(Ty::I2),
+            Some("UInt16") => Some(Ty::U2),
+            Some("Int32") => Some(Ty::I4),
+            Some("UInt32") => Some(Ty::U4),
+            Some("Int64") => Some(Ty::I8),
+            Some("UInt64") => Some(Ty::U8),
+            Some("IntPtr") => Some(Ty::Native),
+            Some("UIntPtr") => Some(Ty::UNative),
+            Some("Single") => Some(Ty::R4),
+            Some("Object") => Some(Ty::Object),
+            Some("String") => Some(Ty::String),
+            _ => None,
+        })
+    }
+
+    fn external_receiver_type(&self, owner: Token) -> Result<crate::ir::Ty> {
+        use crate::ir::{StackKind, Ty};
+        if let Some(ty) = self.primitive_storage_type(owner)?
+            && ty.kind() != StackKind::Ref
+        {
+            return Ok(ty);
+        }
+        if let Ok(enumeration) = self.enum_type(owner) {
+            return Ok(Ty::Enum(enumeration));
+        }
+        if let Some(id) = self.struct_type(owner)? {
+            return Ok(Ty::Value(id));
+        }
+        self.external_class_context(owner.0)?;
+        Ok(Ty::ExternalClass(owner.0))
+    }
+
+    pub(crate) fn location_operand(
+        &self,
+        address: crate::ir::Ty,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        use crate::ir::{StackKind, Ty};
+        let element = self.address_element(address)?;
+        let core = match token.table() {
+            Some(TableId::TypeDef) => self.local_core_type_name(token)?,
+            Some(TableId::TypeRef) => self.core_type_name(token).ok(),
+            _ => None,
+        };
+        let primitive = match core {
+            Some("Boolean") => Some(Ty::Bool),
+            Some("Char") => Some(Ty::Char),
+            Some("SByte") => Some(Ty::I1),
+            Some("Byte") => Some(Ty::U1),
+            Some("Int16") => Some(Ty::I2),
+            Some("UInt16") => Some(Ty::U2),
+            Some("Int32") => Some(Ty::I4),
+            Some("UInt32") => Some(Ty::U4),
+            Some("Int64") => Some(Ty::I8),
+            Some("UInt64") => Some(Ty::U8),
+            Some("IntPtr") => Some(Ty::Native),
+            Some("UIntPtr") => Some(Ty::UNative),
+            Some("Single") => Some(Ty::R4),
+            Some("Object") => Some(Ty::Object),
+            Some("String") => Some(Ty::String),
+            _ => None,
+        };
+        let operand = match (primitive, token.table()) {
+            (Some(ty), _) => ty,
+            (_, Some(TableId::TypeSpec)) => {
+                Ty::from_sig_scoped(&self.type_spec(token)?.type_, self, context)?
+            }
+            (_, Some(TableId::TypeDef | TableId::TypeRef)) => {
+                let ty = if element.kind() == StackKind::Ref {
+                    cildec::Type::Class(token)
+                } else {
+                    cildec::Type::ValueType(token)
+                };
+                Ty::from_sig_scoped(&ty, self, context)?
+            }
+            _ => return Err("location operand needs an exact storage type".into()),
+        };
+        if operand != element
+            && !(operand.kind() == StackKind::Ref
+                && element.kind() == StackKind::Ref
+                && self.assignable(operand, element).is_ok()
+                && self.assignable(element, operand).is_ok())
+        {
+            return Err("location operand differs from its exact storage element".into());
+        }
+        Ok(element)
+    }
+
     fn intrinsic_reference_name(&self, ty: crate::ir::Ty) -> Result<Option<&'a str>> {
         use crate::ir::Ty;
         let name = match ty {
@@ -3430,6 +3562,14 @@ impl<'a> Image<'a> {
                     return Ok(());
                 }
             }
+        }
+        if actual.kind() == crate::ir::StackKind::Address
+            && expected.kind() == crate::ir::StackKind::Address
+        {
+            if self.address_element(actual)? == self.address_element(expected)? {
+                return Ok(());
+            }
+            return Err("managed location element identity differs".into());
         }
         if let (Ty::ValueAddress(a), Ty::Value(b)) = (actual, expected) {
             if a == b {
@@ -3657,15 +3797,20 @@ impl<'a> Image<'a> {
         arguments: Option<&[cildec::Type<'a>]>,
         context: crate::signature_types::TypeContext,
     ) -> Result<crate::ir::Ty> {
-        if parameter.by_ref || !parameter.custom_mods.is_empty() {
+        if !parameter.custom_mods.is_empty() {
             return Err("byref/modified parameter needs IL fallback".into());
         }
-        match arguments {
+        let ty = match arguments {
             Some(arguments) => {
                 let substituted = substitute_type_arguments(&parameter.type_, arguments)?;
-                crate::ir::Ty::from_sig_scoped(&substituted, self, context)
+                crate::ir::Ty::from_sig_scoped(&substituted, self, context)?
             }
-            None => crate::ir::Ty::from_param_scoped(parameter, self, context),
+            None => crate::ir::Ty::from_sig_scoped(&parameter.type_, self, context)?,
+        };
+        if parameter.by_ref {
+            self.address_of(ty)
+        } else {
+            Ok(ty)
         }
     }
 
@@ -3942,8 +4087,7 @@ impl<'a> Image<'a> {
         let receiver = if sig.has_this {
             if t.table() == Some(TableId::MemberRef) {
                 let reference = self.md.tables().member_ref(t.rid())?;
-                self.external_class_context(reference.class.0)?;
-                Some(crate::ir::Ty::ExternalClass(reference.class.0))
+                Some(self.external_receiver_type(reference.class)?)
             } else {
                 let row = self.row(t.0)?;
                 if row.is_static() {

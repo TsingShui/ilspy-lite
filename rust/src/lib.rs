@@ -7,6 +7,7 @@ pub mod discovery_paths;
 mod eh;
 mod ir;
 mod lift;
+mod locations;
 mod metadata;
 mod readable;
 mod signature_guard;

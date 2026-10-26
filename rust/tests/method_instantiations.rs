@@ -19,11 +19,6 @@ fn instantiated_methods_keep_original_tokens_and_substitute_parameters() {
             &[
                 (
                     "MethodInstantiationCases.Ops",
-                    "UnsupportedByRef",
-                    "byref/modified parameter needs IL fallback",
-                ),
-                (
-                    "MethodInstantiationCases.Ops",
                     "Virtual",
                     "generic virtual dispatch needs runtime lookup-order modeling",
                 ),

@@ -153,7 +153,7 @@ fn readonly_permission_does_not_follow_another_receiver_or_a_reassigned_this_slo
         for prefix in [
             &[0x03, 0x04][..],                   // Other receiver argument.
             &[0x03, 0x10, 0x00, 0x02, 0x04][..], // starg.0 then reload.
-            &[0x0f, 0x00, 0x26, 0x02, 0x04][..], // ldarga.0 is unsupported, not proof of entry this.
+            &[0x0f, 0x00, 0x26, 0x02, 0x04][..], // A this-slot address needs original-receiver provenance.
         ] {
             let mut code = prefix.to_vec();
             code.push(0x7d);

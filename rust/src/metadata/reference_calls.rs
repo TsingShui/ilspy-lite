@@ -47,11 +47,16 @@ pub(super) fn constructed(
     let owner = Ty::from_sig_scoped(&spec.type_, image, context)?;
     owner.cs(image)?;
     let parameter = |parameter: &cildec::Param<'_>| -> Result<Ty> {
-        if parameter.by_ref || !parameter.custom_mods.is_empty() {
+        if !parameter.custom_mods.is_empty() {
             return Err("byref/modified parameter needs IL fallback".into());
         }
         let substituted = substitute_type_arguments(&parameter.type_, args)?;
-        Ty::from_sig_scoped(&substituted, image, context)
+        let ty = Ty::from_sig_scoped(&substituted, image, context)?;
+        if parameter.by_ref {
+            image.address_of(ty)
+        } else {
+            Ok(ty)
+        }
     };
     Ok(Some(MethodRef {
         token: token.0,

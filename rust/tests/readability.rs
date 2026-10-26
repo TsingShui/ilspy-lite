@@ -57,9 +57,9 @@ fn unsigned_operations_keep_reinterpretation_and_overflow_checks() {
 fn boolean_loads_and_returns_keep_stack_conversions() {
     for bytes in INTEGERS {
         let text = output(bytes, "IntegerCases.Cases", "Join");
-        assert!(text.contains("(a0 ? 1 : 0)"), "{text}");
+        assert!(text.contains("__cil_bool_load(a0)"), "{text}");
         let text = output(bytes, "IntegerCases.Cases", "Equal");
-        assert!(text.contains("!= 0);"), "{text}");
+        assert!(text.contains("return __cil_bool_store("), "{text}");
     }
 }
 

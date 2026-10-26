@@ -267,7 +267,8 @@ fn class_methods_keep_complete_headers_parameters_and_statuses() {
         assert!(result.text.contains("sequence=2 flags=0x0002 name=output"));
         assert_eq!(result.summary.declarations, 2);
         assert!(result.text.contains(".ctor"));
-        assert!(result.text.contains("IL FALLBACK"));
-        assert_eq!(result.summary.exit_code(), 2);
+        assert!(!result.text.contains("IL FALLBACK"));
+        assert_eq!(result.summary.partial, 0);
+        assert_eq!(result.summary.exit_code(), 0);
     }
 }

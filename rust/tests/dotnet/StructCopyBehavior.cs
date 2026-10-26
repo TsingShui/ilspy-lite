@@ -248,6 +248,29 @@ internal static partial class GenericReferenceRoundtrip
                 throw new Exception("Recovered promoted struct behavior differs: " + name);
             checks++;
         }
+        {
+            MethodInfo original = promoted.GetMethod("UnsupportedByRef") ?? throw new Exception("Owned byref copy missing.");
+            MethodInfo lowered = promotedCarrier.GetMethod("UnsupportedByRef") ?? throw new Exception("Recovered byref copy missing.");
+            Type byref = promotedPair.MakeByRefType();
+            if (original.ReturnType != promotedPair || lowered.ReturnType != promotedPair
+                || original.GetParameters().Single().ParameterType != byref || lowered.GetParameters().Single().ParameterType != byref)
+                throw new Exception("Promoted byref copy signature differs.");
+            Type cellType = typeof(ManagedArgument<>).MakeGenericType(promotedPair);
+            FieldInfo slot = cellType.GetField("Value");
+            foreach (object initial in new[] { promotedZero, promotedBox, StructSample(promotedPair, 1) })
+            {
+                object storage = Activator.CreateInstance(cellType);
+                slot.SetValue(storage, initial);
+                Outcome before = Capture(() => ManagedInvoker(original)(new[] { storage }), new List<State>());
+                object beforeSlot = slot.GetValue(storage);
+                slot.SetValue(storage, initial);
+                Outcome after = Capture(() => ManagedInvoker(lowered)(new[] { storage }), new List<State>());
+                if (before.Error != null || after.Error != before.Error || !Same(before.Value, initial)
+                    || !Same(after.Value, initial) || !Same(beforeSlot, initial) || !Same(slot.GetValue(storage), initial))
+                    throw new Exception("Recovered struct behavior differs: UnsupportedOps.UnsupportedByRef");
+                checks++;
+            }
+        }
         Console.WriteLine($"Struct copy behavior: {checks} comparisons; seven exact aggregate types, scalar bits, embedded reference identity, snapshots, all public static state/constructor counts and exceptions match.");
     }
 }

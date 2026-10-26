@@ -16,6 +16,7 @@ def module(name, path):
     result = importlib.util.module_from_spec(spec); spec.loader.exec_module(result); return result
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
+generic = module("generic_declaring", ROOT / "tests/generic-declaring-roundtrip.py")
 
 
 def without_dependency_report(text):
@@ -54,24 +55,22 @@ def main():
                     for record in map(json.loads, scan.stdout.splitlines())
                     if record["status"] == "Decompiled" and owners.get(record["token"]) == "ExternalEnumCases.Ops"]
         if not selected: raise ValueError("external-enum selection is empty")
-        snippets, skipped = [], []
+        snippets = []
         for token, name in selected:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details",
                                    "--no-auto-references", "--reference", library])
             if details.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("external-enum method not recovered: " + name)
             body = without_dependency_report(details.stdout)
+            body = generic.inline_structural_types(body)
+            for alias, declared in re.findall(r"external class token \S+: (\w+) = \S+ \[[^\]]+\](\S+) //", body):
+                body = body.replace(alias, "global::" + generic.metadata_to_csharp(declared))
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             code = "\n".join(line for line in body.splitlines()
                               if not line.lstrip().startswith("//"))
-            if "__cil_" in code:
-                skipped.append(name)
-                continue
+            if "__cil_" in support.without_boolean_helpers(code):
+                raise ValueError("Unbound recovered external-enum method: " + name)
             snippets.append(body)
-        # An opaque external class keeps an input-scoped alias, which cannot be a
-        # compiled type. Exactly that method is expected to stay unexecuted.
-        if skipped != ["UnsupportedClass"]:
-            raise ValueError("unexpected unexecutable selection: " + repr(skipped))
         if not snippets: raise ValueError("external-enum carrier is empty")
         carrier = ("namespace ExternalEnumCases\n{\npublic static class Recovered\n{\n"
                    + "\n".join(snippets) + "\n}\n}\n")
@@ -81,9 +80,8 @@ def main():
         compile_ms += support.compile_cs(recovered, [source], references=[fixture, library])
         result = support.run([support.DOTNET / "dotnet", harness, fixture,
                               "--external-enum-check", recovered, library])
-        print(config + ": " + result.stdout.strip() + f" [skipped {skipped}]", flush=True)
-        rows.append({"configuration": config, "behavior": result.stdout.strip(),
-                     "skipped": skipped})
+        print(config + ": " + result.stdout.strip(), flush=True)
+        rows.append({"configuration": config, "behavior": result.stdout.strip(), "skipped": []})
         if args.mutation_control:
             # Changing the load extension from the declared unsigned width to a
             # signed one must change a value whose high bit is set, because this
@@ -103,11 +101,32 @@ def main():
                                       "--external-enum-check", str(binary), str(library)],
                                      text=True, capture_output=True, timeout=300)
             (OUT / f"SignedLoad-mutation-{config}.log").write_text(mutated.stdout + mutated.stderr)
-            if mutated.returncode == 0:
-                raise ValueError("mutation control survived: signed load extension accepted")
+            if mutated.returncode == 0 or "Recovered external-enum differs:" not in mutated.stderr:
+                raise ValueError("Signed-load semantic mutant was not detected: " + mutated.stdout + mutated.stderr)
             rows.append({"configuration": config, "mutation": "signed-load-extension",
                          "detected": mutated.stderr.strip().splitlines()[0] if mutated.stderr.strip() else "nonzero exit"})
             print(config + " mutation: signed load extension rejected", flush=True)
+            for name, replacement in [
+                ("UnsupportedStruct", "return default(global::ExternalEnums.Point);"),
+                ("UnsupportedClass", "return a0 == null ? null : new global::ExternalEnums.Widget { Value = a0.Value };"),
+            ]:
+                pattern = r"(public static [^\n]+ @" + name + r"\([^\n]+\)\n\{)(.*?)(\n\})"
+                target = re.search(pattern, carrier, re.S)
+                if target is None: raise ValueError("Copy/identity mutation target missing: " + name)
+                body, count = re.subn(r"return [^;]+;", replacement, target[2], count=1)
+                if count != 1: raise ValueError("Copy/identity return missing: " + name)
+                bad = carrier[:target.start(2)] + body + carrier[target.end(2):]
+                path = OUT / f"Wrong-{name}-{config}.cs"
+                support.write_changed(path, bad)
+                binary = path.with_suffix(".dll")
+                compile_ms += support.compile_cs(binary, [path], references=[fixture, library])
+                negative = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture),
+                    "--external-enum-check", str(binary), str(library)], text=True, capture_output=True, timeout=300)
+                (OUT / f"Wrong-{name}-{config}.log").write_text(negative.stdout + negative.stderr)
+                if negative.returncode == 0 or "Recovered external-enum differs:" not in negative.stderr:
+                    raise ValueError("Copy/identity mutant was not detected: " + name + negative.stdout + negative.stderr)
+                print(config + ": rejected " + name + " mutant", flush=True)
+                rows.append({"configuration": config, "mutation": name, "detected": True})
     (OUT / "behavior-results.json").write_text(json.dumps(
         {"configurations": rows, "compile_ms": compile_ms,
          "mutation_control": args.mutation_control, "third_party_execution": False}, indent=2) + "\n")

@@ -67,7 +67,7 @@ def main():
                 return f"(({owner}){arguments[0]}).{member}({tail})"
             body = re.sub(r"__cil_callvirt_([0-9A-F]{8})\(([^()]*)\)", dispatch, body)
             code = "\n".join(line for line in body.splitlines() if not line.strip().startswith("//"))
-            if "__cil_" in code: raise ValueError("Unexecutable selected method: " + name)
+            if "__cil_" in support.without_boolean_helpers(code): raise ValueError("Unexecutable selected method: " + name)
             methods[name] = body
             (OUT / f"{config}-{name}.cs").write_text(body)
         if not methods: raise ValueError("Owned interface-reference selection is empty")

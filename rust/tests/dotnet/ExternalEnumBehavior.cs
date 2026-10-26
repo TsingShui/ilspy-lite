@@ -16,7 +16,11 @@ internal static partial class GenericReferenceRoundtrip
         // description; a widened load that changed the number must surface here.
         if (type.IsPrimitive)
             return "value:" + Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
-        return "type:" + type.Name;
+        if (type.IsValueType) return "struct:" + type.FullName + "{" + string.Join(",", type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .OrderBy(field => field.Name).Select(field => field.Name + "=" + ExternalEnumDescriptor(field.GetValue(value)))) + "}";
+        return "identity:" + type.Name + ":" + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value)
+            + "{" + string.Join(",", type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+                .OrderBy(field => field.Name).Select(field => field.Name + "=" + ExternalEnumDescriptor(field.GetValue(value)))) + "}";
     }
 
     static void ExternalEnumMain(string[] args)
@@ -49,8 +53,18 @@ internal static partial class GenericReferenceRoundtrip
                 return values.Select(v => Enum.ToObject(type, v)).ToArray();
             }
             if (type == typeof(object) || type == typeof(string)) return new object[] { null };
-            if (type.IsValueType) return new object[] { Activator.CreateInstance(type) };
-            return new object[] { null, Activator.CreateInstance(type) };
+            object WithFields(int value)
+            {
+                object result = Activator.CreateInstance(type);
+                foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    if (field.FieldType != typeof(int)) throw new Exception("Unexpected owned field: " + field);
+                    field.SetValue(result, value);
+                }
+                return result;
+            }
+            if (type.IsValueType) return new object[] { WithFields(0), WithFields(-7), WithFields(int.MaxValue) };
+            return new object[] { null, WithFields(17) };
         }
 
         foreach (MethodInfo original in selected)
@@ -69,10 +83,11 @@ internal static partial class GenericReferenceRoundtrip
             foreach (object[] arguments in cases)
             {
                 Outcome before = Capture(() => OriginalCall(original)(null, arguments), new System.Collections.Generic.List<State>());
-                Outcome after = Capture(() => lowered.Invoke(null, arguments), new System.Collections.Generic.List<State>());
                 string expected = before.Error != null ? "throw:" + before.Error.Name : ExternalEnumDescriptor(before.Value);
+                string beforeState = string.Join("|", arguments.Select(ExternalEnumDescriptor));
+                Outcome after = Capture(() => lowered.Invoke(null, arguments), new System.Collections.Generic.List<State>());
                 string actual = after.Error != null ? "throw:" + after.Error.Name : ExternalEnumDescriptor(after.Value);
-                if (expected != actual)
+                if (expected != actual || beforeState != string.Join("|", arguments.Select(ExternalEnumDescriptor)))
                     throw new Exception("Recovered external-enum differs: " + original.Name + " expected=" + expected + " actual=" + actual + " args=" + string.Join("|", arguments.Select(a => a == null ? "null" : a.GetType().Name + ":" + Convert.ToString(a, System.Globalization.CultureInfo.InvariantCulture))));
                 checks++;
             }

@@ -7,7 +7,34 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: scoped reference-call foundation
+## Current verified state: typed managed-location foundation
+
+- `report/managed-locations/corpus-scan-validated/baseline.json`: **438,801
+  Decompiled / 331,947 Partial** of 770,748; aggregate fallback **43.06816%**.
+- +21,002 in 188 images, zero regressions/incomplete; decrease 2.72489 points.
+  OpenRA.Game +159 (2,473/2,294), Common +226 (9,714/8,693).
+- Typed location elements, ref/out parameters and call operands, scalar/reference/
+  generic addresses, indirect operations and precise value receivers implemented.
+  Initonly addresses remain exact runtime field-address leaves, not value copies.
+- Found/fixed readable snapshot substitution and constructor this-slot exposure.
+  Initial scan's 824 readonly-address regressions retained in `corpus-scan/`
+  and `delta.json`; final scan has zero, not hidden by net gains.
+- 399 tests, fmt/clippy pass. Twenty relevant owned behavior drivers pass.
+  New location gate: release/debug 960/951 comparisons across ordinary/initonly/
+  raw-Boolean variants, 5,733 total; 36 rejected mutants. The raw-byte-2 gate
+  exposed and fixed Boolean truth-value normalization (also present in ILSpy).
+  Promoted legacy byref/value receiver cases stay executed.
+- Twelve production triples self-reviewed, all CRUDE-BUT-EQUIVALENT for changed
+  semantics; no changed-semantic SUSPECT in sample. No independent/formal or
+  third-party execution claim.
+- Goal remains aggregate <=5%, not reached. Fixed scope/references; no agents,
+  no unrequested push. Evidence: `acceptance/corpus/MANAGED_LOCATIONS.md` and
+  `report/managed-locations/{AUDIT.md,review/review-source.md}`.
+- Next larger foundation: characterize remaining receiver/constructed-value and
+  generic assignment/boxing/constrained-call blockers before implementation.
+  GVM lookup-order refusal stays intact. No gains forecast from bucket totals.
+
+## Previous verified state: scoped reference-call foundation
 
 - `report/reference-call-foundation/corpus-scan/baseline.json`: 417,799
   Decompiled / 352,949 Partial of 770,748; aggregate fallback 45.79305%.

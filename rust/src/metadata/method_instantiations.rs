@@ -147,7 +147,7 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
         return Err("external generic instance dispatch needs dependency facts".into());
     };
     let parameter = |parameter: &cildec::Param<'_>| -> Result<Ty> {
-        if parameter.by_ref || !parameter.custom_mods.is_empty() {
+        if !parameter.custom_mods.is_empty() {
             return Err("byref/modified parameter needs IL fallback".into());
         }
         let substituted = substitute_arguments(
@@ -155,7 +155,12 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
             type_arguments.as_deref(),
             Some(&instantiation.args),
         )?;
-        Ty::from_sig_scoped(&substituted, image, context)
+        let ty = Ty::from_sig_scoped(&substituted, image, context)?;
+        if parameter.by_ref {
+            image.address_of(ty)
+        } else {
+            Ok(ty)
+        }
     };
     Ok(MethodRef {
         token: token.0,

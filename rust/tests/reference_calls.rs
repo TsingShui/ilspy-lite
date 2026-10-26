@@ -17,18 +17,11 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
 #[allow(dead_code)]
 mod fixture_contract;
 
-const NEGATIVE: fixture_contract::ExpectedPartial = &[
-    (
-        "ReferenceCallCases.Ops",
-        "UnsupportedGvm",
-        "external generic instance dispatch needs dependency facts",
-    ),
-    (
-        "ReferenceCallCases.Ops",
-        "UnsupportedByRef",
-        "byref/modified parameter needs IL fallback",
-    ),
-];
+const NEGATIVE: fixture_contract::ExpectedPartial = &[(
+    "ReferenceCallCases.Ops",
+    "UnsupportedGvm",
+    "external generic instance dispatch needs dependency facts",
+)];
 
 #[test]
 fn forged_array_identity_and_reference_value_kind_stay_refused() {

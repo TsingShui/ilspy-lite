@@ -3,7 +3,26 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (reference-call foundation; aggregate 5% target)
+## Current position (managed locations; aggregate 5% target)
+
+- **438,801 Decompiled / 331,947 Partial; fallback 43.06816%**.
+- +21,002 in 188 images, zero regressions/incomplete; fixed scope/references.
+  Actual decrease 2.72489 points. OpenRA.Game +159 / Common +226.
+- Typed byref operands, storage operations, exact value receivers and initonly
+  field-address leaves retain aliases, acquisition timing and exception writes.
+- 399 tests, fmt/clippy and twenty owned behavior drivers pass. New location
+  gate executes 5,733 comparisons across ordinary/initonly/raw-Boolean variants;
+  36 mutants fail, including load/store normalization of observable byte value 2.
+  Promoted legacy cases stay executable, with meaningful mutation controls.
+- Twelve source/IL triples self-reviewed. Initial 824 readonly-address regressions
+  retained, reproduced and repaired; the final scan has zero recovered losses.
+- Next: audit remaining receiver/constructed-value and generic assignment,
+  boxing/constrained-call foundations as a related group. Keep GVM refused until
+  its independently reproduced runtime ordering problem is modeled.
+- Continue autonomously; no agents, third-party execution or unrequested pushes.
+  Goal not met; bucket counts are not promised recoveries.
+
+## Previous position (reference-call foundation; aggregate 5% target)
 
 - 417,799 Decompiled / 352,949 Partial; fallback 45.79305%.
 - +30,189 in 226 images, zero regressions/incomplete, unchanged scope/references.

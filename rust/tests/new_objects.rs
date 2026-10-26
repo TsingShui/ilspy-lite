@@ -36,7 +36,7 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "NewObjectCases.Ops",
         "UnsupportedGeneric",
-        "managed location of a non-struct slot needs IL fallback",
+        "box/unbox needs an admitted core scalar or local enum",
     ),
 ];
 

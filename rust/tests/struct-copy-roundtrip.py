@@ -51,7 +51,7 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(r" StructCopyCases\.(\w+Ops)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
-            if match and (not match[2].startswith("Unsupported") or match[2] in {"UnsupportedDefault", "UnsupportedMember", "UnsupportedNew"}):
+            if match and (not match[2].startswith("Unsupported") or match[2] in {"UnsupportedDefault", "UnsupportedMember", "UnsupportedNew", "UnsupportedByRef"}):
                 selected.append((token, match[1], match[2]))
         if not selected:
             raise ValueError("Owned struct selection drift")
@@ -100,6 +100,7 @@ def main():
                 ("Reference", "PairOps", "Identity", "if (a0.Tag is string text) a0.Tag = new string(text.ToCharArray());", "--struct-check"),
                 ("Constructor", "WithCtorOps", "Identity", "var ignored = new global::StructCopyCases.WithCtor();", "--struct-check"),
                 ("Bits", "UnionOps", "Identity", "a0.Bits ^= 0x80000000u;", "--struct-check"),
+                ("ByRefCopy", "UnsupportedOps", "UnsupportedByRef", "a0 = default;", "--struct-check"),
             ]:
                 pattern = rf"(public static [^\n]+ @{method}\([^\n]+\)\n\{{\n)"
                 altered, count = re.subn(pattern, lambda m: m[1] + "    " + statement + "\n", pieces[owner], count=1)

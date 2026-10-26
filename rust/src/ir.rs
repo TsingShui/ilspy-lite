@@ -28,6 +28,7 @@ pub(crate) enum Ty {
     GenericValue(crate::signature_types::TypeId),
     Value(crate::signature_types::TypeId),
     ValueAddress(crate::signature_types::TypeId),
+    ManagedAddress(crate::locations::LocationId),
     I8Address,
     U8Address,
     Enum(EnumType),
@@ -219,20 +220,22 @@ impl Ty {
         }
     }
     pub fn from_param(p: &cildec::Param<'_>, image: &Image<'_>) -> Result<Self> {
-        if p.by_ref || !p.custom_mods.is_empty() {
-            return Err("byref/modified parameter needs IL fallback".into());
-        }
-        Self::from_sig_in(&p.type_, image)
+        Self::from_param_scoped(p, image, crate::signature_types::TypeContext::default())
     }
     pub fn from_param_scoped(
         p: &cildec::Param<'_>,
         image: &Image<'_>,
         context: crate::signature_types::TypeContext,
     ) -> Result<Self> {
-        if p.by_ref || !p.custom_mods.is_empty() {
+        if !p.custom_mods.is_empty() {
             return Err("byref/modified parameter needs IL fallback".into());
         }
-        Self::from_sig_scoped(&p.type_, image, context)
+        let ty = Self::from_sig_scoped(&p.type_, image, context)?;
+        if p.by_ref {
+            image.address_of(ty)
+        } else {
+            Ok(ty)
+        }
     }
     pub fn cs(self, image: &Image<'_>) -> Result<String> {
         Ok(match self {
@@ -262,6 +265,9 @@ impl Ty {
             Self::ValueAddress(t) => {
                 return Ok(format!("ref {}", image.signature_types.borrow().name(t)?));
             }
+            Self::ManagedAddress(_) => {
+                return Ok(format!("ref {}", image.address_element(self)?.cs(image)?));
+            }
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
             Self::I4Address => "ref int",
@@ -278,7 +284,7 @@ impl Ty {
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
             Self::R4 | Self::F4 => StackKind::Float,
-            Self::I4Address | Self::U4Address => StackKind::Address,
+            Self::I4Address | Self::U4Address | Self::ManagedAddress(_) => StackKind::Address,
             Self::GenericValue(_) => StackKind::GenericValue,
             Self::Value(_) => StackKind::Value,
             Self::ValueAddress(_) | Self::I8Address | Self::U8Address => StackKind::Address,
@@ -309,6 +315,7 @@ impl Ty {
             | Self::GenericValue(_)
             | Self::Value(_)
             | Self::ValueAddress(_)
+            | Self::ManagedAddress(_)
             | Self::I8Address
             | Self::U8Address
             | Self::Null => self,
@@ -335,7 +342,7 @@ impl Ty {
             | Self::GenericValue(_)
             | Self::Value(_) => expression.into(),
             // Copying an acquired managed pointer keeps its original location.
-            Self::ValueAddress(_) => expression.into(),
+            Self::ValueAddress(_) | Self::ManagedAddress(_) => expression.into(),
             Self::ExternalClass(_) => {
                 self.cs(image)?;
                 expression.into()
@@ -351,7 +358,7 @@ impl Ty {
             Self::I4Address | Self::U4Address | Self::I8Address | Self::U8Address => {
                 return Err("managed element address is not an ordinary load".into());
             }
-            Self::Bool => format!("({expression} ? 1 : 0)"),
+            Self::Bool => format!("__cil_bool_load({expression})"),
             _ => format!("unchecked(({})({expression}))", self.stack().cs(image)?),
         })
     }
@@ -384,10 +391,11 @@ impl Ty {
             | Self::U4Address
             | Self::I8Address
             | Self::U8Address
-            | Self::ValueAddress(_) => {
+            | Self::ValueAddress(_)
+            | Self::ManagedAddress(_) => {
                 return Err("managed address cannot be stored as an ordinary value".into());
             }
-            Self::Bool => format!("({expression} != 0)"),
+            Self::Bool => format!("__cil_bool_store({expression})"),
             _ => format!("unchecked(({})({expression}))", self.cs(image)?),
         })
     }

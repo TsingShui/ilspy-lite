@@ -34,7 +34,16 @@ def run(command, expected=0):
     return result
 
 
+def without_boolean_helpers(text):
+    """Remove only known primitive names from an unbound-symbol diagnostic copy."""
+    return re.sub(r"\b__cil_bool_(?:load|store)\b", "", text)
+
+
 def compile_cs(output, sources, executable=False, references=()):
+    sources = list(sources)
+    if any("__cil_bool_load" in p.read_text() or "__cil_bool_store" in p.read_text() for p in sources):
+        helper = ROOT / "tests/dotnet/BooleanStorage.cs"
+        if helper not in sources: sources.append(helper)
     sdk = latest(DOTNET / "sdk")
     refs = latest(DOTNET / "packs/Microsoft.NETCore.App.Ref") / "ref/net10.0"
     stamp = {"sources": {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},

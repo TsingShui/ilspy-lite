@@ -52,6 +52,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         args.insert(0, image.receiver(token)?);
     }
     let ret = Ty::from_param_scoped(&sig.return_type, image, context)?;
+    if ret.kind() == StackKind::Address {
+        return Err("byref return needs escape/lifetime analysis".into());
+    }
     let constructor_owner = if name == ".ctor" {
         if !sig.has_this
             || row.flags & 0x1800 != 0x1800
@@ -292,12 +295,20 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             "// nint/nuint use the target runtime pointer width, not the analyzer host width.\n",
         );
     }
-    if writer
+    let storage_types = writer
         .args
         .iter()
         .chain(&writer.locals)
         .chain(std::iter::once(&writer.ret))
-        .any(|ty| ty.kind() == StackKind::Float)
+        .map(|ty| {
+            if ty.kind() == StackKind::Address {
+                image.address_element(*ty)
+            } else {
+                Ok(*ty)
+            }
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if storage_types.iter().any(|ty| ty.kind() == StackKind::Float)
         || instructions
             .iter()
             .any(|i| matches!(i.opcode.canonical().name(), "conv.r4" | "ldc.r4"))
@@ -306,11 +317,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         out.push_str("// conv.r4 rounds to binary32 (nearest); local/argument snapshots do not add a storage rounding. Field storage and return/call boundaries stay explicit.\n");
     }
     out.push_str(&context.evidence());
-    let external_types = writer
-        .args
+    let external_types = storage_types
         .iter()
-        .chain(&writer.locals)
-        .chain(std::iter::once(&writer.ret))
         .filter_map(|ty| {
             if let Ty::ExternalClass(token) = ty {
                 Some(*token)
@@ -323,11 +331,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         out.push_str(&format!("// external class token 0x{token:08X}: {} = {}; opaque identity, no dependency loaded.\n",
             image.external_class_name(token)?, image.external_class_context(token)?));
     }
-    let structural_types = writer
-        .args
+    let structural_types = storage_types
         .iter()
-        .chain(&writer.locals)
-        .chain(std::iter::once(&writer.ret))
         .filter_map(|ty| match ty {
             Ty::StructuralRef(id) | Ty::GenericValue(id) | Ty::Value(id) | Ty::ValueAddress(id) => {
                 Some(*id)
@@ -339,11 +344,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     for id in structural_types {
         out.push_str(&image.signature_types.borrow().evidence(id)?);
     }
-    let enum_types = writer
-        .args
+    let enum_types = storage_types
         .iter()
-        .chain(&writer.locals)
-        .chain(std::iter::once(&writer.ret))
         .filter_map(|ty| if let Ty::Enum(t) = ty { Some(*t) } else { None })
         .chain(writer.enum_types.iter().copied())
         .collect::<BTreeSet<_>>();
@@ -410,7 +412,10 @@ impl Writer<'_, '_> {
             .pop()
             .ok_or_else(|| "evaluation stack underflow".into())
     }
-    fn track_type(&mut self, ty: Ty) {
+    fn track_type(&mut self, ty: Ty) -> Result<()> {
+        if matches!(ty, Ty::ManagedAddress(_)) {
+            return self.track_type(self.image.address_element(ty)?);
+        }
         match ty {
             Ty::StructuralRef(id) | Ty::GenericValue(id) | Ty::Value(id) | Ty::ValueAddress(id) => {
                 self.structural_types.insert(id);
@@ -420,9 +425,10 @@ impl Writer<'_, '_> {
             }
             _ => {}
         }
+        Ok(())
     }
     fn push(&mut self, ty: Ty, expression: String) -> Result<()> {
-        self.track_type(ty);
+        self.track_type(ty)?;
         let name = format!("v{}", self.next);
         self.next += 1;
         let binding = if ty.kind() == StackKind::Address {
@@ -530,7 +536,9 @@ impl Writer<'_, '_> {
                         format!("l{idx}"),
                     )
                 };
-                let loaded = if ty == Ty::R4 {
+                let loaded = if ty.kind() == StackKind::Address {
+                    expr
+                } else if ty == Ty::R4 {
                     if op == "ldarg" {
                         format!("__cil_arg_r4({expr})")
                     } else {
@@ -547,6 +555,11 @@ impl Writer<'_, '_> {
             }
             "ldarga" | "ldloca" => {
                 let idx = var(i)?;
+                if op == "ldarga" && idx == 0 && self.constructor_owner.is_some() {
+                    return Err(
+                        "constructor receiver slot address needs original-this provenance".into(),
+                    );
+                }
                 let (ty, expr) = if op == "ldarga" {
                     (
                         *self.args.get(idx).ok_or("argument out of range")?,
@@ -558,42 +571,91 @@ impl Writer<'_, '_> {
                         format!("l{idx}"),
                     )
                 };
-                let Ty::Value(id) = ty else {
-                    return Err("managed location of a non-struct slot needs IL fallback".into());
-                };
+                let address = self.image.address_of(ty)?;
                 self.lines.push(format!(
                     "// Acquire the stable managed location of {}; later field access reads/writes that slot, not a copy.",
                     expr
                 ));
-                self.push(Ty::ValueAddress(id), expr)?;
+                self.push(address, expr)?;
             }
             "initobj" => {
                 let address = self.pop()?;
-                if !matches!(address.ty, Ty::ValueAddress(_)) {
-                    return Err("initobj needs an admitted struct location".into());
-                }
-                self.lines.push("// initobj: zero-initialize the referenced struct storage in place; no constructor runs.".into());
+                let token = i.operand.token().ok_or("initobj needs a storage token")?;
+                self.image
+                    .location_operand(address.ty, token, self.type_context)?;
+                self.lines.push("// initobj: zero-initialize the acquired storage in place; no constructor or allocation.".into());
                 self.lines.push(format!("{} = default;", address.name));
+            }
+            "ldobj" | "stobj" | "cpobj" => {
+                let token = i
+                    .operand
+                    .token()
+                    .ok_or("object memory operation needs a storage token")?;
+                if op == "ldobj" {
+                    let address = self.pop()?;
+                    let element =
+                        self.image
+                            .location_operand(address.ty, token, self.type_context)?;
+                    self.track_type(element)?;
+                    self.push(element.stack(), element.load(&address.name, self.image)?)?;
+                } else if op == "stobj" {
+                    let value = self.pop()?;
+                    let address = self.pop()?;
+                    let element =
+                        self.image
+                            .location_operand(address.ty, token, self.type_context)?;
+                    if value.ty.kind() == StackKind::Address {
+                        return Err(
+                            "stobj needs a value snapshot, not another managed location".into()
+                        );
+                    }
+                    self.image.assignable(value.ty, element.stack())?;
+                    self.lines.push(format!(
+                        "{} = {};",
+                        address.name,
+                        element.store(&value.name, self.image)?
+                    ));
+                } else {
+                    let source = self.pop()?;
+                    let destination = self.pop()?;
+                    let element =
+                        self.image
+                            .location_operand(source.ty, token, self.type_context)?;
+                    if self
+                        .image
+                        .location_operand(destination.ty, token, self.type_context)?
+                        != element
+                    {
+                        return Err("cpobj needs identical storage elements".into());
+                    }
+                    self.push(element.stack(), element.load(&source.name, self.image)?)?;
+                    let copied = self.pop()?;
+                    self.lines.push(format!(
+                        "{} = {};",
+                        destination.name,
+                        element.store(&copied.name, self.image)?
+                    ));
+                }
+            }
+            "ldsflda" => {
+                let token = i.operand.token().ok_or("missing static field token")?;
+                let (target, element, readonly, _) = self.image.static_field(token)?;
+                let target = if readonly {
+                    format!("__cil_ldsflda_{:08X}()", token.0)
+                } else {
+                    target
+                };
+                self.track_type(element)?;
+                self.push(self.image.address_of(element)?, target)?;
             }
             "ldflda" => {
                 let t = i.operand.token().ok_or("missing field token")?;
                 let field = self.image.field(t, self.type_context)?;
-                self.track_type(field.ty);
+                self.track_type(field.ty)?;
                 if field.is_static {
                     return Err("instance address of a static field".into());
                 }
-                let address = match field.ty {
-                    Ty::Value(id) => Ty::ValueAddress(id),
-                    Ty::I4 => Ty::I4Address,
-                    Ty::U4 => Ty::U4Address,
-                    Ty::I8 => Ty::I8Address,
-                    Ty::U8 => Ty::U8Address,
-                    _ => {
-                        return Err(
-                            "field address needs an admitted struct or integer field".into()
-                        );
-                    }
-                };
+                let address = self.image.address_of(field.ty)?;
                 let receiver = self.pop()?;
                 let target = match field.owner {
                     Ty::Value(id) => {
@@ -609,6 +671,21 @@ impl Writer<'_, '_> {
                         self.image.assignable(receiver.ty, owner)?;
                         format!("{}.{}", receiver.name, field.name)
                     }
+                };
+                // Initonly fields need an exact address operation, not a source-level writable borrow.
+                let target = if field.readonly {
+                    format!(
+                        "__cil_ldflda_{:08X}({}{})",
+                        t.0,
+                        if receiver.ty.kind() == StackKind::Address {
+                            "ref "
+                        } else {
+                            ""
+                        },
+                        receiver.name
+                    )
+                } else {
+                    target
                 };
                 self.lines.push(format!(
                     "// field token 0x{:08X}: {}",
@@ -633,6 +710,11 @@ impl Writer<'_, '_> {
                         format!("l{idx}"),
                     )
                 };
+                if ty.kind() == StackKind::Address || value.ty.kind() == StackKind::Address {
+                    return Err(
+                        "managed argument/local slot reassignment needs lifetime analysis".into(),
+                    );
+                }
                 self.image.assignable(value.ty, ty.stack())?;
                 let stored = if ty == Ty::R4 {
                     if op == "starg" {
@@ -652,13 +734,21 @@ impl Writer<'_, '_> {
                         .image
                         .allocation_constructor(token, self.type_context)?;
                     for ty in std::iter::once(&allocated).chain(args.iter()) {
-                        self.track_type(*ty);
+                        self.track_type(*ty)?;
                     }
                     let mut values = Vec::new();
                     for ty in args.iter().rev() {
                         let value = self.pop()?;
+                        if value.ty.kind() == StackKind::Address && ty.kind() != StackKind::Address
+                        {
+                            return Err("constructor argument needs a value snapshot, not a managed location".into());
+                        }
                         self.image.assignable(value.ty, ty.stack())?;
-                        values.push(value.name);
+                        values.push(if ty.kind() == StackKind::Address {
+                            format!("ref {}", value.name)
+                        } else {
+                            value.name
+                        });
                     }
                     values.reverse();
                     self.lines.push(format!(
@@ -764,45 +854,69 @@ impl Writer<'_, '_> {
                 };
                 self.push(address, format!("{}[{}]", array.name, index.name))?;
             }
-            "ldind.i8" | "ldind.u8" => {
+            "ldind.i1" | "ldind.u1" | "ldind.i2" | "ldind.u2" | "ldind.i4" | "ldind.u4"
+            | "ldind.i8" | "ldind.u8" | "ldind.i" | "ldind.r4" | "ldind.ref" => {
                 let address = self.pop()?;
-                if !matches!(address.ty, Ty::I8Address | Ty::U8Address) {
-                    return Err("ldind.i8 needs a stable I8 location".into());
-                }
-                self.push(Ty::I8, address.name)?;
-            }
-            "ldind.i4" | "ldind.u4" => {
-                let address = self.pop()?;
-                if !matches!(address.ty, Ty::I4Address | Ty::U4Address) {
-                    return Err("ldind.u4 needs a stable I4 element address".into());
-                }
-                // Read now, from the already checked location, into canonical I4 bits.
-                self.push(Ty::I4, Ty::U4.load(&address.name, self.image)?)?;
-            }
-            "stind.i8" => {
-                let value = self.pop()?;
-                expect(value.ty, Ty::I8)?;
-                let address = self.pop()?;
-                let element = match address.ty {
-                    Ty::I8Address => Ty::I8,
-                    Ty::U8Address => Ty::U8,
-                    _ => return Err("stind.i8 needs a stable I8 location".into()),
+                let element = self.image.address_element(address.ty)?;
+                let storage = match element {
+                    Ty::Enum(e) => e.storage.ty(),
+                    other => other,
                 };
-                self.lines.push(format!(
-                    "{} = {};",
-                    address.name,
-                    element.store(&value.name, self.image)?
-                ));
-            }
-            "stind.i4" => {
-                let value = self.pop()?;
-                expect(value.ty, Ty::I4)?;
-                let address = self.pop()?;
-                let element = match address.ty {
-                    Ty::I4Address => Ty::I4,
-                    Ty::U4Address => Ty::U4,
-                    _ => return Err("stind.i4 needs a stable I4 element address".into()),
+                let requested = match op {
+                    "ldind.i1" if matches!(storage, Ty::I1 | Ty::U1) => Ty::I1,
+                    "ldind.u1" if matches!(storage, Ty::I1 | Ty::U1 | Ty::Bool) => Ty::U1,
+                    "ldind.i2" if matches!(storage, Ty::I2 | Ty::U2 | Ty::Char) => Ty::I2,
+                    "ldind.u2" if matches!(storage, Ty::I2 | Ty::U2 | Ty::Char) => Ty::U2,
+                    "ldind.i4" | "ldind.u4" if matches!(storage, Ty::I4 | Ty::U4) => Ty::I4,
+                    "ldind.i8" | "ldind.u8" if matches!(storage, Ty::I8 | Ty::U8) => Ty::I8,
+                    "ldind.i" if matches!(storage, Ty::Native | Ty::UNative) => Ty::Native,
+                    "ldind.r4" if storage == Ty::R4 => Ty::R4,
+                    "ldind.ref" if element.kind() == StackKind::Ref => element,
+                    _ => {
+                        return Err(
+                            "indirect load width/kind differs from its storage element".into()
+                        );
+                    }
                 };
+                let expression = if element == Ty::Bool {
+                    element.load(&address.name, self.image)?
+                } else if op == "ldind.ref" || requested == Ty::R4 {
+                    requested.load(&address.name, self.image)?
+                } else {
+                    requested.load(
+                        &format!(
+                            "unchecked(({})({}))",
+                            requested.cs(self.image)?,
+                            address.name
+                        ),
+                        self.image,
+                    )?
+                };
+                self.push(requested.stack(), expression)?;
+            }
+            "stind.i1" | "stind.i2" | "stind.i4" | "stind.i8" | "stind.i" | "stind.r4"
+            | "stind.ref" => {
+                let value = self.pop()?;
+                let address = self.pop()?;
+                let element = self.image.address_element(address.ty)?;
+                let storage = match element {
+                    Ty::Enum(e) => e.storage.ty(),
+                    other => other,
+                };
+                let valid = match op {
+                    "stind.i1" => matches!(storage, Ty::I1 | Ty::U1 | Ty::Bool),
+                    "stind.i2" => matches!(storage, Ty::I2 | Ty::U2 | Ty::Char),
+                    "stind.i4" => matches!(storage, Ty::I4 | Ty::U4),
+                    "stind.i8" => matches!(storage, Ty::I8 | Ty::U8),
+                    "stind.i" => matches!(storage, Ty::Native | Ty::UNative),
+                    "stind.r4" => storage == Ty::R4,
+                    "stind.ref" => element.kind() == StackKind::Ref,
+                    _ => false,
+                };
+                if !valid || value.ty.kind() == StackKind::Address {
+                    return Err("indirect store width/kind differs from its storage element".into());
+                }
+                self.image.assignable(value.ty, element.stack())?;
                 self.lines.push(format!(
                     "{} = {};",
                     address.name,
@@ -994,6 +1108,9 @@ impl Writer<'_, '_> {
             "call" | "callvirt" => {
                 let t = i.operand.token().ok_or("missing call token")?;
                 let mut method = self.image.method_ref(t, self.type_context)?;
+                if method.ret.kind() == StackKind::Address {
+                    return Err("byref call result needs escape/lifetime analysis".into());
+                }
                 let virtual_call = op == "callvirt";
                 if virtual_call {
                     if method.generic_virtual {
@@ -1035,13 +1152,20 @@ impl Writer<'_, '_> {
                     "exact IL call; no virtual dispatch or added null check"
                 };
                 for ty in method.args.iter().chain(std::iter::once(&method.ret)) {
-                    self.track_type(*ty);
+                    self.track_type(*ty)?;
                 }
                 let mut values = Vec::new();
                 for &ty in method.args.iter().rev() {
                     let v = self.pop()?;
+                    if v.ty.kind() == StackKind::Address && ty.kind() != StackKind::Address {
+                        return Err(
+                            "call argument needs a value snapshot, not a managed location".into(),
+                        );
+                    }
                     self.image.assignable(v.ty, ty.stack())?;
-                    values.push(if ty == Ty::R4 {
+                    values.push(if ty.kind() == StackKind::Address {
+                        format!("ref {}", v.name)
+                    } else if ty == Ty::R4 {
                         format!("__cil_call_arg_r4({})", v.name)
                     } else {
                         ty.store(&v.name, self.image)?
@@ -1067,8 +1191,15 @@ impl Writer<'_, '_> {
                     self.lines.push("// Core Object constructor initialization: exact IL call, no allocation, no virtual dispatch, no added null check.".into());
                 } else if let Some(owner) = method.receiver {
                     let receiver = self.pop()?;
-                    if let Ty::Value(id) = owner {
-                        if receiver.ty != Ty::ValueAddress(id) {
+                    if owner.kind() != StackKind::Ref {
+                        let element = if owner.kind() == StackKind::Address {
+                            self.image.address_element(owner)?
+                        } else {
+                            owner
+                        };
+                        if receiver.ty.kind() != StackKind::Address
+                            || self.image.address_element(receiver.ty)? != element
+                        {
                             return Err(
                                 "struct instance call needs the exact managed location of that value type"
                                     .into(),
@@ -1171,7 +1302,7 @@ impl Writer<'_, '_> {
                     if explicit_receiver {
                         values.insert(
                             0,
-                            if matches!(owner, Ty::Value(_) | Ty::ValueAddress(_)) {
+                            if owner.kind() != StackKind::Ref {
                                 format!("ref {}", receiver.name)
                             } else {
                                 receiver.name
@@ -1213,7 +1344,7 @@ impl Writer<'_, '_> {
             "ldfld" | "stfld" => {
                 let t = i.operand.token().ok_or("missing field token")?;
                 let field = self.image.field(t, self.type_context)?;
-                self.track_type(field.ty);
+                self.track_type(field.ty)?;
                 if field.is_static {
                     return Err("instance access to static field".into());
                 }
@@ -1291,7 +1422,7 @@ impl Writer<'_, '_> {
             "ldsfld" | "stsfld" => {
                 let t = i.operand.token().ok_or("missing field token")?;
                 let (field, ty, readonly, owner) = self.image.static_field(t)?;
-                self.track_type(ty);
+                self.track_type(ty)?;
                 self.lines.push(format!("// field token 0x{:08X}", t.0));
                 if op == "ldsfld" {
                     self.push(ty.stack(), ty.load(&field, self.image)?)?;
@@ -1333,6 +1464,11 @@ impl Writer<'_, '_> {
                     self.lines.push("return;".into());
                 } else {
                     let value = self.pop()?;
+                    if value.ty.kind() == StackKind::Address {
+                        return Err(
+                            "ordinary return needs a value snapshot, not a managed location".into(),
+                        );
+                    }
                     self.image.assignable(value.ty, self.ret.stack())?;
                     let returned = if self.ret == Ty::R4 {
                         format!("__cil_return_r4({})", value.name)

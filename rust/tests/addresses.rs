@@ -228,7 +228,7 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
             ),
             (
                 &[0x21, 1, 0, 0, 0, 0, 0, 0, 0, 0x55, 0x2a][..],
-                "stind.i8 needs a stable I8 location",
+                "indirect store width/kind differs from its storage element",
             ),
             (
                 &[0x25, 0x58, 0x26, 0x2a][..],

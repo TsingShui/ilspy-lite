@@ -69,17 +69,17 @@ fn readable_fallback_keeps_complete_il_inside_its_method_and_class_body() {
         (
             include_bytes!("fixtures/reference-call-release.bin").as_slice(),
             "ReferenceCallCases.Ops",
-            "UnsupportedByRef",
+            "UnsupportedGvm",
         ),
         (
             include_bytes!("fixtures/reference-call-debug.bin").as_slice(),
             "ReferenceCallCases.Ops",
-            "UnsupportedByRef",
+            "UnsupportedGvm",
         ),
         (
-            include_bytes!("fixtures/release.bin").as_slice(),
-            "LiteSamples.RecordSample",
-            "PrintMembers",
+            include_bytes!("fixtures/exception-region-release.bin").as_slice(),
+            "ExceptionRegionCases.Ops",
+            "Filtered",
         ),
     ] {
         let token = list_methods(bytes)

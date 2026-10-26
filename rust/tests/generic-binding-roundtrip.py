@@ -77,7 +77,7 @@ def main():
                 text = re.sub(r"\bGenericBindingCases\." + owner + r"\b", "GenericBindingCases.Recovered" + owner, text)
             if name == ".cctor": text = text.replace("static Bag()", "static RecoveredBag()")
             code = "\n".join(line for line in text.splitlines() if not line.strip().startswith("//"))
-            if "__cil_" in code: raise ValueError("Unbound recovered body: " + family + "." + name)
+            if "__cil_" in support.without_boolean_helpers(code): raise ValueError("Unbound recovered body: " + family + "." + name)
             methods[(family, name)] = text
         def compile_carrier(label, bodies):
             source = OUT / f"{label}-{config}.cs"

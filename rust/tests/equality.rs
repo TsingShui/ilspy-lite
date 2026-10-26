@@ -24,7 +24,7 @@ mod fixture_contract;
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[];
 
 #[test]
-fn boxing_a_boolean_call_result_converts_its_normalized_stack_value() {
+fn boxing_a_boolean_call_result_preserves_its_cli_storage_bits() {
     for bytes in IMAGES {
         let method = list_methods(bytes)
             .unwrap()
@@ -43,7 +43,7 @@ fn boxing_a_boolean_call_result_converts_its_normalized_stack_value() {
             "{}",
             result.text
         );
-        assert!(result.text.contains("!= 0"), "{}", result.text);
+        assert!(result.text.contains("__cil_bool_store("), "{}", result.text);
         assert!(!result.text.contains("((bool)("), "{}", result.text);
     }
 }

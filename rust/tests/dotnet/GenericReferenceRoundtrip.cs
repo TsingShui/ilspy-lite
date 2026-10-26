@@ -382,6 +382,26 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--value-receiver-check")
+        {
+            ValueReceiverMain(args);
+            return;
+        }
+        if (args[1] == "--managed-initonly-variant" || args[1] == "--managed-bool-variant")
+        {
+            ManagedInitOnlyVariant(args);
+            return;
+        }
+        if (args[1] == "--managed-field-plan")
+        {
+            ManagedFieldAddressPlan(args);
+            return;
+        }
+        if (args[1] == "--managed-location-check")
+        {
+            ManagedLocationMain(args);
+            return;
+        }
         if (args[1] == "--reference-call-plan")
         {
             ReferenceCallPlan(args);

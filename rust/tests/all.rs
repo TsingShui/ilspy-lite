@@ -90,6 +90,8 @@ mod external_enums;
 mod external_properties;
 #[path = "external_values.rs"]
 mod external_values;
+#[path = "managed_locations.rs"]
+mod managed_locations;
 #[path = "reference_calls.rs"]
 mod reference_calls;
 

@@ -95,7 +95,7 @@ def main():
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
             code = "\n".join(line for line in body.splitlines()
                               if not line.lstrip().startswith("//"))
-            if "__cil_" in code:
+            if "__cil_" in support.without_boolean_helpers(code):
                 skipped.append(name)
                 continue
             snippets.append(body)

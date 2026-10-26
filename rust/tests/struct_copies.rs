@@ -144,11 +144,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "StructCopyCases.UnsupportedOps",
-        "UnsupportedByRef",
-        "byref/modified parameter needs IL fallback",
-    ),
-    (
-        "StructCopyCases.UnsupportedOps",
         "UnsupportedRefLike",
         "byref-like struct copies need location/lifetime semantics",
     ),

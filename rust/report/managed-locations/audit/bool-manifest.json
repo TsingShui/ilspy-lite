@@ -1,0 +1,33 @@
+{
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/managed-locations/behavior/managed-location-release-bool-bits.bin",
+  "token": "0x06000010",
+  "exit_codes": {
+    "ours": 0,
+    "il": 0,
+    "ilspy": 0
+  },
+  "commands": {
+    "ours": [
+      "target/release/ilspy-lite",
+      "decompile",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/managed-locations/behavior/managed-location-release-bool-bits.bin",
+      "--method",
+      "0x06000010",
+      "--no-auto-references"
+    ],
+    "il": [
+      "target/release/ilspy-lite",
+      "il",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/managed-locations/behavior/managed-location-release-bool-bits.bin",
+      "--method",
+      "0x06000010"
+    ],
+    "ilspy": [
+      "/Users/bytedance/.dotnet10/dotnet",
+      "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/managed-locations/behavior/managed-location-release-bool-bits.bin",
+      "-m",
+      "0x06000010"
+    ]
+  }
+}

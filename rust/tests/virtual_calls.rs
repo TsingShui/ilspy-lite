@@ -24,19 +24,9 @@ mod fixture_contract;
 // Frozen known-unsupported set: (owner, method, stable reason substring).
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
-        "VirtualCallCases.Shape",
-        "Describe",
-        "managed location of a non-struct slot needs IL fallback",
-    ),
-    (
         "VirtualCallCases.Ops",
         "UnsupportedConstrained",
         "unsupported opcode constrained.",
-    ),
-    (
-        "VirtualCallCases.Value",
-        "ToString",
-        "incompatible value/receiver types",
     ),
     (
         "VirtualCallCases.Compute",

@@ -123,6 +123,17 @@ static System.Func<object, object[], object> __CreateLeaf(int token, bool virtua
         }
         object[] Candidates(Type type)
         {
+            if (type.IsByRef)
+            {
+                Type element = type.GetElementType();
+                Type cell = typeof(ManagedArgument<>).MakeGenericType(element);
+                return Candidates(element).Select(value =>
+                {
+                    object box = Activator.CreateInstance(cell);
+                    cell.GetField("Value").SetValue(box, value);
+                    return box;
+                }).ToArray();
+            }
             if (type == typeof(int)) return new object[] { 0, 2, -2 };
             if (type == typeof(string)) return new object[] { null, "", "next" };
             if (type == typeof(int[])) return new object[] { null, Array.Empty<int>(), new[] { 1, -2, 7 } };
@@ -181,8 +192,9 @@ static System.Func<object, object[], object> __CreateLeaf(int token, bool virtua
             {
                 object[] beforeArgs = arguments.Select(Copy).ToArray();
                 object[] afterArgs = arguments.Select(Copy).ToArray();
-                Outcome before = Capture(() => OriginalCall(original)(null, beforeArgs), new List<State>());
-                Outcome after = Capture(() => lowered.Invoke(null, afterArgs), new List<State>());
+                bool byref = parameters.Any(type => type.IsByRef);
+                Outcome before = Capture(() => byref ? ManagedInvoker(original)(beforeArgs) : OriginalCall(original)(null, beforeArgs), new List<State>());
+                Outcome after = Capture(() => byref ? ManagedInvoker(lowered)(afterArgs) : lowered.Invoke(null, afterArgs), new List<State>());
                 string StateOf(object[] values) => string.Join("|", values.Select(value => Describe(value, Array.Empty<object>())));
                 if (before.Error != after.Error || Describe(before.Value, beforeArgs) != Describe(after.Value, afterArgs)
                     || StateOf(beforeArgs) != StateOf(afterArgs))

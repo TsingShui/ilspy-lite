@@ -1,0 +1,117 @@
+[
+  {
+    "slug": "0000-0600021D",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Collections.FSharpMap`2",
+    "name": "TryGetValue",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600021D",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0002-06000146",
+    "assembly": "ICSharpCode.Decompiler.Tests",
+    "owner": "ICSharpCode.Decompiler.Tests.TestCases.Correctness.Capturing",
+    "name": "ReadLine",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+    "token": "0x06000146",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/nunit.framework.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0003-0600008B",
+    "assembly": "ICSharpCode.Decompiler",
+    "owner": "ICSharpCode.Decompiler.CecilExtensions",
+    "name": "GetDefaultMemberName",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "token": "0x0600008B",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0004-0600004D",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.Binder",
+    "name": "ResolveOverloads",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x0600004D",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1041-06000068",
+    "assembly": "OpenRA.Game",
+    "owner": "OpenRA.CPos",
+    "name": "Equals",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "token": "0x06000068",
+    "references": [],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1042-060000BE",
+    "assembly": "OpenRA.Mods.Common",
+    "owner": "OpenRA.Mods.Common.TargetExtensions",
+    "name": "Recalculate",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+    "token": "0x060000BE",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

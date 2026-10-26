@@ -45,7 +45,7 @@ def main():
             match = re.search(r" StructReceiverCases\.(\w+)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
             if match:
                 names[token] = match[2]
-                if not match[2].startswith("Unsupported") and match[2] != "Helper":
+                if not match[2].startswith("Unsupported") or match[2] in {"UnsupportedByRef", "UnsupportedLocalEscape"}:
                     selected.append((token, match[2]))
         if not selected: raise ValueError("struct receiver selection is empty")
         snippets, identities = [], {}

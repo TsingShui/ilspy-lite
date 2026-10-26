@@ -13,7 +13,8 @@ direct/static call for a foreign constructed reference owner; its caller-scoped
 signature supplies argument/result types. Metadata-proven property/member source
 syntax is optional and separate from the exact runtime call. These are original
 IL call leaves, not selected-method/body proxies. Value layout, arbitrary
-inheritance, allocation kind, byrefs and GVM lookup remain separately gated.
+inheritance, allocation kind, unsupported managed-location shapes and GVM lookup
+remain separately gated.
 
 Proved reference TypeSpecs can be cast/tested; reference-type unbox.any uses
 castclass semantics, preserving null and successful reference identity. Qualified
@@ -31,9 +32,38 @@ callvirt retains its original MethodSpec token in the existing callvirt leaf.
 
 Generic virtual callvirt remains fallback: owned runtime validation exposed a
 null-receiver/argument-effect ordering difference not represented by the current
-snapshot model. External generic instance dispatch, byref/modified signatures
-and unsupported arguments are separately refused. See
+snapshot model. External generic instance dispatch, unsupported modified
+signatures and unsupported arguments are separately refused. See
 [MethodSpec acceptance](acceptance/corpus/METHOD_INSTANTIATIONS.md).
+
+## Typed managed locations and byref calls
+
+Plain ref/out parameters carry managed pointers, not incoming value copies.
+Image-scoped descriptors retain invariant element identity; stable ref bindings
+retain storage identity and acquisition timing. Admitted primitive, reference,
+enum, struct and scoped generic elements support indirect loads/stores and
+ldobj/stobj/cpobj/initobj without inferred host layout. Reads produce value
+snapshots at their IL instruction, including Boolean and narrow-width stack
+normalization; writes reach the original aliased storage even before exceptions.
+__cil_bool_load reads the Boolean storage byte as an unsigned I4 value;
+__cil_bool_store truncates I4 bits to that byte without canonicalizing nonzero
+values to 1. Comparisons may still produce canonical 0/1, and branches test
+zero/nonzero. Byte value 2 is observable through ordinary indirect storage and
+boxing; a C# truth-value conversion is not a substitute for these operations.
+
+Known core scalar and proved value owners receive direct calls through the same
+location, not a copied/boxed receiver. Initonly field addresses use exact
+__cil_ldflda_TOKEN / __cil_ldsflda_TOKEN leaves returning the actual pointer,
+with original null/access/initialization behavior. They do not fabricate a
+C# writable borrow of a readonly field or replace an address with its contents.
+Direct field-store permission checks are separate. Constructor this-slot
+exposure remains refused without entry-this provenance.
+
+Flat readable compaction is disabled in ref-bound bodies so reads cannot be
+substituted with mutable aliases after a write. Byref results/returns, byref
+locals/pointer slots, addresses on CFG edges, unsupported modifiers/prefixes and
+unmanaged pointers remain refused. See
+[managed-location acceptance](acceptance/corpus/MANAGED_LOCATIONS.md).
 
 ## Presentation versus semantics
 
@@ -267,22 +297,24 @@ type, not a copy: field reads and writes through it act on the caller's storage.
 __cil_value_HASH still names the value type; the address is a separate stack
 category. ldarga/ldloca acquire the location of an admitted struct argument or
 local, initobj zero-initializes that storage in place (no constructor runs), and
-ldflda yields the location of a struct or integer field. Integer locations reuse
+ldflda yields the location of an admitted field. Integer locations reuse
 the existing address model with I4/I8 signed and unsigned categories.
 
 Reading a field from a copied value is allowed; writing through a copy is not.
 Struct instance calls require the exact location type and render the receiver
 with an explicit ref, so a call site cannot silently pass a value. Addresses
-cannot cross a basic-block edge or be stored as values; byref parameters/returns,
-ref structs, external/generic value types, struct-element arrays and EH remain
-independent gates. See
+cannot cross a basic-block edge or be stored as ordinary values. Plain byref
+parameters are admitted; byref returns, ref structs, unproved value types and
+struct-element address operations remain independent gates. Bounded EH has its
+own region/transfer checks. See
 [struct receiver acceptance](acceptance/corpus/STRUCT_RECEIVERS.md).
 
 Instance field reads/writes retain the original token/owner and position. Base
 receiver casts remain when needed to avoid name hiding. Initonly writes require
 the exact owning instance constructor and a directly proved unchanged entry-this
 load in this subset; this this-only restriction is conservative, not an extra
-CLI initonly requirement. Static initonly writes remain unsupported.
+CLI initonly requirement. Static initonly writes require the exact owning static
+initializer; field-address operations remain distinct from direct field stores.
 
 Closed SZARRAY descriptors also occupy structural reference slots, including
 object[], byte[], string[], struct/enum arrays and jagged vectors. Whole-array
@@ -305,7 +337,8 @@ For admitted zero-based one-dimensional int[]/uint[] array operations:
   an I4 snapshot. `stind.i4` writes I4 bits back at the store instruction, with
   signed/unsigned storage encoding. No second array lookup/check is synthesized.
 - Address dup retains the same location. Addresses crossing a basic-block edge,
-  general byref parameters/locals/returns and prefixes remain unsupported.
+  byref locals/returns and unsupported prefixes remain gated; admitted byref
+  parameters retain their true locations.
 
 ## Local enum storage
 

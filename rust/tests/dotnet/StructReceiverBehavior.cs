@@ -43,7 +43,7 @@ internal static partial class GenericReferenceRoundtrip
         return result;
     }
 
-    static object ReceiverArgument(Type type, int variant) => type == typeof(int)
+    static object ReceiverArgument(Type type, int variant) => type.IsByRef ? ReceiverArgument(type.GetElementType(), variant) : type == typeof(int)
         ? (variant == 0 ? int.MinValue : 11)
         : type == typeof(long) ? (variant == 0 ? long.MaxValue : -5L) : ReceiverSample(type, variant);
 
@@ -124,7 +124,7 @@ internal static partial class GenericReferenceRoundtrip
             .Where(f => !f.IsLiteral && !f.IsInitOnly).ToArray();
         MethodInfo[] selected = new[] { point, line, ops }.SelectMany(t => t.GetMethods(
                 BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) && m.Name != "Helper")
+            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedByRef" || m.Name == "UnsupportedLocalEscape")
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned receiver selection is empty.");
         Type carrier = generated.GetType("StructReceiverCases.Recovered")

@@ -655,9 +655,13 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         .filter(|line| !line.starts_with("//"))
         .map(str::to_owned)
         .collect();
-    // Exception regions keep their lexical boundaries and snapshot lifetimes.
-    // Flat-block compaction is not applied across runtime handler entries.
-    let lines = if lines.iter().any(|line| line == "try {") {
+    // Runtime regions and acquired locations keep explicit snapshot lifetimes.
+    // A ref binding is a mutable location, not an immutable value that can be
+    // substituted into a later expression after an alias write or call.
+    let lines = if lines
+        .iter()
+        .any(|line| line == "try {" || line.starts_with("ref "))
+    {
         lines
     } else {
         let lines = compact_lines(lines);
@@ -833,7 +837,9 @@ fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
                     .map(|(_, l)| identifiers(l).iter().filter(|id| *id == name).count())
                     .sum::<usize>();
                 let next = &lines[i + 1];
-                let replacement = if next == &format!("return ({name} != 0);") {
+                let replacement = if next == &format!("return ({name} != 0);")
+                    || next == &format!("return __cil_bool_store({name});")
+                {
                     Some(format!("return ({condition});"))
                 } else if next == &format!("if ({name} == 0) {{") {
                     Some(format!("if (!({condition})) {{"))
@@ -851,19 +857,36 @@ fn compact_lines(mut lines: Vec<String>) -> Vec<String> {
                 }
             }
         }
-        if lines[i] == "return (1 != 0);" {
+        if let Some((name, expr)) = value_declaration(&lines[i])
+            && let Some(value) = expr
+                .strip_prefix("__cil_bool_load(")
+                .and_then(|s| s.strip_suffix(')'))
+            && lines[i + 1] == format!("return __cil_bool_store({name});")
+            && lines
+                .iter()
+                .enumerate()
+                .filter(|(n, _)| *n != i)
+                .map(|(_, line)| identifiers(line).iter().filter(|id| *id == name).count())
+                .sum::<usize>()
+                == 1
+        {
+            lines[i + 1] = format!("return {value};");
+            lines.remove(i);
+            continue;
+        }
+        if lines[i] == "return (1 != 0);" || lines[i] == "return __cil_bool_store(1);" {
             lines[i] = "return true;".into();
         }
-        if lines[i] == "return (0 != 0);" {
+        if lines[i] == "return (0 != 0);" || lines[i] == "return __cil_bool_store(0);" {
             lines[i] = "return false;".into();
         }
         i += 1;
     }
     for line in &mut lines {
-        if line == "return (1 != 0);" {
+        if line == "return (1 != 0);" || line == "return __cil_bool_store(1);" {
             *line = "return true;".into();
         }
-        if line == "return (0 != 0);" {
+        if line == "return (0 != 0);" || line == "return __cil_bool_store(0);" {
             *line = "return false;".into();
         }
     }

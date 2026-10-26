@@ -54,7 +54,7 @@ def main():
             body = generic.inline_allocation(generic.inline_structural_types(
                 generic.without_dependency_report(readable.stdout)))
             code = "\n".join(line for line in body.splitlines() if not line.strip().startswith("//"))
-            if "__cil_" in code: raise ValueError("Unexecutable selected method: " + name)
+            if "__cil_" in support.without_boolean_helpers(code): raise ValueError("Unexecutable selected method: " + name)
             methods[name] = body
             (OUT / f"{config}-{name}.cs").write_text(body)
         if not methods: raise ValueError("Owned abstract-member selection is empty")

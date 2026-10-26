@@ -63,28 +63,13 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "StructReceiverCases.Ops",
-        "UnsupportedByRef",
-        "byref/modified parameter needs IL fallback",
-    ),
-    (
-        "StructReceiverCases.Ops",
-        "UnsupportedLocalEscape",
-        "byref/modified parameter needs IL fallback",
-    ),
-    (
-        "StructReceiverCases.Ops",
         "UnsupportedRefReturn",
-        "byref/modified parameter needs IL fallback",
+        "byref return needs escape/lifetime analysis",
     ),
     (
         "StructReceiverCases.Ops",
         "UnsupportedArray",
         "operation needs a core TypeRef",
-    ),
-    (
-        "StructReceiverCases.Ops",
-        "Helper",
-        "byref/modified parameter needs IL fallback",
     ),
 ];
 

@@ -23,6 +23,42 @@ using System.Runtime.Loader;
 
 internal static partial class GenericReferenceRoundtrip
 {
+    static void ValueReceiverMain(string[] args)
+    {
+        if (args.Length != 3) throw new Exception("Expected owned value-receiver carrier.");
+        var generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(System.IO.Path.GetFullPath(args[2]));
+        var carrier = generated.GetType("VirtualCallCases.RecoveredReceivers") ?? throw new Exception("Receiver carrier missing.");
+        int comparisons = 0;
+        foreach (string name in new[] { "Shape", "Value" })
+        {
+            Type owner = fixture.GetType("VirtualCallCases." + name) ?? throw new Exception("Owned receiver missing.");
+            MethodInfo original = owner.GetMethod(name == "Shape" ? "Describe" : "ToString", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            MethodInfo lowered = carrier.GetMethod(name + "_Describe") ?? throw new Exception("Recovered receiver method missing.");
+            Type receiverType = name == "Shape" ? fixture.GetType("VirtualCallCases.Square") : owner;
+            FieldInfo member = receiverType.GetFields(BindingFlags.Public | BindingFlags.Instance).Single();
+            foreach (int number in new[] { 0, 7, int.MinValue })
+            foreach (bool isNull in name == "Shape" ? new[] { false, true } : new[] { false })
+            {
+                object receiver = isNull ? null : Activator.CreateInstance(receiverType);
+                if (receiver != null) member.SetValue(receiver, number);
+                object InvokeLowered() => name == "Value"
+                    ? ReceiverCall(lowered, true, true)(receiver, Array.Empty<object>())
+                    : OriginalCall(lowered)(null, new[] { receiver });
+                Outcome before = Capture(() => ReceiverCall(original, false, false)(receiver, Array.Empty<object>()), new System.Collections.Generic.List<State>());
+                Outcome after = Capture(InvokeLowered, new System.Collections.Generic.List<State>());
+                Outcome originalAgain = Capture(() => ReceiverCall(original, false, false)(receiver, Array.Empty<object>()), new System.Collections.Generic.List<State>());
+                Outcome loweredAgain = Capture(InvokeLowered, new System.Collections.Generic.List<State>());
+                if (before.Error != after.Error || !Equals(before.Value, after.Value)
+                    || originalAgain.Error != loweredAgain.Error || !Equals(originalAgain.Value, loweredAgain.Value)
+                    || (before.Error == null && ReferenceEquals(before.Value, originalAgain.Value) != ReferenceEquals(after.Value, loweredAgain.Value))
+                    || (receiver != null && !Equals(member.GetValue(receiver), number)))
+                    throw new Exception("Recovered value receiver differs: " + name);
+                comparisons++;
+            }
+        }
+        Console.WriteLine("Value receiver behavior: " + comparisons + " comparisons, 2 recovered methods; direct base/value receivers, virtual inner dispatch, signed values, null checks and result freshness match.");
+    }
+
     static void VirtualMain(string[] args)
     {
         if (args.Length != 3 || fixture.GetType("VirtualCallCases.Ops") == null)
