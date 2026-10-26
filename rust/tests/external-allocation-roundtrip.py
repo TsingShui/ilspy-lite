@@ -69,17 +69,28 @@ def main():
             if readable.stderr != details.stderr:
                 raise ValueError("view changed admission for " + name)
             body = generic.inline_structural_types(without_dependency_report(readable.stdout))
-            # These methods return the object they allocate, so the declared return
-            # type is the owner: `__cil_type_X` and `__cil_newobj_X` become it.
-            owner = re.match(
-                r"(?:class|valuetype) \[[^\]]+\](.+?) ExternalAllocationCases\.Ops::",
-                signatures[token],
+            # Each `newobj` comment names the owner in metadata notation; the
+            # intrinsic plus its type alias become `new Owner(args)` on that line.
+            owners = dict(re.findall(
+                r"// newobj token 0x([0-9A-F]{8}): (?:class |valuetype )?(.+?)::\.ctor",
+                details.stdout,
+            ))
+
+            def allocate(match):
+                indent, variable, site, arguments = match.groups()
+                owner = owners.get(site)
+                if owner is None:
+                    raise ValueError("allocation owner is not named at " + site)
+                type_name = re.sub(r"\[[^\]]+\]", "", owner).replace("/", ".")
+                return f"{indent}{type_name} {variable} = new {type_name}({arguments});"
+
+            body = re.sub(
+                r"(?m)^(\s*)__cil_type_[0-9A-F]{8} (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
+                allocate,
+                body,
             )
-            if owner is None:
-                raise ValueError("external-allocation selection is not an object return: " + name)
-            owner = owner.group(1).replace("/", ".")
-            body = re.sub(r"__cil_type_[0-9A-F]{8}", owner, body)
-            body = re.sub(r"__cil_newobj_[0-9A-F]{8}\(", "new " + owner + "(", body)
+            if "__cil_type_" in body or "__cil_newobj_" in body:
+                raise ValueError("unexecutable allocation alias in " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
             code = "\n".join(line for line in body.splitlines()

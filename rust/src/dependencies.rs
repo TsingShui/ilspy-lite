@@ -153,6 +153,22 @@ pub(crate) enum ExternalAllocationLookup {
     Unavailable,
 }
 
+/// Facts read from the defining image for an instance field on a foreign type.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalField {
+    pub name: String,
+    pub owner_name: String,
+    pub flags: u16,
+}
+
+/// Outcome of asking the context about one foreign field.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalFieldLookup {
+    Fact(ExternalField),
+    Refused(String),
+    Unavailable,
+}
+
 /// A value type proven through the supplied references.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum ExternalValue {
@@ -445,6 +461,57 @@ impl DependencyContext {
             constructed,
             arity: declared,
             parameter_count: signature.params.len(),
+        })
+    }
+
+    /// Facts for an instance field read or write whose owner is referenced.
+    ///
+    /// Only the field's identity and flags come from the definition; its type is
+    /// read from the caller-scoped `MemberRef` signature by `Image::field`.
+    pub(crate) fn external_field(&self, token: u32) -> ExternalFieldLookup {
+        let field = match self.resolve_field(token) {
+            Ok(field) => field,
+            Err(_) => return ExternalFieldLookup::Unavailable,
+        };
+        if field.flags & 0x0010 != 0 {
+            return ExternalFieldLookup::Refused("field is static".into());
+        }
+        if field.flags & 0x0040 != 0 {
+            return ExternalFieldLookup::Refused("field is a literal with no storage".into());
+        }
+        if field.flags & 0x1000 != 0 {
+            return ExternalFieldLookup::Refused("field has a marshalled layout".into());
+        }
+        let image = match self.image_for_source(&field.owner.definition.source) {
+            Ok(image) => image,
+            Err(_) => return ExternalFieldLookup::Unavailable,
+        };
+        let definition = cildec::Token(field.owner.definition.token);
+        if definition.table() != Some(cildec::TableId::TypeDef) {
+            return ExternalFieldLookup::Unavailable;
+        }
+        let flags = match image.md.tables().type_def(definition.rid()) {
+            Ok(row) => row.flags,
+            Err(_) => return ExternalFieldLookup::Unavailable,
+        };
+        if flags & 0x0020 != 0 {
+            return ExternalFieldLookup::Refused("owner is an interface".into());
+        }
+        let is_value = matches!(image.has_core_base(definition, "ValueType"), Ok(true))
+            || matches!(image.has_core_base(definition, "Enum"), Ok(true));
+        if is_value {
+            return ExternalFieldLookup::Refused(
+                "owner is a value type; its fields need managed-location semantics".into(),
+            );
+        }
+        let owner_name = match crate::symbol_names::type_name(&image, definition, true) {
+            Ok(name) if !name.is_empty() => name,
+            _ => return ExternalFieldLookup::Refused("owner name is not usable".into()),
+        };
+        ExternalFieldLookup::Fact(ExternalField {
+            name: field.name,
+            owner_name,
+            flags: field.flags,
         })
     }
 

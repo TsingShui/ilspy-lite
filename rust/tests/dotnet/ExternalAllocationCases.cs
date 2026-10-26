@@ -23,6 +23,7 @@ namespace ExternalAllocations;
 
 public class Node
 {
+    public static int Zero;
     public int Value;
     public Node() { Value = 7; }
     public Node(int value) { Value = value; }
@@ -82,6 +83,17 @@ public static class Ops
     public static Box<int> MakeBox(int value) => new Box<int>(value);
     public static Outer.Inner MakeNested(int value) => new Outer.Inner(value);
     public static Pair MakeMixed(string text, int number) => new Pair(text, number);
+    public static int ReadValue(Node node) => node.Value;
+    public static int ReadAfterAllocation(int value) => new Node(value).Value;
+    public static void WriteValue(Node node, int value) { node.Value = value; }
+    public static int WriteAndRead(int value)
+    {
+        Node node = new Node(0);
+        node.Value = value;
+        return node.Value;
+    }
+    public static int UnsupportedStatic() => Node.Zero;
+    public static int UnsupportedStructField(Point point) => point.X;
     public static int UnsupportedStruct() => new Point(1, 2).X;
 }
 #endif

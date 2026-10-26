@@ -29,15 +29,24 @@ const EXPECTED_PARTIAL: &[(&str, &str)] = &[
         "UnsupportedStruct",
         "external allocation needs dependency facts: owner is a value type; value initialisation is not an object identity",
     ),
+    ("UnsupportedStatic", "external field needs IL fallback"),
+    (
+        "UnsupportedStructField",
+        "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
+    ),
 ];
 
 /// Positives must name the owner and its kind, keep the argument order, and report
 /// exactly one fresh identity per site.
-const EXPECTED: &[(&str, &str)] = &[
-    ("MakeNode", "ExternalAllocations.Node"),
-    ("MakeDefault", "ExternalAllocations.Node"),
-    ("MakeSealed", "ExternalAllocations.Sealed"),
-    ("MakeMixed", "ExternalAllocations.Pair"),
+const EXPECTED: &[(&str, Option<&str>)] = &[
+    ("MakeNode", Some("ExternalAllocations.Node")),
+    ("MakeDefault", Some("ExternalAllocations.Node")),
+    ("MakeSealed", Some("ExternalAllocations.Sealed")),
+    ("MakeMixed", Some("ExternalAllocations.Pair")),
+    // These return the field's value, so the owner appears only as the local's
+    // alias; what must hold is one allocation and a read/write on that local.
+    ("ReadAfterAllocation", None),
+    ("WriteAndRead", None),
 ];
 
 fn context(bytes: &[u8], library: &[u8]) -> DependencyContext {
@@ -72,11 +81,19 @@ fn declared_reference_constructors_allocate_one_fresh_identity() {
                         result.text
                     );
                 }
-                assert!(
-                    result.text.contains(owner),
-                    "{name} does not name {owner}: {}",
-                    result.text
-                );
+                if let Some(owner) = owner {
+                    assert!(
+                        result.text.contains(owner),
+                        "{name} does not name {owner}: {}",
+                        result.text
+                    );
+                } else {
+                    assert!(
+                        result.text.contains("Value"),
+                        "{name} does not access the field: {}",
+                        result.text
+                    );
+                }
                 assert_eq!(
                     result.text.matches("__cil_newobj_").count(),
                     1,
@@ -111,7 +128,11 @@ fn without_references_every_body_is_unchanged() {
     for (bytes, _) in IMAGES {
         // No reference set means no fact for any of these sites: they must stay
         // Partial with the pre-existing message, byte-identical to the old run.
-        for (name, _) in EXPECTED.iter().chain(EXPECTED_PARTIAL.iter()) {
+        let all = EXPECTED
+            .iter()
+            .map(|(name, _)| name)
+            .chain(EXPECTED_PARTIAL.iter().map(|(name, _)| name));
+        for name in all {
             let bare = DependencyContext::new(bytes.to_vec())
                 .unwrap()
                 .decompile(token(bytes, name), OutputStyle::Readable)

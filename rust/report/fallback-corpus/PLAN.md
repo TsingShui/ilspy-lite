@@ -9,8 +9,8 @@ Authoritative numbers and the ordered queue. Update this file when a milestone l
 |---|---:|
 | managed images / body images | 614 / 319 |
 | bodies | 770,748 |
-| Decompiled / Partial | **334,213 / 436,535** |
-| unrecovered | **56.6354%** |
+| Decompiled / Partial | **334,899 / 435,849** |
+| unrecovered | **56.5386%** |
 | body images within 1% | **33 / 319** |
 | incomplete scans | 0 |
 | recoveries still needed for every image to pass | see `CLOSURE.md` (recomputed per scan) |
@@ -34,7 +34,7 @@ Sources: `report/boxing/corpus-scan-enum/baseline.json`,
 | 2 | boxing scalar stack-category fix + enum unbox cast | 390 + all enum widths | landed, contract re-baselined |
 | 3 | sealed-owner mask fix | 28,685 | landed: **+18,288** measured with the mask reverted as control |
 | 4 | external allocation (concrete external owner) | 24,893 | landed: **+1,116**, 0 lost; constructed/nested owners still gated |
-| 5 | external member facts (field read/write) | 24,893-ish remaining | next: `external member reference needs dependency facts` |
+| 5 | external member facts (field read/write) | 24,893-ish | landed: **+686**, 0 lost; value-type/static owners still gated |
 | 6 | property/event accessor binding | 1,500 first-blockers in 60 images, more overall | brief ready |
 | 7 | external callvirt receiver type facts | 45 images, 11.4% median | design in `EXTERNAL_CALL_DISPATCH.md` |
 | 8 | byref/modified parameters; uninitialized locals | ~19,300; 9 images at 15% | fillers between big slices |

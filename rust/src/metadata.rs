@@ -48,6 +48,12 @@ pub(crate) struct Image<'a> {
     >,
     external_value_defs:
         std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<u32, String>>>,
+    external_fields: std::cell::RefCell<
+        std::collections::BTreeMap<
+            u32,
+            std::result::Result<crate::dependencies::ExternalField, String>,
+        >,
+    >,
     external_allocations: std::cell::RefCell<
         std::collections::BTreeMap<
             u32,
@@ -90,6 +96,7 @@ impl<'a> Image<'a> {
             open_self: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_structs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_value_defs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_fields: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_allocations: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_calls: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
@@ -2314,6 +2321,22 @@ impl<'a> Image<'a> {
         self.external_calls.borrow().get(&token).cloned()
     }
 
+    /// Facts for one foreign field, if the caller asked for them.
+    pub(crate) fn external_field(
+        &self,
+        token: u32,
+    ) -> Option<std::result::Result<crate::dependencies::ExternalField, String>> {
+        self.external_fields.borrow().get(&token).cloned()
+    }
+
+    pub(crate) fn cache_external_field(
+        &self,
+        token: u32,
+        value: std::result::Result<crate::dependencies::ExternalField, String>,
+    ) {
+        self.external_fields.borrow_mut().insert(token, value);
+    }
+
     /// Facts for one foreign constructor, if the caller asked for them.
     pub(crate) fn external_allocation(
         &self,
@@ -3222,9 +3245,31 @@ impl<'a> Image<'a> {
                 let name = self.md.strings().str(row.name)?.to_string();
                 match row.class.table() {
                     Some(TableId::TypeDef | TableId::TypeRef) => {
-                        let definition = self
-                            .local_type_definition(row.class)?
-                            .ok_or("external member reference needs dependency facts")?;
+                        let Some(definition) = self.local_type_definition(row.class)? else {
+                            return match self.external_field(t.0) {
+                                Some(Ok(fact)) => {
+                                    let blob = self.md.blobs().get(row.signature)?;
+                                    self.field_from_parts(
+                                        t.0,
+                                        &fact.name,
+                                        context,
+                                        FieldParts {
+                                            flags: fact.flags,
+                                            signature: blob,
+                                            owner: crate::ir::Ty::ExternalClass(row.class.0),
+                                            arguments: None,
+                                        },
+                                    )
+                                }
+                                Some(Err(reason)) => Err(format!(
+                                    "external member reference needs dependency facts: {reason}"
+                                )
+                                .into()),
+                                None => {
+                                    Err("external member reference needs dependency facts".into())
+                                }
+                            };
+                        };
                         let field = self.find_field(definition, &name)?;
                         let owner = match self.struct_type(definition)? {
                             Some(id) => crate::ir::Ty::Value(id),

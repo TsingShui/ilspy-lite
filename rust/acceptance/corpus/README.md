@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
   leave output byte-identical.
 - `CONSTRUCTED_MEMBERS.md`: members reached through a constructed type - open self
   instantiation, substituted fields, calls, allocation and constructed base classes.
+- `EXTERNAL_FIELDS.md`: instance reads and writes on a field declared in a referenced
+  image, with the caller-scoped field type and the owning-class requirement.
 - `EXTERNAL_ALLOCATION.md`: `newobj` on a constructor from a referenced image - the
   owner/constructor facts, the three-state rule, the refusals, and the constructed and
   nested owners that remain gated.

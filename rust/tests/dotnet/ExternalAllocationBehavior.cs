@@ -31,7 +31,10 @@ internal static partial class GenericReferenceRoundtrip
     static string AllocationDescriptor(object value)
     {
         if (value == null) return "null";
+        if (value is string text) return "str:" + text;
         Type type = value.GetType();
+        if (type.IsPrimitive || value is decimal)
+            return "val:" + Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
         var parts = new List<string> { type.FullName };
         foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
             parts.Add(field.Name + "=" + (field.GetValue(value) ?? "null"));

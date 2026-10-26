@@ -289,6 +289,46 @@ fn prime_external_calls(
     }
 }
 
+/// Prefetch the facts for instance fields read or written on a foreign type.
+///
+/// Only operands of field opcodes are asked about, so a method reference never
+/// reaches the field resolver.
+fn prime_external_fields(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        if !matches!(
+            instruction.opcode.name(),
+            "ldfld" | "ldflda" | "stfld" | "ldsfld" | "ldsflda" | "stsfld"
+        ) {
+            continue;
+        }
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::MemberRef) || !seen.insert(candidate.0) {
+            continue;
+        }
+        if image.external_field(candidate.0).is_some() {
+            continue;
+        }
+        image.cache_external_field(
+            candidate.0,
+            match context.external_field(candidate.0) {
+                crate::dependencies::ExternalFieldLookup::Fact(fact) => Ok(fact),
+                crate::dependencies::ExternalFieldLookup::Refused(reason) => Err(reason),
+                crate::dependencies::ExternalFieldLookup::Unavailable => continue,
+            },
+        );
+    }
+}
+
 /// Prefetch the facts for `newobj` on a foreign constructor.
 ///
 /// Only `MemberRef` operands named `.ctor` are asked about; local constructors and
@@ -394,6 +434,7 @@ fn decompile_method(
         prime_external_enums(image, token, &body, context);
         prime_external_calls(image, &body, context);
         prime_external_allocations(image, &body, context);
+        prime_external_fields(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
     match lift::emit(image, token, &body) {

@@ -25,7 +25,7 @@ const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
     (
         "ExternalValueCases.Ops",
         "UnsupportedField",
-        "external member reference needs dependency facts",
+        "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
     ),
 ];
 
