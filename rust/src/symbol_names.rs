@@ -47,6 +47,10 @@ fn reserved(raw: &str) -> bool {
         .any(|prefix| raw.starts_with(prefix))
 }
 
+pub(crate) fn namespace(raw: &str) -> String {
+    raw.split('.').map(ident).collect::<Vec<_>>().join(".")
+}
+
 /// Construct the path from actual metadata rows, not a display full-name string.
 pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Result<String> {
     let mut current = token;

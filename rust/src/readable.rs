@@ -33,7 +33,10 @@ pub(crate) fn type_view(
         .and_then(|row| image.md.strings().str(row.type_namespace).ok())
         .unwrap_or("");
     if !namespace.is_empty() {
-        out.push_str(&format!("namespace {namespace};\n\n"));
+        out.push_str(&format!(
+            "namespace {};\n\n",
+            crate::symbol_names::namespace(namespace)
+        ));
     }
     let mut emitted = BTreeSet::new();
     let view = View {

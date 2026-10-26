@@ -72,6 +72,39 @@ fn generated_and_reserved_type_references_agree_with_their_declarations() {
 }
 
 #[test]
+fn namespace_keywords_are_escaped_in_both_declarations_and_type_references() {
+    for &bytes in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let namespace = md
+            .tables()
+            .iter::<cildec::tables::TypeDefRow>()
+            .map(|(_, row)| row.unwrap())
+            .map(|row| md.strings().str(row.type_namespace).unwrap())
+            .find(|ns| *ns == "NamingCases")
+            .expect("owned namespace");
+        let at = namespace.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut changed = bytes.to_vec();
+        changed[at..at + namespace.len()].copy_from_slice(b"namespace.a");
+        let result =
+            decompile_type_with_style(&changed, "namespace.a.CollisionHost", OutputStyle::Readable)
+                .unwrap();
+        assert!(
+            result.text.starts_with("namespace @namespace.a;"),
+            "{}",
+            result.text
+        );
+        assert!(
+            result
+                .text
+                .contains("@namespace.a.CollisionHost.Plain Left;"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn generated_method_name_does_not_block_captured_i4_reads_and_writes() {
     for &bytes in IMAGES {
         let method = list_methods(bytes)
