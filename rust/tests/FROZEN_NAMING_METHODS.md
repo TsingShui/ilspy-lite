@@ -26,7 +26,9 @@ fail rather than silently shrinking/changing the gate. The supplemental three
 add no newly recovered scalar methods and are not replacements for these trees.
 
 Pinned assembly SHA-256 values, MVID/root identities, MethodDef ownership, raw names,
-signatures, attributes, field identities and original IL must agree. CLI original
+signatures, attributes, field identities and original IL digests must agree.
+Tracked test code pins digests rather than embedding corpus body bytes; raw
+original/generated bodies remain in ignored reports. CLI original
 IL crosschecks PEReader; loaded original IL, ownership, flags, parameter/result
 and field types are checked again before execution. Cataloging never loads the
 input. Module initializers are forbidden; allocated original owners/referents

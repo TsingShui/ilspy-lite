@@ -1,5 +1,9 @@
 # Bounded OpenRA acceptance corpus
 
+Later naming-only recovery and the unchanged twenty plus three supplemental
+selections are reported in [SYMBOL_NAMING.md](SYMBOL_NAMING.md). Historical counts
+below retain their original scope.
+
 Later static dependency/property/postfix work and the unchanged frozen twenty-class
 sample are reported separately in [dependency/presentation acceptance](DEPENDENCY_PRESENTATION.md).
 The historical results below retain their original scope; they do not certify later changes.

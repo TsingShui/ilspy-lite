@@ -67,6 +67,21 @@ Choose presentation with `decompile_with_style`/`decompile_type_with_style` and
 while giving the CLI a readable default. Validation:
 [readable output acceptance](acceptance/READABLE_OUTPUT.md).
 
+### Symbol names and generated bodies
+
+Generated metadata names no longer block otherwise admitted bodies. A shared
+naming rule renders declarations and references consistently, including nested
+paths, keywords, reserved-prefix collisions and exact local TypeRefs. Original
+scoped tokens/names remain authoritative and remain the CLI selection input;
+aliases are not source-binding or runtime-identity proof.
+
+The unchanged twenty-class corpus improves from 2 to 25 supported bodies out of
+77; 52 still retain IL fallback. This does not add lambda/iterator desugaring,
+generic/value/EH bodies or new type/call semantics. See
+[symbol naming acceptance](acceptance/openra/SYMBOL_NAMING.md) for per-class and
+per-method evidence, executed cases and the five supported-but-unexecuted methods
+across the twenty plus three separate supplemental owner trees.
+
 ### Automatic static dependencies
 
 The CLI discovers local dependencies by default: neighboring images, static

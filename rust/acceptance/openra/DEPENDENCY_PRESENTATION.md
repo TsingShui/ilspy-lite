@@ -1,5 +1,9 @@
 # Static dependencies and constructor/expression presentation
 
+Later naming-only recovery and the unchanged twenty plus three supplemental
+selections are reported in [SYMBOL_NAMING.md](SYMBOL_NAMING.md). Historical counts
+below retain their original scope.
+
 This extends the frozen [constructor contract](CONSTRUCTOR_PRESENTATION.md), not
 the original class-delivery approval. Production remains independent Rust with
 pinned cildec 0.1.0, sha1 0.10.7 and serde_json 1.0.154; no dotnet subprocess,

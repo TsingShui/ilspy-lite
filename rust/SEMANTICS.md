@@ -25,6 +25,15 @@ that dependencies were recovered. Both presentations retain the same statuses an
 exit precedence. The detailed library entry points remain compatible; explicit
 `OutputStyle::Readable` selects the concise view.
 
+Symbols retain their original assembly/module/token identity independently of
+C# spelling. Safe aliases are shared by declarations and references. Local
+Module/nested TypeRefs are canonicalized only through exact namespace/name and
+enclosing-owner metadata; foreign scopes are not matched by short name. A
+literal backtick is not GenericParam ownership. Aliases do not prove property
+source lookup or interface implementation, and do not admit static initialization,
+new type/operator/call shapes or arbitrary generic/value/EH bodies. Raw identities
+remain in Details. See [naming acceptance](acceptance/openra/SYMBOL_NAMING.md).
+
 Constructor initializers are presentation of an existing-receiver exact call,
 never allocation. Only a first initialization with unchanged, exactly typed
 arguments can move into `: base(...)` / `: this(...)`; pre-base writes/calls stay

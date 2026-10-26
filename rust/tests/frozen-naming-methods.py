@@ -12,16 +12,16 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "report/frozen-naming-methods"
-# Exact pinned original protocols, not implementations of the recovered side.
+# Pinned metadata signatures and IL digests; original bodies stay in ignored reports.
 SPECS = {
-    "0x0600468E": (2, "excluded-cctor", "200008", "162A", []),
-    "0x0600147B": (9, "string-getter", "20000E", "027B400E00042A", ["0x04000E40"]),
-    "0x06002770": (10, "dispose-store", "200001", "021FFE7DA62000042A", ["0x040020A6"]),
-    "0x06002772": (10, "string-getter", "20000E", "027BA72000042A", ["0x040020A7"]),
-    "0x060021A3": (11, "empty-return", "200101128095", "2A", ["0x04001B90"]),
-    "0x060021A5": (11, "clear-visible", "200001", "02167D901B00042A", ["0x04001B90"]),
-    "0x060045A6": (11, "negate-visible", "200002", "027BE33A00047B901B000416FE012A", ["0x04003AE3", "0x04001B90"]),
-    "0x0600338F": (18, "string-getter", "20000E", "027BD92A00042A", ["0x04002AD9"]),
+    "0x0600468E": (2, "excluded-cctor", "200008", "84a0936ff1fba6d2811d094757231685673447aed2170738872305076026a316", []),
+    "0x0600147B": (9, "string-getter", "20000E", "431766305968577215cc4ec963ff1217694b63cbc03419c98758fbd4f2f89a65", ["0x04000E40"]),
+    "0x06002770": (10, "dispose-store", "200001", "6395ba04ed43e1e88d442eddbff0fd0540e4a87264c73b692a2148e8e97a74f8", ["0x040020A6"]),
+    "0x06002772": (10, "string-getter", "20000E", "d88158fae6e935bf9813a0057bc12d7283ed75617b6b9ad969e4f65a4d5e534f", ["0x040020A7"]),
+    "0x060021A3": (11, "empty-return", "200101128095", "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1", ["0x04001B90"]),
+    "0x060021A5": (11, "clear-visible", "200001", "ae9118b2cb15339cb9af6d742e42c2badcf513ba188fe476cd3e56b4d9c4ec6e", ["0x04001B90"]),
+    "0x060045A6": (11, "negate-visible", "200002", "f71f99350c31e97b7d453f0f35a295513618808f27566694da49b464071ff252", ["0x04003AE3", "0x04001B90"]),
+    "0x0600338F": (18, "string-getter", "20000E", "432280ced84b542ed79df1a198c2c3e7faafb64ffab53fd912052f7fcf5bd61d", ["0x04002AD9"]),
 }
 PAIRS = {"string-getter": 30, "dispose-store": 30, "empty-return": 9, "clear-visible": 9, "negate-visible": 12}
 MISMATCH = {"string-getter": "return-identity", "dispose-store": "store-state", "empty-return": "preserved-state",
@@ -179,20 +179,20 @@ def main():
                 if not is_target:
                     continue
                 observed.add(token)
-                _, family, signature, il, field_tokens = SPECS[token]
-                require(method["signature"] == signature and method["il"] == il and method["eh"] == 0, "Pinned independent method protocol mismatch")
+                _, family, signature, il_hash, field_tokens = SPECS[token]
+                require(method["signature"] == signature and hashlib.sha256(bytes.fromhex(method["il"])).hexdigest() == il_hash and method["eh"] == 0, "Pinned independent method protocol mismatch")
                 require(sum(m["name"] == method["name"] and m["signature"] == signature for m in owner["methods"]) == 1,
                         "Ambiguous independent owner/name/signature")
                 original_il = run([cli, "il", assembly, "--method", token], directory / (token + "-il")).stdout
                 chunks = re.findall(r"(?m)^\.code-bytes IL_[0-9A-F]+: \[([^]]+)\]$", original_il)
-                require("".join(re.findall(r"\b[0-9A-F]{2}\b", " ".join(chunks))) == il, "CLI/PEReader original IL mismatch")
+                require("".join(re.findall(r"\b[0-9A-F]{2}\b", " ".join(chunks))) == method["il"], "CLI/PEReader original IL mismatch")
                 extraction = extract(text, catalog, owner, method, family)
                 record = {"assembly": entry["assembly"], "mvid": entry["mvid"], "owner": owner, "method": method,
                           "family": family, "extraction": extraction, "baseline": old[token], "current": statuses[token]}
                 if family == "excluded-cctor":
                     require(len(owner["initializers"]) == 1, "Expected allocating cctor exclusion missing")
                     initializer = owner["initializers"][0]
-                    require(initializer["token"] == "0x0600468B" and initializer["il"] == "738C46000680D93B00042A", "Pinned cctor allocator changed")
+                    require(initializer["token"] == "0x0600468B" and hashlib.sha256(bytes.fromhex(initializer["il"])).hexdigest() == "83ba9efb6fc607bc6e5e3b2de66c9e78021d2a33efd57cd23c43db0d3e68af8c", "Pinned cctor allocator changed")
                     run([cli, "il", assembly, "--method", initializer["token"]], directory / "excluded-cctor-il")
                     record["reason"] = "Excluded: .cctor allocates selected-original ctor 0x0600468C and writes singleton field; never executed"
                     exclusions.append(record)
