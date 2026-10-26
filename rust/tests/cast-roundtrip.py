@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Tsingshui
 # SPDX-License-Identifier: MIT
-"""Execute recovered identity comparisons; null and aliasing must not dereference."""
+"""Execute recovered runtime type checks, preserving identity and primitive results."""
 import argparse, importlib.util, json, re, subprocess, sys
 from pathlib import Path
 
@@ -47,6 +47,7 @@ def main():
                     if record["status"] == "Decompiled" and owners.get(record["token"]) == "CastCases.Ops"]
         if not selected: raise ValueError("equality selection is empty")
         snippets = []
+        bodies = {}
         for token, name in selected:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details", "--no-auto-references"])
             if details.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
@@ -59,6 +60,7 @@ def main():
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
             snippets.append(statements)
+            bodies[name] = statements
         carrier = "namespace CastCases\n{\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n}\n"
         source = OUT / f"Recovered-{config}{'-readable' if args.readable else '-details'}.cs"
         support.write_changed(source, carrier)
@@ -83,7 +85,30 @@ def main():
                                       text=True, capture_output=True, timeout=120)
             (OUT / f"WidenedCast-mutation-{config}.log").write_text(negative.stdout + negative.stderr)
             if negative.returncode == 0: raise ValueError("cast mutation was not detected")
+            if "Recovered cast differs:" not in negative.stdout + negative.stderr:
+                raise ValueError("Mutation failed outside the behavior comparison")
             print(config + ": rejected widened-cast mutant", flush=True)
+            for name in ["AsAbstract", "IsAbstract", "Guard", "UnsupportedString"]:
+                if name not in bodies: raise ValueError("Missing cast mutation method: " + name)
+                body = bodies[name]
+                if name in ("AsAbstract", "UnsupportedString"):
+                    changed, count = re.subn(r"\(\(object\)(\w+) as ([A-Za-z0-9_@:.]+)\)",
+                                             r"((\2)(object)\1)", body, count=1)
+                else:
+                    changed, count = re.subn(r"return [^;]+;", "return " + ("false" if name == "IsAbstract" else "0") + ";",
+                                             body, count=1)
+                if count != 1: raise ValueError("Missing targeted mutation expression: " + name)
+                path = OUT / f"Mutant-{name}-{config}.cs"
+                support.write_changed(path, carrier.replace(body, changed, 1))
+                binary = path.with_suffix(".dll")
+                compile_ms += support.compile_cs(binary, [path], references=[fixture])
+                negative = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture),
+                                           "--cast-check", str(binary)], text=True, capture_output=True, timeout=120)
+                log = negative.stdout + negative.stderr
+                (OUT / f"Mutant-{name}-{config}.log").write_text(log)
+                if negative.returncode == 0 or "Recovered cast differs: " + name not in log:
+                    raise ValueError("Targeted mutation was not detected: " + name + "\n" + log)
+                print(config + ": rejected " + name + " mutant", flush=True)
     view = "readable" if args.readable else "details"
     (OUT / f"behavior-results-{view}.json").write_text(json.dumps({"configurations": rows, "compile_ms": compile_ms,
         "view": view, "mutation_control": args.mutation_control, "third_party_execution": False}, indent=2) + "\n")

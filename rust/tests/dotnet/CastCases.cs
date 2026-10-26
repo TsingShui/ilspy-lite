@@ -35,8 +35,19 @@ public sealed class Other
     public int Value;
 }
 
+public abstract class AbstractBase { }
+public sealed class AbstractChild : AbstractBase, IMarker { }
+public sealed class AbstractOther : AbstractBase { }
+public interface IMarker { }
+public class GenericBase<T> { }
+
 public static class Ops
 {
+    public static AbstractBase ToAbstract(object value) => (AbstractBase)value;
+    public static AbstractBase AsAbstract(object value) => value as AbstractBase;
+    public static bool IsAbstract(object value) => value is AbstractBase;
+    public static bool UnsupportedLocalInterface(object value) => value is IMarker;
+    public static bool UnsupportedGeneric(object value) => value is GenericBase<int>;
     public static Derived Downcast(object value) => (Derived)value;
     public static Base Upcast(Derived value) => (Base)value;
     public static Derived As(object value) => value as Derived;
@@ -46,6 +57,8 @@ public static class Ops
     public static Other Switch(object value) => value as Other;
 
     public static string UnsupportedString(object value) => value as string;
+    public static string ToStringValue(object value) => (string)value;
+    public static bool IsString(object value) => value is string;
     public static Base Unrelated(Other value) => (Base)(object)value;
     public static int UnsupportedInterface(IComparable value) => value.CompareTo(null);
 }

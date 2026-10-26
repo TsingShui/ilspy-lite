@@ -10,7 +10,7 @@ const IMAGES: [&[u8]; 2] = [
 ];
 
 #[test]
-fn object_support_does_not_admit_boxing_downcasts_dispatch_or_allocation() {
+fn unsupported_object_operations_retain_their_original_il() {
     for bytes in IMAGES {
         // The frozen table is the list: every row must still be a marked fallback
         // that carries its original IL, and a promotion removes its row here.
@@ -189,11 +189,6 @@ mod fixture_contract;
 // Frozen known-unsupported set: (owner, method, stable reason substring). There
 // are no counts; a promotion must drop its row and a regression must add one.
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "ObjectCases.Ops",
-        "UnsupportedCast",
-        "cast needs a local class definition; external/interface casts need more facts",
-    ),
     (
         "ObjectCases.Ops",
         "UnsupportedDispatch",

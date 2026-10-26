@@ -3,7 +3,20 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (abstract constructed members)
+## Current position (grouped reference repairs; aggregate 5% target)
+
+- 366,811 Decompiled / 403,937 Partial of 770,748; aggregate fallback 52.40844%.
+- +23,266 in 119 images, zero regressions/incomplete; fixed references/scope.
+- 382 tests, interface and cast behavior/mutations pass, fourteen corpus triples
+  self-reviewed. No third-party execution.
+- Complete related semantic repairs as groups: local red/green tests inside the
+  group, one full regression/behavior/scan/self-review milestone and local commit.
+- User revised acceptance to aggregate <= 5%; per-image results remain diagnostic.
+  User authorizes implementation/design work; retain repository constraints.
+- Continue on high-frequency receiver/generic/member gaps after ILSpy/IL audit.
+  No subagents, no automatic push.
+
+## Previous position (abstract constructed members)
 
 - 343,545 Decompiled / 427,203 Partial (55.42707%), 34/319 passing.
 - +4,751 in 50 images, zero regressions/incomplete. Abstract lookup is allowed;

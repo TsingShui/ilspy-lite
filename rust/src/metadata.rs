@@ -29,10 +29,14 @@ pub(crate) struct SignatureValueTypes {
     pub value_definitions: Vec<(Token, usize)>,
 }
 
+type InterfaceEdges =
+    std::cell::OnceCell<std::result::Result<std::collections::BTreeMap<u32, Vec<u32>>, String>>;
+
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
     pub md: Metadata<'a>,
     core_definition: std::cell::OnceCell<std::result::Result<bool, String>>,
+    interface_edges: InterfaceEdges,
     struct_types: StructTypes,
     pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
     enum_types: std::cell::RefCell<
@@ -89,6 +93,7 @@ impl<'a> Image<'a> {
             pe,
             md,
             core_definition: std::cell::OnceCell::new(),
+            interface_edges: std::cell::OnceCell::new(),
             struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
             enum_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
@@ -2691,10 +2696,98 @@ impl<'a> Image<'a> {
         )?))
     }
 
-    /// Resolve local class identity; external ancestry is not an assignability proof.
+    /// Resolve local named reference identity, without guessing external ancestry.
     pub fn class_name(&self, token: u32) -> Result<String> {
-        self.class_chain(token)?;
+        if !self.local_interface(token)? {
+            self.class_chain(token)?;
+        }
         crate::symbol_names::type_name(self, Token(token), true)
+    }
+
+    fn local_interface(&self, token: u32) -> Result<bool> {
+        let token = Token(token);
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            return Err("local reference identity needs a TypeDef".into());
+        }
+        let row = self.md.tables().type_def(token.rid())?;
+        if row.flags & 0x20 == 0 {
+            return Ok(false);
+        }
+        if row.flags & 0x80 == 0
+            || self
+                .md
+                .tables()
+                .raw_column(TableId::TypeDef, token.rid(), 3)?
+                != 0
+        {
+            return Err("interface reference needs abstract flags and no class base".into());
+        }
+        if self.generic_declaring_context(token)? {
+            return Err("generic interface reference needs IL fallback".into());
+        }
+        Ok(true)
+    }
+
+    /// Prove assignment only through local, nongeneric interface edges. Constructed
+    /// and external edges are not erased to their definitions or guessed by name.
+    fn implements_interface(&self, actual: u32, expected: u32) -> Result<bool> {
+        let roots = if self.local_interface(actual)? {
+            vec![actual]
+        } else {
+            self.class_chain(actual)?
+        };
+        let edges = self
+            .interface_edges
+            .get_or_init(|| {
+                let mut edges = std::collections::BTreeMap::<u32, Vec<u32>>::new();
+                for (_, row) in self.md.tables().iter::<cildec::tables::InterfaceImplRow>() {
+                    let row = row.map_err(|error| error.to_string())?;
+                    if row.interface.table() == Some(TableId::TypeDef) {
+                        edges
+                            .entry(0x02000000 | row.class.get())
+                            .or_default()
+                            .push(row.interface.0);
+                    }
+                }
+                Ok(edges)
+            })
+            .as_ref()
+            .map_err(|error| error.clone())?;
+        let mut pending: Vec<_> = roots.into_iter().map(|token| (token, false)).collect();
+        let mut active = std::collections::BTreeSet::new();
+        let mut visited = std::collections::BTreeSet::new();
+        let mut found = false;
+        let mut work = 0;
+        while let Some((token, leaving)) = pending.pop() {
+            if leaving {
+                active.remove(&token);
+                visited.insert(token);
+                continue;
+            }
+            if active.contains(&token) {
+                return Err("cyclic local interface hierarchy needs IL fallback".into());
+            }
+            if visited.contains(&token) {
+                continue;
+            }
+            work += 1;
+            if work > 256 {
+                return Err("local interface hierarchy work limit exceeded".into());
+            }
+            found |= token == expected;
+            active.insert(token);
+            pending.push((token, true));
+            for &interface in edges.get(&token).into_iter().flatten() {
+                if self.generic_declaring_context(Token(interface))? {
+                    continue;
+                }
+                if !self.local_interface(interface)? {
+                    return Err("InterfaceImpl edge must name an interface".into());
+                }
+                pending.push((interface, false));
+            }
+        }
+        Ok(found)
     }
 
     fn generic_declaring_context(&self, token: Token) -> Result<bool> {
@@ -2868,7 +2961,9 @@ impl<'a> Image<'a> {
             "netstandard" => key == [0xcc, 0x7b, 0x13, 0xff, 0xcd, 0x2d, 0xdd, 0x51],
             _ => false,
         };
-        if !core || assembly.flags & 1 != 0 || !self.md.strings().str(assembly.culture)?.is_empty()
+        if !core
+            || assembly.flags & 0x0e01 != 0
+            || !self.md.strings().str(assembly.culture)?.is_empty()
         {
             return Err("type scope is not an admitted core identity".into());
         }
@@ -3148,18 +3243,21 @@ impl<'a> Image<'a> {
         Ok((owner, arguments))
     }
 
-    /// Cast target for castclass/isinst: a locally verified class, so the
-    /// runtime check needs no external type facts.
+    /// Cast target with locally verified class facts or an admitted core identity.
     pub(crate) fn cast_class(&self, token: Token) -> Result<crate::ir::Ty> {
+        match self.core_type_name(token) {
+            Ok("String") => return Ok(crate::ir::Ty::String),
+            Ok("Object") => return Ok(crate::ir::Ty::Object),
+            _ => {}
+        }
         if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
             return Err(
                 "cast needs a local class definition; external/interface casts need more facts"
                     .into(),
             );
         }
-        let row = self.md.tables().type_def(token.rid())?;
-        if row.flags & (0x20 | 0x80) != 0 || self.generic_declaring_context(token)? {
-            return Err("cast target must be a concrete nongeneric class".into());
+        if self.generic_declaring_context(token)? {
+            return Err("cast target must be a nongeneric reference type".into());
         }
         self.class_name(token.0)?;
         Ok(crate::ir::Ty::Class(token.0))
@@ -3172,6 +3270,10 @@ impl<'a> Image<'a> {
             .type_of_method(Rid::new(method & 0xffffff))?
             .ok_or("missing declaring type")?;
         let token = 0x02000000 | owner.get();
+        if self.local_interface(token)? && self.md.strings().str(self.row(method)?.name)? == ".ctor"
+        {
+            return Err("interface instance constructors are invalid".into());
+        }
         // A value-type instance method receives a managed pointer to the caller's
         // storage; its receiver slot is a location, never a copied value.
         if let Some(id) = self.struct_type(Token(token))? {
@@ -3204,7 +3306,11 @@ impl<'a> Image<'a> {
             }
         }
         if let (Ty::Class(a), Ty::Class(b)) = (actual, expected) {
-            if self.class_chain(a)?.contains(&b) {
+            if self.local_interface(b)? {
+                if self.implements_interface(a, b)? {
+                    return Ok(());
+                }
+            } else if !self.local_interface(a)? && self.class_chain(a)?.contains(&b) {
                 return Ok(());
             }
         }
@@ -3390,6 +3496,12 @@ impl<'a> Image<'a> {
             owner,
             arguments,
         } = parts;
+        if flags & 0x10 == 0
+            && let crate::ir::Ty::Class(token) = owner
+            && self.local_interface(token)?
+        {
+            return Err("interface instance fields are invalid".into());
+        }
         let signature = crate::signature_guard::field(signature)?;
         if !signature.custom_mods.is_empty() {
             return Err("modified field needs IL fallback".into());

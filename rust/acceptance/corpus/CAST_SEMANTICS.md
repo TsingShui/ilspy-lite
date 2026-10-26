@@ -1,5 +1,10 @@
 # Runtime type checks: castclass and isinst
 
+Current extension: `LOCAL_INTERFACE_REFERENCES.md` admits local nongeneric
+abstract/interface targets and qualified core String/Object targets. Its grouped
+verification supersedes the concrete-only admission described below. The
+historical results and reviews below remain evidence for the original slice.
+
 Both lower to an explicit runtime check for locally defined classes. Neither is
 ever erased or replaced by a static conversion.
 

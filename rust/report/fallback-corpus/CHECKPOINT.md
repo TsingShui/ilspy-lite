@@ -7,7 +7,28 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: abstract constructed member owners
+## Current verified state: grouped reference checks and interface semantics
+
+- Current user-approved acceptance: aggregate fallback <= 5% over the same fixed
+  implementation scope; per-image rates remain reported, no per-image 1% gate.
+- Latest: `report/reference-checks/corpus-scan/baseline.json`.
+  366,811 Decompiled / 403,937 Partial of 770,748; fallback 52.40844%.
+  Gain +23,266 in 119 images, zero regressions, zero incomplete scans.
+- Group: abstract casts, qualified core String/Object checks, local nongeneric
+  interface references, runtime casts/dispatch and proven InterfaceImpl assignment.
+- 382 tests, fmt/clippy green. Per release/debug: 125 interface comparisons with
+  four rejected mutants; 114 cast comparisons with five rejected mutants.
+  Existing object behavior remains green. Fourteen static corpus triples
+  self-reviewed; no changed semantic differences found, no third-party execution.
+- OpenRA.Game +222, OpenRA.Mods.Common +186. Historical per-image 1% diagnostic
+  remains 34/319 but is no longer the acceptance criterion.
+- User requests grouped repairs, autonomous implementation/design within project
+  constraints, no subagents and no unrequested pushes. Keep ordinary tests local;
+  consolidate full regression/scans/commits at group completion.
+- Next: audit remaining high-frequency receiver, generic call and member-binding
+  blockers. Reference closure changes are not implied by this group.
+
+## Previous verified state: abstract constructed member owners
 
 - `report/abstract-members/corpus-scan/baseline.json`: 343,545 Decompiled /
   427,203 Partial of 770,748 (55.42707%), 34/319 passing, zero incomplete.

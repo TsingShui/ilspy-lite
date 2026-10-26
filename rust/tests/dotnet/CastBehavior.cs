@@ -30,6 +30,8 @@ internal static partial class GenericReferenceRoundtrip
         if (value == null) return "null";
         for (int index = 0; index < arguments.Length; index++)
             if (ReferenceEquals(arguments[index], value)) return "arg" + index;
+        if (value.GetType().IsValueType)
+            return value.GetType().FullName + ":" + Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
         return "type:" + value.GetType().Name;
     }
 
@@ -53,7 +55,12 @@ internal static partial class GenericReferenceRoundtrip
         object baseValue = Activator.CreateInstance(@base);
         object derivedValue = Activator.CreateInstance(derived);
         object otherValue = Activator.CreateInstance(other);
-        object[] values = { null, baseValue, derivedValue, otherValue, "text" };
+        Type abstractChild = fixture.GetType("CastCases.AbstractChild")
+            ?? throw new Exception("Owned abstract child missing.");
+        Type abstractOther = fixture.GetType("CastCases.AbstractOther")
+            ?? throw new Exception("Owned second abstract child missing.");
+        object[] values = { null, baseValue, derivedValue, otherValue, "text", "",
+            Activator.CreateInstance(abstractChild), Activator.CreateInstance(abstractOther), 123 };
         foreach (MethodInfo original in selected)
         {
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)

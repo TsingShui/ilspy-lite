@@ -31,6 +31,7 @@ pub(crate) enum Ty {
     I8Address,
     U8Address,
     Enum(EnumType),
+    /// Local named reference: a class or admitted nongeneric interface.
     Class(u32),
     I4Array,
     U4Array,

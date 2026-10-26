@@ -103,6 +103,8 @@ mod generic_declaring;
 mod generic_references;
 #[path = "generic_values.rs"]
 mod generic_values;
+#[path = "interface_references.rs"]
+mod interface_references;
 #[path = "naming.rs"]
 mod naming;
 #[path = "native.rs"]
