@@ -43,7 +43,7 @@ def main():
     build.check_returncode()
     cli = ROOT / "target/release/ilspy-lite"
     variants = [("ordinary", None, False), ("generated", b"<X>__", False),
-                ("dotted-record-name", b"X.Y__", False), ("unicode", b"\xc3\xa9abc", False),
+                ("dotted-record-name", b"X.Y__", False), ("literal-backtick", b"X`Y__", False), ("unicode", b"\xc3\xa9abc", False),
                 ("namespace-keyword", None, True), ("generated-and-keyword", b"<X>__", True)]
     records = []
 

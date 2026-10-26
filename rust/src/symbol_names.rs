@@ -61,6 +61,25 @@ pub(crate) fn namespace(raw: &str) -> String {
     raw.split('.').map(ident).collect::<Vec<_>>().join(".")
 }
 
+fn arity_stem(raw: &str) -> Option<&str> {
+    raw.rsplit_once('`')
+        .filter(|(_, arity)| {
+            !arity.is_empty()
+                && arity.bytes().all(|b| b.is_ascii_digit())
+                && arity.parse::<u32>().is_ok_and(|n| n > 0)
+        })
+        .map(|(stem, _)| stem)
+}
+
+pub(crate) fn type_ident(raw: &str, generic: bool, escaped: bool) -> String {
+    let name = if generic {
+        arity_stem(raw).unwrap_or(raw)
+    } else {
+        raw
+    };
+    if escaped { verbatim(name) } else { ident(name) }
+}
+
 /// Construct the path from actual metadata rows, not a display full-name string.
 pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Result<String> {
     let mut current = token;
@@ -72,7 +91,7 @@ pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Resul
             return Err("invalid/cyclic/excessive type name path".into());
         }
         seen.push(current.0);
-        let (name, ns, parent) = match current.table() {
+        let (name, ns, parent, generic) = match current.table() {
             Some(TableId::TypeDef) => {
                 let row = md.tables().type_def(current.rid())?;
                 (
@@ -81,6 +100,7 @@ pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Resul
                     md.tables()
                         .enclosing_type(Rid::new(current.rid()))?
                         .map(|rid| Token(0x02000000 | rid.get())),
+                    !md.tables().generic_params(current)?.is_empty(),
                 )
             }
             Some(TableId::TypeRef) => {
@@ -90,6 +110,7 @@ pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Resul
                     md.strings().str(row.type_namespace)?,
                     (row.resolution_scope.table() == Some(TableId::TypeRef))
                         .then_some(row.resolution_scope),
+                    arity_stem(md.strings().str(row.type_name)?).is_some(),
                 )
             }
             _ => return Err("type name path requires TypeDef or TypeRef".into()),
@@ -97,12 +118,7 @@ pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Resul
         if name.is_empty() {
             return Err("empty metadata type name".into());
         }
-        let name = name.split('`').next().unwrap_or(name);
-        parts.push(if escaped {
-            format!("@{}", bare(name))
-        } else {
-            ident(name)
-        });
+        parts.push(type_ident(name, generic, escaped));
         if let Some(parent) = parent {
             current = parent;
         } else {

@@ -50,6 +50,13 @@ Presentation aliases are not source lookup names. A real external property named
 property. That mutation reproduced the wrong access and is green after the
 source-binding fence; logs use `naming-property-alias-*`.
 
+A literal backtick in a nongeneric TypeDef is not generic context. Owned
+`X\`Y__` reproduced both truncation to `X` and false generic-body rejection.
+TypeDef generic admission now uses actual GenericParam/enclosing metadata;
+canonical arity spelling is removed only when appropriate for presentation.
+Generic bodies remain fenced. Declaration compilation also covers this case;
+logs use `naming-backtick-*`.
+
 ## Verification contract
 
 Use public byte/context/CLI output as the test interface. Preserve scoped tokens

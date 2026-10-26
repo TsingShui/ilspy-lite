@@ -228,7 +228,7 @@ fn type_header(image: &Image<'_>, ty: &SelectedType) -> Result<String> {
     }
     Ok(format!(
         "{access} {modifiers}{kind} {}{suffix}{}{}",
-        ident(name.split('`').next().unwrap_or(name)),
+        crate::symbol_names::type_ident(name, !generics.is_empty(), false),
         if bases.is_empty() {
             String::new()
         } else {
@@ -414,14 +414,10 @@ fn method_header(
                 access(row.flags)
             },
             if name == ".cctor" { "static " } else { "" },
-            ident(
-                image
-                    .md
-                    .strings()
-                    .str(ty.type_name)?
-                    .split('`')
-                    .next()
-                    .unwrap()
+            crate::symbol_names::type_ident(
+                image.md.strings().str(ty.type_name)?,
+                !image.md.tables().generic_params(Token(owner))?.is_empty(),
+                false
             ),
             params.join(", ")
         )

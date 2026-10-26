@@ -169,6 +169,30 @@ fn static_field_alias_is_shared_by_its_declaration_load_and_store() {
 }
 
 #[test]
+fn a_backtick_in_a_nongeneric_metadata_name_is_not_generic_context() {
+    for &bytes in IMAGES {
+        let changed = rename_type(bytes, "Plain", "X`Y__");
+        let actual =
+            decompile_type_with_style(&changed, "NamingCases.CollisionHost", OutputStyle::Readable)
+                .unwrap();
+        assert_eq!(actual.summary.decompiled, 3, "{}", actual.text);
+        assert!(
+            actual.text.contains("class __name_5860595F5F"),
+            "{}",
+            actual.text
+        );
+        assert!(
+            actual
+                .text
+                .contains("CollisionHost.__name_5860595F5F Left;"),
+            "{}",
+            actual.text
+        );
+        assert!(!actual.text.contains("class X\n"), "{}", actual.text);
+    }
+}
+
+#[test]
 fn namespace_keywords_are_escaped_in_both_declarations_and_type_references() {
     for &bytes in IMAGES {
         let pe = cildec::PeImage::parse(bytes).unwrap();

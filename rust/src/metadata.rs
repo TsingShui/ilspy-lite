@@ -1896,6 +1896,30 @@ impl<'a> Image<'a> {
         crate::symbol_names::type_name(&self.md, Token(token), true)
     }
 
+    fn generic_declaring_context(&self, token: Token) -> Result<bool> {
+        let mut current = Some(token);
+        let mut seen = Vec::new();
+        while let Some(owner) = current {
+            if owner.table() != Some(TableId::TypeDef)
+                || seen.len() == 64
+                || seen.contains(&owner.0)
+            {
+                return Err("invalid/cyclic generic declaring context".into());
+            }
+            seen.push(owner.0);
+            self.md.tables().type_def(owner.rid())?;
+            if !self.md.tables().generic_params(owner)?.is_empty() {
+                return Ok(true);
+            }
+            current = self
+                .md
+                .tables()
+                .enclosing_type(Rid::new(owner.rid()))?
+                .map(|rid| Token(0x02000000 | rid.get()));
+        }
+        Ok(false)
+    }
+
     fn class_chain(&self, token: u32) -> Result<Vec<u32>> {
         let mut chain = Vec::new();
         let mut current = Token(token);
@@ -1904,8 +1928,7 @@ impl<'a> Image<'a> {
                 return Err("unresolved/cyclic reference hierarchy needs IL fallback".into());
             }
             let row = self.md.tables().type_def(current.rid())?;
-            let name = Names::new(&self.md).type_def(Rid::new(current.rid()))?;
-            if row.flags & 0x20 != 0 || name.contains('`') {
+            if row.flags & 0x20 != 0 || self.generic_declaring_context(current)? {
                 return Err("interface/generic declaring type needs IL fallback".into());
             }
             chain.push(current.0);
@@ -2267,7 +2290,11 @@ impl<'a> Image<'a> {
             } else if receiver.is_some() {
                 format!("__cil_direct_{:08X}", t.0)
             } else {
-                if Names::new(&self.md).try_token(owner)?.contains('`') {
+                if if owner.table() == Some(TableId::TypeDef) {
+                    self.generic_declaring_context(owner)?
+                } else {
+                    Names::new(&self.md).try_token(owner)?.contains('`')
+                } {
                     return Err("generic static call owner needs IL fallback".into());
                 }
                 format!(
@@ -2302,7 +2329,7 @@ impl<'a> Image<'a> {
         if !sig.custom_mods.is_empty() {
             return Err("modified field needs IL fallback".into());
         }
-        if Names::new(&self.md).type_def(owner)?.contains('`') {
+        if self.generic_declaring_context(Token(0x02000000 | owner.get()))? {
             return Err("generic static field owner needs IL fallback".into());
         }
         Ok((
