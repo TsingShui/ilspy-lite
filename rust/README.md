@@ -82,6 +82,14 @@ generic/value/EH bodies or new type/call semantics. See
 per-method evidence and bounded execution cases for all 27 supported methods
 across the twenty plus three separate supplemental owner trees.
 
+### Local comparison website
+
+Use the [local ILSpy / Lite viewer](tools/local-viewer/README.md) to browse test
+assemblies and compare real ILSpy output with the current Rust CLI side by side.
+It runs on loopback with uv-managed Python, uses existing local tools only, and
+never executes selected assemblies. Readable, Details and original-method IL
+views retain partial/failure diagnostics.
+
 ### Automatic static dependencies
 
 The CLI discovers local dependencies by default: neighboring images, static

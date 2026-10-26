@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Copyright (c) 2026 Tsingshui. SPDX-License-Identifier: MIT -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ILSpy / Lite - Local comparison</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark">{ }</span><div><h1>ILSpy <span>/</span> Lite</h1><p>Local decompilation workbench</p></div></div>
+    <div class="header-actions"><span class="local-pill"><i></i> LOCAL ONLY</span><button id="import-button" class="button primary">Import DLLs</button><input id="file-input" type="file" accept=".dll,.exe,.bin" multiple hidden></div>
+  </header>
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="assembly-picker">
+        <label for="assembly">ASSEMBLY</label>
+        <div class="select-wrap"><select id="assembly" aria-label="Select an assembly"><option>Loading assemblies...</option></select></div>
+        <div id="assembly-info" class="muted small">Reading local fixtures</div>
+      </div>
+      <div class="search-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></svg><input id="search" type="search" placeholder="Find a type..." autocomplete="off" aria-label="Search original metadata type names"><kbd>/</kbd></div>
+      <div class="type-heading"><span>TYPES</span><span id="type-count">0</span></div>
+      <div id="quick-picks" class="quick-picks"></div>
+      <nav id="types" class="type-list" aria-label="Assembly types"><div class="sidebar-empty">Choose an assembly to begin.</div></nav>
+      <div class="sidebar-footer"><span class="file-icon">PE</span><div>Drop DLLs anywhere<small>DLL / EXE / BIN &middot; up to 64 MiB each</small></div></div>
+    </aside>
+    <section class="main-view">
+      <div class="selection-bar"><div class="breadcrumb"><span id="selected-assembly">ASSEMBLY</span><span class="crumb-separator">/</span><strong id="selected-type">Choose a type</strong></div><button id="rerun" class="button" disabled title="Rerun both engines; rebuilds Rust if its source changed">Run again <span aria-hidden="true">&#8635;</span></button></div>
+      <div class="view-options">
+        <div class="type-meta"><span id="type-token" class="token">TypeDef</span><span id="member-count" class="muted">Original metadata identity</span></div>
+        <div class="option-controls">
+          <label class="checkbox"><input id="automatic" type="checkbox" checked>Rust auto references</label>
+          <label class="checkbox"><input id="sync-scroll" type="checkbox" checked>Link scroll</label>
+          <label class="checkbox"><input id="show-diff" type="checkbox">Highlight changes</label>
+        </div>
+      </div>
+      <div id="status" class="status-line" role="status" aria-live="polite"><span class="status-dot"></span><span id="status-text">Connecting to local engines...</span></div>
+      <div class="comparison">
+        <section class="code-panel reference-panel">
+          <div class="panel-title"><div class="engine-heading"><span class="engine-symbol reference-symbol">I</span><div><h2>ILSpy <span id="ilspy-version" class="version"></span></h2><p>Reference decompiler &middot; C#</p></div></div><button class="icon-button" id="copy-left" title="Copy complete ILSpy output" aria-label="Copy ILSpy output">&#10697;</button></div>
+          <div class="panel-tools"><span class="source-label">C# SOURCE</span><span id="left-meta" class="engine-meta">Waiting</span></div>
+          <div id="left-code" class="code-scroll" tabindex="0"><div class="code-empty"><span class="empty-mark">{ }</span><h3>One assembly. Two perspectives.</h3><p>Select a type to compare real ILSpy output<br>with the current Rust implementation.</p></div></div>
+          <div class="panel-bottom"><span id="left-lines">0 lines</span><button class="text-button" id="save-left">Save output</button></div>
+        </section>
+        <section class="code-panel lite-panel">
+          <div class="panel-title"><div class="engine-heading"><span class="engine-symbol lite-symbol">L</span><div><h2>ilspy-lite <span class="version">Rust</span></h2><p>Current local working tree</p></div></div><button class="icon-button" id="copy-right" title="Copy complete Rust output, including fallback IL" aria-label="Copy Rust output">&#10697;</button></div>
+          <div class="panel-tools"><div class="segmented" role="group" aria-label="Rust output view"><button class="active" data-mode="readable">Readable</button><button data-mode="details">Details</button><button data-mode="il">IL</button></div><span id="right-meta" class="engine-meta">Waiting</span></div>
+          <div id="method-bar" class="method-bar" hidden><label for="method">METHOD</label><select id="method"></select></div>
+          <div id="right-code" class="code-scroll" tabindex="0"><div class="code-empty"><span class="empty-mark lite-empty">{ }</span><h3>No fabricated bodies.</h3><p>Recovered code and complete method-local<br>IL fallbacks remain visible together.</p></div></div>
+          <div class="panel-bottom"><span id="right-lines">0 lines</span><button class="text-button" id="save-right">Save output</button></div>
+        </section>
+      </div>
+      <details id="diagnostics" class="diagnostics" hidden><summary>Engine diagnostics <span id="diagnostic-count"></span></summary><pre id="diagnostic-text"></pre></details>
+    </section>
+  </main>
+  <footer class="app-footer"><span><i class="tiny-dot"></i> Static PE reading only. Selected assemblies are never executed.</span><span>Visual comparison, not an equivalence proof &middot; engines resolve dependencies independently</span></footer>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
