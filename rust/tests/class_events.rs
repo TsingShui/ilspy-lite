@@ -179,6 +179,9 @@ fn events_keep_types_and_accessor_methods_without_delegate_lowering() {
         );
         assert!(generic.text.contains("Updated") && generic.text.contains("type=0x1B"));
         assert!(generic.text.contains("add_Updated") && generic.text.contains("remove_Updated"));
-        assert!(generic.summary.partial > 0);
+        // The accessors of a generic event used to be the partial surface here; a
+        // recovered type must now report no fallback at all.
+        assert_eq!(generic.summary.partial, 0, "{}", generic.text);
+        assert_eq!(generic.summary.failed, 0, "{}", generic.text);
     }
 }

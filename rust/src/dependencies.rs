@@ -115,6 +115,46 @@ pub enum AssemblyResolution {
     },
 }
 
+/// Facts about an instance method declared in another assembly.
+///
+/// Only facts that are already settled by the referenced definition are recorded:
+/// the declared name, the declaring type, and the virtual/abstract flags. Which
+/// override a call reaches remains a target-runtime decision, exactly as the
+/// original `callvirt` left it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ExternalCall {
+    pub name: String,
+    pub declaring_type: String,
+    pub is_virtual: bool,
+    pub is_abstract: bool,
+}
+
+/// A value type proven through the supplied references.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalValue {
+    /// Enum storage plus the defining assembly's own name for the type.
+    Enum(crate::ir::EnumType, String),
+    /// A struct whose whole-value copy is admitted; the caller keeps the identity
+    /// the input signature already spells.
+    Struct,
+}
+
+/// Outcome of asking the context about one value type.
+///
+/// `Unavailable` means the references did not answer the question at all, which
+/// must leave the caller exactly as it was without a context. `Refused` means the
+/// references answered and the definition failed the proof; that reason is worth
+/// reporting in place of a generic one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalValueLookup {
+    Value(ExternalValue),
+    Refused(String),
+    Unavailable,
+}
+
+type ExternalValueCache =
+    std::cell::RefCell<BTreeMap<u32, std::result::Result<ExternalValueLookup, String>>>;
+
 #[derive(Clone, Copy, Debug)]
 pub struct DependencyLimits {
     pub max_assemblies: usize,
@@ -146,6 +186,7 @@ pub struct DependencyContext {
     version_policy: ReferenceVersionPolicy,
     kinds: BTreeMap<usize, AssemblyKind>,
     discovery_incomplete: bool,
+    enum_types: ExternalValueCache,
 }
 
 impl DependencyContext {
@@ -195,6 +236,7 @@ impl DependencyContext {
             reference_failures,
             candidates: Vec::new(),
             sources: BTreeMap::new(),
+            enum_types: std::cell::RefCell::new(BTreeMap::new()),
             limits,
             search_evidence: Vec::new(),
             search_diagnostics: diagnostic.into_iter().collect(),
@@ -216,6 +258,149 @@ impl DependencyContext {
         let mut result = crate::decompile_with_context(&self.main, token, style, Some(self))?;
         self.append_report(&mut result.text, style)?;
         Ok(result)
+    }
+
+    /// Facts about an instance method defined outside the main image, resolved
+    /// only through the references this context was explicitly given.
+    ///
+    /// Static targets, interface members, constructors and generic instantiations
+    /// are refused: rendering those as an ordinary instance call would either not
+    /// compile or bind to a different member than the original call site.
+    pub(crate) fn external_call(&self, token: u32) -> Result<ExternalCall> {
+        let method = self.resolve_method(token)?;
+        if method.flags & 0x0010 != 0 {
+            return Err("external call target is not an instance method".into());
+        }
+        if method.owner.flags & 0x0020 != 0 {
+            return Err("external call target is declared on an interface".into());
+        }
+        if !method.method_arguments.is_empty() || !method.instantiation_signature.is_empty() {
+            return Err("external call target is a generic instantiation".into());
+        }
+        let signature = crate::signature_guard::method(&method.reference_signature)?;
+        if let cildec::CallConv::Generic(count) = signature.calling_convention
+            && count != 0
+        {
+            return Err("external call target declares generic parameters".into());
+        }
+        if method.name.starts_with(".ctor") || method.name.starts_with(".cctor") {
+            return Err("external call target is a constructor".into());
+        }
+        // Accessors keep the existing placeholder: turning them into a named call
+        // would bypass property binding, which is its own milestone.
+        if method.flags & 0x0800 != 0
+            || ["get_", "set_", "add_", "remove_"]
+                .iter()
+                .any(|prefix| method.name.starts_with(prefix))
+        {
+            return Err("external call target is a special-name accessor".into());
+        }
+        if !is_plain_identifier(&method.name) {
+            return Err("external call target name is not a plain identifier".into());
+        }
+        Ok(ExternalCall {
+            name: method.name.clone(),
+            declaring_type: method.owner.name.clone(),
+            is_virtual: method.flags & 0x0040 != 0,
+            is_abstract: method.flags & 0x0400 != 0,
+        })
+    }
+
+    /// Admission of a value definition from a referenced assembly.
+    ///
+    /// The referenced definition must pass the same proof a local struct copy
+    /// needs, with its own generic parameters open because the instantiation
+    /// supplies them, and it must declare exactly the arity the call site used.
+    /// A reference that cannot be resolved is reported as unavailable so the
+    /// caller keeps the blocker it would have had without a context.
+    pub(crate) fn external_value_definition(
+        &self,
+        token: u32,
+        arity: usize,
+    ) -> ExternalValueLookup {
+        let Ok(resolved) = self.resolve_type(token) else {
+            return ExternalValueLookup::Unavailable;
+        };
+        let Ok(image) = self.image_for_source(&resolved.definition.source) else {
+            return ExternalValueLookup::Unavailable;
+        };
+        let definition = cildec::Token(resolved.definition.token);
+        if definition.table() != Some(cildec::TableId::TypeDef) {
+            return ExternalValueLookup::Unavailable;
+        }
+        let declared = match image.md.tables().generic_params(definition) {
+            Ok(params) => params.len() as u32,
+            Err(_) => return ExternalValueLookup::Unavailable,
+        };
+        if declared != arity as u32 {
+            return ExternalValueLookup::Refused(format!(
+                "constructed value type supplies {arity} arguments but the referenced definition declares {declared}"
+            ));
+        }
+        match image.value_definition_checks(definition, true) {
+            Ok(()) => ExternalValueLookup::Value(ExternalValue::Struct),
+            Err(error) => ExternalValueLookup::Refused(error.to_string()),
+        }
+    }
+
+    /// Storage of an enum defined outside the main image, resolved only through
+    /// the references this context was explicitly given.
+    pub(crate) fn external_value_type(&self, token: u32) -> Result<ExternalValueLookup> {
+        if let Some(cached) = self.enum_types.borrow().get(&token) {
+            return cached.clone().map_err(Into::into);
+        }
+        let result = self.external_value_uncached(token);
+        self.enum_types.borrow_mut().insert(
+            token,
+            match &result {
+                Ok(lookup) => Ok(lookup.clone()),
+                Err(error) => Err(error.to_string()),
+            },
+        );
+        result
+    }
+
+    fn external_value_uncached(&self, token: u32) -> Result<ExternalValueLookup> {
+        let Ok(resolved) = self.resolve_type(token) else {
+            return Ok(ExternalValueLookup::Unavailable);
+        };
+        let Ok(image) = self.image_for_source(&resolved.definition.source) else {
+            return Ok(ExternalValueLookup::Unavailable);
+        };
+        let definition = cildec::Token(resolved.definition.token);
+        let kind = match image.value_definition_kind(definition) {
+            Ok(kind) => kind,
+            Err(_) => return Ok(ExternalValueLookup::Unavailable),
+        };
+        Ok(match kind {
+            crate::metadata::ValueDefinitionKind::Enum => match image.checked_enum_type(definition)
+            {
+                Ok(enum_type) => {
+                    // The name comes from the defining image, not from the caller's token.
+                    let name = crate::symbol_names::type_name(&image, definition, true)?;
+                    ExternalValueLookup::Value(ExternalValue::Enum(enum_type, name))
+                }
+                Err(error) => ExternalValueLookup::Refused(error.to_string()),
+            },
+            crate::metadata::ValueDefinitionKind::Struct => {
+                match image.value_definition_checks(definition, true) {
+                    Ok(()) => ExternalValueLookup::Value(ExternalValue::Struct),
+                    Err(error) => ExternalValueLookup::Refused(error.to_string()),
+                }
+            }
+            crate::metadata::ValueDefinitionKind::Other => ExternalValueLookup::Unavailable,
+        })
+    }
+
+    fn image_for_source(&self, source: &str) -> Result<Image<'_>> {
+        if source == "<main>" {
+            return self.binding_image(0);
+        }
+        let index = *self
+            .sources
+            .get(source)
+            .ok_or("unknown defining source label")?;
+        self.binding_image(index + 1)
     }
 
     fn append_report(&self, text: &mut String, style: OutputStyle) -> Result<()> {
@@ -502,6 +687,67 @@ impl DependencyContext {
             }),
         }
     }
+}
+
+pub(crate) fn is_core_reference(image: &Image<'_>, scope: cildec::Token) -> Result<bool> {
+    if scope.table() != Some(TableId::AssemblyRef) || scope.rid() == 0 {
+        return Ok(false);
+    }
+    let mut identity = reference_identity(image, scope.rid())?;
+    // Base-type proof follows the ordinary assembly name comparison policy.
+    let Some(name) = [
+        "System.Runtime",
+        "System.Private.CoreLib",
+        "mscorlib",
+        "netstandard",
+    ]
+    .into_iter()
+    .find(|name| identity.name.eq_ignore_ascii_case(name)) else {
+        return Ok(false);
+    };
+    identity.name = name.into();
+    Ok(search::core_contract(&identity))
+}
+
+pub(crate) fn is_core_definition(image: &Image<'_>) -> Result<bool> {
+    if image.md.tables().row_count(TableId::Assembly) == 0 {
+        return Ok(false);
+    }
+    Ok(search::core_contract(&assembly_identity(image)?))
+}
+
+/// One image's own identity together with the references it declares.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ImageIdentity {
+    pub identity: AssemblyIdentity,
+    pub references: Vec<AssemblyIdentity>,
+}
+
+/// Report the identity of one image and the references it declares, without
+/// loading or resolving any other file. An image without exactly one Assembly
+/// definition (a module or a netmodule) has no identity and is rejected.
+pub fn image_identity(bytes: &[u8]) -> Result<ImageIdentity> {
+    let image = Image::parse(bytes)?;
+    let identity = assembly_identity(&image)?;
+    let count = reference_count(&image, DependencyLimits::default())?;
+    let mut references = Vec::with_capacity(count as usize);
+    for rid in 1..=count {
+        references.push(reference_identity(&image, rid)?);
+    }
+    Ok(ImageIdentity {
+        identity,
+        references,
+    })
+}
+
+/// A name that can be written after `@` without changing what it binds to.
+fn is_plain_identifier(name: &str) -> bool {
+    let mut bytes = name.bytes();
+    match bytes.next() {
+        Some(first) if first == b'_' || first.is_ascii_alphabetic() => {}
+        _ => return false,
+    }
+    bytes.all(|byte| byte == b'_' || byte.is_ascii_alphanumeric())
 }
 
 fn assembly_identity(image: &Image<'_>) -> Result<AssemblyIdentity> {

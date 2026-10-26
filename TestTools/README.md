@@ -10,8 +10,10 @@ in-repo test suite cannot: it decompiles fixtures we wrote, these decompile what
 | `decompdiff.cs` | Did a change make the *output* better or worse? (readability across two builds) |
 | `nuget-top.ps1` | Where do I get a corpus? (downloads the most-downloaded packages) |
 | `allocview.cs` | Where did the *allocations* go? (bytes by type and by area, as a flamegraph) |
+| [`LiteExperiment/`](LiteExperiment/README.md) | What changes when high-level syntax recovery is disabled? (.NET 10 class/method A/B/C tests) |
+| [`RustFeasibility/`](RustFeasibility/README.md) | Can existing Rust metadata/IL/SSA libraries support a small rewrite? (Cargo probe and decision) |
 
-They are [file-based apps](https://learn.microsoft.com/dotnet/core/whats-new/dotnet-10/sdk#file-based-apps):
+Except for the standalone `LiteExperiment/` solution and the `RustFeasibility/` Cargo probe, they are [file-based apps](https://learn.microsoft.com/dotnet/core/whats-new/dotnet-10/sdk#file-based-apps):
 single `.cs` files run directly by the SDK, no project, no solution entry. They are not built by
 `ILSpy.slnx` and not run by CI. Requirements: the .NET SDK from `global.json` (or newer) and, for
 the sweep script, PowerShell 7 (`pwsh`) - both cross-platform.

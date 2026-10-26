@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "commit": "9668d49b9f71b40045e5417b55d20e330be95921",
+  "inputs": [
+    {
+      "sha256": "a69849cf0b433664b14dbaeb82385ec043449f71f7c69559cba4be0dd3e8be8d",
+      "origin": "dotnet/legacy/mscorlib.dll",
+      "assembly": "mscorlib",
+      "mvid": "cafb29d5-2338-47fb-b4ed-cf8d7c32b1e3",
+      "method_rows": 24178,
+      "cil_methods": 20869,
+      "zero_code_methods": 20854,
+      "evidence": "Pinned framework reference input; raw inventory has 20,854 zero-byte CIL RVAs, with 15 nonempty contract stubs. Source provenance is retained in dotnet/legacy/README.txt. The user approved skipping reference-only inputs, including this demonstrated unmarked legacy shell."
+    }
+  ]
+}

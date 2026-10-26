@@ -6,7 +6,7 @@ pub use ilspy_lite::Result;
 mod signature_guard;
 
 use cildec::{CallConv, TableId, Token, Type};
-use signature_guard::{field, method, method_spec, property, type_spec};
+use signature_guard::{field, method, method_spec, plain_locals, property, type_spec};
 
 // These are literal blob bodies, not output from a compiler or metadata writer.
 const METHOD: &[u8] = &[0x20, 2, 1, 8, 0x0e];
@@ -14,6 +14,7 @@ const FIELD: &[u8] = &[6, 0x1f, 5, 0x1d, 0x20, 6, 0x12, 4];
 const PROPERTY: &[u8] = &[0x28, 1, 0x1f, 5, 0x10, 8, 0x0e];
 const TYPE_SPEC: &[u8] = &[0x15, 0x12, 5, 2, 0x13, 0, 0x1d, 0x12, 6];
 const METHOD_SPEC: &[u8] = &[0x0a, 2, 0x1e, 0, 0x12, 5];
+const LOCALS: &[u8] = &[7, 2, 0x15, 0x12, 5, 1, 8, 0x1d, 9];
 
 type Check = fn(&[u8]) -> bool;
 const SEAMS: &[(Check, &[u8])] = &[
@@ -22,6 +23,7 @@ const SEAMS: &[(Check, &[u8])] = &[
     (|b| property(b).is_ok(), PROPERTY),
     (|b| type_spec(b).is_ok(), TYPE_SPEC),
     (|b| method_spec(b).is_ok(), METHOD_SPEC),
+    (|b| plain_locals(b).is_ok(), LOCALS),
 ];
 
 #[test]
@@ -119,6 +121,7 @@ fn token_checks_cover_all_exported_roots() {
         (&[8, 0, 0x12][..], &[][..], SEAMS[2].0),
         (&[0x12][..], &[][..], SEAMS[3].0),
         (&[0x0a, 1, 0x12][..], &[][..], SEAMS[4].0),
+        (&[7, 1, 0x15, 0x12][..], &[1, 8][..], SEAMS[5].0),
     ] {
         let mut bad = prefix.to_vec();
         bad.extend_from_slice(&overflow);

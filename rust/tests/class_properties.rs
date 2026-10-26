@@ -233,6 +233,7 @@ fn properties_keep_signatures_and_accessor_methods_without_syntax_recovery() {
             generic.text
         );
         assert!(generic.text.contains("get_Stored") && generic.text.contains("set_Stored"));
-        assert!(generic.summary.partial > 0);
+        // Generic members are admitted through the open self instantiation now.
+        assert_eq!(generic.summary.partial, 0, "{}", generic.text);
     }
 }

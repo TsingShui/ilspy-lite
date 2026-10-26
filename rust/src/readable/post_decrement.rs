@@ -66,7 +66,8 @@ fn stable_i4_locations(image: &Image<'_>, caller: u32) -> Result<BTreeSet<String
         .instructions()
         .collect::<std::result::Result<Vec<_>, _>>()?;
     let mut eligible = BTreeSet::new();
-    for (index, ty) in image.local_types(&body)?.into_iter().enumerate() {
+    let context = image.method_type_context(caller, &image.signature(caller)?)?;
+    for (index, ty) in image.local_types(&body, context)?.into_iter().enumerate() {
         if ty == Ty::I4
             && !instructions.iter().any(|i| {
                 i.opcode.canonical().name() == "ldloca"

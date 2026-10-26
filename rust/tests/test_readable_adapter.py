@@ -74,6 +74,24 @@ class ReadableAdapter(unittest.TestCase):
         self.assertIn('// source property token 0x06000002: get this.Flag', adapted)
         self.assertNotIn('not this body', adapted)
 
+    def test_nested_generic_parameter_commas_do_not_split_variable_bindings(self):
+        readable = ('public static Dictionary<string, List<int>> Save(Dictionary<string, List<int>> value, int count)\n'
+                    '{\n    return count == 0 ? null : value;\n}\n')
+        details = ('public static __cil_ref_sample @Save(__cil_ref_sample a0, int a1)\n{\n'
+                   '    throw new System.Exception("not this body");\n}\n')
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('return a1 == 0 ? null : a0;', adapted)
+        self.assertNotIn('not this body', adapted)
+
+    def test_comment_punctuation_does_not_make_the_next_parameter_a_member(self):
+        readable = ('public static object Copy(object value, object next)\n{\n'
+                    '    // Preserve value and next.\n    value = next;\n    return value;\n}\n')
+        details = 'public static object @Copy(object a0, object a1)\n{\n}\n'
+        adapted = roundtrip.adapt_readable_body(readable, details)
+        self.assertIn('a0 = a1;', adapted)
+        self.assertIn('// Preserve value and next.', adapted)
+        self.assertIn('return a0;', adapted)
+
     def test_ambiguous_parameter_bindings_fail_instead_of_merging_values(self):
         details = 'public static int @Difference(int a0, int a1)\n{\n}\n'
         readable = 'public static int Difference(int value, int value)\n{\n    return value - value;\n}\n'

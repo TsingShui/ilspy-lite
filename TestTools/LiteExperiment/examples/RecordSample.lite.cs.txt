@@ -1,0 +1,149 @@
+// C#-like reverse-engineering output; not guaranteed to compile.
+// Compiler-generated names and lowered implementations are intentionally retained.
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text;
+
+namespace LiteSamples;
+
+public class RecordSample : IEquatable<RecordSample>
+{
+	[CompilerGenerated]
+	private readonly int <Id>k__BackingField;
+
+	[CompilerGenerated]
+	private readonly string <Name>k__BackingField;
+
+	[CompilerGenerated]
+	protected virtual Type EqualityContract
+	{
+		[CompilerGenerated]
+		get
+		{
+			return typeof(RecordSample);
+		}
+	}
+
+	public int Id
+	{
+		[CompilerGenerated]
+		get
+		{
+			return <Id>k__BackingField;
+		}
+		[CompilerGenerated]
+		init
+		{
+			<Id>k__BackingField = value;
+		}
+	}
+
+	public string Name
+	{
+		[CompilerGenerated]
+		get
+		{
+			return <Name>k__BackingField;
+		}
+		[CompilerGenerated]
+		init
+		{
+			<Name>k__BackingField = value;
+		}
+	}
+
+	public RecordSample(int Id, string Name)
+	{
+		this.<Id>k__BackingField = Id;
+		this.<Name>k__BackingField = Name;
+		base..ctor();
+	}
+
+	[CompilerGenerated]
+	public override string ToString()
+	{
+		StringBuilder stringBuilder = new StringBuilder();
+		stringBuilder.Append("RecordSample");
+		stringBuilder.Append(" { ");
+		if (PrintMembers(stringBuilder))
+		{
+			stringBuilder.Append(' ');
+		}
+		stringBuilder.Append('}');
+		return stringBuilder.ToString();
+	}
+
+	[CompilerGenerated]
+	protected virtual bool PrintMembers(StringBuilder builder)
+	{
+		RuntimeHelpers.EnsureSufficientExecutionStack();
+		builder.Append("Id = ");
+		builder.Append(Id.ToString());
+		builder.Append(", Name = ");
+		builder.Append((object?)Name);
+		return true;
+	}
+
+	[CompilerGenerated]
+	public static bool operator !=(RecordSample? left, RecordSample? right)
+	{
+		return !(left == right);
+	}
+
+	[CompilerGenerated]
+	public static bool operator ==(RecordSample? left, RecordSample? right)
+	{
+		if ((object)left != right)
+		{
+			return left?.Equals(right) ?? false;
+		}
+		return true;
+	}
+
+	[CompilerGenerated]
+	public override int GetHashCode()
+	{
+		return (EqualityComparer<Type>.Default.GetHashCode(EqualityContract) * -1521134295 + EqualityComparer<int>.Default.GetHashCode(<Id>k__BackingField)) * -1521134295 + EqualityComparer<string>.Default.GetHashCode(<Name>k__BackingField);
+	}
+
+	[CompilerGenerated]
+	public override bool Equals(object? obj)
+	{
+		return Equals(obj as RecordSample);
+	}
+
+	[CompilerGenerated]
+	public virtual bool Equals(RecordSample? other)
+	{
+		if ((object)this != other)
+		{
+			if ((object)other != null && EqualityContract == other.EqualityContract && EqualityComparer<int>.Default.Equals(<Id>k__BackingField, other.<Id>k__BackingField))
+			{
+				return EqualityComparer<string>.Default.Equals(<Name>k__BackingField, other.<Name>k__BackingField);
+			}
+			return false;
+		}
+		return true;
+	}
+
+	[CompilerGenerated]
+	public virtual RecordSample <Clone>$()
+	{
+		return new RecordSample(this);
+	}
+
+	[CompilerGenerated]
+	protected RecordSample(RecordSample original)
+	{
+		<Id>k__BackingField = original.<Id>k__BackingField;
+		<Name>k__BackingField = original.<Name>k__BackingField;
+	}
+
+	[CompilerGenerated]
+	public void Deconstruct(out int Id, out string Name)
+	{
+		Id = this.Id;
+		Name = this.Name;
+	}
+}

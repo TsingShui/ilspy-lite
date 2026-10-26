@@ -568,7 +568,7 @@ fn generated_method_name_does_not_block_captured_i4_reads_and_writes() {
 }
 
 #[test]
-fn static_initialization_is_not_admitted_as_an_ordinary_renamed_method() {
+fn static_initialization_is_rendered_as_the_type_static_constructor() {
     for &bytes in IMAGES {
         let method = list_methods(bytes)
             .unwrap()
@@ -576,8 +576,17 @@ fn static_initialization_is_not_admitted_as_an_ordinary_renamed_method() {
             .find(|m| m.declaring_type == "NamingCases.Special" && m.simple_name == ".cctor")
             .expect("owned static constructor");
         let actual = decompile_with_style(bytes, method.token, OutputStyle::Readable).unwrap();
-        assert_eq!(actual.status, Status::Partial, "{}", actual.text);
-        assert!(actual.text.contains("// IL_") && actual.text.contains("ret"));
+        assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        assert!(actual.text.contains("static Special()"), "{}", actual.text);
+        // An initializer is the type's own static constructor, never an ordinary
+        // method that something else could call a second time.
+        assert!(!actual.text.contains(".cctor"), "{}", actual.text);
+        assert!(!actual.text.contains("void Special("), "{}", actual.text);
+        assert!(
+            actual.text.contains("NamingCases.Special.Value = 11;"),
+            "{}",
+            actual.text
+        );
     }
 }
 

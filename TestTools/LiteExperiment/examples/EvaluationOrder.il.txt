@@ -1,0 +1,15 @@
+.method /* 0600001E */ public hidebysig static 
+	int32 EvaluationOrder () cil managed 
+{
+	// Method begins at RVA 0x2404
+	// Header size: 1
+	// Code size: 22 (0x16)
+	.maxstack 8
+
+	IL_0000: ldc.i4.0
+	IL_0001: stsfld int32 LiteSamples.ControlFlowSample::state /* 04000003 */
+	IL_0006: call int32 LiteSamples.ControlFlowSample::Next() /* 0600001C */
+	IL_000b: call int32 LiteSamples.ControlFlowSample::Next() /* 0600001C */
+	IL_0010: call int32 LiteSamples.ControlFlowSample::Pair(int32, int32) /* 0600001D */
+	IL_0015: ret
+} // end of method ControlFlowSample::EvaluationOrder

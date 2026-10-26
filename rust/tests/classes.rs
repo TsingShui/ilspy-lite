@@ -230,10 +230,12 @@ fn class_methods_keep_supported_and_unsupported_results_together() {
             assert!(result.text.contains(&format!("0x{:08X}", method.token)));
         }
         let result = decompile_type(bytes, "ClassCases.Generic`1").unwrap();
-        assert!(result.summary.partial > 0);
+        // The open self instantiation of a generic type is admitted, so this type
+        // must no longer report a fallback.
+        assert_eq!(result.summary.partial, 0, "{}", result.text);
         assert!(result.text.contains("Echo"));
         assert!(result.text.contains(".ctor"));
-        assert_eq!(result.summary.exit_code(), 2);
+        assert_eq!(result.summary.exit_code(), 0);
     }
 }
 

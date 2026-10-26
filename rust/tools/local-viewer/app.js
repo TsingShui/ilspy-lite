@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 "use strict";
 const $ = (id) => document.getElementById(id);
-const state = { assemblies: [], types: [], selected: null, mode: "readable", token: "", assembly: "", generation: 0, catalogGeneration: 0, left: "", right: "" };
+const state = { assemblies: [], types: [], selected: null, mode: "readable", token: "", assembly: "", generation: 0, catalogGeneration: 0, left: "", right: "", reportGeneration: 0, report: null, reportReason: null, capabilities: new Set() };
 const keywords = new Set("using namespace public private protected internal class struct interface enum sealed abstract static readonly const new return if else while for foreach switch case break continue void bool int uint long ulong short ushort byte sbyte char string object float double decimal nint nuint this base null true false override virtual get set out ref in default throw try catch finally unchecked checked global async await".split(" "));
 const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function highlight(text) {
@@ -88,6 +88,7 @@ function quickPicks() {
   }
 }
 async function chooseAssembly(id, desiredType) {
+  if (!$("report-overlay").hidden) closeReport();
   const generation = ++state.catalogGeneration;
   ++state.generation; state.assembly = id; state.selected = null; state.types = []; renderTypes();
   $("rerun").disabled = true; $("search").value = "";
@@ -138,6 +139,180 @@ function renderCode(side, text, changed = []) {
   $(side + "-code").innerHTML = '<div class="code-lines">' + markup + "</div>";
   $(side + "-code").scrollTop = 0;
   $(side + "-lines").textContent = lines.length.toLocaleString() + " lines";
+}
+function reportLoading(message, failed = false) {
+  const note = document.createElement("div");
+  note.className = "report-loading" + (failed ? " report-error" : "");
+  note.textContent = message;
+  $("report-body").replaceChildren(note);
+}
+function appendReasons(container, rows, failure = false, select = null) {
+  for (const row of rows) {
+    const line = document.createElement(select ? "button" : "div");
+    line.className = "reason-row" + (failure ? " failure" : "") + (select && state.reportReason === row.reason ? " active" : "");
+    if (select) {
+      line.type = "button"; line.dataset.reason = row.reason; line.title = "Show the types blocked by this reason";
+      line.onclick = () => select(row.reason);
+    }
+    const name = document.createElement("span"); name.className = "reason-name"; name.textContent = row.reason;
+    const track = document.createElement("span"); track.className = "reason-track";
+    const bar = document.createElement("span"); bar.className = "reason-bar";
+    bar.style.width = Math.max(1, row.share * 100) + "%"; track.append(bar);
+    const count = document.createElement("span"); count.className = "reason-count";
+    count.textContent = row.count.toLocaleString() + "  " + (row.share * 100).toFixed(1) + "%";
+    line.append(name, track, count); container.append(line);
+  }
+}
+function renderReport(data) {
+  const s = data.summary;
+  state.report = data;
+  state.reportReason = null;
+  const body = $("report-body");
+  body.replaceChildren();
+  const stats = document.createElement("div"); stats.className = "report-stats";
+  for (const [label, value, kind] of [["Bodies", s.bodies.toLocaleString(), ""], ["Recovered", s.decompiled.toLocaleString(), ""], ["Fallback", s.partial.toLocaleString(), "warn"], ["Failed", s.failed.toLocaleString(), s.failed ? "bad" : ""], ["Fallback rate", (s.rate * 100).toFixed(2) + "%", "warn"]]) {
+    const card = document.createElement("div"); card.className = "report-stat" + (kind ? " " + kind : "");
+    const number = document.createElement("strong"); number.textContent = value;
+    const caption = document.createElement("span"); caption.textContent = label;
+    card.append(number, caption); stats.append(card);
+  }
+  body.append(stats);
+  const scope = document.createElement("p"); scope.className = "report-scope"; scope.textContent = data.scope;
+  body.append(scope);
+  const reasons = document.createElement("section"); reasons.className = "report-section";
+  const reasonHeading = document.createElement("h3"); reasonHeading.textContent = "Fallback reasons ";
+  const reasonCount = document.createElement("span"); reasonCount.textContent = s.partial.toLocaleString() + " bodies";
+  reasonHeading.append(reasonCount); reasons.append(reasonHeading);
+  if (data.reasons.length) appendReasons(reasons, data.reasons, false, selectReportReason);
+  else { const empty = document.createElement("div"); empty.className = "report-empty"; empty.textContent = "No fallback bodies in this assembly."; reasons.append(empty); }
+  body.append(reasons);
+  if (data.failures.length) {
+    const failures = document.createElement("section"); failures.className = "report-section";
+    const heading = document.createElement("h3"); heading.textContent = "Failed bodies ";
+    const count = document.createElement("span"); count.textContent = s.failed.toLocaleString() + " bodies";
+    heading.append(count); failures.append(heading); appendReasons(failures, data.failures, true); body.append(failures);
+  }
+  const types = document.createElement("section"); types.id = "report-types"; types.className = "report-section";
+  body.append(types);
+  fillReportTypes(data, null);
+  if (data.errors.length) {
+    const errors = document.createElement("section"); errors.className = "report-errors";
+    const heading = document.createElement("h3"); heading.textContent = "Read errors (" + data.errors.length + ")"; errors.append(heading);
+    for (const row of data.errors) { const line = document.createElement("div"); line.textContent = row.type + ": " + row.error; errors.append(line); }
+    body.append(errors);
+  }
+  $("report-subtitle").textContent = data.assembly + " / " + s.scannedTypes.toLocaleString() + " top-level types / " + s.declarations.toLocaleString() + " declarations";
+}
+function fillReportTypes(data, filterReason) {
+  const section = $("report-types");
+  if (!section) return;
+  section.replaceChildren();
+  const heading = document.createElement("h3");
+  heading.textContent = filterReason ? "Types with this reason " : "Top fallback types ";
+  let rows = data.types;
+  if (filterReason) {
+    rows = rows.filter((row) => (row.reasons?.[filterReason] || 0) > 0)
+      .sort((a, b) => (b.reasons[filterReason] - a.reasons[filterReason]) || (b.partial - a.partial));
+  }
+  const hint = document.createElement("span");
+  hint.textContent = filterReason ? rows.length.toLocaleString() + " types" : "click a row to open it";
+  heading.append(hint);
+  if (filterReason) {
+    const clear = document.createElement("button"); clear.type = "button"; clear.className = "text-button report-clear"; clear.textContent = "Clear filter";
+    clear.onclick = () => {
+      state.reportReason = null;
+      for (const row of document.querySelectorAll("#report-body .reason-row[data-reason]")) row.classList.remove("active");
+      fillReportTypes(data, null);
+    };
+    heading.append(clear);
+  }
+  section.append(heading);
+  if (!rows.length) {
+    const empty = document.createElement("div"); empty.className = "report-empty"; empty.textContent = "No readable method bodies in this assembly."; section.append(empty);
+    return;
+  }
+  for (const row of rows.slice(0, 40)) {
+    const button = document.createElement("button"); button.type = "button"; button.className = "report-type";
+    const name = document.createElement("span"); name.className = "report-type-name"; name.textContent = row.name;
+    const token = document.createElement("span"); token.className = "report-type-token"; token.textContent = row.token || "";
+    const counts = document.createElement("span"); counts.className = "report-type-counts";
+    if (filterReason) {
+      const own = document.createElement("b"); own.textContent = (row.reasons?.[filterReason] || 0).toLocaleString();
+      counts.append(own, " this reason / " + row.partial.toLocaleString() + " total");
+    } else {
+      const partial = document.createElement("b"); partial.textContent = row.partial.toLocaleString();
+      counts.append(partial, " fallback / " + row.decompiled.toLocaleString() + " recovered");
+    }
+    button.append(name, token, counts);
+    button.onclick = () => {
+      const type = state.types.find((item) => item.token === row.token);
+      if (!type) { toast("That type is not in the current catalog."); return; }
+      closeReport(); $("search").value = ""; selectType(type);
+    };
+    section.append(button);
+  }
+  if (rows.length > 40) {
+    const note = document.createElement("div"); note.className = "report-empty";
+    note.textContent = "Showing the first 40 of " + rows.length.toLocaleString() + " types.";
+    section.append(note);
+  }
+}
+function selectReportReason(reason) {
+  if (!state.report) return;
+  const active = state.reportReason === reason ? null : reason;
+  state.reportReason = active;
+  for (const row of document.querySelectorAll("#report-body .reason-row[data-reason]")) {
+    row.classList.toggle("active", row.dataset.reason === active);
+  }
+  fillReportTypes(state.report, active);
+  const section = $("report-types");
+  if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+async function openReport(fresh = false) {
+  if (!state.assembly) { toast("Choose an assembly first."); return; }
+  const item = state.assemblies.find((assembly) => assembly.id === state.assembly);
+  if (!state.capabilities.has("fallback-report")) {
+    try {
+      const current = await api("/api/bootstrap");
+      state.token = current.token;
+      state.capabilities = new Set(current.capabilities || []);
+    } catch { /* The guard below explains how to restart the viewer. */ }
+  }
+  if (!state.capabilities.has("fallback-report")) {
+    $("report-overlay").hidden = false;
+    $("report-subtitle").textContent = item?.name || "Current assembly";
+    $("report-meta").textContent = "Server restart required";
+    reportLoading("The running viewer server does not support fallback reports. Restart server.py, then click the button again or reload this page.", true);
+    $("report-close").focus();
+    return;
+  }
+  const generation = ++state.reportGeneration;
+  $("report-overlay").hidden = false;
+  $("report-subtitle").textContent = item?.name || "Current assembly";
+  $("report-meta").textContent = "Reading...";
+  state.reportReason = null;
+  $("report-refresh").disabled = true;
+  reportLoading("Scanning every method body for its first fallback reason...");
+  $("report-close").focus();
+  try {
+    const data = await api("/api/fallback-report?assembly=" + encodeURIComponent(state.assembly) + (fresh ? "&fresh=1" : ""));
+    if (generation !== state.reportGeneration) return;
+    renderReport(data);
+    $("report-meta").textContent = (data.cached ? "Cached / " : "") + data.elapsedMs + " ms";
+  } catch (error) {
+    if (generation !== state.reportGeneration) return;
+    const hint = /not found/i.test(error.message) ? " Restart server.py, then reload this page." : "";
+    reportLoading("Unable to build the report: " + error.message + hint, true);
+    $("report-meta").textContent = "Stopped";
+  } finally {
+    if (generation === state.reportGeneration) $("report-refresh").disabled = false;
+  }
+}
+function closeReport() {
+  ++state.reportGeneration;
+  state.report = null; state.reportReason = null;
+  $("report-overlay").hidden = true;
+  $("fallback-report-button").focus();
 }
 async function compare(fresh = false) {
   if (!state.selected) return;
@@ -203,6 +378,11 @@ function save(side) {
   link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 $("assembly").onchange = () => chooseAssembly($("assembly").value);
+$("fallback-report-button").onclick = () => openReport(false);
+$("report-refresh").onclick = () => openReport(true);
+$("report-close").onclick = closeReport;
+$("report-overlay").addEventListener("click", (event) => { if (event.target === $("report-overlay")) closeReport(); });
+document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !$("report-overlay").hidden) closeReport(); });
 $("search").oninput = renderTypes;
 $("rerun").onclick = () => compare(true);
 $("automatic").onchange = compare;
@@ -233,7 +413,7 @@ document.addEventListener("drop", (event) => { event.preventDefault(); dragDepth
 document.addEventListener("keydown", (event) => { if (event.key === "/" && !["INPUT", "SELECT"].includes(document.activeElement.tagName)) { event.preventDefault(); $("search").focus(); } });
 (async () => {
   try {
-    const data = await api("/api/bootstrap"); state.token = data.token; state.assemblies = data.assemblies;
+    const data = await api("/api/bootstrap"); state.token = data.token; state.assemblies = data.assemblies; state.capabilities = new Set(data.capabilities || []);
     $("ilspy-version").textContent = data.ilspyVersion.split("+")[0];
     const hash = new URLSearchParams(location.hash.slice(1));
     if (["readable", "details", "il"].includes(hash.get("view"))) setMode(hash.get("view"), false);
@@ -241,5 +421,6 @@ document.addEventListener("keydown", (event) => { if (event.key === "/" && !["IN
     renderAssemblies(selected?.id);
     if (selected) await chooseAssembly(selected.id, hash.get("type"));
     else status("No local samples found. Import a managed DLL to begin.", "warning");
+    if (selected && hash.get("report") === "1") openReport(false);
   } catch (error) { status(error.message, "error"); }
 })();

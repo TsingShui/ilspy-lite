@@ -53,7 +53,7 @@ impl DependencyContext {
                 i.opcode.canonical().name() == "call"
                     && match i.operand {
                         Operand::Method(t) => main
-                            .method_ref(t)
+                            .method_ref(t, Default::default())
                             .is_ok_and(|m| m.constructor && m.args.is_empty()),
                         _ => false,
                     }

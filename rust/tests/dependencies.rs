@@ -340,14 +340,20 @@ fn context_decompilation_keeps_bodies_and_reports_dependency_provenance_separate
         .decompile_type("ExternalCases.Cells", OutputStyle::Details)
         .unwrap();
     let isolated = ilspy_lite::decompile_type(MAIN, "ExternalCases.Cells").unwrap();
-    assert_eq!(details.summary, isolated.summary);
-    assert!(details.text.starts_with(&isolated.text));
+    // Supplied references may now admit bodies that are gated without them, so the
+    // two runs need not agree method for method. What must hold is that the bodies
+    // stay bodies and that provenance remains a separate trailing report.
+    let (_, report) = details
+        .text
+        .split_once("\n.dependency-main ")
+        .expect("dependency details carry a provenance report");
+    assert!(!isolated.text.contains(".dependency-main"));
+    assert!(details.summary.failed <= isolated.summary.failed);
+    assert!(details.summary.decompiled >= isolated.summary.decompiled);
+    assert!(report.contains("status=resolved") && report.contains("fixture-library.dll"));
+    assert!(report.contains("status=missing") && report.contains("System.Runtime"));
     assert!(
-        details.text.contains("status=resolved") && details.text.contains("fixture-library.dll")
-    );
-    assert!(details.text.contains("status=missing") && details.text.contains("System.Runtime"));
-    assert!(
-        details.text.contains(".dependency-candidate ")
+        report.contains(".dependency-candidate ")
             && details.text.contains("identity=\"ExternalLibrary,")
     );
     let readable = context

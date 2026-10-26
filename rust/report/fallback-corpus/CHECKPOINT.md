@@ -1,0 +1,311 @@
+# Fixed corpus checkpoint
+
+> **Handoff:** to continue on another machine, read `HANDOFF.md` in this directory first;
+> it records the exact verified state, the uncommitted working tree, the open failures and
+> the next three steps.
+
+
+Goal: mvouhw7y-679jgb
+
+## Authoritative state (external facts, option C)
+
+- Decision C is recorded in rust/acceptance/corpus/EXTERNAL_TYPE_FACTS.md and
+  implemented: every scan now receives exactly the references its image declares, and
+  the selection is recorded per image (EXTERNAL_REFERENCES_PLUMBING.md). Reference
+  selection today: 610/614 images with a usable identity, 3,010 declared references,
+  1,179 resolved to exactly one file, 1,399 unresolved, 432 ambiguous (never guessed).
+- External enum storage landed (EXTERNAL_ENUM_STORAGE.md): storage width comes from
+  the referenced definition; the defining assembly's own name is kept, so a foreign
+  token is never resolved against the image being decompiled.
+- External call dispatch landed (EXTERNAL_CALL_DISPATCH.md): instance methods declared
+  in a referenced assembly are written on the receiver; interface, generic, static,
+  constructor and accessor targets stay gated.
+- Order-independence defect found by the enum review and fixed: enum candidates now
+  also come from the signatures of the members a body calls, so each method primes
+  what it needs. rust/report/external-enum/check-parity.py re-runs the CLI per token;
+  6,599 changed statuses plus a 400-method Partial sample all reproduce on their own,
+  0 mismatches.
+- Current scan: report/external-call/corpus-scan/baseline.json -- 271,276 recovered /
+  499,472 Partial (64.80354% unrecovered), 33/319 passing, 0 incomplete. +6,599 over
+  the plumbing baseline (4,304 enum storage, 2,295 call dispatch) across 93 images, no
+  image lost a method. Cumulative over the 140,537 anchor: 130,739.
+- Value copies landed (VALUE_TYPE_COPIES.md): constructed value types (`Pair<int>`,
+  `ImmutableArray<X>`) and external value types (referenced structs; enums keep their
+  storage) are whole-value copies. Gain +3,165 and +7,889. A test caught that caching
+  an unresolved reference as a negative fact changed blocker text; lookups are now
+  three-state (Value / Refused / Unavailable) and Unavailable leaves output
+  byte-identical. Current scan: report/external-value/corpus-scan-final -- 282,330
+  recovered / 488,418 Partial (63.36935% unrecovered), 33/319, 0 incomplete; 11,054
+  changed statuses all reproduce per token (0 mismatches). Review closed with 0
+  SUSPECT (23 pairs: 17 EQUIVALENT + 6 CRUDE-BUT-EQUIVALENT).
+- Constructed generic members landed (CONSTRUCTED_MEMBERS.md): open self
+  instantiation, substituted field types, calls on constructed receivers, allocation
+  through a constructed class, and inheritance from a constructed base. Current scan:
+  report/constructed-members/corpus-scan -- 296,157 recovered / 474,591 Partial
+  after demoting the SUSPECT shape: 296,145 recovered / 474,603 Partial
+  (61.5770% unrecovered), +6,773 over the previous milestone, 33/319 passing, 0
+  incomplete. `Derived<T>.Score` and its corpus peers now fall back with
+  "base field access needs the constructed owner name" instead of printing an open
+  generic cast; naming a constructed base needs a C# owner renderer.
+  Scan final: report/constructed-members/corpus-scan-demoted/baseline.json.
+  Re-review of the same 21 pairs after the demotion: 15 EQUIVALENT, 3 CRUDE, 0
+  SUSPECT, 3 INSUFFICIENT-EVIDENCE (field-signature evidence gap in the IL dump plus
+  two missing corpus dumps). Milestone counts are final at 296,145 / 474,603. Scan cost is 32.3s (6 processes x 2 threads,
+  from 53.7s); per-image work is the critical path and each worker now owns its image
+  parse and fact caches. Review returned over 21 pairs: 14 EQUIVALENT, 3 CRUDE, 1 SUSPECT, 1 INSUFFICIENT-EVIDENCE. The SUSPECT is real: a generic base field owner renders as `((Holder)this)` - open generic name, type argument erased. DO NOT count this milestone until the cast names the constructed base or is suppressed; fix and re-review the same pairs.
+- Boxing core scalars landed (BOXING.md): `box`/`unbox.any` for bool/char/integer
+  scalars, enums/structs/constructed/generic gated with one stable reason. Scan
+  report/boxing/corpus-scan -- 296,978 / 473,770 (61.46886%), +833 over the demoted
+  constructed-members baseline, 87 images gained, 0 lost. Review launched; counts
+  provisional until it returns.
+- Reviews closed with 0 SUSPECT: cast (two agents), external enum storage (scout, 9
+  fixture + 8 corpus pairs; its one contradiction is the parity defect above),
+  external call dispatch (scout, 9 fixture + 8 corpus pairs: 7 EQUIVALENT + 10
+  CRUDE-BUT-EQUIVALENT). The call review's remark about an unhelpful interface reason
+  was fixed by appending the concrete refusal to the stable blocker prefix; a final
+  scan (report/external-call/corpus-scan-final) reproduced 271,276 / 499,472 exactly.
+- Remaining blockers by first cause (latest scan): unsupported signature type 62.8k,
+  interface/generic declaring type 60.4k, external enum storage 55.5k (deeper uses),
+  exception/data sections 39.2k, unresolved/cyclic hierarchy 31.0k, allocation
+  owner/constructor 48.8k, byref/modified parameter 18.3k.
+- Next slices: external/interface cast targets (identity only, no hierarchy), then
+  constructed generic member binding, then region-aware CFG + bounded EH. Every slice
+  keeps fixture + frozen contract table + behaviour gate with mutation control +
+  independent review + full scan.
+
+## Current milestone
+
+- Corpus, baseline, implementation-scope and design tasks are complete (4/9). The types task is current. Object references, qualified core roots, vector/generic reference signatures and scoped generic variable copies are implemented and validated. Exact local enum storage is also implemented. Whole local struct snapshots/copies and struct receivers/managed locations are also implemented. Constructed generic members, external value facts, allocation/dispatch and EH remain pending.
+- Final independent inventory is inventory-final/inventory.json; final production status baseline is baseline-final/baseline.json.
+- All 1,164,708 MethodDef records across 976 managed snapshots occur exactly once. All 1,098,128 CIL bodies are accounted for.
+- Baseline: 146,752 recovered, 951,376 partial, 86.64% unrecovered; no incomplete image scans. Final method results match the first saved baseline exactly.
+- Nine acceptance E2E checks pass. The full Rust regression, CLI E2E, clippy and format evidence is saved under this directory.
+- No third-party corpus assembly or archived executable was run. Owned object fixtures and recovered carriers were behaviorally executed under the user's existing authorization.
+- Preserve all preexisting external working-tree changes. Session production changes include rust/src/lib.rs, main.rs, ir.rs, metadata.rs and lift.rs; new object fixtures/tooling/tests and corpus acceptance files are also session work.
+
+## Latest runtime-type-check milestone
+
+- Baseline: rust/report/cast-roundtrip/corpus-scan/baseline.json; unchanged inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- castclass/isinst on a local concrete nongeneric class render as ((T)(object)value) and ((object)value as T): runtime check preserved, same reference on success, null passes through, castclass throws InvalidCastException, isinst yields null and never throws. External/interface targets and value operands stay gated.
+- 55 Rust suites green, Clippy -D warnings clean; frozen tables refreshed where the first blocker moved.
+- Behavior: 31 comparisons x Debug/Release x Details/Readable over null/base/derived/unrelated/string, results compared by identity relative to inputs; type-test-turned-throwing-cast mutant rejected in every configuration.
+- Same 770,748 bodies: 264,677 recovered / 506,071 Partial (65.65972% unrecovered). 4,191 new recoveries in 109 inputs, zero recovered-status regressions, zero incomplete scans, 33/319 passing. Cumulative same-scope gain 129,643. Game +4 (1,520), Common +5 (5,974).
+- Also closed: the second-opinion delegate review of the allocation milestone reported 24 methods, 18 EQUIVALENT + 6 CRUDE-BUT-EQUIVALENT, 0 SUSPECT.
+- Report: rust/acceptance/corpus/CAST_SEMANTICS.md. Cast review closed by two independent agents, both 0 SUSPECT (scout over 8 owned dumps; delegate over 8 owned + 5 corpus). Counts are final.
+- Behavior-driver infrastructure fix: all shared-harness drivers now derive their compile inputs from GenericReferenceRoundtrip.cs plus globbed *Behavior.cs instead of stale hand-listed files, and struct-receiver was pointing at an undefined lowercase variable. All ten drivers run green again: object 111, generic-reference 340, scoped 1350, enum 3032, struct-copy 492, struct-receiver 32, virtual-call 44, new-object 29, equality 149, cast 31 comparisons.
+- Reference-equality review closed: 16 bodies, 11 EQUIVALENT + 5 CRUDE-BUT-EQUIVALENT, 0 SUSPECT. Allocation review closed twice (17-sample report plus the delegate second opinion: 24 bodies, 18 EQUIVALENT + 6 CRUDE-BUT-EQUIVALENT, 0 SUSPECT).
+- Context handoff: everything needed to resume is this file plus rust/acceptance/corpus/ (REVIEW_PROTOCOL.md and one report per slice). Open gate: cast review only. The Rust suite is one test binary now: warm `cargo nextest run` is about 2.5s for all 356 tests, a rebuild after touching src/ is about 14s, and a single suite is selectable with `cargo nextest run -E 'test(<module>::)'` (or `cargo test --test all -- <module>::`); discovery_paths and signature_guard stay separate targets because they compile a src/ file into their own crate root; rust/report/compare-recovery-scans.py BEFORE AFTER OUT produces deltas; behavior drivers are rust/tests/NAME-roundtrip.py with --mutation-control and optional --readable; the scan uses acceptance/corpus/corpus.py baseline with the frozen inventory (exit 2 means complete but above threshold).
+- Next: external/interface cast targets and constructed generic members, then region-aware CFG and bounded EH.
+
+## Prior reference-equality milestone
+
+- Baseline: rust/report/equality-roundtrip/corpus-scan/baseline.json; unchanged inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- Reference identity comparison: ceq/beq/bne over reference operands (identical static types or Null) lower to global::System.Object.ReferenceEquals, negated for bne; cgt.un against null lowers to a non-null identity test. Ordered reference comparisons, castclass, isinst and external dispatch keep their blockers, so a null test cannot smuggle in a cast or a call.
+- 54 Rust suites green, Clippy -D warnings clean. Behavior: 137 comparisons x Debug/Release x Details/Readable over a matrix with null, two instances and two value-equal but distinct strings; value-equality mutant rejected in every configuration (only detectable thanks to those strings).
+- Same 770,748 bodies: 260,486 recovered / 510,262 Partial (66.20348% unrecovered). 2,453 new recoveries in 124 inputs, zero recovered-status regressions, zero incomplete scans, 33/319 passing. Cumulative same-scope gain 125,452. Game +26 (1,516), Common +94 (5,969).
+- Report: rust/acceptance/corpus/REFERENCE_EQUALITY.md. Review launched on the exec-capable delegate agent (per user instruction to use delegate/scout/worker rather than the shell-less reviewer).
+- Next: external/struct/abstract/generic allocation and constructed generic members, then region-aware CFG + EH.
+
+## Resume checklist (context-budget aware)
+
+Closed gate: the independent source review returned **15 EQUIVALENT, 2
+CRUDE-BUT-EQUIVALENT, 0 SUSPECT** over 17 samples (10 owned + 5 FSharp.Core + 2
+OpenRA.Game), so the `newobj` counts are final. Verdicts:
+rust/report/new-object-roundtrip/review-source.md. Process for future milestones:
+rust/acceptance/corpus/REVIEW_PROTOCOL.md.
+
+Reviewer tooling lesson: the builtin `reviewer` agent has no shell
+(`tools: read, grep, find, ls, watchdog_diff, contact_supervisor`), so it cannot
+run the CLI. Either pre-dump sources/IL to files, or use an exec-capable agent
+such as `delegate` and instruct it to stay read-only except for its report file.
+
+State at handoff: 258,033 recovered / 512,715 Partial out of 770,748 bodies
+(66.52174%), 33/319 body-bearing targets passing, zero incomplete scans, cumulative
+same-scope gain 122,999. Rust: 53 suites + Clippy -D warnings green.
+
+Open blockers by size (first error): unsupported signature type 62.7k, generic /
+interface declaring type 60.2k, external enum storage 59.2k, EH 39.2k, opaque
+external callvirt 39.2k, general newobj 39.1k, unresolved hierarchy 30.3k.
+
+Ordered next slices (each needs its own fixture, contract table, behavior driver,
+review, then scan):
+1. reference equality (`ceq` on references) -> unlocks `x == null` guards and
+   `ReferenceEquals`; emit identity comparison, never an overloaded operator.
+2. external/struct/abstract/generic allocation and constructed generic members.
+3. region-aware CFG + bounded EH (`control` task); this is the largest structural
+   change and needs the approved design's D5 work.
+
+Operational notes that cost time when rediscovered:
+- `il <asm> --method <token>` rejects `--no-auto-references`; `decompile` accepts it.
+- Fixture contract tables are refreshed by regenerating rows from `list` + `scan`
+  of the debug fixture; never hand-edit counts (there are none).
+- Reviewers may lack a shell: dump sources/IL to files first.
+- `cargo nextest run` full run is ~2.5s warm (356 tests, one merged binary); focused selection is `-E 'test(<module>::)'`.
+
+## Latest local-allocation milestone
+
+- Baseline: rust/report/new-object-roundtrip/corpus-scan/baseline.json; unchanged inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- newobj is admitted only for a local concrete nongeneric non-interface class constructor (MethodDef, .ctor, instance, non-abstract/virtual, void default-convention, provable ancestry). Emitted as __cil_newobj_TOKEN(args): arguments first, exactly one fresh identity, then the exact constructor in order. External/struct/abstract/generic/open constructors keep distinct blockers.
+- 53 Rust suites green, Clippy -D warnings clean. Frozen expected-partial tables were refreshed where the first blocker legitimately moved (objects/scoped/generic/vector/struct/enum/virtual-call fixtures).
+- Owned behavior: 29 comparisons x Debug/Release x Details/Readable comparing observable state (fields, argument/self aliasing, exception type) rather than identity, plus explicit checks that equal-content allocations are distinct instances and a repeated call is fresh. Cached-identity mutant rejected in every configuration.
+- Same 770,748 bodies: 258,033 recovered / 512,715 Partial (66.52174% unrecovered). 6,072 new recoveries in 132 inputs, zero recovered-status regressions, zero incomplete scans, 33/319 body-bearing targets pass. Cumulative same-scope gain 122,999. Game +26 (1,490), Common +120 (5,875).
+- New goal constraint in effect: an independent async read-only reviewer samples the default readable source against the original IL (ILSpy secondary only) before gains are treated as final. Dumps and artifacts: rust/report/new-object-roundtrip/dumps/; verdicts in review-source.md. SUSPECT items must be fixed or demoted.
+- Report: rust/acceptance/corpus/LOCAL_ALLOCATION.md. Next: external/struct/abstract allocation and generic construction, then EH.
+
+## Prior local virtual-dispatch milestone
+
+- Baseline: rust/report/virtual-call-roundtrip/corpus-scan/baseline.json; unchanged inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- callvirt is admitted only when the declared owner is a locally verified class and the receiver is assignable by the existing exact class-chain rule. It renders __cil_callvirt_TOKEN with documented semantics (receiver/args evaluated once in order, receiver null check, then target-runtime dispatch), never the direct-call form. Value-type/interface/constrained/opaque-external receivers, constructor/intrinsic callvirt and newobj stay independently gated.
+- Contract gained a third expected state: legitimately bodyless declarations (abstract members). The shared count-free contract now distinguishes recovered, known-unsupported with a stable reason, and declarations, with stale entries failing.
+- Two existing conservative expectations were updated because the capability is now real: callvirt on a local class no longer falls back, and a patched call->callvirt must show dispatch rather than partial output. Both keep explicit assertions on the marker.
+- 52 Rust suites green, Clippy -D warnings clean, rustfmt clean. Behavior: 44 comparisons x Debug/Release x Details/Readable (8 methods, 1-2 Shape args, null receivers), direct-dispatch mutant rejected in every configuration.
+- Same 770,748 bodies: 251,961 recovered / 518,787 Partial (67.30955% unrecovered). 47,680 new recoveries in 151 inputs, zero recovered-status regressions, zero incomplete scans, 33/319 body-bearing targets pass. Cumulative same-scope gain 116,927. Game +92 (1,464), Common +199 (5,755).
+- Report: rust/acceptance/corpus/VIRTUAL_DISPATCH.md. Next: opaque/external dispatch and interface receivers with dependency facts, then constructed generic members, allocation (newobj) and EH.
+
+## Prior struct-receiver / managed-location milestone
+
+- Current baseline: rust/report/struct-receiver-roundtrip/corpus-scan/baseline.json. Unchanged scan inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- Test approach changed on user request: all magic method counts and negative-sentinel counts are gone from the seven owned fixture suites. rust/tests/support/fixture_contract.rs requires every MethodDef to lower with identical admission in both views, every non-listed method to be Decompiled, every listed (owner, method, reason) to stay Partial with an un-drifted reason, and every table row to be non-stale. Promotions/regressions are explicit one-line table edits; the table immediately caught a real name/arity mismatch during generation.
+- Every Decompiled fixture method is behaviorally verified (no separate allow-list), and newly promoted bodies (UnsupportedDefault/Member/New) were added to the value-copy harness rather than only losing a sentinel.
+- New capability: Ty::ValueAddress plus I8/U8 address categories, ldarga/ldloca, initobj, ldflda (struct and integer fields), ldind.i4/i8, stind.i8, struct instance receivers as managed locations (`this` is caller storage), and explicit `ref` at struct instance call sites. Reading a field through a copied value stays allowed; writing through a copy, address escape/as-value storage, addresses crossing block edges, byref params/returns, ref structs and external/generic value types stay rejected.
+- Evidence: 51 Rust suites green, all-target Clippy -D warnings clean, rustfmt clean, twelve corpus-tool E2E checks pass. Struct receiver behavior: 32 comparisons per configuration/view (16 methods), Debug+Release, Details+Readable, three dropped-store mutants rejected (SetX/Bump/Move). Struct-copy harness re-run with promoted methods in both views plus all prior mutants.
+- Same 770,748 bodies: 204,281 recovered / 566,467 Partial (73.49575% unrecovered). 17,827 new recoveries in 138 inputs, zero previously recovered regressions, zero incomplete scans, still 33/319 body-bearing targets meet <=1%. Cumulative same-scope genuine gain 69,247. Game +179 (1,372 recovered); Common +24 (5,556).
+- Report: rust/acceptance/corpus/STRUCT_RECEIVERS.md. Types task still incomplete; next are constructed generic member binding, external value facts, allocation/callvirt and EH.
+
+## Prior whole-struct-copy milestone
+
+- Current baseline: rust/report/struct-copy-roundtrip/corpus-scan/baseline.json. Same fixed inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- Ty::Value has a distinct stack category and image-isolated interned nominal TypeId. Whole loads/stores/arguments/locals/fields/direct-call boundaries/returns copy original typed values and preserve embedded references. No boxing, construction, host size/offset/packing or managed-address inference. Enum proof stays first, and exact value identities must match.
+- Local admission checks exact core ValueType base, sealed/nongeneric shape, attributes and field signatures. Ref-like markers/lookalikes, unknown constructed attribute owners, modified/direct void/open/managed-address fields and special core scalars stay gated. External values and constructed generic values remain unsupported.
+- Core base-reference proof now applies existing assembly-name case folding plus normalized key/culture/content-type facts; structural class/value checking uses that same proof. Reference-contract classification and all frozen exclusions are unchanged. Red/green lowercased System.Runtime and invalid void field regressions are recorded.
+- Six Rust struct E2E/boundary checks pass: 63 positives across seven struct shapes, 15 independent unsupported cases, typed assignment and scan parity. 1,932 owned comparisons (483 x configurations/views) pass, with 24 helper/snapshot/reference/constructor/bit/static-state mutants rejected.
+- Initial ARM64 .NET 10 observer failures were reproduced and debugged: native-crash-stack.log identifies DataMisalignedException in Reflection.FieldAccessor.SetValue when initializing Packed.Wide. Exact field-leaf IL observers/setup retain packed tests without invoking selected bodies; all behavior passed afterward, plus three consecutive complete repeat runs. No test was skipped. Native trace/failed logs remain evidence.
+- Full Rust regression, Clippy -D warnings/rustfmt, eight readable-adapter checks and twelve corpus E2E pass. Enum, scoped generic, generic reference, vector and object behavior/mutants also pass with the shared observer. No third-party input code was executed.
+- Fixed 770,748 bodies: 186,454 recovered / 584,294 Partial (75.80869% unrecovered). 4,561 new recoveries in 82 inputs, zero prior recovered-status regressions, zero incomplete scans. 33/319 body-bearing targets meet <=1%. Cumulative same-scope genuine gain 51,420.
+- OpenRA.Game +222 (1,193 recovered / 3,574 Partial); Common +3 (5,532 / 12,875). Static probes retain CoreLib CancellationToken getter, Game MapSize getter and Common EditorBlit.Commit output without running them.
+- Release incremental build 4.97s; full implementation scan about 15.6s. Evidence under rust/report/struct-copy-roundtrip/; report rust/acceptance/corpus/STRUCT_VALUE_COPIES.md.
+- Next: bounded ldarga/ldloca managed locations and value receivers/field operations, keeping stable location identity, no address escape/block-join guesses, and explicit copy-versus-location behavior. Then constructed generic member binding/external facts and call/dispatch remain. The types task is not complete.
+
+## Prior local-enum milestone
+
+- Latest baseline: rust/report/enum-roundtrip/corpus-scan/baseline.json; unchanged scope inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- Ty::Enum carries exact local TypeDef plus one of eight verified signed/unsigned storage widths. Definition admission checks sealed/nongeneric shape, exact core Enum base via normalized identity, every owned field, unique ordinary public special value__, unmodified integer signature and literal static fields. Facts cache only per Image; local TypeRef aliases canonicalize through the existing resolver.
+- Loads normalize enum storage to I4/I8 bits with proper sign/zero extension. Stores explicitly truncate and restore enum identity. Both views retain enum aliases and storage evidence; arguments/locals/fields/direct calls/returns use the same transfers. Existing integer/branch operations remain; narrow opcode conversions, external enum layouts, boxing, array allocation and value/address receivers stay gated.
+- Six Rust enum E2E/boundary checks pass: 96 positives, 29 unsupported cases, raw shape/flags/storage/core-identity negatives, local alias and scan parity. 3,032 owned cases covering all eight widths x Debug/Release x Details/Readable = 12,128 comparisons total. Sixteen helper/sign/unsigned/static-state mutants are rejected.
+- Full Rust regression, Clippy/rustfmt, eight adapter checks and twelve corpus E2E checks pass. Prior scoped/generic/vector/object behavior and controls pass. All execution remains owned only.
+- Same 770,748 target bodies: 181,893 recovered / 588,855 Partial; 76.40046% aggregate unrecovered. 22,174 new recoveries in 160 inputs, zero recovered-status regressions, zero incomplete scans. Still 33/319 body-bearing images meet <=1%. Cumulative same-scope genuine gain 46,859.
+- Game +57 (971 recovered/3,796 Partial); Common +137 (5,529/12,878). Static probes for CSharp Binder flag getter and both OpenRA enum getters are retained in enum-roundtrip/static-probes.json and .txt, without runtime-loading inputs.
+- Release incremental build 4.73s; four-worker full scope scan about 14s. Report: rust/acceptance/corpus/ENUM_STORAGE.md. Current types task is not complete.
+- Next bounded type slice: concrete value snapshots/copies without host-layout, boxing or managed-address inference; then constructed receiver/member and address facts. Keep the exact enum specialization before any broad value-type admission so primitive stack normalization is not lost.
+
+## Prior generic-value-copy milestone
+
+- Current baseline: rust/report/generic-value-roundtrip/corpus-scan/baseline.json. Continue scanning only rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- Added Ty::GenericValue with a separate StackKind. Bare VAR/MVAR uses its validated owner/position TypeId. Loads/locals/arguments/returns copy the original generic value; no boxing, reference/numeric classification or layout inference. Unknown T cannot accept null, I4 or a different variable. Both views retain __cil_generic aliases, canonical bytes, scope and body context.
+- Scoped owned fixture expanded to 23 positives/seven unsupported cases. Seven Rust E2E/boundary checks pass. The prior pure generic identity is now an explicit positive; constructed member, generic receiver, boxing and allocation gates remain closed.
+- 5,400 owned comparisons: 1,350 x Debug/Release x Details/Readable, 230 contexts per combination from ten substitutions (int/string/decimal/object/double/owned aggregate/enum/nullable/float/nint). Exact runtime types, copies/snapshots, reference fields, reachable state, float/double signed-zero/NaN bits and decimal representation match. Twenty-eight body/binding/snapshot/reference/float/single/decimal mutants fail.
+- Prior generic/vector/object behavior profiles pass, as do full Rust regression, Clippy -D warnings, rustfmt, eight adapter checks and twelve corpus E2E. No third-party code was executed.
+- Same 770,748 bodies: 159,719 recovered / 611,029 Partial (79.27740%). New 132 recoveries in 30 inputs, zero previously recovered regressions; 33/319 body-bearing targets pass; zero incomplete scans. Cumulative genuine gain 24,685. OpenRA unchanged (Game 914/3,853; Common 5,392/13,015).
+- Release incremental build 4.65s; full target scan about 13s. Evidence/report: rust/report/generic-value-roundtrip/ and rust/acceptance/corpus/GENERIC_VALUE_COPIES.md. Scoped fixture/behavior drivers now run the expanded value matrix and save behavior to generic-value-roundtrip; old scoped-reference scan/evidence remains historical.
+- Reusable ignored evidence comparator: rust/report/compare-recovery-scans.py BEFORE AFTER OUTPUT, requiring identical target ids/origins/body counts and MethodDef token sets. It does not regenerate inventory or rewrite prior statuses.
+- Types task still incomplete. Next slices: exact local enum underlying storage and transfers, then concrete value/address and generic receiver/member facts, reusing approved architecture. Static gains from type signatures alone are modest because later operations remain blocked.
+
+## Prior scoped-reference-variable milestone
+
+- Baseline: rust/report/scoped-reference-roundtrip/corpus-scan/baseline.json; same inventory at rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- TypeContext validates generic owner/position/arity/flags. VAR/MVAR descriptors inside reference shapes carry their owner and position through canonical interning; closed keys do not pick up unused context. Generic methods and static generic owners can copy reference descriptors; bare T, constructed members and generic receivers remain gated.
+- Six Rust E2E/boundary checks pass; 16 positive methods and eight negative shapes. Old open-reference/vector pure copies are explicit positive regressions. Both views keep canonical signatures and generic body context; scan/class/individual status and alias parity are checked.
+- 1,392 owned comparisons: 348 cases x Debug/Release x Details/Readable, 64 type/method contexts per combination. Four body and four binding-swap mutants fail. Prior object/generic/vector gates pass. Eight readable-adapter checks (including a comment-punctuation fix), twelve corpus E2E, full Rust regression, Clippy and rustfmt pass. No original third-party execution.
+- 72 new recovered methods in 16 inputs, zero recovered-status regressions. 159,587 recovered / 611,161 Partial out of unchanged 770,748 (79.29453% unrecovered). Passing body targets remain 33/319; zero incomplete scans. OpenRA unchanged. Cumulative same-scope gain 24,553. Later blockers, not bucket disappearances, govern gains.
+- Report: rust/acceptance/corpus/SCOPED_REFERENCE_VARIABLES.md. Current types task still incomplete; next bounded capability is generic variable value copies with a distinct evaluation/storage category, no boxing or layout inference.
+
+## Prior vector-reference milestone
+
+- Current production baseline: rust/report/array-reference-roundtrip/corpus-scan/baseline.json. Same scope inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json.
+- StructuralRef (renamed from GenericRef) now represents closed SZARRAY copies as well as closed generic references. int[]/uint[] forms and operations are unchanged. Byte/string/object/value/enum/generic/jagged elements remain descriptors, not element/layout/allocation/covariance semantics.
+- Four array integration/E2E checks pass (21 positives, seven unsupported shapes, element identity and scan parity). The old pure object[] upcast is explicitly a positive test; its five other unsupported object-operation sentinels remain negative. All selected bodies keep ordinary admission checks.
+- Shared generic-reference-roundtrip.py --arrays executes 103 cases x two configurations x two views = 412 comparisons; 16 mutants rejected (helper, element write, signed zero, struct-field reference). Prior 340 generic/eight mutants and 444 object/four mutants also pass. Full Rust regression, Clippy/rustfmt and twelve corpus E2E checks pass.
+- 4,234 newly recovered methods in 171 images, zero previous recovery regressions. 159,515 recovered / 611,233 Partial out of 770,748 (79.30387% unrecovered). 33/319 body-bearing targets meet <=1%; no incomplete scans. Cumulative same-scope gain 24,481. Game +26 (914/3,853), Common +68 (5,392/13,015). No classification change or third-party execution.
+- Release incremental build 5.16s; full target scan about 15s. Evidence and exact delta: rust/report/array-reference-roundtrip/. Report: rust/acceptance/corpus/ARRAY_REFERENCES.md.
+- Next: owner/position-scoped VAR/MVAR descriptors inside references (List<T>, T[]), then value/address/member semantics; generic receivers and T stack values remain separately gated. The types task is not complete.
+
+## Prior closed-generic reference milestone
+
+- Current statuses: rust/report/generic-reference-roundtrip/corpus-scan/baseline.json. Continue using rust/report/core-type-roots/scope-policy/implementation-inventory.json; scope/exclusions and all original inputs are unchanged.
+- Added rust/src/signature_types.rs: arena-isolated Copy TypeId handles backed by full canonical closed signature keys, preserving nominal token scope and every recursive argument. Alias hashes are naming only; key equality and collision checks cannot merge distinct types. Exact local TypeRefs use the existing module resolver. No new dependency resolver or CLR executor.
+- New Ty::GenericRef accepts GenericInst class copies, null, object upcasts, locals, ordinary fields/returns and already-supported direct calls. Closed primitive/named/nested generic/vector arguments, including value arguments, are descriptors, not value-stack/layout support. Free VAR/MVAR, constructed fields/member dispatch, generic owner receivers, variance and EH remain unsupported.
+- Raw semantic method/field/plain-local signatures now use checked pre-token walking, preserving suffix and full-RID rejection. Known local generic arity and class/value flags are checked. Copying references does not allocate wrappers or convert layouts.
+- Public E2E red evidence is generic-reference-red.log. Seven Rust generic tests pass across Debug/Release; 15 positive owned methods, six unsupported sentinels, argument/nominal identity, arity/kind, RID and suffix boundaries. Identical display names with different TypeDefs remain distinct. Shared readable adapter has a red/green nested-comma case; seven adapter checks pass.
+- Owned behavioral gate: 85 cases x Debug/Release x Details/Readable = 340 comparisons. Exact runtime parameter/return types, reference identity, reachable fields/collection/array contents, static state, enumeration observations and exception types match. Four helper and four same-contents/double-Reverse mutants are rejected. Only signature tokens/type and field definitions are borrowed; all selected bodies and helpers execute recovered statements.
+- Full Rust regression, all-target Clippy -D warnings, rustfmt, twelve corpus E2E checks and 444 prior object behavior comparisons/four helper mutants pass. No original third-party input executed. Own compilation is cached; no full solution build.
+- Same 614 managed/319 body-bearing targets and 770,748 bodies: recovered 150,791 -> 155,281; Partial 619,957 -> 615,467; aggregate 80.43576% -> 79.85321%. 4,490 newly recovered methods in 127 inputs; zero previously recovered status regressions; no incomplete scans. Passing body-bearing inputs remain 33/319. Cumulative same-scope gain is 20,247.
+- OpenRA.Game +33 (888 recovered/3,879 Partial); Common +91 (5,324 recovered/13,083 Partial). The signature first-error bucket shrinks 226,683 -> 187,068, but only whole-method gains count. Full per-method delta retained at generic-reference-roundtrip/corpus-delta.json.
+- Incremental Release build 4.83s, full implementation scan about 15s. Capability report: rust/acceptance/corpus/CLOSED_GENERIC_REFERENCES.md. The goal and types task remain incomplete.
+- Next bounded type slice can reuse the interner for closed SZARRAY reference copies (all element descriptors, but no new element/value operations), preserving existing int[]/uint[] handling and unsupported pointer/modifier/open-variable gates. Then owner-scoped free variables, exact enum/value/address and member facts remain necessary. Do not ask again for approved D1-D6 architecture.
+
+## Prior core-root milestone
+
+- Current implementation inventory: rust/report/core-type-roots/scope-policy/implementation-inventory.json. Current production statuses: rust/report/core-type-roots/corpus-scan/baseline.json.
+- Qualified local System.Object may terminate a null-base hierarchy only in an admitted full core definition scope. Core identity uses the existing normalization and is cached per parsed Image, never across inputs/MVIDs. Raw base coded indices are checked; noncanonical null tags, wrong identity/name/culture, cycles and generic roots remain rejected. Local ValueType/Enum descendants still cannot be reference receivers.
+- Both Rust classification and the independent PEReader now recognize ReferenceAssemblyAttribute constructors defined as MethodDef in the same core image, with exact nongeneric owner/constructor, flags, signature and payload checks. A local lookalike in an ordinary image remains nonproof.
+- Static full metadata reinspection changed only ids 400 (legacy mscorlib, already skipped by exception) and 725 (.NET 5 System.Runtime reference input). All input hashes, MVIDs and CIL denominators stayed unchanged. Current role evidence: core-type-roots/inventory/, role-delta.json and role-probe-400/725.txt. All 362 reference-only inputs now have direct markers; no pinned exception is needed by the current oracle.
+- Corrected implementation scope: 614 managed snapshots, 319 with CIL bodies, 770,748 bodies. The 7,203 System.Runtime contract RVAs are excluded under the already approved policy; no new user scope question is needed.
+- At this same corrected scope, the object step gained 5,503 bodies, not the initially measured 5,540: 37 earlier gains belonged to the newly recognized contract. Old evidence remains historical and is annotated. Classification gains are never counted as semantic fixes.
+- before-core-fix.json projects the saved post-object baseline to current target ids without rescanning or rewriting method statuses. Core-root repair adds 10,254 recovered bodies in three real CoreLib inputs, with zero previously recovered status regressions. Final totals: 150,791 Decompiled, 619,957 Partial, 80.43576% aggregate; 33/319 body-bearing inputs meet <=1%; zero incomplete scans. Cumulative genuine gain versus the original baseline at this same corrected scope: 15,757.
+- CoreLib gains: .NET Core 2.2 System.Private.CoreLib +2,461; Mono 2.6.4 mscorlib +3,297; Mono 5.23 mscorlib +4,496. Getter probes in all three changed from TypeDef out-of-range to supported output. No original third-party input was executed.
+- Seven owned core metadata regression tests pass; twelve corpus E2E checks pass. Full Rust regression, clippy -D warnings and rustfmt passed. Existing object behavior was rerun against the new Release CLI: 444 comparisons and four rejected helper mutants, with unchanged owned compilation cached. Hand-authored fake core fixtures are static-only and never loaded into CLR.
+- A final red/green case also rejects a marker constructor with GenericParam rows despite a nongeneric signature, in both Rust and the independent reader. Final Release role checks confirm genuine local marker / ordinary lookalike / generic-ctor results. This guard does not affect the scan body-admission path or change the frozen valid input roles.
+- Release incremental build 5.47s; current implementation scan 15.57s. Evidence/notes: rust/acceptance/corpus/CORE_TYPE_ROOTS.md. The types task is not complete; structural/generic/value/address capabilities still need implementation.
+
+## Confirmed scope revision (initial recorded basis)
+
+- The user approved skipping reference-only inputs, with no separate metadata/API gate, and confirmed the revised goal through /goal-tweak.
+- implementation-scope/implementation-baseline.json retains 615 managed snapshots, including 320 with implementation bodies, totaling 777,951 CIL bodies; 135,566 recovered and 642,385 partial (82.57%).
+- 361 reference-only snapshots (360 verified markers and one pinned legacy mscorlib exception) are explicitly listed with evidence. Every one of the original 1,098 PE origins is retained.
+- Original 1,098,128 CIL-marked RVAs reconcile exactly with 777,951 implementation bodies and 320,177 skipped reference RVAs. Classification alone recovers zero methods.
+- The policy application used saved reports only and took 18 ms, without input acquisition, extraction, hashing, compilation or rescanning. Eleven acceptance E2E checks pass.
+- The original raw-metric reports are historical evidence, not the revised acceptance denominator. Do not reopen reference-scope confirmation.
+
+## Confirmed architecture and object milestone (historical basis)
+
+The user explicitly replied "同意" to the concrete Rust IL/CFG + lift architecture direction (input-scoped TypeId, reused static binding, separated values/addresses, explicit calls/EH) and the first object-reference slice, then resumed. These decisions are recorded in rust/acceptance/corpus/DESIGN_PROPOSAL.md. Do not ask for the same approval again. Major deviations still need a decision; original third-party corpus execution still needs separate test/environment/risk approval.
+
+- Added Ty::Object as an ordinary reference type; admitted null/copy/argument/local/return/field transfers and reference-to-object upcasts. Reference static stores use typed assignment checks. No boxing, general newobj/callvirt/generic/value/EH capability was admitted.
+- Seven Rust object E2E/regression tests pass, including six unsupported sentinels and invalid integer/downcast/field-receiver cases.
+- Nineteen owned positive methods run in Debug/Release and Details/Readable, 111 behavioral cases per combination (444 total). Identity, all relevant instance/static fields, arrays and exception types match. All four recovered-helper mutation controls reject the mutant.
+- Full Rust regression and clippy/rustfmt passed; final focused object and behavioral gates were rerun after adding typed-static reference cases.
+- Fixed-scope production scan: rust/report/object-roundtrip/corpus-scan/baseline.json. All 777,951 implementation bodies accounted for, zero incomplete inputs. 141,106 recovered / 636,845 partial (81.86184%); 33/320 body-bearing inputs meet <=1%.
+- corpus-delta.json records 5,540 newly recovered methods across 173 images, zero regressions from previously recovered status. The first-error signature bucket fell by 27,044, but only 5,354 of those were recovered; later blockers are not counted as successes.
+- OpenRA.Mods.Common: 5,233 recovered / 13,174 partial, 305 gained; signature reason 6,016 -> 5,230. OpenRA.Game: 855 recovered / 3,912 partial, 31 gained.
+- Release incremental build: 4.75s. Implementation-corpus scan: 15.54s. Same frozen reference exclusions and saved independent inventory; no reacquisition or input rehash.
+- Implementation inventory for future scans: implementation-scope/implementation-inventory.json. The scope tool now emits it so reference-only inputs are not rescanned.
+- Acceptance summary: rust/acceptance/corpus/OBJECT_REFERENCES.md. The goal remains far from complete; do not complete the types task on object-only evidence.
+
+## Evidence
+
+- BASELINE.md and scope-contradiction.json: scope contradiction and per-image evidence.
+- scope-options-comparison.json: diagnostic alternate group counts; no revised gate is applied.
+- baseline-integrity.json and baseline-comparison.json: every MethodDef token exactly once; final production results equal the initial baseline.
+- e2e-baseline-integrity-red.log / green.log: rejection of omitted declarations and extraction-directory symlink escapes.
+- baseline-final.log: final all-image scan, 20.32 seconds. No per-method process launches or full solution build.
+
+## Acquisition history
+
+### Completed acquisition
+
+- Checked out ILSpy-tests at 9668d49b9f71b40045e5417b55d20e330be95921.
+- Submodule status is clean; the host gitlink is unchanged.
+- Recorded all 865 tracked files, Git blob identities and acquired-file SHA-256 hashes in acquisition-manifest.json.
+- Found 648 files beginning with MZ: 599 DLLs, 46 EXEs, two netmodules and one winmd.
+- Listed all members of five NuGet archives in archive-listings.json. Their listings contain another 448 DLL/EXE entries; managed/native classification remains pending.
+- No selected input, compiler, build script or installer from the corpus was executed.
+- Reused recorded provenance and hashes for the two unchanged OpenRA inputs from rust/acceptance/openra/manifest.json.
+
+## Remaining work
+
+- Continue the approved types work from the implemented closed-generic interner: bounded array reference signatures, owner-scoped open generic types, then exact enum/value semantics and addresses, using relevant E2E and behavior gates. The null-base core-root defect has been repaired; do not repeat that investigation.
+- Generic signature integration must keep Ty handles image-scoped, owner-scoped type/method variables distinct, reference/value categories separate, and all existing unsupported callvirt/newobj/EH gates honest. No need to request the already approved D1-D6 direction again; only real major deviations need another decision.
+- Do not implement a whole-method original-IL proxy to reduce fallback counts or conflate reference-only classification gains with semantic gains.
+- Separately authorized original-corpus behavior checks and final per-image closure.
+
+Ordinary test-interface approval is no longer a blocker. The user requested agile E2E iteration; relevant red/green E2E cases satisfy repository test discipline without repeated tool-detail approval.

@@ -9,13 +9,14 @@ mod lift;
 mod metadata;
 mod readable;
 mod signature_guard;
+mod signature_types;
 mod symbol_names;
 
 pub use dependencies::{
     AssemblyIdentity, AssemblyKind, AssemblyReference, AssemblyResolution, DefinitionLocation,
-    DependencyContext, DependencyLimits, PropertyAccessor, ReferenceFailure,
+    DependencyContext, DependencyLimits, ImageIdentity, PropertyAccessor, ReferenceFailure,
     ReferenceSearchOptions, ReferenceVersionPolicy, ResolvedField, ResolvedMethod, ResolvedType,
-    TypeRelation, TypeRelations,
+    TypeRelation, TypeRelations, image_identity,
 };
 
 /// Readable presentation is distinct from the complete diagnostic evidence view.
@@ -32,6 +33,149 @@ pub fn list_methods(bytes: &[u8]) -> Result<Vec<MethodInfo>> {
     metadata::Image::parse(bytes)?.methods()
 }
 
+/// Scan every MethodDef using the ordinary decompilation path and one parsed image.
+/// Failed methods are recorded independently; output I/O errors stop the scan.
+pub fn scan_methods(
+    bytes: &[u8],
+    record: impl FnMut(u32, Status, Option<String>) -> Result<()>,
+) -> Result<Summary> {
+    scan_methods_with_context(bytes, None, record)
+}
+
+/// Scan every MethodDef with an explicit reference set.
+///
+/// The context must have been built from the same bytes. Its references are the
+/// only facts lowering may use; a method's status here is the status the same
+/// context produces for that token on its own.
+pub fn scan_methods_with_context(
+    bytes: &[u8],
+    context: Option<&DependencyContext>,
+    record: impl FnMut(u32, Status, Option<String>) -> Result<()>,
+) -> Result<Summary> {
+    let image = metadata::Image::parse(bytes)?;
+    scan_range(&image, 1, &image, context, record)
+}
+
+type ScanRow = (u32, Status, Option<String>);
+type ScanChunk = Result<Vec<ScanRow>>;
+
+/// Scan every MethodDef with one interpreter per worker.
+///
+/// Each worker parses the image and rebuilds the reference context itself, so the
+/// fact caches stay thread-local; results are emitted in MethodDef order and are
+/// identical to the sequential scan for the same references. `threads` above 1 is
+/// only useful for large images: the wall time of one image is otherwise bounded
+/// by that image.
+pub fn scan_methods_parallel(
+    bytes: &[u8],
+    threads: usize,
+    context: Option<&(dyn Fn() -> Result<Option<DependencyContext>> + Sync)>,
+    mut record: impl FnMut(u32, Status, Option<String>) -> Result<()>,
+) -> Result<Summary> {
+    let counted = metadata::Image::parse(bytes)?;
+    let count = counted.md.tables().row_count(cildec::TableId::MethodDef);
+    let workers = threads.max(1).min(count.max(1) as usize);
+    if workers <= 1 {
+        let owned = match context {
+            Some(factory) => factory()?,
+            None => None,
+        };
+        let image = metadata::Image::parse(bytes)?;
+        return scan_range(&image, 1, &image, owned.as_ref(), record);
+    }
+    let chunk = count.div_ceil(workers as u32);
+    let mut collected: Vec<ScanChunk> = Vec::new();
+    std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for index in 0..workers as u32 {
+            let start = index * chunk + 1;
+            let end = ((index + 1) * chunk).min(count);
+            if start > end {
+                break;
+            }
+            handles.push(
+                scope.spawn(move || -> Result<Vec<(u32, Status, Option<String>)>> {
+                    let image = metadata::Image::parse(bytes)?;
+                    let owned = match context {
+                        Some(factory) => factory()?,
+                        None => None,
+                    };
+                    let mut rows = Vec::with_capacity((end - start + 1) as usize);
+                    for rid in start..=end {
+                        let token = 0x06000000 | rid;
+                        let (status, reason) = scan_status(&image, token, owned.as_ref());
+                        rows.push((token, status, reason));
+                    }
+                    Ok(rows)
+                }),
+            );
+        }
+        for handle in handles {
+            match handle.join() {
+                Ok(result) => collected.push(result),
+                Err(_) => {
+                    collected.push(Err("scan worker panicked".into()));
+                }
+            }
+        }
+    });
+    let mut rows = Vec::with_capacity(count as usize);
+    for chunk in collected {
+        rows.extend(chunk?);
+    }
+    rows.sort_unstable_by_key(|row| row.0);
+    let mut summary = Summary::default();
+    for (token, status, reason) in rows {
+        summary.record(&status);
+        record(token, status, reason)?;
+    }
+    Ok(summary)
+}
+
+fn scan_range(
+    image: &metadata::Image<'_>,
+    first: u32,
+    counted: &metadata::Image<'_>,
+    context: Option<&DependencyContext>,
+    mut record: impl FnMut(u32, Status, Option<String>) -> Result<()>,
+) -> Result<Summary> {
+    let mut summary = Summary::default();
+    let count = counted.md.tables().row_count(cildec::TableId::MethodDef);
+    for rid in first..=count {
+        let token = 0x06000000 | rid;
+        let (status, reason) = scan_status(image, token, context);
+        summary.record(&status);
+        record(token, status, reason)?;
+    }
+    Ok(summary)
+}
+
+fn scan_status(
+    image: &metadata::Image<'_>,
+    token: u32,
+    context: Option<&DependencyContext>,
+) -> (Status, Option<String>) {
+    match decompile_method(image, token, context) {
+        Ok(result) => {
+            let reason = match result.status {
+                Status::Partial => result
+                    .text
+                    .lines()
+                    .find_map(|line| line.strip_prefix("// IL FALLBACK: "))
+                    .map(String::from),
+                Status::Failed => result
+                    .text
+                    .lines()
+                    .find_map(|line| line.strip_prefix("// FAILED: "))
+                    .map(String::from),
+                _ => None,
+            };
+            (result.status, reason)
+        }
+        Err(error) => (Status::Failed, Some(error.to_string())),
+    }
+}
+
 /// Decode one method without executing it.
 pub fn disassemble(bytes: &[u8], token: u32) -> Result<String> {
     metadata::Image::parse(bytes)?.disassemble(token)
@@ -39,7 +183,7 @@ pub fn disassemble(bytes: &[u8], token: u32) -> Result<String> {
 
 /// Lower a supported method, or return a marked IL fallback without a fabricated body.
 pub fn decompile(bytes: &[u8], token: u32) -> Result<DecompiledMethod> {
-    decompile_method(&metadata::Image::parse(bytes)?, token)
+    decompile_method(&metadata::Image::parse(bytes)?, token, None)
 }
 
 /// Choose a presentation without changing method status or lowering admission.
@@ -58,14 +202,129 @@ pub(crate) fn decompile_with_context(
     context: Option<&DependencyContext>,
 ) -> Result<DecompiledMethod> {
     let image = metadata::Image::parse(bytes)?;
-    let mut result = decompile_method(&image, token)?;
+    let mut result = decompile_method(&image, token, context)?;
     if style == OutputStyle::Readable {
         result.text = readable::method_view(&image, token, &result, context);
     }
     Ok(result)
 }
 
-fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<DecompiledMethod> {
+/// Prefetch storage facts for the value types this method can load or store.
+///
+/// Only cross-image identities need a fact, and only the ones named by this
+/// method's signature and local slots are asked about. A fact that resolves is
+/// cached on the image, where the enum lookup finds it under the same token; a
+/// type that does not resolve keeps its existing blocker unchanged.
+fn prime_external_enums(
+    image: &metadata::Image<'_>,
+    token: u32,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let Ok(types) = image.value_type_tokens(token, body) else {
+        return;
+    };
+    for candidate in types.values {
+        if candidate.table() != Some(cildec::TableId::TypeRef) || image.has_cached_enum(candidate) {
+            continue;
+        }
+        use crate::dependencies::{ExternalValue, ExternalValueLookup};
+        match context.external_value_type(candidate.0) {
+            Ok(ExternalValueLookup::Value(ExternalValue::Enum(enum_type, name))) => {
+                let external = image.intern_external_type_name(&name);
+                image.cache_enum(
+                    candidate,
+                    crate::ir::EnumType {
+                        external: Some(external),
+                        ..enum_type
+                    },
+                );
+            }
+            Ok(ExternalValueLookup::Value(ExternalValue::Struct)) => {
+                let identity = image
+                    .intern_signature_type(&cildec::Type::ValueType(candidate), Default::default())
+                    .map_err(|error| error.to_string());
+                image.cache_external_struct_type(candidate, identity);
+            }
+            Ok(ExternalValueLookup::Refused(reason)) => {
+                image.cache_external_struct_type(candidate, Err(reason));
+            }
+            // A context that could not answer must leave the caller byte-identical.
+            Ok(ExternalValueLookup::Unavailable) | Err(_) => {}
+        }
+    }
+}
+
+/// Prefetch facts for the call targets this body names.
+///
+/// Only MemberRef operands are asked about; a MethodDef target is local and a
+/// MethodSpec target is a generic instantiation, which stays gated regardless.
+/// A refused fact is recorded with its reason so the call site reports why it
+/// cannot be rendered instead of silently keeping a placeholder.
+fn prime_external_calls(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::MemberRef) || !seen.insert(candidate.0) {
+            continue;
+        }
+        if image.external_call(candidate.0).is_some() {
+            continue;
+        }
+        image.cache_external_call(
+            candidate.0,
+            context
+                .external_call(candidate.0)
+                .map_err(|error| error.to_string()),
+        );
+    }
+}
+
+/// Prefetch admission for constructed value types whose definition is external.
+///
+/// The proof is about the definition, so one fact covers every instantiation of
+/// it; the recorded arity keeps a mismatched instantiation from borrowing it.
+fn prime_external_value_definitions(
+    image: &metadata::Image<'_>,
+    token: u32,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    use crate::dependencies::ExternalValueLookup;
+    let Ok(types) = image.value_type_tokens(token, body) else {
+        return;
+    };
+    for (definition, arity) in types.value_definitions {
+        if definition.table() != Some(cildec::TableId::TypeRef)
+            || image.has_external_value_definition(definition)
+        {
+            continue;
+        }
+        image.cache_external_value_definition(
+            definition,
+            match context.external_value_definition(definition.0, arity) {
+                ExternalValueLookup::Value(_) => Ok(arity as u32),
+                ExternalValueLookup::Refused(reason) => Err(reason),
+                ExternalValueLookup::Unavailable => continue,
+            },
+        );
+    }
+}
+
+fn decompile_method(
+    image: &metadata::Image<'_>,
+    token: u32,
+    context: Option<&DependencyContext>,
+) -> Result<DecompiledMethod> {
     let name = match image.name(token) {
         Ok(name) => name,
         Err(error) => {
@@ -90,6 +349,11 @@ fn decompile_method(image: &metadata::Image<'_>, token: u32) -> Result<Decompile
         "// C#-like reverse-engineering output; not guaranteed to compile.\n// token 0x{token:08X} {}\n",
         metadata::escape_line(&name)
     );
+    if let Some(context) = context {
+        prime_external_enums(image, token, &body, context);
+        prime_external_calls(image, &body, context);
+        prime_external_value_definitions(image, token, &body, context);
+    }
     match lift::emit(image, token, &body) {
         Ok(source) => Ok(DecompiledMethod {
             status: Status::Decompiled,
@@ -314,7 +578,7 @@ pub(crate) fn decompile_type_with_context(
                     ));
                 }
             }
-            let result = match decompile_method(&image, token) {
+            let result = match decompile_method(&image, token, context) {
                 Ok(result) => result,
                 Err(error) => DecompiledMethod {
                     status: Status::Failed,

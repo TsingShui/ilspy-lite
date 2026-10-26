@@ -28,7 +28,7 @@
       <div class="sidebar-footer"><span class="file-icon">PE</span><div>Drop DLLs anywhere<small>DLL / EXE / BIN &middot; up to 64 MiB each</small></div></div>
     </aside>
     <section class="main-view">
-      <div class="selection-bar"><div class="breadcrumb"><span id="selected-assembly">ASSEMBLY</span><span class="crumb-separator">/</span><strong id="selected-type">Choose a type</strong></div><button id="rerun" class="button" disabled title="Rerun both engines; rebuilds Rust if its source changed">Run again <span aria-hidden="true">&#8635;</span></button></div>
+      <div class="selection-bar"><div class="breadcrumb"><span id="selected-assembly">ASSEMBLY</span><span class="crumb-separator">/</span><strong id="selected-type">Choose a type</strong></div><div class="selection-actions"><button id="fallback-report-button" class="button">Fallback report</button><button id="rerun" class="button" disabled title="Rerun both engines; rebuilds Rust if its source changed">Run again <span aria-hidden="true">&#8635;</span></button></div></div>
       <div class="view-options">
         <div class="type-meta"><span id="type-token" class="token">TypeDef</span><span id="member-count" class="muted">Original metadata identity</span></div>
         <div class="option-controls">
@@ -57,6 +57,15 @@
     </section>
   </main>
   <footer class="app-footer"><span><i class="tiny-dot"></i> Static PE reading only. Selected assemblies are never executed.</span><span>Visual comparison, not an equivalence proof &middot; engines resolve dependencies independently</span></footer>
+  <div id="report-overlay" class="report-overlay" hidden>
+    <section class="report-card" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <header class="report-head">
+        <div><h2 id="report-title">Fallback report</h2><p id="report-subtitle">Current assembly</p></div>
+        <div class="report-actions"><span id="report-meta" class="report-meta"></span><button id="report-refresh" class="button">Recompute</button><button id="report-close" class="icon-button" aria-label="Close fallback report" title="Close">&#215;</button></div>
+      </header>
+      <div id="report-body" class="report-body"><div class="report-loading">Reading...</div></div>
+    </section>
+  </div>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

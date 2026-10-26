@@ -1,0 +1,12 @@
+using System.Threading.Tasks;
+
+namespace LiteSamples;
+
+public static class AsyncSample
+{
+	public static async Task<int> ReadAsync(int value)
+	{
+		await Task.Yield();
+		return value + 1;
+	}
+}

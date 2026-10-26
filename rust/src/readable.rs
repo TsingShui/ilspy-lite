@@ -482,6 +482,13 @@ fn render_method(
     }
     line(out, indent, &header);
     line(out, indent, "{");
+    for evidence in result.text.lines().filter(|l| {
+        l.starts_with("// structural signature ")
+            || l.starts_with("// generic body context ")
+            || l.starts_with("// enum storage ")
+    }) {
+        line(out, indent + 1, evidence);
+    }
     if result.status != Status::Decompiled {
         let mut evidence = result
             .text
@@ -542,7 +549,10 @@ fn constructor_initializer<'b>(
         return None;
     }
     let target = image
-        .method_ref(Token(u32::from_str_radix(target, 16).ok()?))
+        .method_ref(
+            Token(u32::from_str_radix(target, 16).ok()?),
+            Default::default(),
+        )
         .ok()?;
     let target_owner = match (target.receiver, target.core_object_constructor) {
         (Some(Ty::Class(t) | Ty::ExternalClass(t)), None) if target.constructor => t,
@@ -575,7 +585,7 @@ fn constructor_initializer<'b>(
             .parse::<usize>()
             .ok()?
             .checked_sub(1)?;
-        if Ty::from_param(signature.params.get(index)?).ok()? != expected {
+        if Ty::from_param(signature.params.get(index)?, image).ok()? != expected {
             return None;
         }
     }

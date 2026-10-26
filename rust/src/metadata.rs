@@ -5,9 +5,55 @@ use crate::{MethodInfo, Result};
 use cildec::tables::{MethodDefRow, NestedClassRow, TypeDefRow};
 use cildec::{Metadata, MethodBody, MethodSig, Names, PeImage, Rid, Strictness, TableId, Token};
 
+type StructTypes = std::cell::RefCell<
+    std::collections::BTreeMap<
+        u32,
+        std::result::Result<Option<crate::signature_types::TypeId>, String>,
+    >,
+>;
+
+/// What a sealed value definition actually is.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum ValueDefinitionKind {
+    Enum,
+    Struct,
+    Other,
+}
+
+/// Value types a method names, split by how they are admitted.
+#[derive(Default)]
+pub(crate) struct SignatureValueTypes {
+    /// Plain `valuetype` identities, which need a storage fact.
+    pub values: Vec<Token>,
+    /// Constructed value types, with the argument count the site supplies.
+    pub value_definitions: Vec<(Token, usize)>,
+}
+
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
     pub md: Metadata<'a>,
+    core_definition: std::cell::OnceCell<std::result::Result<bool, String>>,
+    struct_types: StructTypes,
+    pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
+    enum_types: std::cell::RefCell<
+        std::collections::BTreeMap<u32, std::result::Result<crate::ir::EnumType, String>>,
+    >,
+    external_type_names: std::cell::RefCell<Vec<String>>,
+    open_self: std::cell::RefCell<std::collections::BTreeMap<crate::signature_types::TypeId, u32>>,
+    external_structs: std::cell::RefCell<
+        std::collections::BTreeMap<
+            u32,
+            std::result::Result<crate::signature_types::TypeId, String>,
+        >,
+    >,
+    external_value_defs:
+        std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<u32, String>>>,
+    external_calls: std::cell::RefCell<
+        std::collections::BTreeMap<
+            u32,
+            std::result::Result<crate::dependencies::ExternalCall, String>,
+        >,
+    >,
 }
 
 impl<'a> Image<'a> {
@@ -27,7 +73,19 @@ impl<'a> Image<'a> {
         {
             return Err("metadata pointer tables are not supported".into());
         }
-        Ok(Self { pe, md })
+        Ok(Self {
+            pe,
+            md,
+            core_definition: std::cell::OnceCell::new(),
+            struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
+            enum_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_type_names: std::cell::RefCell::new(Vec::new()),
+            open_self: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_structs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_value_defs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_calls: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+        })
     }
 
     pub fn methods(&self) -> Result<Vec<MethodInfo>> {
@@ -1668,7 +1726,7 @@ impl<'a> Image<'a> {
 
     pub fn signature(&self, token: u32) -> Result<MethodSig<'a>> {
         let row = self.row(token)?;
-        Ok(MethodSig::parse(self.md.blobs().get(row.signature)?)?)
+        crate::signature_guard::method(self.md.blobs().get(row.signature)?)
     }
 
     pub fn body(&self, token: u32) -> Result<Option<MethodBody<'a>>> {
@@ -1870,7 +1928,11 @@ impl<'a> Image<'a> {
         Ok(literal)
     }
 
-    pub fn local_types(&self, body: &MethodBody<'a>) -> Result<Vec<crate::ir::Ty>> {
+    pub fn local_types(
+        &self,
+        body: &MethodBody<'a>,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Vec<crate::ir::Ty>> {
         let Some(t) = body.local_var_sig else {
             return Ok(Vec::new());
         };
@@ -1878,15 +1940,19 @@ impl<'a> Image<'a> {
             return Err("invalid local signature token".into());
         }
         let row = self.md.tables().stand_alone_sig(t.rid())?;
-        let sig = cildec::LocalVarSig::parse(self.md.blobs().get(row.signature)?)?;
+        let bytes = self.md.blobs().get(row.signature)?;
+        let sig = cildec::LocalVarSig::parse(bytes)?;
+        if sig
+            .locals
+            .iter()
+            .any(|l| l.pinned || l.by_ref || !l.custom_mods.is_empty())
+        {
+            return Err("pinned/byref/modified local needs IL fallback".into());
+        }
+        crate::signature_guard::plain_locals(bytes)?;
         sig.locals
             .iter()
-            .map(|l| {
-                if l.pinned || l.by_ref || !l.custom_mods.is_empty() {
-                    return Err("pinned/byref/modified local needs IL fallback".into());
-                }
-                crate::ir::Ty::from_sig(&l.type_)
-            })
+            .map(|l| crate::ir::Ty::from_sig_scoped(&l.type_, self, context))
             .collect()
     }
 
@@ -1981,6 +2047,604 @@ impl<'a> Image<'a> {
         resolve(self, token, &mut Vec::new())
     }
 
+    pub(crate) fn method_type_context(
+        &self,
+        token: u32,
+        signature: &MethodSig<'_>,
+    ) -> Result<crate::signature_types::TypeContext> {
+        use crate::signature_types::{GenericScope, TypeContext};
+        fn scope(image: &Image<'_>, owner: Token) -> Result<GenericScope> {
+            let tables = image.md.tables();
+            let parameters = tables.generic_params(owner)?;
+            if parameters.len() > 4096 {
+                return Err("generic context arity exceeds 4096 positions".into());
+            }
+            for (position, rid) in parameters.iter().copied().enumerate() {
+                let row = tables.generic_param(rid)?;
+                let raw_owner = image.metadata_coded_token(
+                    cildec::CodedIndex::TypeOrMethodDef,
+                    tables.raw_column(TableId::GenericParam, rid, 2)?,
+                )?;
+                if raw_owner != owner
+                    || usize::from(row.number) != position
+                    || row.flags & !0x1f != 0
+                    || row.flags & 0x0c == 0x0c
+                    || row.flags & 3 == 3
+                    || (owner.table() == Some(TableId::MethodDef) && row.flags & 3 != 0)
+                {
+                    return Err("invalid generic context owner/position/flags".into());
+                }
+            }
+            Ok(GenericScope {
+                owner: owner.0,
+                count: parameters.len() as u32,
+            })
+        }
+        let method = Token(token);
+        self.row(token)?;
+        let owner = self
+            .md
+            .tables()
+            .type_of_method(Rid::new(method.rid()))?
+            .ok_or("generic method context has no declaring type")?;
+        let method_scope = scope(self, method)?;
+        let expected = match signature.calling_convention {
+            cildec::CallConv::Default => 0,
+            cildec::CallConv::Generic(arity) if arity != 0 => arity,
+            _ => return Err("unsupported generic method context calling convention".into()),
+        };
+        if method_scope.count != expected {
+            return Err("generic context parameter count differs from method signature".into());
+        }
+        Ok(TypeContext {
+            type_scope: scope(self, Token(0x02000000 | owner.get()))?,
+            method_scope,
+        })
+    }
+
+    pub(crate) fn intern_signature_type(
+        &self,
+        ty: &cildec::Type<'_>,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::signature_types::TypeId> {
+        let (signature, description) = crate::signature_types::encode_type(self, ty, context)?;
+        self.signature_types
+            .borrow_mut()
+            .intern(signature, description)
+    }
+
+    pub(crate) fn signature_type_token(
+        &self,
+        token: Token,
+        value: bool,
+        arity: usize,
+    ) -> Result<Token> {
+        let token = if token.table() == Some(TableId::TypeRef) {
+            self.local_type_definition(token)?.unwrap_or(token)
+        } else {
+            token
+        };
+        match token.table() {
+            Some(TableId::TypeRef) => {
+                self.type_reference(token, 0)?;
+            }
+            Some(TableId::TypeDef) => {
+                let row = self.md.tables().type_def(token.rid())?;
+                if self.md.strings().str(row.type_name)?.is_empty()
+                    || self.md.tables().generic_params(token)?.len() != arity
+                {
+                    return Err("structural type definition has invalid name/generic arity".into());
+                }
+                let core = self.local_core_type_name(token)?;
+                let is_value = !matches!(core, Some("ValueType" | "Enum"))
+                    && (self.has_core_base(token, "ValueType")?
+                        || self.has_core_base(token, "Enum")?);
+                if is_value != value {
+                    return Err(
+                        "structural signature class/value kind disagrees with local definition"
+                            .into(),
+                    );
+                }
+            }
+            _ => return Err("structural type definition must be TypeDef or TypeRef".into()),
+        }
+        Ok(token)
+    }
+
+    pub(crate) fn enum_type(&self, token: Token) -> Result<crate::ir::EnumType> {
+        // A cross-image storage fact is cached under the TypeRef it was asked
+        // about, so it must be honoured before the TypeDef requirement below.
+        if let Some(cached) = self.enum_types.borrow().get(&token.0) {
+            return cached.clone().map_err(Into::into);
+        }
+        let token = if token.table() == Some(TableId::TypeRef) {
+            self.local_type_definition(token)?.unwrap_or(token)
+        } else {
+            token
+        };
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            return Err("enum storage requires an exact local definition; external/value signatures need IL fallback".into());
+        }
+        if let Some(cached) = self.enum_types.borrow().get(&token.0) {
+            return cached.clone().map_err(Into::into);
+        }
+        let result = self.checked_enum_type(token).map_err(|e| e.to_string());
+        self.enum_types.borrow_mut().insert(token.0, result.clone());
+        result.map_err(Into::into)
+    }
+
+    /// Value-type tokens named by a method's own signature and local slots.
+    /// Callers use this to ask an explicit dependency context about exactly the
+    /// types this method can load or store, rather than walking every TypeRef.
+    pub(crate) fn value_type_tokens(
+        &self,
+        token: u32,
+        body: &cildec::MethodBody<'_>,
+    ) -> Result<SignatureValueTypes> {
+        let mut tokens = SignatureValueTypes::default();
+        fn walk(ty: &cildec::Type<'_>, out: &mut SignatureValueTypes) {
+            match ty {
+                cildec::Type::ValueType(token) => out.values.push(*token),
+                cildec::Type::GenericInst {
+                    is_value_type: true,
+                    def,
+                    args,
+                } => {
+                    out.value_definitions.push((*def, args.len()));
+                    for arg in args {
+                        walk(arg, out);
+                    }
+                }
+                cildec::Type::GenericInst { def, args, .. } => {
+                    out.values.push(*def);
+                    for arg in args {
+                        walk(arg, out);
+                    }
+                }
+                cildec::Type::Array(element, _) => walk(element, out),
+                cildec::Type::SzArray(_, element) => walk(element, out),
+                cildec::Type::ByRef(inner)
+                | cildec::Type::Ptr(_, inner)
+                | cildec::Type::Modified(_, inner)
+                | cildec::Type::Pinned(inner) => walk(inner, out),
+                _ => {}
+            }
+        }
+        let row = self.row(token)?;
+        let signature = crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+        walk(&signature.return_type.type_, &mut tokens);
+        for param in &signature.params {
+            walk(&param.type_, &mut tokens);
+        }
+        if let Some(t) = body.local_var_sig
+            && t.table() == Some(TableId::StandAloneSig)
+        {
+            let row = self.md.tables().stand_alone_sig(t.rid())?;
+            let signature = cildec::LocalVarSig::parse(self.md.blobs().get(row.signature)?)?;
+            for local in &signature.locals {
+                walk(&local.type_, &mut tokens);
+            }
+        }
+        // A call, field access or allocation can name a value type that this
+        // method never stores directly. Those signatures live in this image, so
+        // they are collected here rather than left to whichever method happened
+        // to be lowered first: admission must not depend on scan order.
+        for instruction in body.instructions() {
+            let Ok(instruction) = instruction else {
+                break;
+            };
+            let (blob, field) = match instruction.operand {
+                cildec::Operand::Method(target) => (self.member_signature(target)?, false),
+                cildec::Operand::Field(target) => (self.member_signature(target)?, true),
+                _ => continue,
+            };
+            let Some(blob) = blob else { continue };
+            if field {
+                if let Ok(signature) = crate::signature_guard::field(blob) {
+                    walk(&signature.type_, &mut tokens);
+                }
+            } else if let Ok(signature) = crate::signature_guard::method(blob) {
+                walk(&signature.return_type.type_, &mut tokens);
+                for param in &signature.params {
+                    walk(&param.type_, &mut tokens);
+                }
+            }
+        }
+        Ok(tokens)
+    }
+
+    /// The signature blob of a member operand, when the image owns one.
+    ///
+    /// A prefetch that cannot read a signature simply contributes no candidate;
+    /// the lowering reports the original blocker for that member on its own.
+    fn member_signature(&self, token: Token) -> Result<Option<&'a [u8]>> {
+        Ok(match token.table() {
+            Some(TableId::MemberRef) => Some(
+                self.md
+                    .blobs()
+                    .get(self.md.tables().member_ref(token.rid())?.signature)?,
+            ),
+            Some(TableId::MethodDef) => Some(
+                self.md
+                    .blobs()
+                    .get(self.md.tables().method_def(token.rid())?.signature)?,
+            ),
+            Some(TableId::Field) => Some(
+                self.md
+                    .blobs()
+                    .get(self.md.tables().field(token.rid())?.signature)?,
+            ),
+            _ => None,
+        })
+    }
+
+    /// Name of a value type defined in another assembly, recorded when its
+    /// storage fact was admitted. Kept per image so a foreign token is never
+    /// looked up in this image's type table.
+    pub(crate) fn external_type_name(&self, index: u32) -> Result<String> {
+        self.external_type_names
+            .borrow()
+            .get(index as usize)
+            .cloned()
+            .ok_or_else(|| "unknown external value type name".into())
+    }
+
+    pub(crate) fn intern_external_type_name(&self, name: &str) -> u32 {
+        let mut names = self.external_type_names.borrow_mut();
+        if let Some(index) = names.iter().position(|existing| existing == name) {
+            return index as u32;
+        }
+        names.push(name.to_string());
+        (names.len() - 1) as u32
+    }
+
+    /// Facts recorded for one call target from a referenced assembly, if the
+    /// caller asked for them. `Some(Err(..))` records why the fact was refused.
+    pub(crate) fn external_call(
+        &self,
+        token: u32,
+    ) -> Option<std::result::Result<crate::dependencies::ExternalCall, String>> {
+        self.external_calls.borrow().get(&token).cloned()
+    }
+
+    pub(crate) fn cache_external_call(
+        &self,
+        token: u32,
+        value: std::result::Result<crate::dependencies::ExternalCall, String>,
+    ) {
+        self.external_calls.borrow_mut().insert(token, value);
+    }
+
+    /// True when this type would be named by an open generic definition, i.e. the
+    /// text cannot be written as C# without its instantiation.
+    pub(crate) fn generic_definition_name(&self, ty: crate::ir::Ty) -> Result<bool> {
+        let crate::ir::Ty::Class(token) = ty else {
+            return Ok(false);
+        };
+        if token & 0xffffff == 0 {
+            return Ok(false);
+        }
+        self.generic_declaring_context(Token(token))
+    }
+
+    /// Whether a value definition is an enum, a struct, or neither.
+    pub(crate) fn value_definition_kind(&self, token: Token) -> Result<ValueDefinitionKind> {
+        if self.has_core_base(token, "Enum")? {
+            Ok(ValueDefinitionKind::Enum)
+        } else if self.has_core_base(token, "ValueType")? {
+            Ok(ValueDefinitionKind::Struct)
+        } else {
+            Ok(ValueDefinitionKind::Other)
+        }
+    }
+
+    /// A value type from a referenced assembly that passed the copy proof, keyed by
+    /// the input-scoped TypeRef identity the signature used.
+    pub(crate) fn external_struct_type(
+        &self,
+        token: Token,
+    ) -> Option<std::result::Result<crate::signature_types::TypeId, String>> {
+        self.external_structs.borrow().get(&token.0).cloned()
+    }
+
+    pub(crate) fn cache_external_struct_type(
+        &self,
+        token: Token,
+        value: std::result::Result<crate::signature_types::TypeId, String>,
+    ) {
+        self.external_structs.borrow_mut().insert(token.0, value);
+    }
+
+    /// Admission of a value definition from a referenced assembly, recorded with
+    /// the generic arity the referenced definition declares.
+    pub(crate) fn has_external_value_definition(&self, token: Token) -> bool {
+        self.external_value_defs.borrow().contains_key(&token.0)
+    }
+
+    pub(crate) fn cache_external_value_definition(
+        &self,
+        token: Token,
+        value: std::result::Result<u32, String>,
+    ) {
+        self.external_value_defs.borrow_mut().insert(token.0, value);
+    }
+
+    /// Record that an interned reference instantiation is the open self type of a
+    /// local definition, i.e. `C<!0..!n-1>`. Members of `C` name `this` that way,
+    /// so the two representations must stay assignable to each other.
+    pub(crate) fn register_open_self(&self, id: crate::signature_types::TypeId, definition: u32) {
+        self.open_self.borrow_mut().insert(id, definition);
+    }
+
+    pub(crate) fn open_self_definition(&self, id: crate::signature_types::TypeId) -> Option<u32> {
+        self.open_self.borrow().get(&id).copied()
+    }
+
+    pub(crate) fn has_cached_enum(&self, token: Token) -> bool {
+        self.enum_types.borrow().contains_key(&token.0)
+    }
+
+    pub(crate) fn cache_enum(&self, token: Token, value: crate::ir::EnumType) {
+        self.enum_types.borrow_mut().insert(token.0, Ok(value));
+    }
+
+    fn has_core_base(&self, token: Token, name: &str) -> Result<bool> {
+        let tables = self.md.tables();
+        let mut base = self.metadata_coded_token(
+            cildec::CodedIndex::TypeDefOrRef,
+            tables.raw_column(TableId::TypeDef, token.rid(), 3)?,
+        )?;
+        if base.table() == Some(TableId::TypeRef) {
+            base = self.local_type_definition(base)?.unwrap_or(base);
+        }
+        Ok(match base.table() {
+            Some(TableId::TypeDef) => {
+                self.local_core_type_name(base)? == Some(name)
+                    && !self.generic_declaring_context(base)?
+            }
+            Some(TableId::TypeRef) => {
+                let ty = tables.type_ref(base.rid())?;
+                let scope = self.metadata_coded_token(
+                    cildec::CodedIndex::ResolutionScope,
+                    tables.raw_column(TableId::TypeRef, base.rid(), 0)?,
+                )?;
+                self.md.strings().str(ty.type_namespace)? == "System"
+                    && self.md.strings().str(ty.type_name)? == name
+                    && crate::dependencies::is_core_reference(self, scope)?
+            }
+            _ => false,
+        })
+    }
+
+    pub(crate) fn checked_enum_type(&self, token: Token) -> Result<crate::ir::EnumType> {
+        use crate::ir::{EnumStorage, EnumType};
+        let tables = self.md.tables();
+        let row = tables.type_def(token.rid())?;
+        if row.flags & (0x20 | 0x80 | 0x100) != 0x100 || self.generic_declaring_context(token)? {
+            return Err("enum storage needs a sealed nongeneric value definition".into());
+        }
+        if !self.has_core_base(token, "Enum")? {
+            return Err("value type has no exact core Enum base".into());
+        }
+        let mut storage = None;
+        for rid in tables.field_range(Rid::new(token.rid()))? {
+            let field = tables.field(rid)?;
+            if field.flags & 0x10 != 0 {
+                if field.flags & 0x60 != 0x40 {
+                    return Err("enum static fields must be literal, not initonly".into());
+                }
+                continue;
+            }
+            if storage.is_some()
+                || self.md.strings().str(field.name)? != "value__"
+                || field.flags != 0x0606
+            {
+                return Err("enum needs one ordinary public special value__ instance field".into());
+            }
+            let signature = crate::signature_guard::field(self.md.blobs().get(field.signature)?)?;
+            if !signature.custom_mods.is_empty() {
+                return Err("modified enum storage needs IL fallback".into());
+            }
+            storage = Some(match signature.type_ {
+                cildec::Type::I1 => EnumStorage::I1,
+                cildec::Type::U1 => EnumStorage::U1,
+                cildec::Type::I2 => EnumStorage::I2,
+                cildec::Type::U2 => EnumStorage::U2,
+                cildec::Type::I4 => EnumStorage::I4,
+                cildec::Type::U4 => EnumStorage::U4,
+                cildec::Type::I8 => EnumStorage::I8,
+                cildec::Type::U8 => EnumStorage::U8,
+                _ => return Err("enum storage must be an admitted fixed-width integer".into()),
+            });
+        }
+        Ok(EnumType {
+            token: token.0,
+            storage: storage.ok_or("enum has no instance storage field")?,
+            external: None,
+        })
+    }
+
+    pub(crate) fn struct_type(
+        &self,
+        token: Token,
+    ) -> Result<Option<crate::signature_types::TypeId>> {
+        let token = if token.table() == Some(TableId::TypeRef) {
+            self.local_type_definition(token)?.unwrap_or(token)
+        } else {
+            token
+        };
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            // A refusal recorded for this cross-image value type keeps its own
+            // reason instead of being reported as an enum-storage failure.
+            return match self.external_struct_type(token) {
+                Some(Ok(id)) => Ok(Some(id)),
+                Some(Err(reason)) => Err(reason.into()),
+                None => Ok(None),
+            };
+        }
+        if let Some(cached) = self.struct_types.borrow().get(&token.0) {
+            return cached.clone().map_err(Into::into);
+        }
+        let result = self.checked_struct_type(token).map_err(|e| e.to_string());
+        self.struct_types
+            .borrow_mut()
+            .insert(token.0, result.clone());
+        result.map_err(Into::into)
+    }
+
+    /// The proof shared by local struct copies and constructed value types.
+    ///
+    /// open_fields admits fields whose signature is one of the definition's own
+    /// generic parameters: an instantiation supplies a value for each of them, so
+    /// the field is still a value field. Modified, byref, typed-reference and
+    /// unreadable fields are refused either way.
+    pub(crate) fn value_definition_checks(&self, token: Token, open_fields: bool) -> Result<()> {
+        use cildec::CodedIndex;
+        let tables = self.md.tables();
+        if !self.has_core_base(token, "ValueType")? {
+            return Err("value definition has no exact core ValueType base".into());
+        }
+        let row = tables.type_def(token.rid())?;
+        if row.flags & (0x20 | 0x80 | 0x100) != 0x100 {
+            return Err("value definition must be sealed and not an interface or abstract".into());
+        }
+        if matches!(
+            self.local_core_type_name(token)?,
+            Some(
+                "Boolean"
+                    | "Char"
+                    | "SByte"
+                    | "Byte"
+                    | "Int16"
+                    | "UInt16"
+                    | "Int32"
+                    | "UInt32"
+                    | "Int64"
+                    | "UInt64"
+                    | "IntPtr"
+                    | "UIntPtr"
+                    | "Single"
+                    | "Double"
+                    | "TypedReference"
+                    | "Void"
+            )
+        ) {
+            return Err("core scalar/special value signature requires its own stack model".into());
+        }
+        for rid in tables.custom_attributes(token)? {
+            let parent = self.metadata_coded_token(
+                CodedIndex::HasCustomAttribute,
+                tables.raw_column(TableId::CustomAttribute, rid, 0)?,
+            )?;
+            if parent != token {
+                return Err("invalid struct custom attribute owner".into());
+            }
+            let constructor = self.metadata_coded_token(
+                CodedIndex::CustomAttributeType,
+                tables.raw_column(TableId::CustomAttribute, rid, 1)?,
+            )?;
+            let owner = match constructor.table() {
+                Some(TableId::MethodDef) => Token(
+                    0x02000000
+                        | tables
+                            .type_of_method(Rid::new(constructor.rid()))?
+                            .ok_or("struct attribute constructor has no owner")?
+                            .get(),
+                ),
+                Some(TableId::MemberRef) => self.metadata_coded_token(
+                    CodedIndex::MemberRefParent,
+                    tables.raw_column(TableId::MemberRef, constructor.rid(), 0)?,
+                )?,
+                _ => return Err("unreadable struct attribute constructor".into()),
+            };
+            let (namespace, name) = match owner.table() {
+                Some(TableId::TypeDef) => {
+                    let row = tables.type_def(owner.rid())?;
+                    (row.type_namespace, row.type_name)
+                }
+                Some(TableId::TypeRef) => {
+                    let row = tables.type_ref(owner.rid())?;
+                    (row.type_namespace, row.type_name)
+                }
+                _ => {
+                    return Err(
+                        "constructed/unknown struct attribute owner needs IL fallback".into(),
+                    );
+                }
+            };
+            // An ambiguous lookalike is conservatively refused, not used as
+            // positive identity or layout evidence.
+            if self.md.strings().str(namespace)? == "System.Runtime.CompilerServices"
+                && self.md.strings().str(name)? == "IsByRefLikeAttribute"
+            {
+                return Err("byref-like struct copies need location/lifetime semantics".into());
+            }
+        }
+        for rid in tables.field_range(Rid::new(token.rid()))? {
+            let field = tables.field(rid)?;
+            if field.flags & 0x10 != 0 {
+                continue;
+            }
+            let sig = crate::signature_guard::field(self.md.blobs().get(field.signature)?)?;
+            if !sig.custom_mods.is_empty()
+                || matches!(
+                    sig.type_,
+                    cildec::Type::Void | cildec::Type::ByRef(_) | cildec::Type::TypedByRef
+                )
+                || (!open_fields
+                    && matches!(sig.type_, cildec::Type::Var(_) | cildec::Type::MVar(_)))
+            {
+                return Err(
+                    "invalid/modified/open/managed-address struct field needs IL fallback".into(),
+                );
+            }
+        }
+        Ok(())
+    }
+
+    /// Proof for a constructed value type: the definition must be a sealed generic
+    /// value definition and the instantiation must supply exactly its parameters.
+    pub(crate) fn admit_generic_value_definition(&self, def: Token, arity: usize) -> Result<()> {
+        let token = if def.table() == Some(TableId::TypeRef) {
+            self.local_type_definition(def)?.unwrap_or(def)
+        } else {
+            def
+        };
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            return match self.external_value_defs.borrow().get(&def.0) {
+                Some(Ok(declared)) if *declared as usize == arity => Ok(()),
+                Some(Ok(declared)) => Err(format!(
+                    "constructed value type instantiation supplies {arity} arguments but the definition declares {declared}"
+                )
+                .into()),
+                Some(Err(reason)) => Err(reason.clone().into()),
+                None => Err(
+                    "constructed value type needs a local definition; external instantiations need dependency facts"
+                        .into(),
+                ),
+            };
+        }
+        let declared = self.md.tables().generic_params(token)?.len();
+        if arity == 0 || declared != arity {
+            return Err("constructed value type argument count differs from the definition".into());
+        }
+        self.value_definition_checks(token, true)
+    }
+
+    fn checked_struct_type(&self, token: Token) -> Result<Option<crate::signature_types::TypeId>> {
+        if !self.has_core_base(token, "ValueType")? {
+            return Ok(None);
+        }
+        if self.generic_declaring_context(token)? {
+            return Err("struct copies require a sealed nongeneric value definition".into());
+        }
+        self.value_definition_checks(token, false)?;
+        Ok(Some(self.intern_signature_type(
+            &cildec::Type::ValueType(token),
+            Default::default(),
+        )?))
+    }
+
     /// Resolve local class identity; external ancestry is not an assignability proof.
     pub fn class_name(&self, token: u32) -> Result<String> {
         self.class_chain(token)?;
@@ -2011,6 +2675,30 @@ impl<'a> Image<'a> {
         Ok(false)
     }
 
+    pub(crate) fn is_core_definition(&self) -> Result<bool> {
+        self.core_definition
+            .get_or_init(|| {
+                crate::dependencies::is_core_definition(self).map_err(|e| e.to_string())
+            })
+            .as_ref()
+            .copied()
+            .map_err(|e| e.clone().into())
+    }
+
+    fn local_core_type_name(&self, token: Token) -> Result<Option<&'a str>> {
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            return Ok(None);
+        }
+        let row = self.md.tables().type_def(token.rid())?;
+        if row.is_nested()
+            || self.md.strings().str(row.type_namespace)? != "System"
+            || !self.is_core_definition()?
+        {
+            return Ok(None);
+        }
+        Ok(Some(self.md.strings().str(row.type_name)?))
+    }
+
     fn class_chain(&self, token: u32) -> Result<Vec<u32>> {
         let mut chain = Vec::new();
         let mut current = Token(token);
@@ -2019,11 +2707,48 @@ impl<'a> Image<'a> {
                 return Err("unresolved/cyclic reference hierarchy needs IL fallback".into());
             }
             let row = self.md.tables().type_def(current.rid())?;
-            if row.flags & 0x20 != 0 || self.generic_declaring_context(current)? {
-                return Err("interface/generic declaring type needs IL fallback".into());
+            if row.flags & 0x20 != 0 {
+                return Err("interface declaring type needs IL fallback".into());
             }
             chain.push(current.0);
-            current = row.extends;
+            let encoded = self
+                .md
+                .tables()
+                .raw_column(TableId::TypeDef, current.rid(), 3)?;
+            let base = self.metadata_coded_token(cildec::CodedIndex::TypeDefOrRef, encoded)?;
+            // A class may itself be generic, and a base may be a constructed type
+            // such as `Base<T>`. Inheritance, assignability and override identity
+            // are properties of the definition, so the chain follows the definition
+            // and leaves the instantiation to member binding.
+            let base = if base.table() == Some(TableId::TypeSpec) {
+                let spec = self.type_spec(base)?;
+                let cildec::Type::GenericInst {
+                    is_value_type: false,
+                    def,
+                    ..
+                } = &spec.type_
+                else {
+                    return Err("constructed base needs member binding".into());
+                };
+                self.local_type_definition(*def)?.ok_or(
+                    "constructed base needs a local definition; external constructed bases need dependency facts",
+                )?
+            } else {
+                base
+            };
+            if base.rid() == 0 {
+                if encoded == 0 && self.local_core_type_name(current)? == Some("Object") {
+                    return Ok(chain);
+                }
+                return Err("unresolved reference hierarchy root needs IL fallback".into());
+            }
+            current = base;
+            if matches!(
+                self.local_core_type_name(current)?,
+                Some("ValueType" | "Enum")
+            ) {
+                return Err("value-type receiver needs IL fallback".into());
+            }
             if current.table() == Some(TableId::TypeRef) {
                 let base = self.md.tables().type_ref(current.rid())?;
                 if self.md.strings().str(base.type_namespace)? == "System"
@@ -2041,6 +2766,41 @@ impl<'a> Image<'a> {
 
     /// Recognize admitted core identities without loading dependencies.
     /// A locally named System type is not a core type.
+    /// The core scalar named by a `box`/`unbox.any` operand.
+    ///
+    /// Only core scalars are admitted: a boxed enum or struct must keep its own
+    /// value identity, which needs a constructed-value admission this slice does not
+    /// have, so those stay gated instead of being boxed as a plain integer.
+    pub(crate) fn boxed_value_type(&self, token: Token) -> Result<crate::ir::Ty> {
+        use crate::ir::Ty;
+        // A local enum keeps its own boxed identity, so it is admitted with its
+        // declared name; a struct or constructed value still needs a name renderer.
+        if token.table() != Some(TableId::TypeRef) || self.core_type_name(token).is_err() {
+            return match crate::ir::Ty::from_sig_scoped(
+                &cildec::Type::ValueType(token),
+                self,
+                crate::signature_types::TypeContext::default(),
+            ) {
+                Ok(ty @ crate::ir::Ty::Enum(_)) => Ok(ty),
+                _ => Err("box/unbox needs an admitted core scalar or local enum".into()),
+            };
+        }
+        let name = self.core_type_name(token)?;
+        Ok(match name {
+            "Boolean" => Ty::Bool,
+            "Char" => Ty::Char,
+            "SByte" => Ty::I1,
+            "Byte" => Ty::U1,
+            "Int16" => Ty::I2,
+            "UInt16" => Ty::U2,
+            "Int32" => Ty::I4,
+            "UInt32" => Ty::U4,
+            "Int64" => Ty::I8,
+            "UInt64" => Ty::U8,
+            _ => return Err("box/unbox needs an admitted core scalar or local enum".into()),
+        })
+    }
+
     fn core_type_name(&self, token: Token) -> Result<&'a str> {
         if token.table() != Some(TableId::TypeRef) || token.rid() == 0 {
             return Err("operation needs a core TypeRef".into());
@@ -2129,6 +2889,170 @@ impl<'a> Image<'a> {
         Ok(crate::ir::Ty::ExternalClass(member.class.0))
     }
 
+    /// Local reference-class allocation: a fresh identity plus one exact
+    /// constructor call. Value types, abstract/generic owners and external
+    /// constructors stay out of this subset.
+    /// Receiver and supplied arguments for a member reference whose parent is a
+    /// local class instantiation.
+    ///
+    /// `None` means the parent is not a constructed local class, so the caller
+    /// keeps its existing path. An open self instantiation (`C<!0..>`) is the
+    /// declaring type itself and needs no substitution.
+    fn constructed_member_owner(
+        &self,
+        parent: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<ConstructedOwner<'a>>> {
+        if parent.table() != Some(TableId::TypeSpec) {
+            return Ok(None);
+        }
+        let spec = self.type_spec(parent)?;
+        let cildec::Type::GenericInst {
+            is_value_type: false,
+            def,
+            args,
+        } = &spec.type_
+        else {
+            return Err("constructed member parent is not a class instantiation".into());
+        };
+        let definition = self.local_type_definition(*def)?.ok_or(
+            "constructed member needs a local definition; external constructed members need dependency facts",
+        )?;
+        if self.md.tables().type_def(definition.rid())?.flags & (0x20 | 0x80) != 0 {
+            return Err("constructed member parent must be a concrete class".into());
+        }
+        let open_self = args
+            .iter()
+            .enumerate()
+            .all(|(index, argument)| {
+                matches!(argument, cildec::Type::Var(position) if *position as usize == index)
+            });
+        if open_self {
+            return Ok(Some(ConstructedOwner {
+                definition,
+                receiver: crate::ir::Ty::Class(definition.0),
+                arguments: None,
+            }));
+        }
+        let receiver =
+            crate::ir::Ty::StructuralRef(self.intern_signature_type(&spec.type_, context)?);
+        Ok(Some(ConstructedOwner {
+            definition,
+            receiver,
+            arguments: Some(args.clone()),
+        }))
+    }
+
+    /// The single constructor of `definition` with this parameter count.
+    fn find_constructor(&self, definition: Token, parameters: usize) -> Result<Token> {
+        let tables = self.md.tables();
+        let mut found = None;
+        for rid in tables.method_range(Rid::new(definition.rid()))? {
+            let row = tables.method_def(rid)?;
+            if self.md.strings().str(row.name)? != ".ctor" || row.flags & 0x10 != 0 {
+                continue;
+            }
+            let signature = crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+            if signature.params.len() != parameters {
+                continue;
+            }
+            if found.is_some() {
+                return Err("constructor overload selection needs IL fallback".into());
+            }
+            found = Some(Token(0x06000000 | rid));
+        }
+        found.ok_or_else(|| "constructed allocation names no constructor of its definition".into())
+    }
+
+    pub(crate) fn allocation_constructor(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<(crate::ir::Ty, Vec<crate::ir::Ty>)> {
+        let (token, allocated, arguments) = match token.table() {
+            Some(TableId::MethodDef) if token.rid() != 0 => (token, None, None),
+            Some(TableId::MemberRef) => {
+                let row = self.md.tables().member_ref(token.rid())?;
+                if self.md.strings().str(row.name)? != ".ctor" {
+                    return Err("allocation needs a constructor reference".into());
+                }
+                let reference =
+                    crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+                let owner = self
+                    .constructed_member_owner(row.class, context)?
+                    .ok_or("external allocation needs dependency facts; only local classes and local instantiations are admitted")?;
+                let constructor =
+                    self.find_constructor(owner.definition, reference.params.len())?;
+                (constructor, Some(owner.receiver), owner.arguments)
+            }
+            _ => return Err("allocation needs a local constructor definition".into()),
+        };
+        let row = self.row(token.0)?;
+        if self.md.strings().str(row.name)? != ".ctor"
+            || row.is_static()
+            || row.flags & 0x1800 != 0x1800
+            || row.flags & 0x440 != 0
+        {
+            return Err("allocation needs an ordinary instance constructor".into());
+        }
+        let owner = self
+            .md
+            .tables()
+            .type_of_method(Rid::new(token.rid()))?
+            .ok_or("constructor has no declaring type")?;
+        let owner = Token(0x02000000 | owner.get());
+        let definition = self.md.tables().type_def(owner.rid())?;
+        // A sealed class is concrete and instantiable; a static class is
+        // `abstract | sealed` and is still refused by the abstract bit.
+        if definition.flags & (0x20 | 0x80) != 0 {
+            return Err("allocation owner must be a concrete class".into());
+        }
+        match &arguments {
+            Some(arguments) => {
+                if self.md.tables().generic_params(owner)?.len() != arguments.len() {
+                    return Err("allocation instantiation arity differs from its definition".into());
+                }
+            }
+            None => {
+                if self.generic_declaring_context(owner)? {
+                    return Err("allocation owner must be a concrete nongeneric class".into());
+                }
+            }
+        }
+        self.class_name(owner.0)?;
+        let sig = self.signature(token.0)?;
+        if !sig.has_this
+            || sig.calling_convention != cildec::CallConv::Default
+            || !sig.vararg_params.is_empty()
+            || crate::ir::Ty::from_param(&sig.return_type, self)? != crate::ir::Ty::Void
+        {
+            return Err("allocation constructor signature needs IL fallback".into());
+        }
+        let args = sig
+            .params
+            .iter()
+            .map(|p| self.member_parameter(p, arguments.as_deref(), context))
+            .collect::<Result<Vec<_>>>()?;
+        Ok((allocated.unwrap_or(crate::ir::Ty::Class(owner.0)), args))
+    }
+
+    /// Cast target for castclass/isinst: a locally verified class, so the
+    /// runtime check needs no external type facts.
+    pub(crate) fn cast_class(&self, token: Token) -> Result<crate::ir::Ty> {
+        if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
+            return Err(
+                "cast needs a local class definition; external/interface casts need more facts"
+                    .into(),
+            );
+        }
+        let row = self.md.tables().type_def(token.rid())?;
+        if row.flags & (0x20 | 0x80) != 0 || self.generic_declaring_context(token)? {
+            return Err("cast target must be a concrete nongeneric class".into());
+        }
+        self.class_name(token.0)?;
+        Ok(crate::ir::Ty::Class(token.0))
+    }
+
     pub fn receiver(&self, method: u32) -> Result<crate::ir::Ty> {
         let owner = self
             .md
@@ -2136,6 +3060,11 @@ impl<'a> Image<'a> {
             .type_of_method(Rid::new(method & 0xffffff))?
             .ok_or("missing declaring type")?;
         let token = 0x02000000 | owner.get();
+        // A value-type instance method receives a managed pointer to the caller's
+        // storage; its receiver slot is a location, never a copied value.
+        if let Some(id) = self.struct_type(Token(token))? {
+            return Ok(crate::ir::Ty::ValueAddress(id));
+        }
         self.class_name(token)?;
         Ok(crate::ir::Ty::Class(token))
     }
@@ -2143,16 +3072,34 @@ impl<'a> Image<'a> {
     pub fn assignable(&self, actual: crate::ir::Ty, expected: crate::ir::Ty) -> Result<()> {
         use crate::ir::Ty;
         if actual == expected
+            || (expected == Ty::Object && actual.kind() == crate::ir::StackKind::Ref)
             || (actual == Ty::Null
                 && matches!(
                     expected,
-                    Ty::String | Ty::ExternalClass(_) | Ty::Class(_) | Ty::I4Array | Ty::U4Array
+                    Ty::String
+                        | Ty::ExternalClass(_)
+                        | Ty::StructuralRef(_)
+                        | Ty::Class(_)
+                        | Ty::I4Array
+                        | Ty::U4Array
                 ))
         {
             return Ok(());
         }
+        if let (Ty::ValueAddress(a), Ty::Value(b)) = (actual, expected) {
+            if a == b {
+                return Ok(());
+            }
+        }
         if let (Ty::Class(a), Ty::Class(b)) = (actual, expected) {
             if self.class_chain(a)?.contains(&b) {
+                return Ok(());
+            }
+        }
+        // `this` inside `C<T>` is the open self instantiation of `C`, so a member
+        // typed `C<!0..>` and the receiver are the same type.
+        if let (Ty::Class(a), Ty::StructuralRef(b)) = (actual, expected) {
+            if self.open_self_definition(b) == Some(a) {
                 return Ok(());
             }
         }
@@ -2167,36 +3114,237 @@ impl<'a> Image<'a> {
         Err("incompatible value/receiver types".into())
     }
 
-    pub fn field(&self, t: Token) -> Result<FieldRef> {
-        if t.table() != Some(TableId::Field) {
-            return Err("nonlocal/constructed field needs IL fallback".into());
+    /// Resolve a field operand.
+    ///
+    /// A field of a generic type is usually named through a MemberRef whose parent
+    /// is the constructed type, so the definition's signature names the declaring
+    /// type's parameters and the site supplies their arguments.
+    pub fn field(
+        &self,
+        t: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<FieldRef> {
+        match t.table() {
+            Some(TableId::Field) => {
+                let row = self.md.tables().field(t.rid())?;
+                let owner = self
+                    .md
+                    .tables()
+                    .type_of_field(Rid::new(t.rid()))?
+                    .ok_or("missing field owner")?;
+                let owner_token = 0x02000000 | owner.get();
+                let owner = match self.struct_type(Token(owner_token))? {
+                    Some(id) => crate::ir::Ty::Value(id),
+                    None => crate::ir::Ty::Class(owner_token),
+                };
+                let name = self.md.strings().str(row.name)?;
+                let blob = self.md.blobs().get(row.signature)?;
+                self.field_from_parts(
+                    t.0,
+                    name,
+                    context,
+                    FieldParts {
+                        flags: row.flags,
+                        signature: blob,
+                        owner,
+                        arguments: None,
+                    },
+                )
+            }
+            Some(TableId::MemberRef) => {
+                let row = self.md.tables().member_ref(t.rid())?;
+                let name = self.md.strings().str(row.name)?.to_string();
+                match row.class.table() {
+                    Some(TableId::TypeDef | TableId::TypeRef) => {
+                        let definition = self
+                            .local_type_definition(row.class)?
+                            .ok_or("external member reference needs dependency facts")?;
+                        let field = self.find_field(definition, &name)?;
+                        let owner = match self.struct_type(definition)? {
+                            Some(id) => crate::ir::Ty::Value(id),
+                            None => crate::ir::Ty::Class(definition.0),
+                        };
+                        let field_row = self.md.tables().field(field.rid())?;
+                        let blob = self.md.blobs().get(field_row.signature)?;
+                        self.field_from_parts(
+                            field.0,
+                            &name,
+                            context,
+                            FieldParts {
+                                flags: field_row.flags,
+                                signature: blob,
+                                owner,
+                                arguments: None,
+                            },
+                        )
+                    }
+                    Some(TableId::TypeSpec) => {
+                        let spec = self.type_spec(row.class)?;
+                        let cildec::Type::GenericInst {
+                            is_value_type: false,
+                            def,
+                            args,
+                        } = &spec.type_
+                        else {
+                            return Err(
+                                "constructed member parent is not a class instantiation".into()
+                            );
+                        };
+                        let definition = self.local_type_definition(*def)?.ok_or(
+                            "constructed member needs a local definition; external constructed members need dependency facts",
+                        )?;
+                        let field = self.find_field(definition, &name)?;
+                        let field_row = self.md.tables().field(field.rid())?;
+                        let blob = self.md.blobs().get(field_row.signature)?;
+                        // `C<!0..!n-1>` is the open self instantiation that instance
+                        // members of `C` name; it is the declaring type itself, not a
+                        // constructed one, so no argument substitution applies.
+                        let open_self = args.iter().enumerate().all(
+                            |(index, argument)| {
+                                matches!(argument, cildec::Type::Var(position) if *position as usize == index)
+                            },
+                        );
+                        if open_self {
+                            let owner = match self.struct_type(definition)? {
+                                Some(id) => crate::ir::Ty::Value(id),
+                                None => crate::ir::Ty::Class(definition.0),
+                            };
+                            return self.field_from_parts(
+                                field.0,
+                                &name,
+                                context,
+                                FieldParts {
+                                    flags: field_row.flags,
+                                    signature: blob,
+                                    owner,
+                                    arguments: None,
+                                },
+                            );
+                        }
+                        let owner = crate::ir::Ty::StructuralRef(
+                            self.intern_signature_type(&spec.type_, context)?,
+                        );
+                        self.field_from_parts(
+                            field.0,
+                            &name,
+                            context,
+                            FieldParts {
+                                flags: field_row.flags,
+                                signature: blob,
+                                owner,
+                                arguments: Some(args),
+                            },
+                        )
+                    }
+                    _ => Err("nonlocal/constructed field needs IL fallback".into()),
+                }
+            }
+            _ => Err("nonlocal/constructed field needs IL fallback".into()),
         }
-        let row = self.md.tables().field(t.rid())?;
-        let owner = self
-            .md
-            .tables()
-            .type_of_field(Rid::new(t.rid()))?
-            .ok_or("missing field owner")?;
-        let owner = crate::ir::Ty::Class(0x02000000 | owner.get());
-        let sig = cildec::FieldSig::parse(self.md.blobs().get(row.signature)?)?;
-        if !sig.custom_mods.is_empty() {
+    }
+
+    fn field_from_parts(
+        &self,
+        token: u32,
+        name: &str,
+        context: crate::signature_types::TypeContext,
+        parts: FieldParts<'a>,
+    ) -> Result<FieldRef> {
+        let FieldParts {
+            flags,
+            signature,
+            owner,
+            arguments,
+        } = parts;
+        let signature = crate::signature_guard::field(signature)?;
+        if !signature.custom_mods.is_empty() {
             return Err("modified field needs IL fallback".into());
         }
-        let ty = crate::ir::Ty::from_sig(&sig.type_)?;
+        let ty = match arguments {
+            Some(arguments) => {
+                let substituted = substitute_type_arguments(&signature.type_, arguments)?;
+                crate::ir::Ty::from_sig_scoped(&substituted, self, context)?
+            }
+            None => crate::ir::Ty::from_sig_scoped(&signature.type_, self, context)?,
+        };
         ty.cs(self)?;
-        let original = self.md.strings().str(row.name)?;
-        let name = field_name(t.0, original);
         Ok(FieldRef {
-            token: t.0,
+            token,
             owner,
             ty,
-            name,
-            is_static: row.flags & 0x10 != 0,
-            readonly: row.flags & 0x20 != 0,
+            name: field_name(token, name),
+            is_static: flags & 0x10 != 0,
+            readonly: flags & 0x20 != 0,
         })
     }
 
-    pub fn method_ref(&self, t: Token) -> Result<MethodRef> {
+    fn member_parameter(
+        &self,
+        parameter: &cildec::Param<'_>,
+        arguments: Option<&[cildec::Type<'a>]>,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        if parameter.by_ref || !parameter.custom_mods.is_empty() {
+            return Err("byref/modified parameter needs IL fallback".into());
+        }
+        match arguments {
+            Some(arguments) => {
+                let substituted = substitute_type_arguments(&parameter.type_, arguments)?;
+                crate::ir::Ty::from_sig_scoped(&substituted, self, context)
+            }
+            None => crate::ir::Ty::from_param(parameter, self),
+        }
+    }
+
+    fn find_field(&self, definition: Token, name: &str) -> Result<Token> {
+        let tables = self.md.tables();
+        let mut found = None;
+        for rid in tables.field_range(Rid::new(definition.rid()))? {
+            let field = tables.field(rid)?;
+            if self.md.strings().str(field.name)? != name {
+                continue;
+            }
+            if found.is_some() {
+                return Err("constructed definition declares the field name twice".into());
+            }
+            found = Some(Token(0x04000000 | rid));
+        }
+        found.ok_or_else(|| "constructed member names no field of its definition".into())
+    }
+
+    /// The local definition a type's `extends` column names, following a
+    /// constructed base to its definition.
+    pub(crate) fn base_definition(&self, base: Token) -> Result<Option<u32>> {
+        if base.rid() == 0 {
+            return Ok(None);
+        }
+        if base.table() != Some(TableId::TypeSpec) {
+            return Ok(Some(base.0));
+        }
+        let spec = self.type_spec(base)?;
+        let cildec::Type::GenericInst {
+            is_value_type: false,
+            def,
+            ..
+        } = &spec.type_
+        else {
+            return Err("constructed base needs member binding".into());
+        };
+        Ok(self
+            .local_type_definition(*def)?
+            .map(|definition| definition.0))
+    }
+
+    fn type_spec(&self, token: Token) -> Result<cildec::TypeSpecSig<'a>> {
+        let row = self.md.tables().type_spec(token.rid())?;
+        crate::signature_guard::type_spec(self.md.blobs().get(row.signature)?)
+    }
+
+    pub fn method_ref(
+        &self,
+        t: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<MethodRef> {
         let (name, owner, sig) = match t.table() {
             Some(TableId::MethodDef) => {
                 let row = self.row(t.0)?;
@@ -2216,7 +3364,7 @@ impl<'a> Image<'a> {
                 (
                     self.md.strings().str(row.name)?.to_string(),
                     row.class,
-                    MethodSig::parse(self.md.blobs().get(row.signature)?)?,
+                    crate::signature_guard::method(self.md.blobs().get(row.signature)?)?,
                 )
             }
             _ => return Err("generic/indirect method reference needs IL fallback".into()),
@@ -2229,6 +3377,36 @@ impl<'a> Image<'a> {
         }
         if name == ".ctor" && t.table() == Some(TableId::MemberRef) {
             let reference = self.md.tables().member_ref(t.rid())?;
+            // A base constructor of a constructed base (`Base<T>`) resolves against
+            // the local definition and keeps the instantiation for its signature.
+            if let Some(owner) = self.constructed_member_owner(reference.class, context)? {
+                let signature =
+                    crate::signature_guard::method(self.md.blobs().get(reference.signature)?)?;
+                if !signature.has_this
+                    || crate::ir::Ty::from_param(&signature.return_type, self)?
+                        != crate::ir::Ty::Void
+                {
+                    return Err(
+                        "constructed constructor needs an ordinary instance void signature".into(),
+                    );
+                }
+                let args = signature
+                    .params
+                    .iter()
+                    .map(|p| self.member_parameter(p, owner.arguments.as_deref(), context))
+                    .collect::<Result<Vec<_>>>()?;
+                return Ok(MethodRef {
+                    token: t.0,
+                    name: name.clone(),
+                    receiver: Some(owner.receiver),
+                    target: format!("__cil_ctor_call_{:08X}", t.0),
+                    args,
+                    ret: crate::ir::Ty::Void,
+                    core_object_constructor: None,
+                    tick_count: false,
+                    constructor: true,
+                });
+            }
             self.external_class_context(reference.class.0)?;
             let declaring_type = self.md.tables().type_ref(reference.class.rid())?;
             if self.md.strings().str(declaring_type.type_namespace)? == "System"
@@ -2242,6 +3420,7 @@ impl<'a> Image<'a> {
                 }
                 return Ok(MethodRef {
                     token: t.0,
+                    name: name.clone(),
                     receiver: None,
                     target: format!("__cil_core_object_ctor_{:08X}", t.0),
                     args: Vec::new(),
@@ -2251,7 +3430,8 @@ impl<'a> Image<'a> {
                     constructor: false,
                 });
             }
-            if !sig.has_this || crate::ir::Ty::from_param(&sig.return_type)? != crate::ir::Ty::Void
+            if !sig.has_this
+                || crate::ir::Ty::from_param(&sig.return_type, self)? != crate::ir::Ty::Void
             {
                 return Err(
                     "external constructor needs an ordinary instance void signature".into(),
@@ -2259,12 +3439,13 @@ impl<'a> Image<'a> {
             }
             return Ok(MethodRef {
                 token: t.0,
+                name: name.clone(),
                 receiver: Some(crate::ir::Ty::ExternalClass(reference.class.0)),
                 target: format!("__cil_ctor_call_{:08X}", t.0),
                 args: sig
                     .params
                     .iter()
-                    .map(crate::ir::Ty::from_param)
+                    .map(|p| crate::ir::Ty::from_param(p, self))
                     .collect::<Result<Vec<_>>>()?,
                 ret: crate::ir::Ty::Void,
                 core_object_constructor: None,
@@ -2278,18 +3459,19 @@ impl<'a> Image<'a> {
                 || row.is_static()
                 || row.flags & 0x1800 != 0x1800
                 || row.flags & 0x440 != 0
-                || crate::ir::Ty::from_param(&sig.return_type)? != crate::ir::Ty::Void
+                || crate::ir::Ty::from_param(&sig.return_type, self)? != crate::ir::Ty::Void
             {
                 return Err("invalid constructor call context needs IL fallback".into());
             }
             return Ok(MethodRef {
                 token: t.0,
+                name: name.clone(),
                 receiver: Some(self.receiver(t.0)?),
                 target: format!("__cil_ctor_call_{:08X}", t.0),
                 args: sig
                     .params
                     .iter()
-                    .map(crate::ir::Ty::from_param)
+                    .map(|p| crate::ir::Ty::from_param(p, self))
                     .collect::<Result<Vec<_>>>()?,
                 ret: crate::ir::Ty::Void,
                 core_object_constructor: None,
@@ -2311,6 +3493,7 @@ impl<'a> Image<'a> {
             }
             return Ok(MethodRef {
                 token: t.0,
+                name: name.clone(),
                 receiver: None,
                 target: format!("__cil_tick_count_{:08X}", t.0),
                 args: Vec::new(),
@@ -2324,6 +3507,43 @@ impl<'a> Image<'a> {
             || t.table() == Some(TableId::MethodDef) && self.row(t.0)?.flags & 0x1000 != 0
         {
             return Err("empty/runtime-special method reference needs IL fallback".into());
+        }
+        // A member named through a local class instantiation (`C<int>` or the open
+        // self `C<!0>`): the definition is local and concrete, so dispatch is
+        // verified here and the declared signature is read with the site's
+        // arguments substituted.
+        if sig.has_this
+            && t.table() == Some(TableId::MemberRef)
+            && let Some(owner) =
+                self.constructed_member_owner(self.md.tables().member_ref(t.rid())?.class, context)?
+        {
+            let reference = self.md.tables().member_ref(t.rid())?;
+            let signature =
+                crate::signature_guard::method(self.md.blobs().get(reference.signature)?)?;
+            if signature.explicit_this
+                || signature.calling_convention != cildec::CallConv::Default
+                || !signature.vararg_params.is_empty()
+            {
+                return Err("instance/generic/vararg call needs IL fallback".into());
+            }
+            let args = signature
+                .params
+                .iter()
+                .map(|p| self.member_parameter(p, owner.arguments.as_deref(), context))
+                .collect::<Result<Vec<_>>>()?;
+            let ret =
+                self.member_parameter(&signature.return_type, owner.arguments.as_deref(), context)?;
+            return Ok(MethodRef {
+                token: t.0,
+                name: name.clone(),
+                receiver: Some(owner.receiver),
+                target: format!("__cil_direct_{:08X}", t.0),
+                args,
+                ret,
+                core_object_constructor: None,
+                tick_count: false,
+                constructor: false,
+            });
         }
         let receiver = if sig.has_this {
             if t.table() == Some(TableId::MemberRef) {
@@ -2343,9 +3563,9 @@ impl<'a> Image<'a> {
         let args = sig
             .params
             .iter()
-            .map(crate::ir::Ty::from_param)
+            .map(|p| crate::ir::Ty::from_param(p, self))
             .collect::<Result<Vec<_>>>()?;
-        let ret = crate::ir::Ty::from_param(&sig.return_type)?;
+        let ret = crate::ir::Ty::from_param(&sig.return_type, self)?;
         if t.table() == Some(TableId::MemberRef)
             && args
                 .iter()
@@ -2364,6 +3584,7 @@ impl<'a> Image<'a> {
             }
             return Ok(MethodRef {
                 token: t.0,
+                name: name.clone(),
                 receiver: None,
                 target: format!("__cil_abs_r4_{:08X}", t.0),
                 args,
@@ -2375,6 +3596,7 @@ impl<'a> Image<'a> {
         }
         Ok(MethodRef {
             token: t.0,
+            name: name.clone(),
             receiver,
             target: if receiver.is_some() && t.table() == Some(TableId::MemberRef) {
                 format!("__cil_memberref_call_{:08X}", t.0)
@@ -2402,9 +3624,26 @@ impl<'a> Image<'a> {
         })
     }
 
-    pub fn static_field(&self, t: Token) -> Result<(String, crate::ir::Ty, bool)> {
+    /// A static field of this image, rendered with its declaring type's name.
+    ///
+    /// The declaring type token is reported so a write can be checked against the
+    /// constructor context: only the declaring type's own static constructor may
+    /// assign a `static readonly` field.
+    pub fn static_field(&self, t: Token) -> Result<(String, crate::ir::Ty, bool, u32)> {
+        if t.table() == Some(TableId::MemberRef) {
+            // A static field named through a member reference has a declaring type
+            // this image does not define, so neither its storage nor its name can be
+            // written without more facts.
+            let parent = self.md.tables().member_ref(t.rid())?.class;
+            return Err(match parent.table() {
+                Some(TableId::TypeSpec) => {
+                    "generic static field needs the constructed owner name".into()
+                }
+                _ => "external field needs IL fallback".into(),
+            });
+        }
         if t.table() != Some(TableId::Field) {
-            return Err("external field needs IL fallback".into());
+            return Err("nonlocal static field needs IL fallback".into());
         }
         let row = self.md.tables().field(t.rid())?;
         if row.flags & 0x10 == 0 {
@@ -2416,7 +3655,7 @@ impl<'a> Image<'a> {
             .type_of_field(Rid::new(t.rid()))?
             .ok_or("missing field owner")?;
         let name = field_name(t.0, self.md.strings().str(row.name)?);
-        let sig = cildec::FieldSig::parse(self.md.blobs().get(row.signature)?)?;
+        let sig = crate::signature_guard::field(self.md.blobs().get(row.signature)?)?;
         if !sig.custom_mods.is_empty() {
             return Err("modified field needs IL fallback".into());
         }
@@ -2428,8 +3667,9 @@ impl<'a> Image<'a> {
                 "{}.{name}",
                 crate::symbol_names::type_name(self, Token(0x02000000 | owner.get()), true)?
             ),
-            crate::ir::Ty::from_sig(&sig.type_)?,
+            crate::ir::Ty::from_sig_in(&sig.type_, self)?,
             row.flags & 0x20 != 0,
+            0x02000000 | owner.get(),
         ))
     }
 }
@@ -2443,6 +3683,70 @@ pub(crate) struct SelectedType {
     pub events: Vec<u32>,
 }
 
+/// A member reference resolved against a local class instantiation.
+struct ConstructedOwner<'a> {
+    definition: Token,
+    receiver: crate::ir::Ty,
+    /// Arguments the site supplied; `None` for the open self instantiation.
+    arguments: Option<Vec<cildec::Type<'a>>>,
+}
+
+/// Everything a field resolution needs besides its token and name.
+struct FieldParts<'a> {
+    flags: u16,
+    signature: &'a [u8],
+    owner: crate::ir::Ty,
+    /// Supplied arguments when the crate names a constructed declaring type.
+    arguments: Option<&'a [cildec::Type<'a>]>,
+}
+
+/// Replace the declaring type's generic parameters with the arguments the site
+/// supplied. Only `Var` positions of the declaring type are substituted; arguments
+/// keep their own scope because they may name an enclosing method's parameters.
+fn substitute_type_arguments<'a>(
+    ty: &cildec::Type<'a>,
+    arguments: &[cildec::Type<'a>],
+) -> Result<cildec::Type<'a>> {
+    use cildec::Type;
+    Ok(match ty {
+        Type::Var(index) => arguments
+            .get(*index as usize)
+            .cloned()
+            .ok_or("constructed member argument missing")?,
+        Type::GenericInst {
+            is_value_type,
+            def,
+            args,
+        } => Type::GenericInst {
+            is_value_type: *is_value_type,
+            def: *def,
+            args: args
+                .iter()
+                .map(|argument| substitute_type_arguments(argument, arguments))
+                .collect::<Result<_>>()?,
+        },
+        Type::SzArray(modifiers, inner) => Type::SzArray(
+            modifiers.clone(),
+            Box::new(substitute_type_arguments(inner, arguments)?),
+        ),
+        Type::Array(inner, shape) => Type::Array(
+            Box::new(substitute_type_arguments(inner, arguments)?),
+            shape.clone(),
+        ),
+        Type::ByRef(inner) => Type::ByRef(Box::new(substitute_type_arguments(inner, arguments)?)),
+        Type::Ptr(modifiers, inner) => Type::Ptr(
+            modifiers.clone(),
+            Box::new(substitute_type_arguments(inner, arguments)?),
+        ),
+        Type::Modified(modifiers, inner) => Type::Modified(
+            modifiers.clone(),
+            Box::new(substitute_type_arguments(inner, arguments)?),
+        ),
+        Type::Pinned(inner) => Type::Pinned(Box::new(substitute_type_arguments(inner, arguments)?)),
+        other => other.clone(),
+    })
+}
+
 pub(crate) struct FieldRef {
     pub token: u32,
     pub owner: crate::ir::Ty,
@@ -2454,6 +3758,7 @@ pub(crate) struct FieldRef {
 
 pub(crate) struct MethodRef {
     pub token: u32,
+    pub name: String,
     pub receiver: Option<crate::ir::Ty>,
     pub target: String,
     pub args: Vec<crate::ir::Ty>,

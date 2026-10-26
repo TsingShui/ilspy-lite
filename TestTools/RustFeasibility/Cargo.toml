@@ -1,0 +1,11 @@
+[package]
+name = "ilspy-rust-probe"
+version = "0.0.0"
+edition = "2024"
+
+[dependencies]
+cildec = "=0.1.0"
+dotscope = { version = "=0.9.1", default-features = false }
+
+[profile.release]
+strip = true

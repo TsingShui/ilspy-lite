@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <EnableNUnitRunner>true</EnableNUnitRunner>
+    <GenerateTestingPlatformEntryPoint>true</GenerateTestingPlatformEntryPoint>
+    <StartupObject>LiteExperiment.MicrosoftTestingPlatformEntryPoint</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Remove="Fixtures/**" />
+    <ProjectReference Include="Fixtures/Fixtures.csproj" />
+    <ProjectReference Include="../../ICSharpCode.Decompiler/ICSharpCode.Decompiler.csproj" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
+    <PackageReference Include="NUnit" Version="5.0.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.1" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.1" />
+    <PackageReference Include="Microsoft.Testing.Extensions.VSTestBridge" Version="2.5.1" />
+  </ItemGroup>
+</Project>

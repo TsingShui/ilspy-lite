@@ -77,6 +77,27 @@ def adapt_source_properties(statements, details):
     return ''.join(lines), sorted(directives)
 
 
+def source_parameters(text):
+    """Split supported declarations without flattening nested type argument lists."""
+    parts, stack, start = [], [], 0
+    delimiters = {">": "<", ")": "(", "]": "["}
+    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|[<>,()\[\]]')
+    for match in lexical.finditer(text):
+        token = match[0]
+        if token in ("<", "(", "["):
+            stack.append(token)
+        elif token in delimiters:
+            if not stack or stack.pop() != delimiters[token]:
+                raise ValueError("Unbalanced readable parameter type")
+        elif token == "," and not stack:
+            parts.append(text[start:match.start()])
+            start = match.end()
+    if stack:
+        raise ValueError("Unbalanced readable parameter type")
+    parts.append(text[start:])
+    return parts
+
+
 def adapt_readable_body(readable, details):
     """Execute readable statements, using only unchanged detailed header/identity evidence.
 
@@ -110,7 +131,7 @@ def adapt_readable_body(readable, details):
         operation = "core_object_ctor" if owner.rsplit("]", 1)[-1] == "System.Object" else "ctor_call"
         initializer = f'    __cil_{operation}_{token}(this{", " + arguments if arguments else ""});\n'
     parameters = header[header.index("(") + 1:header.rindex(")")]
-    names = [p.strip().split(" = ", 1)[0].split()[-1] for p in parameters.split(",") if p.strip()]
+    names = [p.strip().split(" = ", 1)[0].split()[-1] for p in source_parameters(parameters) if p.strip()]
     if len(names) != len(set(names)):
         raise ValueError("Readable parameter names are ambiguous")
     bindings = re.findall(r"\ba\d+\b", original_header)
@@ -122,9 +143,17 @@ def adapt_readable_body(readable, details):
         raise ValueError("Readable parameter shape differs from detailed signature")
     statements = initializer + readable[rendered.end():-2]
     statements, property_directives = adapt_source_properties(statements, details)
-    lexical = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|@?[A-Za-z_][A-Za-z_0-9]*')
-    statements = lexical.sub(lambda m: m.group(0) if statements[:m.start()].rstrip().endswith((".", "::"))
-                             else mapping.get(m.group(0), m.group(0)), statements)
+    lexical = re.compile(r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|@?[A-Za-z_][A-Za-z_0-9]*|::|\S')
+    previous = None
+    def rebind(match):
+        nonlocal previous
+        token = match[0]
+        if token.startswith(("//", "/*")):
+            return token
+        replacement = token if previous in (".", "::") else mapping.get(token, token)
+        previous = token
+        return replacement
+    statements = lexical.sub(rebind, statements)
     comments = "\n".join([line for line in details.splitlines() if line.strip().startswith("// field token ")] + property_directives)
     return comments + "\n" + original_header + statements + "}\n"
 

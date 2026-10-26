@@ -48,6 +48,15 @@ HTML/CSS/JS changes need only a browser refresh.
 - Copy/save always uses the complete original engine output, not highlighted DOM.
   The partial/failure counts, exit codes, timings, and diagnostics remain visible.
 - Run again bypasses the result cache. URL fragments retain assembly/type/view.
+- **Fallback report** aggregates every method body owned by top-level TypeDefs and
+  their nested types: recovered/fallback/failed counts, the first-failure reason
+  distribution, and the types with the most fallback bodies. Click a type to open
+  it in the comparison. The same collector runs without the viewer:
+  `python rust/tools/local-viewer/fallback_report.py <assembly> [--json report.json]`
+  uses the existing release binary and never executes input code. The server also
+  exposes the report as `GET /api/fallback-report?assembly=<id>`. Append
+  `&report=1` to the URL fragment to open it directly. Collector unit checks:
+  `python3 -m unittest rust/tools/local-viewer/test_fallback_report.py`.
 
 The local server rejects foreign Hosts and cross-origin writes. Uploads and
 comparison requests require a same-origin session token. Only allowlisted static
@@ -65,5 +74,11 @@ the selected assembly. Rust's production CLI stays independent of .NET.
 Engine output is limited to 16 MiB per stream and each engine call has a timeout.
 Large outputs beyond that limit must be inspected with the CLI. Textual diff
 highlighting is skipped above 16,000 combined lines; the source itself is retained.
+Fallback reasons are the first blocker reported for a body, so fixing one does not
+guarantee recovery; later blockers are not included in the report. Dependency
+resolution affects presentation only and does not change method statuses. If the
+report says `Not found`, the running Python server predates the endpoint; restart
+`server.py` and reload the page. The viewer reports its capabilities at startup and
+shows that restart message instead of sending an unknown request.
 Generated output, uploaded DLLs, compiler artifacts, and screenshots stay under
 `rust/report/local-viewer/` (ignored).

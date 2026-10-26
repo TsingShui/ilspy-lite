@@ -1,0 +1,11 @@
+// C#-like reverse-engineering output; not guaranteed to compile.
+public static int Sum(int count)
+{
+	int __il_v1 = 0;
+	int __il_v0 = 0;
+	for (; __il_v0 < count; __il_v0++)
+	{
+		__il_v1 = (((__il_v0 & 1) != 0) ? (__il_v1 - __il_v0) : (__il_v1 + __il_v0));
+	}
+	return __il_v1;
+}

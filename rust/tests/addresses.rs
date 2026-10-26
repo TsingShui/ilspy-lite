@@ -226,8 +226,10 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
                 &[0x2b, 0x00, 0x26, 0x2a][..],
                 "managed element address crossing a block",
             ),
-            (&[0x4a, 0x26, 0x2a][..], "unsupported opcode ldind.i4"),
-            (&[0x17, 0x55, 0x2a][..], "unsupported opcode stind.i8"),
+            (
+                &[0x21, 1, 0, 0, 0, 0, 0, 0, 0, 0x55, 0x2a][..],
+                "stind.i8 needs a stable I8 location",
+            ),
             (
                 &[0x25, 0x58, 0x26, 0x2a][..],
                 "integer operation on non-integer",
@@ -243,6 +245,12 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
             assert!(result.text.contains(reason), "{}", result.text);
             assert!(result.text.contains("IL FALLBACK") && result.text.contains("ldelema"));
         }
+        // ldind.i4 over an already acquired element location is an ordinary read
+        // of that location, so it no longer falls back.
+        let mut read = acquire.clone();
+        read.extend([0x4a, 0x26, 0x2a]);
+        let result = decompile(&patched_body(bytes, method, &read), method).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
         let mut code = vec![0x03, 0x04, 0xfe, 0x1e, 0x8f]; // readonly. ldelema remains unsupported.
         code.extend(element_token(bytes, method).0.to_le_bytes());
         code.extend([0x26, 0x2a]);

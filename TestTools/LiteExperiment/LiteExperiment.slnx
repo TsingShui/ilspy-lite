@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../../ICSharpCode.Decompiler.Generators/ICSharpCode.Decompiler.Generators.csproj" />
+  <Project Path="../../ICSharpCode.Decompiler/ICSharpCode.Decompiler.csproj" />
+  <Project Path="Fixtures/Fixtures.csproj" />
+  <Project Path="LiteExperiment.csproj" />
+</Solution>

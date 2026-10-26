@@ -166,10 +166,87 @@ retains declared external Class identity. The explicit context can independently
 bind supplied definitions, without expanding that body admission.
 
 Local assignment may follow locally known ancestors to an exact named external
-base TypeRef; external ancestor chains, interfaces and generic instantiations are
-not inferred. Null can be assigned to admitted reference types. Reference
+base TypeRef. A null-base local root is admitted only as top-level System.Object
+in an exact admitted core definition scope; raw noncanonical null tags and
+unqualified roots are rejected. Local core ValueType/Enum descendants are not
+reference receivers. External ancestor chains, interfaces and generic
+instantiations are not inferred. Null can be assigned to admitted reference types. Reference
 `is null`/`is not null` patterns test identity without dereferencing or invoking
 operator equality. Other reference comparisons/joins may still fall back.
+
+`object` is an ordinary reference type, distinct from the Null pseudo-type and
+from integer/value/address stack categories. Parameters, locals, returns and
+field slots copy the reference without boxing or allocation. Copying does not
+dereference the copied object; field receiver checks remain at the access.
+An already admitted string, class or int[]/uint[] reference can be assigned to
+object, including null; the original reference identity is unchanged. This does
+not authorize an implicit object-to-string/class downcast or a value-to-object
+conversion. Reference static-field stores use the same assignment check as
+instance/local/call transfers. Closed generic references also use these copy and
+object-upcast rules. Boxing/unboxing, virtual calls, arbitrary allocation and
+mixed-type joins remain separate unsupported
+operations. Bounded owned behavior evidence is in
+[object reference acceptance](acceptance/corpus/OBJECT_REFERENCES.md).
+
+GenericInst class signatures and vectors have input-scoped TypeId identities. Their
+complete canonical keys retain class/value tags, metadata-scoped definitions and
+all recursive arguments; equal names are not equality. Opaque __cil_ref_HASH
+aliases denote those exact reference types, not wrapper allocations. Both views
+retain canonical type-spec bytes and the input-scoped interpretation. Hashes name
+aliases only; collisions cannot merge distinct semantic identities.
+
+Arguments can be primitive, named, nested generic and vector shapes, with
+VAR/MVAR bound to their actual TypeDef/MethodDef owner and position. Body entry
+checks arity, contiguous positions, raw ownership and supported parameter flags.
+An unbound or out-of-range variable is not a wildcard. Closed shapes do not
+acquire unrelated caller context. Member references never implicitly capture the
+caller's variables. See [scoped variables](acceptance/corpus/SCOPED_REFERENCE_VARIABLES.md).
+Concrete Nullable<int> value operations, constructed members, variance and
+generic receiver specialization remain pending.
+
+A bare generic variable uses the separate GenericValue evaluation category.
+__cil_generic_HASH denotes the original generic type, not an object wrapper.
+Loads/assignments/returns snapshot/copy that value: references retain identity;
+value instantiations copy values while preserving their embedded references.
+No boxing, deep copy, layout inference, numeric reinterpretation or generic
+reference conversion is implied. Null/I4/different generic variables cannot be
+assigned to unknown T without an admitted proof/operation. Initlocals uses
+default(T), not a user constructor. See
+[generic value copies](acceptance/corpus/GENERIC_VALUE_COPIES.md).
+Method, field and plain-local raw signatures are checked before token creation;
+oversized RIDs and ignored suffixes cannot admit a body. See
+[closed generic references](acceptance/corpus/CLOSED_GENERIC_REFERENCES.md).
+
+Known local nongeneric structs use a separate Value category with exact interned
+nominal identity. Their whole-value loads, assignments and returns snapshot/copy
+the original target type, preserving embedded references without deep cloning,
+boxing, construction or host-layout inference. __cil_value_HASH denotes that
+original type, not an execution wrapper. Both views keep canonical signature
+evidence. Enum proof remains prior to aggregate admission so normalized integer
+semantics cannot disappear into opaque copies.
+
+Base proof, sealed/nongeneric shape, attached byref-like markers and instance-field
+signatures are checked. Unknown external values, ref-like types, direct invalid/
+open/managed-address fields and special core scalar types remain gated; this is
+not full loader/layout verification. Struct field/address/receiver operations
+require their own support. See
+[whole struct copies](acceptance/corpus/STRUCT_VALUE_COPIES.md).
+
+A value-type instance method receives a managed location of its exact struct
+type, not a copy: field reads and writes through it act on the caller's storage.
+__cil_value_HASH still names the value type; the address is a separate stack
+category. ldarga/ldloca acquire the location of an admitted struct argument or
+local, initobj zero-initializes that storage in place (no constructor runs), and
+ldflda yields the location of a struct or integer field. Integer locations reuse
+the existing address model with I4/I8 signed and unsigned categories.
+
+Reading a field from a copied value is allowed; writing through a copy is not.
+Struct instance calls require the exact location type and render the receiver
+with an explicit ref, so a call site cannot silently pass a value. Addresses
+cannot cross a basic-block edge or be stored as values; byref parameters/returns,
+ref structs, external/generic value types, struct-element arrays and EH remain
+independent gates. See
+[struct receiver acceptance](acceptance/corpus/STRUCT_RECEIVERS.md).
 
 Instance field reads/writes retain the original token/owner and position. Base
 receiver casts remain when needed to avoid name hiding. Initonly writes require
@@ -177,7 +254,14 @@ the exact owning instance constructor and a directly proved unchanged entry-this
 load in this subset; this this-only restriction is conservative, not an extra
 CLI initonly requirement. Static initonly writes remain unsupported.
 
-For admitted zero-based one-dimensional int[]/uint[] arrays:
+Closed SZARRAY descriptors also occupy structural reference slots, including
+object[], byte[], string[], struct/enum arrays and jagged vectors. Whole-array
+copies never inspect or convert elements, allocate storage or infer covariance.
+Pointers/modifiers/unbound variables and non-vector shapes still fall back. Runtime
+subtypes already legal for the declared parameter retain their actual identity.
+See [vector reference acceptance](acceptance/corpus/ARRAY_REFERENCES.md).
+
+For admitted zero-based one-dimensional int[]/uint[] array operations:
 
 - `new int[length]` / `new uint[length]` represents `newarr` at that instruction:
   fresh array identity, zero initialization, runtime length/allocation failure.
@@ -192,6 +276,51 @@ For admitted zero-based one-dimensional int[]/uint[] arrays:
   signed/unsigned storage encoding. No second array lookup/check is synthesized.
 - Address dup retains the same location. Addresses crossing a basic-block edge,
   general byref parameters/locals/returns and prefixes remain unsupported.
+
+## Local enum storage
+
+An exact local enum definition must have an admitted core Enum base and one
+unmodified public special value__ instance field of a fixed-width integer type.
+Sealed/nongeneric shape, raw base identity, field count/flags and underlying
+signature are checked. External enum widths are not guessed. __cil_enum_TOKEN
+denotes the original input-scoped value type; both views retain its storage fact.
+
+Loads sign/zero extend from the declared 8/16/32/64-bit storage into I4/I8 stack
+bits. Stores truncate to that storage and explicitly restore the enum type.
+Arguments/locals/fields/returns and admitted direct calls preserve this boundary.
+Integer operations use normalized CLI stack bits, not overloaded enum operators
+or inferred boxed objects. Narrow OR shapes emitted without conversion opcodes
+are supported; explicit narrow conversion opcodes remain independently gated.
+No value receiver, layout-derived address, boxing or enum array allocation is
+implied. See [enum storage acceptance](acceptance/corpus/ENUM_STORAGE.md).
+
+## Local virtual dispatch
+
+callvirt on a locally verified class is a distinct operation:
+__cil_callvirt_TOKEN(receiver, ...). The receiver and arguments are evaluated
+once, in order; the receiver is null-checked first and dispatch to the declared
+method belongs to the target runtime. It is never rewritten as a direct call.
+Value-type, interface, constrained and opaque external receivers, constructor or
+intrinsic callvirt, and newobj remain separately gated. See
+[dispatch acceptance](acceptance/corpus/VIRTUAL_DISPATCH.md).
+
+## Reference identity comparison
+
+Equality over reference operands is identity: ceq/beq/bne with identical static
+types (or a null operand) render as Object.ReferenceEquals, and cgt.un against
+null renders as a non-null identity test. No dereference, overloaded operator or
+virtual Equals is introduced. Ordered reference comparisons stay unsupported, and
+castclass/isinst remain separate gates so a null test cannot hide a cast or call.
+See [equality acceptance](acceptance/corpus/REFERENCE_EQUALITY.md).
+
+## Local allocation
+
+__cil_newobj_TOKEN(args...) on a locally verified concrete class means: evaluate
+arguments in order, allocate exactly one fresh object identity at this
+instruction, then run the exact constructor on that instance. Repeated reads of
+the resulting reference observe the same instance; it is never a re-allocating
+getter. External, struct, abstract, generic and open constructors keep their own
+blockers. See [allocation acceptance](acceptance/corpus/LOCAL_ALLOCATION.md).
 
 ## Exact calls, initialization and exceptions
 

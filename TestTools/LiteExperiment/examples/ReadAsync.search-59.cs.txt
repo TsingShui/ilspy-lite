@@ -1,0 +1,11 @@
+// C#-like reverse-engineering output; not guaranteed to compile.
+[System.Runtime.CompilerServices.AsyncStateMachine(typeof(LiteSamples.AsyncSample.<ReadAsync>d__0))]
+public static System.Threading.Tasks.Task<int> ReadAsync(int value)
+{
+	LiteSamples.AsyncSample.<ReadAsync>d__0 __il_v0 = default;
+	__il_v0.<>t__builder = System.Runtime.CompilerServices.AsyncTaskMethodBuilder<int>.Create();
+	__il_v0.value = value;
+	__il_v0.<>1__state = -1;
+	__il_v0.<>t__builder.Start(ref __il_v0);
+	return __il_v0.<>t__builder.Task;
+}

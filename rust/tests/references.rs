@@ -78,7 +78,12 @@ fn callvirt_is_not_silently_treated_as_direct_call() {
     code.extend(token.to_le_bytes());
     code.push(0x2a);
     let (bytes, token) = replace_body(IMAGES[0], "CountTwice", &code);
-    assert_eq!(decompile(&bytes, token).unwrap().status, Status::Partial);
+    let result = decompile(&bytes, token).unwrap();
+    // A locally verified class receiver keeps dispatch and the null check; the
+    // instruction must never collapse into the direct-call form.
+    assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+    assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
+    assert!(!result.text.contains("__cil_direct_"), "{}", result.text);
 }
 
 #[test]
@@ -111,18 +116,19 @@ fn reference_joins_keep_the_reference_type() {
     }
 }
 
+/// Struct instance methods now receive a managed location, so a field read through
+/// `this` is recovered. Escaping that location is still rejected elsewhere.
 #[test]
-fn value_type_receivers_remain_fallback() {
+fn struct_value_receivers_read_their_own_fields_through_a_managed_location() {
     for bytes in IMAGES {
         let method = list_methods(bytes)
             .unwrap()
             .into_iter()
             .find(|m| m.declaring_type == "ReferenceCases.ValueCell" && m.simple_name == "Read")
             .unwrap();
-        assert_eq!(
-            decompile(bytes, method.token).unwrap().status,
-            Status::Partial
-        );
+        let result = decompile(bytes, method.token).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("ref "), "{}", result.text);
     }
 }
 

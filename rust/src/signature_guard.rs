@@ -4,7 +4,7 @@
 //! Checked blob bodies for dependency identity binding, not a CLR validity verifier.
 //! cildec 0.1.0 ignores suffixes and masks token RIDs to 24 bits. Walk its supported
 //! structural grammar before constructing tokens, without allocating a second AST.
-//! PINNED/local signatures, reserved flags, misplaced sentinels, and generic
+//! PINNED/byref/modified locals, reserved flags, misplaced sentinels, and generic
 //! non-default conventions (whose arity cildec discards) are outside this seam.
 //! Type legality, generic context, and token resolution remain the caller's job.
 
@@ -42,7 +42,13 @@ pub fn method_spec(bytes: &[u8]) -> crate::Result<cildec::MethodSpecSig<'_>> {
     Ok(cildec::MethodSpecSig::parse_with(bytes, OPTIONS)?)
 }
 
+/// Callers reject local flags/modifiers before requesting this plain-local seam.
+pub fn plain_locals(bytes: &[u8]) -> crate::Result<()> {
+    check(bytes, Kind::PlainLocals)
+}
+
 enum Kind {
+    PlainLocals,
     Method,
     Field,
     Property,
@@ -62,6 +68,13 @@ fn check(bytes: &[u8], kind: Kind) -> crate::Result<()> {
     };
     match kind {
         Kind::Method => s.method()?,
+        Kind::PlainLocals => {
+            s.expect(0x07)?;
+            let count = s.count()?;
+            for _ in 0..count {
+                s.ty()?;
+            }
+        }
         Kind::Field => {
             s.expect(cc::FIELD)?;
             s.mods()?;

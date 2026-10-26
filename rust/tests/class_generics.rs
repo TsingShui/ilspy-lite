@@ -137,7 +137,10 @@ fn generic_context_preserves_owners_constraints_and_nested_members() {
                 result.text
             );
         }
-        assert!(result.summary.partial > 0);
+        // Members of a generic type use the open self instantiation, which is now
+        // admitted; nothing in this type may fall back.
+        assert_eq!(result.summary.partial, 0, "{}", result.text);
+        assert_eq!(result.summary.failed, 0, "{}", result.text);
         assert!(result.text.contains("Echo") && result.text.contains(".ctor"));
         let nested = decompile_type(bytes, "ClassCases.Constrained`1/Nested`1").unwrap();
         assert!(nested.text.contains("number=0") && nested.text.contains("number=1"));

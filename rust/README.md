@@ -208,6 +208,58 @@ retain raw code bytes in a `Failed` result.
   other floating arithmetic remain unsupported. External floating calls admit
   only the exact core `Math.Abs(float32)` overload, preserving its token and
   argument/result boundaries through `__cil_abs_r4_TOKEN`.
+- `object` reference parameters, locals, returns and fields, preserving identity,
+  null and stable snapshots. Admitted string/class/int[]/uint[] references can
+  upcast to object without boxing; implicit downcasts and value-to-object stores
+  are rejected. Reference static fields use typed reference assignment, not
+  integer conversion. This does not add boxing or value stack signatures,
+  virtual dispatch or general allocation. See
+  [object reference acceptance](acceptance/corpus/OBJECT_REFERENCES.md).
+- Closed generic reference signatures such as List<int>, local Box<string> and
+  Dictionary<string, List<int>>, interned with complete input-scoped type identity.
+  Null/copies/field transfers/object upcasts and already-supported direct calls
+  preserve reference identity. Value arguments do not enable value stack/layout
+  operations, and generic members/receivers and variance remain unsupported.
+  Both views retain canonical signature evidence for opaque aliases.
+  See [closed generic reference acceptance](acceptance/corpus/CLOSED_GENERIC_REFERENCES.md).
+- Closed vector reference copies, including byte[], string[], object[], struct/
+  enum arrays and jagged arrays, without element operations, allocation or inferred
+  covariance. Existing int[]/uint[] instruction support remains separate. See
+  [array reference acceptance](acceptance/corpus/ARRAY_REFERENCES.md).
+- Owner/position-scoped generic variables in reference signatures and as ordinary
+  values. Generic value copies have their own evaluation category; no boxing,
+  reference/numeric classification or concrete layout is guessed. Parameters,
+  locals and returns preserve original value/reference transfer semantics. Generic
+  member binding, receivers and addresses still require separate support. See
+  [scoped references](acceptance/corpus/SCOPED_REFERENCE_VARIABLES.md) and
+  [generic value copies](acceptance/corpus/GENERIC_VALUE_COPIES.md).
+- Exact local enums with checked core ancestry and a unique fixed-width value__
+  field. Loads preserve sign/zero extension; storage and return/call boundaries
+  preserve truncation and original enum identity. Existing integer operations
+  apply to normalized stack bits; external widths, boxing and value receivers
+  are not inferred. See [enum acceptance](acceptance/corpus/ENUM_STORAGE.md).
+- Whole snapshots/copies of verified local nongeneric structs, including class
+  field and static-field transfers. Exact value identity and embedded references
+  are preserved without boxing, construction or host-layout calculations. Enum
+  normalization stays separate; ref structs, external value facts, managed
+  addresses and value receivers remain gated. See
+  [struct copy acceptance](acceptance/corpus/STRUCT_VALUE_COPIES.md).
+- Struct instance methods whose receiver is a managed location of that exact
+  value type, plus ldarga/ldloca/ldflda/initobj and integer field locations.
+  Writes reach the caller's storage without passing a copy; addresses cannot
+  escape as values or cross block edges. See
+  [struct receiver acceptance](acceptance/corpus/STRUCT_RECEIVERS.md).
+- `callvirt` with a locally verified class receiver, rendered as an explicit
+  dispatch primitive that keeps the receiver null check and target-runtime
+  dispatch. Opaque external, interface, constrained and value-type receivers stay
+  gated. See [dispatch acceptance](acceptance/corpus/VIRTUAL_DISPATCH.md).
+- Reference identity comparison: `ceq`/`beq`/`bne` over reference operands and
+  `cgt.un` against null lower to an explicit `ReferenceEquals` form, never an
+  overloaded operator. Ordered reference comparisons stay gated. See
+  [equality acceptance](acceptance/corpus/REFERENCE_EQUALITY.md).
+- `newobj` for a locally verified concrete class: one fresh identity, then the
+  exact constructor in argument order. External/struct/abstract/generic/open
+  constructors stay gated. See [allocation acceptance](acceptance/corpus/LOCAL_ALLOCATION.md).
 - Local reference-class instance methods with an explicit receiver, `ldfld` /
   `stfld`, and direct instance `call` through MethodDef.
 - Instance `.ctor` initialization bodies use `__cil_ctor_body_TOKEN`, distinct
@@ -327,8 +379,8 @@ its local ancestor chain, but no further external inheritance is inferred.
 Direct reference-class MemberRef instance calls use `__cil_memberref_call_TOKEN`,
 keeping owner scope/name/raw signature, exact dispatch and original runtime
 resolution/access/body effects. Test adapters execute independent external leaves
-by exact IL call; they never replace selected bodies. Interfaces, value
-types and generic reference types remain unsupported. Reference brtrue/brfalse
+by exact IL call; they never replace selected bodies. Interface dispatch,
+concrete value receivers and constructed generic member calls remain unsupported. Reference brtrue/brfalse
 tests use identity null patterns without dereferencing or overloaded equality.
 Reference comparisons and mixed-reference joins are not yet lowered.
 
@@ -339,11 +391,13 @@ bytes, decoded offsets/opcodes/tokens, locals, method/header flags and EH clause
 If a malformed header prevents reading the body, the CLI reports the token and
 error instead of claiming to have recovered unavailable bytes.
 
-Currently unsupported: general external object operations, string operations, other array
-element types, multidimensional/jagged arrays, native/I8 array lengths, other indirect access,
+Currently unsupported: general external object operations, string operations,
+additional array element operations, multidimensional array signatures/operations,
+jagged element operations, native/I8 array lengths, other indirect access,
 other floating arithmetic/R8/unsigned conversions, native integer arithmetic/comparisons, general constructor calls, constructed/value-type external instance calls,
 callvirt, indirect calls, generic method instantiation, general managed references,
-value types, prefixes, exception regions and
+general concrete-struct operations, external enum storage without definition facts,
+prefixes, exception regions and
 `leave`. Synchronized/unmanaged method implementation semantics, uninitialized
 locals and unreachable blocks also fall back. Metadata pointer tables are
 rejected. These are real coverage limits, not successful decompilations.
@@ -385,6 +439,37 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked
 cargo test --release --locked
 ```
+
+### Fast iteration
+
+The whole suite is one test binary (`[[test]] name = "all"`), plus
+`discovery_paths` and `signature_guard`, which stay separate because they compile a
+`src/` file into their own crate root. One target means a library change relinks
+three binaries instead of one per test file: a warm `cargo test` run is about 2.5 s
+instead of about 12 s, and a rebuild after touching `src/` is about 14 s instead of
+about 24 s.
+
+With [cargo-nextest](https://nexte.st) installed:
+
+```sh
+cargo nextest run                                  # everything, ~2 s warm
+cargo nextest run --no-fail-fast                   # keep going after a failure
+cargo nextest run -E 'test(casts::)'               # one suite (module name)
+cargo nextest run -E 'test(scan_reports_every)'    # one test by name
+
+# The corpus scan runs one process per image; --scan-threads adds workers inside
+# each process, each with its own image parse and fact caches.
+python3 acceptance/corpus/corpus.py baseline --inventory <inventory.json> \
+    --cli target/release/ilspy-lite --output <dir> --references declared
+```
+
+Without it, the same selection works through the harness filter:
+
+```sh
+cargo test --test all -- casts::
+```
+
+The two internals targets keep their own names: `cargo test --test discovery_paths`.
 
 Optional behavioral gate (Python 3 and .NET **10** SDK/runtime):
 

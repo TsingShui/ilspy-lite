@@ -6,6 +6,17 @@ an SDK. Existing byte-only `decompile` / `decompile_type` APIs remain detailed a
 perform no implicit filesystem search. `DependencyContext` is the explicit
 metadata/search interface. Resolving metadata does not expand body lowering.
 
+The closed-generic reference slice interns canonical structural signatures within
+each parsed input. TypeId handles cannot cross inputs; metadata tokens retain
+their requested scope, and local TypeRefs use the existing exact module resolver.
+This does not add a second dependency binder, infer external layout or prove
+generic member/variance relationships. Body VAR/MVAR identities carry their
+actual TypeDef/MethodDef owner and position; member interpretation cannot capture
+an unrelated caller's variable context. Generic values have a separate transfer
+category and do not imply concrete layout or boxing. Opaque alias names
+are not binding keys; full structural keys determine type equality. See
+[closed generic references](acceptance/corpus/CLOSED_GENERIC_REFERENCES.md).
+
 ## Inputs, identity and cache
 
 `DependencyContext::new(Vec<u8>)` owns the main snapshot. `add_reference(source,
@@ -99,7 +110,11 @@ Unresolved relation edges remain separate; a missing base does not erase an
 independently readable interface or method.
 
 `ReferenceContract` means a recognized ReferenceAssemblyAttribute or reference-pack
-provenance. `ImplementationImage` means no recognized contract marker was found;
+provenance. The marker may use an external core-scoped MemberRef or a local
+MethodDef on the top-level nongeneric marker type in an admitted core definition.
+Constructor flags/signature and the attribute payload remain checked; a local
+lookalike in an ordinary assembly is not core evidence. Core definition identity
+is cached per parsed image, not by short name or shared across images. `ImplementationImage` means no recognized contract marker was found;
 it is **not execution proof**. Malformed classification is `Unclassified`.
 Explicit-context output labels reference input stubs as API contracts, never
 runtime implementations. Dependency bodies are not executed or borrowed.

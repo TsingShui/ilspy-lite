@@ -20,6 +20,8 @@ import threading
 import time
 from urllib.parse import parse_qs, urlsplit
 
+import fallback_report
+
 HERE = Path(__file__).resolve().parent
 RUST = HERE.parents[1]
 REPO = RUST.parent
@@ -64,9 +66,11 @@ class Viewer:
         self.files = {}
         self.catalogs = {}
         self.cache = {}
+        self.reports = {}
         self.lock = threading.RLock()
         self.build_lock = threading.Lock()
         self.slots = threading.BoundedSemaphore(4)
+        self.report_slots = threading.BoundedSemaphore(1)
         self.cli = RUST / "target/release/ilspy-lite"
         self.dotnet_root = Path(os.environ.get("DOTNET_ROOT", Path.home() / ".dotnet10")).resolve()
         self.dotnet = self.dotnet_root / "dotnet"
@@ -173,6 +177,27 @@ class Viewer:
             self.catalogs[stamp] = catalog
         return catalog
 
+    def fallback_stats(self, key, fresh=False):
+        item = self.file(key)
+        self.build()
+        path = item["path"]
+        stamp = (key, path.stat().st_mtime_ns, path.stat().st_size, self.cli.stat().st_mtime_ns)
+        with self.lock:
+            cached = self.reports.get(stamp)
+        if cached and not fresh:
+            return dict(cached, cached=True)
+        catalog = self.catalog(key)
+        names = [t["name"] for t in catalog["types"] if t.get("parent") is None and t.get("methods")]
+        report = fallback_report.collect(self.cli, path, type_names=names,
+                                         workers=8, timeout=60, runner=run)
+        report["assembly"] = item["name"]
+        report["cached"] = False
+        with self.lock:
+            if len(self.reports) >= 6:
+                self.reports.pop(next(iter(self.reports)))
+            self.reports[stamp] = report
+        return report
+
     def compare(self, request):
         key = request["assembly"]
         item = self.file(key)
@@ -266,11 +291,23 @@ class Handler(BaseHTTPRequestHandler):
                     files = [{k: v for k, v in row.items() if k != "path"} for row in self.viewer.files.values()]
                 self.respond(200, {"token": self.viewer.token, "assemblies": sorted(files, key=lambda f: (f["group"], f["name"])),
                                   "ilspyVersion": self.viewer.version, "maxUploadBytes": MAX_INPUT,
-                                  "pythonVersion": sys.version.split()[0]})
+                                  "pythonVersion": sys.version.split()[0],
+                                  "capabilities": ["fallback-report"]})
             elif url.path == "/api/types":
                 key = parse_qs(url.query).get("assembly", [""])[0]
                 with self.viewer.slots:
                     self.respond(200, self.viewer.catalog(key))
+            elif url.path == "/api/fallback-report":
+                query = parse_qs(url.query)
+                key = query.get("assembly", [""])[0]
+                fresh = query.get("fresh", ["0"])[0] == "1"
+                if not self.viewer.report_slots.acquire(blocking=False):
+                    self.respond(429, {"error": "A fallback report is already running; try again shortly."})
+                    return
+                try:
+                    self.respond(200, self.viewer.fallback_stats(key, fresh=fresh))
+                finally:
+                    self.viewer.report_slots.release()
             elif url.path in {"/", "/index.html", "/app.js", "/style.css"}:
                 filename = "index.html" if url.path == "/" else url.path[1:]
                 mime = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8", "style.css": "text/css; charset=utf-8"}[filename]
