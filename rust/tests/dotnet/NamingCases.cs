@@ -42,6 +42,18 @@ public static class CollisionHost
     }
 }
 
+public static class StaticTargets
+{
+    public static int Data;
+    public static int Callee(int value) => value;
+    public static int Update(int value)
+    {
+        int old = Data;
+        Data = value;
+        return Callee(old);
+    }
+}
+
 public sealed class Special
 {
     public static int Value;

@@ -71,6 +71,54 @@ fn generated_and_reserved_type_references_agree_with_their_declarations() {
     }
 }
 
+fn rename_field(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
+    assert_eq!(old.len(), new.len());
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let (rid, row) = md
+        .tables()
+        .iter::<cildec::tables::FieldRow>()
+        .map(|(rid, row)| (rid, row.unwrap()))
+        .find(|(_, row)| md.strings().str(row.name).unwrap() == old)
+        .expect("owned field");
+    let value = md.strings().str(row.name).unwrap();
+    let at = value.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut changed = bytes.to_vec();
+    changed[at..at + old.len()].copy_from_slice(new.as_bytes());
+    (changed, 0x04000000 | rid)
+}
+
+#[test]
+fn static_field_alias_is_shared_by_its_declaration_load_and_store() {
+    for &bytes in IMAGES {
+        let (changed, token) = rename_field(bytes, "Data", "<F>_");
+        let method = list_methods(&changed)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "NamingCases.StaticTargets" && m.simple_name == "Update")
+            .unwrap();
+        let actual = decompile_with_style(&changed, method.token, OutputStyle::Readable).unwrap();
+        assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        let alias = format!("__il_field_{token:08X}");
+        assert!(
+            actual
+                .text
+                .matches(&format!("StaticTargets.{alias}"))
+                .count()
+                >= 2,
+            "{}",
+            actual.text
+        );
+        let ty =
+            decompile_type_with_style(&changed, "NamingCases.StaticTargets", OutputStyle::Readable)
+                .unwrap();
+        assert!(
+            ty.text.contains(&format!("public static int {alias};")),
+            "{}",
+            ty.text
+        );
+    }
+}
+
 #[test]
 fn namespace_keywords_are_escaped_in_both_declarations_and_type_references() {
     for &bytes in IMAGES {

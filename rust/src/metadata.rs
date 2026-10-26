@@ -2286,16 +2286,18 @@ impl<'a> Image<'a> {
             .tables()
             .type_of_field(Rid::new(t.rid()))?
             .ok_or("missing field owner")?;
-        let name = self.md.strings().str(row.name)?;
-        identifier(name)?;
+        let name = field_name(t.0, self.md.strings().str(row.name)?);
         let sig = cildec::FieldSig::parse(self.md.blobs().get(row.signature)?)?;
         if !sig.custom_mods.is_empty() {
             return Err("modified field needs IL fallback".into());
         }
+        if Names::new(&self.md).type_def(owner)?.contains('`') {
+            return Err("generic static field owner needs IL fallback".into());
+        }
         Ok((
             format!(
-                "{}.@{name}",
-                cs_owner(&Names::new(&self.md).type_def(owner)?)?
+                "{}.{name}",
+                crate::symbol_names::type_name(&self.md, Token(0x02000000 | owner.get()), true)?
             ),
             crate::ir::Ty::from_sig(&sig.type_)?,
             row.flags & 0x20 != 0,
@@ -2449,11 +2451,7 @@ fn constant_value(kind: u16, bytes: &[u8]) -> Result<String> {
 }
 
 fn field_name(token: u32, original: &str) -> String {
-    if identifier(original).is_ok() && !original.starts_with("__il_field_") {
-        format!("@{original}")
-    } else {
-        format!("__il_field_{token:08X}")
-    }
+    crate::symbol_names::field(token, original, true)
 }
 
 fn field_flags(flags: u16) -> String {

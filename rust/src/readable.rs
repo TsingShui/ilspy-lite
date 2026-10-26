@@ -290,12 +290,7 @@ fn field_header(image: &Image<'_>, token: u32, owner: u32) -> Result<String> {
     let row = image.md.tables().field(token & 0xffffff)?;
     let sig = cildec::FieldSig::parse(image.md.blobs().get(row.signature)?)?;
     let original = image.md.strings().str(row.name)?;
-    let name =
-        if crate::metadata::identifier(original).is_err() || original.starts_with("__il_field_") {
-            format!("__il_field_{token:08X}")
-        } else {
-            ident(original)
-        };
+    let name = crate::symbol_names::field(token, original, false);
     let modifier = if row.flags & 0x40 != 0 {
         "const "
     } else if row.flags & 0x20 != 0 {
