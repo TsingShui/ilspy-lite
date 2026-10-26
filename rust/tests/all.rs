@@ -107,6 +107,8 @@ mod generic_references;
 mod generic_values;
 #[path = "interface_references.rs"]
 mod interface_references;
+#[path = "method_instantiations.rs"]
+mod method_instantiations;
 #[path = "naming.rs"]
 mod naming;
 #[path = "native.rs"]

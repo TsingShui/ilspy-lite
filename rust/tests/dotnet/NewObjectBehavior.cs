@@ -55,6 +55,9 @@ internal static partial class GenericReferenceRoundtrip
         MethodInfo[] selected = carrier.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
             .Select(lowered => ops.GetMethod(lowered.Name, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new Exception("Recovered carrier has no owned counterpart: " + lowered.Name))
+            .SelectMany(method => method.IsGenericMethodDefinition
+                ? new[] { typeof(int), typeof(object), node }.Select(type => method.MakeGenericMethod(type))
+                : new[] { method })
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned allocation selection is empty.");
 
@@ -62,6 +65,7 @@ internal static partial class GenericReferenceRoundtrip
         {
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new Exception("Missing recovered allocation: " + original.Name);
+            if (original.IsGenericMethod) lowered = lowered.MakeGenericMethod(original.GetGenericArguments());
             Type[] parameters = original.GetParameters().Select(p => p.ParameterType).ToArray();
             if (lowered.ReturnType != original.ReturnType
                 || !lowered.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameters))
@@ -84,6 +88,13 @@ internal static partial class GenericReferenceRoundtrip
                 string actual = after.Error != null ? "throw:" + after.Error.Name : Fingerprint(after.Value, arguments);
                 if (expected != actual)
                     throw new Exception("Recovered allocation differs: " + original.Name + " expected=" + expected + " actual=" + actual);
+                checks++;
+            }
+            if (original.IsGenericMethod && !original.ReturnType.IsValueType)
+            {
+                object first = lowered.Invoke(null, null), second = lowered.Invoke(null, null);
+                if (first == null || second == null || ReferenceEquals(first, second))
+                    throw new Exception("Generic factory did not return fresh identities.");
                 checks++;
             }
         }

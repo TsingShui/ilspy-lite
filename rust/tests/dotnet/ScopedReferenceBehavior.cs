@@ -36,9 +36,9 @@ internal static partial class GenericReferenceRoundtrip
     static List<Specialization> Specializations()
     {
         MethodInfo[] methods = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
-            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare")
+            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall")
             .OrderBy(m => m.MetadataToken).ToArray();
-        if (methods.Length != 23) throw new Exception("Scoped owned method selection drift.");
+        if (methods.Length != 24) throw new Exception("Scoped owned method selection drift.");
         var result = new List<Specialization>();
         foreach (MethodInfo definition in methods)
         {
@@ -65,7 +65,7 @@ internal static partial class GenericReferenceRoundtrip
     {
         using var json = JsonDocument.Parse(File.ReadAllText(directivesPath));
         var directives = json.RootElement.EnumerateArray().ToDictionary(row => row.GetProperty("token").GetInt32());
-        if (directives.Count != 23) throw new Exception("Scoped signature directive coverage drift.");
+        if (directives.Count != 24) throw new Exception("Scoped signature directive coverage drift.");
         var result = new List<object>();
         foreach (Specialization test in cases)
         {
@@ -213,7 +213,7 @@ internal static partial class GenericReferenceRoundtrip
         {
             Assembly generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[2]));
             foreach (Specialization test in cases) ScopedCheck(test, generated);
-            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 23 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
+            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 24 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
         }
     }
 }

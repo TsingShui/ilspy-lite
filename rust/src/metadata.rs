@@ -32,6 +32,8 @@ pub(crate) struct SignatureValueTypes {
 type InterfaceEdges =
     std::cell::OnceCell<std::result::Result<std::collections::BTreeMap<u32, Vec<u32>>, String>>;
 
+mod method_instantiations;
+
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
     pub md: Metadata<'a>,
@@ -3640,6 +3642,9 @@ impl<'a> Image<'a> {
         t: Token,
         context: crate::signature_types::TypeContext,
     ) -> Result<MethodRef> {
+        if t.table() == Some(TableId::MethodSpec) {
+            return method_instantiations::resolve(self, t, context);
+        }
         let (name, owner, sig) = match t.table() {
             Some(TableId::MethodDef) => {
                 let row = self.row(t.0)?;
@@ -3700,6 +3705,7 @@ impl<'a> Image<'a> {
                     core_object_constructor: None,
                     tick_count: false,
                     constructor: true,
+                    generic_virtual: false,
                 });
             }
             self.external_class_context(reference.class.0)?;
@@ -3723,6 +3729,7 @@ impl<'a> Image<'a> {
                     core_object_constructor: Some(reference.class.0),
                     tick_count: false,
                     constructor: false,
+                    generic_virtual: false,
                 });
             }
             if !sig.has_this
@@ -3746,6 +3753,7 @@ impl<'a> Image<'a> {
                 core_object_constructor: None,
                 tick_count: false,
                 constructor: true,
+                generic_virtual: false,
             });
         }
         if name == ".ctor" && t.table() == Some(TableId::MethodDef) {
@@ -3772,6 +3780,7 @@ impl<'a> Image<'a> {
                 core_object_constructor: None,
                 tick_count: false,
                 constructor: true,
+                generic_virtual: false,
             });
         }
         if name == ".ctor" || name == ".cctor" {
@@ -3796,6 +3805,7 @@ impl<'a> Image<'a> {
                 core_object_constructor: None,
                 tick_count: true,
                 constructor: false,
+                generic_virtual: false,
             });
         }
         if name.is_empty()
@@ -3841,6 +3851,7 @@ impl<'a> Image<'a> {
                 core_object_constructor: None,
                 tick_count: false,
                 constructor: false,
+                generic_virtual: false,
             });
         }
         let receiver = if sig.has_this {
@@ -3890,6 +3901,7 @@ impl<'a> Image<'a> {
                 core_object_constructor: None,
                 tick_count: false,
                 constructor: false,
+                generic_virtual: false,
             });
         }
         Ok(MethodRef {
@@ -3919,6 +3931,7 @@ impl<'a> Image<'a> {
             core_object_constructor: None,
             tick_count: false,
             constructor: false,
+            generic_virtual: false,
         })
     }
 
@@ -4005,12 +4018,29 @@ fn substitute_type_arguments<'a>(
     ty: &cildec::Type<'a>,
     arguments: &[cildec::Type<'a>],
 ) -> Result<cildec::Type<'a>> {
+    substitute_arguments(ty, Some(arguments), None)
+}
+
+/// Substitute both declaration scopes in one traversal. Inserted arguments
+/// already belong to the caller and must not be substituted a second time.
+fn substitute_arguments<'a>(
+    ty: &cildec::Type<'a>,
+    type_arguments: Option<&[cildec::Type<'a>]>,
+    method_arguments: Option<&[cildec::Type<'a>]>,
+) -> Result<cildec::Type<'a>> {
     use cildec::Type;
+    let recurse = |ty: &Type<'a>| substitute_arguments(ty, type_arguments, method_arguments);
     Ok(match ty {
-        Type::Var(index) => arguments
+        Type::Var(index) if type_arguments.is_some() => type_arguments
+            .unwrap()
             .get(*index as usize)
             .cloned()
             .ok_or("constructed member argument missing")?,
+        Type::MVar(index) if method_arguments.is_some() => method_arguments
+            .unwrap()
+            .get(*index as usize)
+            .cloned()
+            .ok_or("constructed method argument missing")?,
         Type::GenericInst {
             is_value_type,
             def,
@@ -4018,29 +4048,18 @@ fn substitute_type_arguments<'a>(
         } => Type::GenericInst {
             is_value_type: *is_value_type,
             def: *def,
-            args: args
-                .iter()
-                .map(|argument| substitute_type_arguments(argument, arguments))
-                .collect::<Result<_>>()?,
+            args: args.iter().map(&recurse).collect::<Result<_>>()?,
         },
-        Type::SzArray(modifiers, inner) => Type::SzArray(
-            modifiers.clone(),
-            Box::new(substitute_type_arguments(inner, arguments)?),
-        ),
-        Type::Array(inner, shape) => Type::Array(
-            Box::new(substitute_type_arguments(inner, arguments)?),
-            shape.clone(),
-        ),
-        Type::ByRef(inner) => Type::ByRef(Box::new(substitute_type_arguments(inner, arguments)?)),
-        Type::Ptr(modifiers, inner) => Type::Ptr(
-            modifiers.clone(),
-            Box::new(substitute_type_arguments(inner, arguments)?),
-        ),
-        Type::Modified(modifiers, inner) => Type::Modified(
-            modifiers.clone(),
-            Box::new(substitute_type_arguments(inner, arguments)?),
-        ),
-        Type::Pinned(inner) => Type::Pinned(Box::new(substitute_type_arguments(inner, arguments)?)),
+        Type::SzArray(modifiers, inner) => {
+            Type::SzArray(modifiers.clone(), Box::new(recurse(inner)?))
+        }
+        Type::Array(inner, shape) => Type::Array(Box::new(recurse(inner)?), shape.clone()),
+        Type::ByRef(inner) => Type::ByRef(Box::new(recurse(inner)?)),
+        Type::Ptr(modifiers, inner) => Type::Ptr(modifiers.clone(), Box::new(recurse(inner)?)),
+        Type::Modified(modifiers, inner) => {
+            Type::Modified(modifiers.clone(), Box::new(recurse(inner)?))
+        }
+        Type::Pinned(inner) => Type::Pinned(Box::new(recurse(inner)?)),
         other => other.clone(),
     })
 }
@@ -4064,6 +4083,7 @@ pub(crate) struct MethodRef {
     pub core_object_constructor: Option<u32>,
     pub tick_count: bool,
     pub constructor: bool,
+    pub generic_virtual: bool,
 }
 
 fn generic_flags(flags: u16) -> String {

@@ -55,11 +55,24 @@ def main():
                 raise ValueError("allocation method not recovered: " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             statements = details.stdout
-            if args.readable:
+            if args.readable and not name.startswith("UnsupportedGenericNew"):
                 readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"])
                 if readable.stderr != details.stderr: raise ValueError("view changed admission")
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
+            if name.startswith("UnsupportedGenericNew"):
+                # This generic allocation is the exact core Activator MethodSpec,
+                # not an opaque newobj or a proxy for this recovered method.
+                readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
+                rows = re.findall(r"structural signature (__cil_generic_\w+) bytes=1E00:", readable)
+                if len(rows) != 1: raise ValueError("Generic factory alias missing")
+                il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+                if "System.Activator::CreateInstance<!!0>" not in il:
+                    raise ValueError("Generic factory is not the expected core leaf")
+                statements = readable.replace(rows[0], "T")
+                statements, count = re.subn(r"__cil_methodspec_call_[0-9A-F]{8}\(\)",
+                                           "global::System.Activator.CreateInstance<T>()", statements)
+                if count != 1: raise ValueError("Generic factory call missing")
             for token_hex in re.findall(r"__cil_newobj_([0-9A-F]{8})\(", statements):
                 key = "0x" + token_hex
                 owner = owners.get(key)

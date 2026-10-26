@@ -190,11 +190,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "ScopedReferenceCases.MethodOps",
-        "UnsupportedCall",
-        "generic/indirect method reference needs IL fallback",
-    ),
-    (
-        "ScopedReferenceCases.MethodOps",
         "UnsupportedConstruct",
         "constructed member needs a local definition; external constructed members need dependency facts",
     ),

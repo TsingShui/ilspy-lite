@@ -14,7 +14,7 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
     ),
 ];
 
-/// Interface dispatch and generic instantiation are not part of this milestone.
+/// Foreign interface and generic instance dispatch remain outside this subset.
 const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
     (
         "ExternalCallCases.Ops",
@@ -24,7 +24,7 @@ const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
     (
         "ExternalCallCases.Ops",
         "UnsupportedGeneric",
-        "generic/indirect method reference needs IL fallback",
+        "external generic instance dispatch needs dependency facts",
     ),
 ];
 

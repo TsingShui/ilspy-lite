@@ -35,11 +35,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "NewObjectCases.Ops",
-        "UnsupportedGenericNew",
-        "generic/indirect method reference needs IL fallback",
-    ),
-    (
-        "NewObjectCases.Ops",
         "UnsupportedGeneric",
         "managed location of a non-struct slot needs IL fallback",
     ),

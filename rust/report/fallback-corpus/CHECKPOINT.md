@@ -7,7 +7,29 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: grouped generic member binding
+## Current verified state: static/nonvirtual MethodSpec calls
+
+- `report/method-instantiations/corpus-scan/baseline.json`: 387,610 Decompiled /
+  383,138 Partial of 770,748; aggregate fallback 49.70989%.
+- +12,104 in 132 images, zero regressions/incomplete; every gain formerly
+  generic/indirect method reference. OpenRA.Game +86 / Common +128.
+- Exact static/nonvirtual MethodSpecs and simultaneous owner/method substitution
+  implemented. Generic virtual callvirt is refused after an owned null/argument
+  ordering discrepancy; failing logs/fixture are preserved, no GVM gains claimed.
+- 389 tests, clippy/fmt green. 122 MethodSpec comparisons / 13 selections per
+  config, four mutants. Expanded allocation (40), virtual/count (51) and scoped
+  reference (1,380) gates include promoted methods; generic binding remains green.
+- Ten source/IL triples self-reviewed; no changed semantic differences found.
+  No third-party execution, no independent/formal review claim.
+- Current goal is aggregate <=5%. User requests larger foundational batches,
+  ideally ~10 percentage points where genuine coverage permits; do not promise
+  gains by summing blocker buckets. Next prioritize reusable generic assignment,
+  foreign constructed calls and managed-location/byref capabilities, not only
+  narrow admission tweaks. Preserve fixed scope/references and local commits.
+- Evidence: `acceptance/corpus/METHOD_INSTANTIATIONS.md`,
+  `report/method-instantiations/AUDIT.md`, `review/review-source.md`.
+
+## Previous verified state: grouped generic member binding
 
 - `report/generic-binding/corpus-scan-final/baseline.json`: 375,506 Decompiled /
   395,242 Partial of 770,748; overall fallback 51.28031%.

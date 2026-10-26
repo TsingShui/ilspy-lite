@@ -382,6 +382,11 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--method-instantiation-check")
+        {
+            MethodInstantiationMain(args);
+            return;
+        }
         if (args[1] == "--generic-binding-check")
         {
             GenericBindingMain(args);

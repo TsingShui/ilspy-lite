@@ -996,6 +996,11 @@ impl Writer<'_, '_> {
                 let mut method = self.image.method_ref(t, self.type_context)?;
                 let virtual_call = op == "callvirt";
                 if virtual_call {
+                    if method.generic_virtual {
+                        return Err(
+                            "generic virtual dispatch needs runtime lookup-order modeling".into(),
+                        );
+                    }
                     // Constructors and intrinsics are not virtual: callvirt on them
                     // is invalid IL and must not be turned into a dispatch.
                     if method.core_object_constructor.is_some()
@@ -1125,7 +1130,10 @@ impl Writer<'_, '_> {
                     // already verified, so a virtual call can be written on the
                     // receiver: C# emits callvirt, keeping the null check, dispatch
                     // and evaluation order of the original instruction.
-                    if virtual_call && matches!(owner, Ty::StructuralRef(_)) {
+                    if virtual_call
+                        && matches!(owner, Ty::StructuralRef(_))
+                        && t.table() != Some(cildec::TableId::MethodSpec)
+                    {
                         method.target = format!("{}.@{}", receiver.name, method.name);
                         self.lines.push(
                             "// constructed dispatch: the call is written on the receiver, so the receiver null check, target-runtime dispatch and evaluation order are the ones the original call site had."

@@ -65,6 +65,8 @@ internal static partial class GenericReferenceRoundtrip
             {
                 if (type == typeof(int)) return new object[] { 3, 0, -2 };
                 if (type == shape) return shapes;
+                if (type == typeof(System.Collections.Generic.IEnumerable<int>))
+                    return new object[] { null, Array.Empty<int>(), new[] { 1, 2, 3 }, new System.Collections.Generic.List<int> { 7 } };
                 if (type == typeof(string)) return new object[] { "x", null };
                 if (!type.IsValueType) return new object[] { null };
                 throw new Exception("Unexpected owned virtual-call parameter type: " + type);

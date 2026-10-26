@@ -64,6 +64,17 @@ def main():
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
 
+            if name == "UnsupportedInterface":
+                readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
+                aliases = re.findall(r"structural signature (__cil_ref_\w+) bytes=\S+: (.*?);", readable)
+                for alias, _ in aliases:
+                    readable = readable.replace(alias, "global::System.Collections.Generic.IEnumerable<int>")
+                il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+                if "System.Linq.Enumerable::Count<int32>" not in il:
+                    raise ValueError("Unexpected generic extension target")
+                statements, count = re.subn(r"__cil_methodspec_call_[0-9A-F]{8}\(([^()]*)\)",
+                                           r"global::System.Linq.Enumerable.Count<int>(\1)", readable)
+                if count != 1: raise ValueError("Generic extension call missing")
             def dispatch(match):
                 target = "0x" + match.group(1)
                 if target not in names:

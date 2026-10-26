@@ -51,9 +51,9 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             name = signature.split("::", 1)[1].split("(", 1)[0].split("<", 1)[0]
-            if name != ".ctor" and (not name.startswith("Unsupported") or name == "UnsupportedBare"):
+            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall")):
                 selected.append((int(token, 16), name))
-        if len(selected) != 23:
+        if len(selected) != 24:
             raise ValueError("Owned scoped method selection drift")
         snippets, directives = {}, []
         for token, name in selected:
@@ -76,11 +76,21 @@ def main():
         path = OUT / f"directives-{config}.json"
         support.write_changed(path, json.dumps(directives, indent=2) + "\n")
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--scoped-plan", path]).stdout)
-        if len(plan) != 230:
+        if len(plan) != 240:
             raise ValueError("Scoped closure coverage drift")
         (OUT / f"plan-{config}.json").write_text(json.dumps(plan, indent=2) + "\n")
+        for case in plan:
+            if case["name"] != "UnsupportedCall": continue
+            identities = [peer for peer in plan if peer["name"] == "Identity"
+                          and [alias.split(" = ", 1)[1] for alias in peer["aliases"]]
+                          == [alias.split(" = ", 1)[1] for alias in case["aliases"]]]
+            if len(identities) != 1: raise ValueError("Recovered Identity closure missing or ambiguous")
+            case["body"] = re.sub(r"__cil_methodspec_call_[0-9A-F]{8}\(([^()]*)\)",
+                                  "global::" + identities[0]["carrier"] + r".Recovered.Identity(\1)",
+                                  snippets[case["token"]])
+            if "__cil_methodspec_call_" in case["body"]: raise ValueError("Unbound scoped generic call")
         pieces = ["namespace " + case["carrier"] + "\n{\n" + "\n".join(case["aliases"])
-                  + "\npublic static class Recovered\n{\n" + snippets[case["token"]] + "\n}\n}\n"
+                  + "\npublic static class Recovered\n{\n" + case.get("body", snippets[case["token"]]) + "\n}\n}\n"
                   for case in plan]
         text = "\n".join(pieces)
         suffix = config + ("-readable" if args.readable else "-details")

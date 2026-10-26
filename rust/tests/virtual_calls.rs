@@ -35,11 +35,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "VirtualCallCases.Ops",
-        "UnsupportedInterface",
-        "generic/indirect method reference needs IL fallback",
-    ),
-    (
-        "VirtualCallCases.Ops",
         "UnsupportedConstrained",
         "unsupported opcode constrained.",
     ),

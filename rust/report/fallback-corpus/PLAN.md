@@ -3,7 +3,22 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (generic binding group; aggregate 5% target)
+## Current position (MethodSpec calls; aggregate 5% target)
+
+- 387,610 Decompiled / 383,138 Partial, fallback 49.70989%.
+- +12,104 in 132 images, zero regressions/incomplete; no scope/reference changes.
+- Static/nonvirtual generic calls and simultaneous Var/MVar substitution pass;
+  generic virtual callvirt remains gated after a real owned ordering failure.
+- 389 tests, owned MethodSpec/expanded legacy behavior and mutations pass;
+  ten corpus triples self-reviewed.
+- User requests larger batches with foundational leverage rather than narrow
+  incremental fixes. Aim for substantial actual recovery via generic assignment,
+  external constructed calls and typed managed-location/byref infrastructure.
+  Ten percentage points means ~77,075 bodies; bucket totals are not forecasts.
+- Keep audit before implementation, local red/green tests, consolidated full
+  milestone gates, no subagents, no unrequested pushes.
+
+## Previous position (generic binding group; aggregate 5% target)
 
 - 375,506 Decompiled / 395,242 Partial, overall fallback 51.28031%.
 - +8,695 in 83 images; final zero regressions/incomplete after resolving

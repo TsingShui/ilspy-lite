@@ -5,6 +5,20 @@ The CLI defaults to a readable class/method view; `--details` preserves the full
 image-scoped metadata/IL evidence record. Original metadata is authoritative.
 All operations below are semantic notation; the CLI does not ship a runtime adapter.
 
+## Generic method instantiation calls
+
+`__cil_methodspec_call_TOKEN` is an exact original MethodSpec direct/static
+call, preserving its instantiated declaring owner, method arguments, runtime
+initialization, access/constraint checks and effects. Var/MVar substitution is
+simultaneous in the caller's proven scopes, not name-based. Nonvirtual generic
+callvirt retains its original MethodSpec token in the existing callvirt leaf.
+
+Generic virtual callvirt remains fallback: owned runtime validation exposed a
+null-receiver/argument-effect ordering difference not represented by the current
+snapshot model. External generic instance dispatch, byref/modified signatures
+and unsupported arguments are separately refused. See
+[MethodSpec acceptance](acceptance/corpus/METHOD_INSTANTIATIONS.md).
+
 ## Presentation versus semantics
 
 Readable output shows original class/member declarations with parameter names and
