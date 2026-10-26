@@ -180,3 +180,26 @@ Success criteria, boundaries, constraints and the verification contract are repr
 `get_goal(section="tasks")` on the old machine holds the completion evidence for the five
 completed tasks; copy it into the evidence fields when recreating them, so the audit trail
 is not lost.
+
+### 8.3 Completion evidence for the finished tasks
+
+Copy these into the recreated tasks so the audit trail survives the machine move.
+
+- **corpus** (complete, 2026-10-26T06:12:31Z): fixed commit unchanged; `frozen/manifest.json`
+  records 1,499 files including archive members and 1,098 PE sources; `inventory-raw`
+  independently enumerated 976 managed inputs / 1,098,128 CIL bodies, 0 errors, 4 E2E passed.
+- **baseline** (complete, 2026-10-26T06:31:18Z): `baseline-final` scanned 976 managed inputs /
+  1,098,128 CIL bodies; 1,164,708 MethodDefs each accounted for exactly once and identical to
+  the initial baseline; per-assembly integer gate, residual records complete, 9 acceptance E2E
+  passed.
+- **implementation-scope** (complete, 2026-10-26T06:47:26Z): generated 361 reference-skip
+  records and the reconciliation from saved reports in 18 ms; 320 implementation inputs /
+  777,951 bodies / 82.57%, fully reconciled against the original 1,098,128 bodies; no
+  re-acquisition, hashing or scanning; 11 E2E passed.
+- **design** (complete, 2026-10-26T06:53:00Z): user replied "同意", confirming Rust typed
+  IL/CFG + lift, input-separated TypeId, reuse of the static binder, value/address separation
+  and the explicit call/EH direction, plus the first object slice; proposal recorded.
+- **types** (complete, 2026-10-26T14:39:02Z): external enum/struct storage, constructed and
+  external value copies, constructed generic members (open self, field substitution, calls,
+  allocation, constructed generic base) all implemented; 356 tests green, clippy 0; scan
+  296,145/474,603 (61.577%), review 0 SUSPECT (the SUSPECT item was demoted).
