@@ -87,6 +87,55 @@ fn rename_field(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
     (changed, 0x04000000 | rid)
 }
 
+fn rename_method(bytes: &[u8], old: &str, new: &str) -> (Vec<u8>, u32) {
+    assert_eq!(old.len(), new.len());
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let (rid, row) = md
+        .tables()
+        .iter::<cildec::tables::MethodDefRow>()
+        .map(|(rid, row)| (rid, row.unwrap()))
+        .find(|(_, row)| md.strings().str(row.name).unwrap() == old)
+        .expect("owned method");
+    let value = md.strings().str(row.name).unwrap();
+    let at = value.as_ptr() as usize - bytes.as_ptr() as usize;
+    let mut changed = bytes.to_vec();
+    changed[at..at + old.len()].copy_from_slice(new.as_bytes());
+    (changed, 0x06000000 | rid)
+}
+
+#[test]
+fn renamed_static_method_calls_keep_the_target_alias_and_original_token() {
+    for &bytes in IMAGES {
+        let (changed, target) = rename_method(bytes, "Callee", "<M>___");
+        let method = list_methods(&changed)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "NamingCases.StaticTargets" && m.simple_name == "Update")
+            .unwrap();
+        let actual = decompile_with_style(&changed, method.token, OutputStyle::Readable).unwrap();
+        assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        assert!(
+            actual.text.contains("StaticTargets.__name_3C4D3E5F5F5F("),
+            "{}",
+            actual.text
+        );
+        let details = decompile_with_style(&changed, method.token, OutputStyle::Details).unwrap();
+        assert!(
+            details.text.contains(&format!("call token 0x{target:08X}")),
+            "{}",
+            details.text
+        );
+        let ty =
+            decompile_type_with_style(&changed, "NamingCases.StaticTargets", OutputStyle::Readable)
+                .unwrap();
+        assert!(
+            ty.text.contains("int __name_3C4D3E5F5F5F(int value)"),
+            "{}",
+            ty.text
+        );
+    }
+}
+
 #[test]
 fn static_field_alias_is_shared_by_its_declaration_load_and_store() {
     for &bytes in IMAGES {

@@ -2093,7 +2093,7 @@ impl<'a> Image<'a> {
                     .ok_or("missing method owner")?;
                 (
                     self.md.strings().str(row.name)?.to_string(),
-                    Names::new(&self.md).type_def(owner)?,
+                    Token(0x02000000 | owner.get()),
                     self.signature(t.0)?,
                 )
             }
@@ -2101,7 +2101,7 @@ impl<'a> Image<'a> {
                 let row = self.md.tables().member_ref(t.rid())?;
                 (
                     self.md.strings().str(row.name)?.to_string(),
-                    Names::new(&self.md).try_token(row.class)?,
+                    row.class,
                     MethodSig::parse(self.md.blobs().get(row.signature)?)?,
                 )
             }
@@ -2206,7 +2206,11 @@ impl<'a> Image<'a> {
                 constructor: false,
             });
         }
-        identifier(&name)?;
+        if name.is_empty()
+            || t.table() == Some(TableId::MethodDef) && self.row(t.0)?.flags & 0x1000 != 0
+        {
+            return Err("empty/runtime-special method reference needs IL fallback".into());
+        }
         let receiver = if sig.has_this {
             if t.table() == Some(TableId::MemberRef) {
                 let reference = self.md.tables().member_ref(t.rid())?;
@@ -2263,7 +2267,14 @@ impl<'a> Image<'a> {
             } else if receiver.is_some() {
                 format!("__cil_direct_{:08X}", t.0)
             } else {
-                format!("{}.@{name}", cs_owner(&owner)?)
+                if Names::new(&self.md).try_token(owner)?.contains('`') {
+                    return Err("generic static call owner needs IL fallback".into());
+                }
+                format!(
+                    "{}.{}",
+                    crate::symbol_names::type_name(&self.md, owner, true)?,
+                    crate::symbol_names::verbatim(&name)
+                )
             },
             args,
             ret,
@@ -2538,27 +2549,6 @@ pub(crate) fn identifier(s: &str) -> Result<()> {
         return Err("non-simple identifier needs IL fallback".into());
     }
     Ok(())
-}
-fn cs_owner(name: &str) -> Result<String> {
-    // Assembly identity remains in the adjacent IL-token comment and raw IL.
-    let name = if name.starts_with('[') {
-        name.split_once(']')
-            .ok_or("invalid assembly-qualified name")?
-            .1
-    } else {
-        name
-    };
-    let name = name.replace('/', ".");
-    for part in name.split('.') {
-        identifier(part)?;
-    }
-    Ok(format!(
-        "global::{}",
-        name.split('.')
-            .map(|p| format!("@{p}"))
-            .collect::<Vec<_>>()
-            .join(".")
-    ))
 }
 pub(crate) fn escape_line(s: &str) -> String {
     s.chars().flat_map(|c| c.escape_default()).collect()
