@@ -57,3 +57,24 @@ is a failure, not a footnote.
    semantically sound. Either one can reject the slice.
 5. Docs land with the slice: `acceptance/corpus/<SLICE>.md` plus the README index and
    the `CHECKPOINT.md` "Authoritative state" line.
+
+## Slice entry gate: audit ILSpy first
+
+No capability is implemented on the strength of an IL pattern alone. Before a slice
+starts, a read-only audit samples the target bucket and compares, per method, our
+recovered output with ILSpy's for the same member:
+
+- `ILSPY_YES_OURS_NO` - a candidate; design the admission from what ILSpy emitted and
+  from the original IL, never from the refusal text alone;
+- `BOTH_NO` - out of scope; ILSpy cannot decompile it either, so the corpus is not
+  required to recover it and the bucket is not a target;
+- `BOTH_YES_DIFFERS` - semantics review before touching code;
+- `OURS_YES_ILSPY_NO` - we are ahead; leave it alone.
+
+The audit result is written to `report/<slice>/AUDIT.md` with the sample list and a ranked
+recommendation. Implementation starts only from that recommendation, and the slice report
+must state which sampled classes it addressed and which it deliberately left out of scope.
+
+## Version control
+
+An agent commits each accepted slice and **does not push** unless the user asks for it.

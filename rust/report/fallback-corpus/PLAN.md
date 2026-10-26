@@ -83,3 +83,11 @@ Sources: `report/boxing/corpus-scan-enum/baseline.json`,
   not frozen as expected-`Partial`.
 - Review artifacts are one revision behind the working tree (`dumps/` predates the
   enum admission); after any rebuild, regenerate `review/current/` before judging.
+
+## Slice entry gate (mandatory)
+
+Every slice now begins with a read-only audit that samples the target bucket and compares
+our output with ILSpy's member by member. Only `ILSPY_YES_OURS_NO` classes are candidates;
+`BOTH_NO` is explicitly out of scope and must not be implemented. The audit lands in
+`report/<slice>/AUDIT.md` and the slice report cites it. Agents commit accepted slices and
+do not push unless asked.
