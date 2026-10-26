@@ -407,6 +407,11 @@ internal static partial class GenericReferenceRoundtrip
             ExternalValueMain(args);
             return;
         }
+        if (args[1] == "--external-property-check")
+        {
+            ExternalPropertyMain(args);
+            return;
+        }
         if (args[1] == "--external-call-check")
         {
             ExternalCallMain(args);

@@ -7,7 +7,28 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: bounded EH regions
+## Current verified state: external properties
+
+- Latest scan: `report/external-properties/corpus-scan/baseline.json`.
+  338,794 Decompiled / 431,954 Partial, 770,748 bodies, 56.04348% unrecovered,
+  34/319 passing, zero incomplete. +2,704 in 73 images, zero regressions versus EH.
+  Every gain formerly hit the special-name accessor blocker; Common gains 240.
+- Metadata-proven external getters/setters render with a declared-owner cast;
+  virtual dispatch and argument-before-null-check order are preserved. Direct
+  calls stay exact intrinsics; events/indexers/interfaces/generic owners remain
+  gated. No reference-selection changes.
+- 374 tests, clippy warnings denied and fmt checks pass. Default readable owned
+  property behavior: 98 comparisons and three rejected semantic mutants per
+  release/debug configuration. Prior external calls and direct properties pass.
+- Six pre-fix ILSpy/ours/IL samples drove the design; eight post-fix corpus triples
+  self-reviewed, no property-semantic differences found. No subagents or third-
+  party execution; this is self-review, not independent evidence.
+- Evidence: `acceptance/corpus/EXTERNAL_PROPERTIES.md`,
+  `report/external-properties/AUDIT.md`, `review/review-source.md`.
+- Next repair still requires an ILSpy-first audit. Continue directly in the main
+  session; commit validated slices, never push without explicit instruction.
+
+## Previous verified state: bounded EH regions
 
 - Work continues directly in the main session. No subagents; audit ILSpy before
   repairs; original IL is the correctness basis. Commit validated slices, do not

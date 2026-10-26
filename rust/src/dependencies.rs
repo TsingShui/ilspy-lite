@@ -127,6 +127,15 @@ pub struct ExternalCall {
     pub declaring_type: String,
     pub is_virtual: bool,
     pub is_abstract: bool,
+    pub(crate) property: Option<ExternalProperty>,
+}
+
+/// Metadata-proven source property for a virtual instance accessor call.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalProperty {
+    pub owner_name: String,
+    pub name: String,
+    pub getter: bool,
 }
 
 /// Facts read from the defining image for `newobj` on a foreign constructor.
@@ -326,15 +335,18 @@ impl DependencyContext {
         if method.name.starts_with(".ctor") || method.name.starts_with(".cctor") {
             return Err("external call target is a constructor".into());
         }
-        // Accessors keep the existing placeholder: turning them into a named call
-        // would bypass property binding, which is its own milestone.
-        if method.flags & 0x0800 != 0
+        // Special names require a unique metadata association and a separately
+        // proven source lookup. Prefixes alone never establish a property.
+        let special = method.flags & 0x0800 != 0
             || ["get_", "set_", "add_", "remove_"]
                 .iter()
-                .any(|prefix| method.name.starts_with(prefix))
-        {
-            return Err("external call target is a special-name accessor".into());
-        }
+                .any(|prefix| method.name.starts_with(prefix));
+        let property = if special {
+            Some(self.external_property_presentation(token)?
+                .ok_or("external call target is a special-name accessor without a supported property association")?)
+        } else {
+            None
+        };
         if !is_plain_identifier(&method.name) {
             return Err("external call target name is not a plain identifier".into());
         }
@@ -343,6 +355,7 @@ impl DependencyContext {
             declaring_type: method.owner.name.clone(),
             is_virtual: method.flags & 0x0040 != 0,
             is_abstract: method.flags & 0x0400 != 0,
+            property,
         })
     }
 

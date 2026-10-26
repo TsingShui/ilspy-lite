@@ -3,7 +3,17 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (bounded EH)
+## Current position (external properties)
+
+- 338,794 Decompiled / 431,954 Partial (56.04348%); 34/319 images passing.
+- +2,704 in 73 images, zero regressions/incomplete; every gain from the special-name
+  accessor blocker. OpenRA.Mods.Common +240.
+- 374 tests and 98 property behavior comparisons per configuration; three semantic
+  mutants rejected. Main-session self-review completed over eight corpus triples.
+- Next: audit the remaining value-receiver and generic-member differences against
+  ILSpy, then select a bounded repair. No subagents, no automatic push.
+
+## Previous position (bounded EH)
 
 - 336,090 Decompiled / 434,658 Partial; 770,748 bodies, 56.39431% unrecovered.
 - 34/319 body images pass; zero incomplete; +1,191 in 119 images, zero regressions.

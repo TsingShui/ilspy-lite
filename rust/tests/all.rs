@@ -86,6 +86,8 @@ mod external;
 mod external_calls;
 #[path = "external_enums.rs"]
 mod external_enums;
+#[path = "external_properties.rs"]
+mod external_properties;
 #[path = "external_values.rs"]
 mod external_values;
 

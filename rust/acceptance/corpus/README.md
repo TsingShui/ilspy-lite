@@ -167,6 +167,8 @@ generated output remain ignored and retain their original license boundaries.
   exactly the references its image declares and records the selection.
 - `EXTERNAL_ENUM_STORAGE.md`: the first capability that consumes those references -
   storage width of enums defined in a referenced assembly.
+- `EXTERNAL_PROPERTIES.md`: metadata-proven external instance getters/setters,
+  retaining declared-owner lookup, virtual dispatch and argument/null-check order.
 - `EXTERNAL_CALL_DISPATCH.md`: instance calls on receivers whose method is declared
   in a referenced assembly, with the order-independence defect that review found and
   its per-token parity gate.

@@ -1057,6 +1057,7 @@ impl Writer<'_, '_> {
                     });
                 }
                 values.reverse();
+                let mut property_expression = None;
                 if let Some(core_owner) = method.core_object_constructor {
                     let owner = self
                         .constructor_owner
@@ -1135,15 +1136,40 @@ impl Writer<'_, '_> {
                     if matches!(owner, Ty::ExternalClass(_))
                         && let Some(Ok(call)) = self.image.external_call(t.0)
                     {
-                        method.target = format!("{}.@{}", receiver.name, call.name);
-                        self.lines.push(format!(
-                            "// external dispatch 0x{:08X}: instance method declared by {} (virtual={}, abstract={}); the call is written on the receiver, so the receiver null check, target-runtime dispatch, evaluation order and argument copies are the ones the original call site had.",
-                            t.0,
-                            crate::metadata::escape_line(&call.declaring_type),
-                            call.is_virtual,
-                            call.is_abstract
-                        ));
-                        explicit_receiver = false;
+                        if virtual_call && let Some(property) = &call.property {
+                            let access = format!(
+                                "(({}){}).{}",
+                                property.owner_name, receiver.name, property.name
+                            );
+                            property_expression =
+                                Some(match (property.getter, values.as_slice()) {
+                                    (true, []) => access,
+                                    (false, [value]) if method.ret == Ty::Void => {
+                                        format!("{access} = {value}")
+                                    }
+                                    _ => return Err(
+                                        "external property call shape differs from its association"
+                                            .into(),
+                                    ),
+                                });
+                            self.lines.push(format!(
+                                "// property callvirt 0x{:08X}: declared owner {}; exact metadata association; arguments evaluated before receiver null check and runtime dispatch.",
+                                t.0, property.owner_name
+                            ));
+                            explicit_receiver = false;
+                        } else if call.property.is_none() {
+                            method.target = format!("{}.@{}", receiver.name, call.name);
+                            self.lines.push(format!(
+                                "// external dispatch 0x{:08X}: instance method declared by {} (virtual={}, abstract={}); the call is written on the receiver, so the receiver null check, target-runtime dispatch, evaluation order and argument copies are the ones the original call site had.",
+                                t.0,
+                                crate::metadata::escape_line(&call.declaring_type),
+                                call.is_virtual,
+                                call.is_abstract
+                            ));
+                            explicit_receiver = false;
+                        }
+                        // A direct accessor call keeps its exact-call intrinsic:
+                        // property syntax would add a null check and virtual dispatch.
                     }
                     // A value-type instance call passes a managed pointer, so the
                     // receiver argument is explicit here rather than an implicit copy.
@@ -1168,7 +1194,8 @@ impl Writer<'_, '_> {
                     self.lines.push(format!("// memberref target 0x{:08X}: owner={} method-name={} signature-bytes={:02X?}; {dispatch_note}; resolution/access/body effects belong to the original target runtime.",
                         t.0, self.image.external_class_context(owner)?, crate::metadata::escape_line(self.image.md.strings().str(reference.name)?), self.image.md.blobs().get(reference.signature)?));
                 }
-                let expression = format!("{}({})", method.target, values.join(", "));
+                let expression = property_expression
+                    .unwrap_or_else(|| format!("{}({})", method.target, values.join(", ")));
                 self.lines.push(format!(
                     "// call token 0x{:08X}: {}",
                     method.token,

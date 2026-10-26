@@ -208,6 +208,142 @@ impl DependencyContext {
         Ok(Some((property, qualifier)))
     }
 
+    /// Prove source lookup for a callvirt property on an external class.
+    /// The receiver will be cast to this exact declaring owner before lookup.
+    pub(crate) fn external_property_presentation(
+        &self,
+        token: u32,
+    ) -> Result<Option<super::super::ExternalProperty>> {
+        let Some(property) = self.resolve_property_accessor(token)? else {
+            return Ok(None);
+        };
+        let method = &property.method;
+        let image = self.binding_image(method.module)?;
+        let owner_token = Token(property.owner.definition.token);
+        if !property.owner.exact_identity
+            || property.owner.flags & 0x20 != 0
+            || !property.owner.generic_arguments.is_empty()
+            || !image.md.tables().generic_params(owner_token)?.is_empty()
+            || image.has_core_base(owner_token, "ValueType")?
+            || image.has_core_base(owner_token, "Enum")?
+        {
+            return Err("external property needs an exact nongeneric reference-class owner".into());
+        }
+        let signature = crate::signature_guard::method(&method.definition_signature)?;
+        let property_signature = crate::signature_guard::property(&property.signature)?;
+        if !signature.has_this
+            || method.flags & 0x10 != 0
+            || method.flags & 7 != 6
+            || !property_signature.params.is_empty()
+            || signature.return_type.by_ref
+            || !signature.return_type.custom_mods.is_empty()
+            || signature
+                .params
+                .iter()
+                .any(|p| p.by_ref || !p.custom_mods.is_empty())
+            || method.name != format!("{}_{}", property.role, property.name)
+        {
+            return Err("external property needs a public non-indexed ordinary accessor".into());
+        }
+        identifier(&property.name)?;
+        if crate::symbol_names::aliased(&property.name) {
+            return Err("external property name is not a proven source identifier".into());
+        }
+        for (module, raw) in [
+            (0, &method.reference_signature),
+            (method.module, &method.definition_signature),
+        ] {
+            let signature = crate::signature_guard::method(raw)?;
+            for parameter in signature
+                .params
+                .iter()
+                .chain(std::iter::once(&signature.return_type))
+            {
+                if !self.property_type_is_exact(module, &parameter.type_)? {
+                    return Err("external property signature needs exact supported types".into());
+                }
+            }
+        }
+        let types = image.selected_types(&property.owner.name)?;
+        let owner = types.first().ok_or("external property owner is missing")?;
+        if owner.token != owner_token.0 {
+            return Err("external property owner identity changed".into());
+        }
+        let matching = owner
+            .properties
+            .iter()
+            .filter(|&&token| {
+                image
+                    .md
+                    .tables()
+                    .property(token & 0xffffff)
+                    .ok()
+                    .and_then(|row| image.md.strings().str(row.name).ok())
+                    == Some(property.name.as_str())
+            })
+            .count();
+        if matching != 1 {
+            return Err("external property source name is ambiguous".into());
+        }
+        for &token in &owner.fields {
+            let row = image.md.tables().field(token & 0xffffff)?;
+            if image.md.strings().str(row.name)? == property.name {
+                return Err("field hides the external property name".into());
+            }
+        }
+        for &token in &owner.methods {
+            if image.md.strings().str(image.row(token)?.name)? == property.name {
+                return Err("method hides the external property name".into());
+            }
+        }
+        for &token in &owner.events {
+            let row = image.md.tables().event(token & 0xffffff)?;
+            if image.md.strings().str(row.name)? == property.name {
+                return Err("event hides the external property name".into());
+            }
+        }
+        for (rid, row) in image.md.tables().iter::<cildec::tables::TypeDefRow>() {
+            let row = row?;
+            if image
+                .md
+                .tables()
+                .enclosing_type(cildec::Rid::new(rid))?
+                .is_some_and(|parent| parent.get() == owner_token.rid())
+                && image.md.strings().str(row.type_name)?.split('`').next()
+                    == Some(property.name.as_str())
+            {
+                return Err("nested type hides the external property name".into());
+            }
+        }
+        let role = if property.role == "get" { 2 } else { 1 };
+        let mut same_role = 0;
+        for (rid, row) in image
+            .md
+            .tables()
+            .iter::<cildec::tables::MethodSemanticsRow>()
+        {
+            let row = row?;
+            let association = image.metadata_coded_token(
+                CodedIndex::HasSemantics,
+                image
+                    .md
+                    .tables()
+                    .raw_column(TableId::MethodSemantics, rid, 2)?,
+            )?;
+            if association.0 == property.definition.token && row.semantics == role {
+                same_role += 1;
+            }
+        }
+        if same_role != 1 {
+            return Err("external property accessor role is ambiguous".into());
+        }
+        Ok(Some(super::super::ExternalProperty {
+            owner_name: crate::symbol_names::type_name(&image, owner_token, true)?,
+            name: crate::symbol_names::ident(&property.name),
+            getter: property.role == "get",
+        }))
+    }
+
     fn property_type_is_exact(&self, module: usize, ty: &cildec::Type<'_>) -> Result<bool> {
         match ty {
             cildec::Type::Class(token) | cildec::Type::ValueType(token) => {
