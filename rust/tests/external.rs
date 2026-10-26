@@ -168,7 +168,14 @@ fn memberref_calls_do_not_infer_wrong_receiver_or_callvirt_semantics() {
     assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
     let mut patched = bytes.to_vec();
     patched[start + call.offset as usize] = 0x6f;
-    assert_eq!(decompile(&patched, method).unwrap().status, Status::Partial);
+    let result = decompile(&patched, method).unwrap();
+    assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+    assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
+    assert!(
+        !result.text.contains("__cil_memberref_call_"),
+        "{}",
+        result.text
+    );
 }
 
 #[test]

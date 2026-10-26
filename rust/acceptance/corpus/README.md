@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_COPIES.md`: constructed value types and external value types as
   whole-value copies, and the three-state rule that makes an unresolved reference
   leave output byte-identical.
+- `REFERENCE_CALL_FOUNDATION.md`: exact scoped external/reference calls,
+  constructed owners, qualified core identity and reference TypeSpec conversions.
 - `METHOD_INSTANTIATIONS.md`: exact static/nonvirtual MethodSpec calls and
   simultaneous Var/MVar substitution; generic virtual lookup remains gated.
 - `GENERIC_MEMBER_SCOPES.md`: caller-qualified generic member binding,

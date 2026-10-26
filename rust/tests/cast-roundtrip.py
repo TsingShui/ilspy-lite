@@ -18,6 +18,8 @@ def module(name, path):
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
 adapter = module("reference_roundtrip", ROOT / "tests/reference-roundtrip.py")
+structural = module("generic_declaring", ROOT / "tests/generic-declaring-roundtrip.py")
+leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -59,9 +61,11 @@ def main():
                 if readable.stderr != details.stderr: raise ValueError("view changed admission")
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
+            statements = structural.inline_structural_types(statements)
             snippets.append(statements)
             bodies[name] = statements
-        carrier = "namespace CastCases\n{\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n}\n"
+        aliases, helpers = leaves.plan(support, harness, fixture, OUT, snippets, "CastCases.Ops")
+        carrier = aliases + "namespace CastCases\n{\npublic static class Recovered\n{\n" + helpers + "\n".join(snippets) + "\n}\n}\n"
         source = OUT / f"Recovered-{config}{'-readable' if args.readable else '-details'}.cs"
         support.write_changed(source, carrier)
         recovered = source.with_suffix(".dll")

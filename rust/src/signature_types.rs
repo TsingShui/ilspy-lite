@@ -128,6 +128,10 @@ impl SignatureTypes {
             .ok_or_else(|| "unknown structural signature identity".into())
     }
 
+    pub fn is_vector(&self, id: TypeId) -> Result<bool> {
+        Ok(self.entry(id)?.signature.bytes.first() == Some(&0x1d))
+    }
+
     pub fn name(&self, id: TypeId) -> Result<String> {
         Ok(self.entry(id)?.alias.clone())
     }

@@ -1,0 +1,163 @@
+[
+  {
+    "slug": "0004-06001362",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.CSharpResources",
+    "name": "get_CantReferenceCompilationOf",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x06001362",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: type binding requires a resolved assembly: System.Resources.ResourceManager, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ContentType=0x0",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000040",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.CompilationArgumentCountsAttribute",
+    "name": "get_Counts",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000040",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: type binding requires a resolved assembly: System.Private.CoreLib, Version=0.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, ContentType=0x0",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0001-0600004D",
+    "assembly": "DiffLib",
+    "owner": "DiffLib.Diff`1/<GenerateSections>d__0",
+    "name": "<>m__Finally5",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+    "token": "0x0600004D",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: external call target is declared on an interface",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000219",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Collections.FSharpMap`2",
+    "name": "Partition",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000219",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0001-06000045",
+    "assembly": "DiffLib",
+    "owner": "DiffLib.Diff`1/<GenerateSections>d__0",
+    "name": "System.Collections.Generic.IEnumerable<DiffLib.DiffChange>.GetEnumerator",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+    "token": "0x06000045",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: property/accessor flags or calling convention conflict",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0003-0600218B",
+    "assembly": "ICSharpCode.Decompiler",
+    "owner": "ICSharpCode.Decompiler.DotNetCorePathFinder/<LoadPackageInfos>d__12",
+    "name": "MoveNext",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "token": "0x0600218B",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: external property needs a public non-indexed ordinary accessor",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0483-060002C6",
+    "assembly": "System.Private.CoreLib",
+    "owner": "System.String",
+    "name": "ToString",
+    "token": "0x060002C6",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.CoreLib.dll",
+    "references": [],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0620-06000242",
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "name": "ToString",
+    "token": "0x06000242",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll",
+    "references": [],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0628-06000E51",
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "name": "ToString",
+    "token": "0x06000E51",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/mscorlib.dll",
+    "references": [],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

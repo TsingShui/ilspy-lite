@@ -216,12 +216,21 @@ fn selected_class_contains_owned_nested_types_not_siblings() {
 fn class_methods_keep_supported_and_unsupported_results_together() {
     for bytes in IMAGES {
         let result = decompile_type(bytes, "ClassCases.Mixed").unwrap();
-        assert_eq!(result.summary.decompiled, 1);
-        assert_eq!(result.summary.partial, 1);
+        assert_eq!(result.summary.decompiled, 2);
+        assert_eq!(result.summary.partial, 0);
         assert_eq!(result.summary.failed, 0);
-        assert_eq!(result.summary.exit_code(), 2);
+        assert_eq!(result.summary.exit_code(), 0);
         assert!(result.text.contains("@Good("));
-        assert!(result.text.contains("IL FALLBACK"));
+        assert!(result.text.contains("__cil_callvirt_"));
+        let mixed = decompile_type(
+            include_bytes!("fixtures/reference-call-release.bin"),
+            "ReferenceCallCases.Ops",
+        )
+        .unwrap();
+        assert!(mixed.summary.decompiled > 0 && mixed.summary.partial > 0);
+        assert_eq!(mixed.summary.failed, 0);
+        assert_eq!(mixed.summary.exit_code(), 2);
+        assert!(mixed.text.contains("UnsupportedByRef") && mixed.text.contains("IL FALLBACK"));
         for method in list_methods(bytes)
             .unwrap()
             .into_iter()

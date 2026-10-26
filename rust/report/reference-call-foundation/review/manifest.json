@@ -1,0 +1,198 @@
+[
+  {
+    "slug": "0004-06001362",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.CSharpResources",
+    "name": "get_CantReferenceCompilationOf",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x06001362",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: type binding requires a resolved assembly: System.Resources.ResourceManager, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ContentType=0x0",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000040",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.CompilationArgumentCountsAttribute",
+    "name": "get_Counts",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000040",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "callvirt on an opaque external receiver needs dependency facts: type binding requires a resolved assembly: System.Private.CoreLib, Version=0.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e, ContentType=0x0",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0483-060002C6",
+    "assembly": "System.Private.CoreLib",
+    "owner": "System.String",
+    "name": "ToString",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.CoreLib.dll",
+    "token": "0x060002C6",
+    "references": [],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0620-06000242",
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "name": "ToString",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll",
+    "token": "0x06000242",
+    "references": [],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0628-06000E51",
+    "assembly": "mscorlib",
+    "owner": "System.String",
+    "name": "ToString",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/mscorlib.dll",
+    "token": "0x06000E51",
+    "references": [],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-0600053A",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Control.Mailbox`1",
+    "name": "ScanArrivalsUnsafe",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600053A",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000067",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpChoice`2",
+    "name": "get_IsChoice1Of2",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000067",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "cast needs a local class definition; external/interface casts need more facts",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-060001BC",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Collections.FSharpList`1",
+    "name": "CompareTo",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x060001BC",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "box/unbox needs an admitted core scalar or local enum",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000149",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.MatchFailureException",
+    "name": "GetHashCode",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000149",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1041-06000007",
+    "assembly": "OpenRA.Game",
+    "owner": "<>f__AnonymousType0`4",
+    "name": "GetHashCode",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "token": "0x06000007",
+    "references": [],
+    "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1042-06000005",
+    "assembly": "OpenRA.Mods.Common",
+    "owner": "<>f__AnonymousType0`2",
+    "name": "GetHashCode",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+    "token": "0x06000005",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+    ],
+    "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

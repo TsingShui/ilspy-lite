@@ -15,6 +15,20 @@ fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
 }
 
 #[test]
+fn qualified_local_core_string_and_primitive_string_keep_one_reference_identity() {
+    let result = decompile(CORE, token(CORE, "System.String", "ReturnSelf")).unwrap();
+    assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+    for bytes in [
+        include_bytes!("fixtures/core-fake-name.bin").as_slice(),
+        include_bytes!("fixtures/core-wrong-key.bin").as_slice(),
+        include_bytes!("fixtures/core-wrong-culture.bin").as_slice(),
+    ] {
+        let result = decompile(bytes, token(bytes, "System.String", "ReturnSelf")).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+    }
+}
+
+#[test]
 fn a_qualified_local_core_object_is_a_legal_reference_hierarchy_root() {
     for (owner, name) in [
         ("System.Object", "RootConstant"),

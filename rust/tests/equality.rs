@@ -21,11 +21,32 @@ fn token(bytes: &[u8], name: &str) -> u32 {
 #[allow(dead_code)]
 mod fixture_contract;
 
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
-    "EqualityCases.Ops",
-    "UnsupportedExternal",
-    "callvirt on an opaque external receiver needs dependency facts",
-)];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[];
+
+#[test]
+fn boxing_a_boolean_call_result_converts_its_normalized_stack_value() {
+    for bytes in IMAGES {
+        let method = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.simple_name == "UnsupportedExternal")
+            .unwrap();
+        let result = ilspy_lite::decompile_with_style(
+            bytes,
+            method.token,
+            ilspy_lite::OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(
+            result.status,
+            ilspy_lite::Status::Decompiled,
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("!= 0"), "{}", result.text);
+        assert!(!result.text.contains("((bool)("), "{}", result.text);
+    }
+}
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

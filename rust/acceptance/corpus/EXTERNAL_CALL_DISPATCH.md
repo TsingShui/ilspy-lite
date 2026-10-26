@@ -1,5 +1,10 @@
 # External call dispatch
 
+Current extension: `REFERENCE_CALL_FOUNDATION.md` separates exact reference-call
+semantics from dependency-backed source member/property presentation. Missing
+source facts no longer require fallback for an otherwise supported exact leaf.
+The original dependency-backed milestone evidence below remains historical.
+
 An instance method declared in a referenced assembly is written as a call on the
 receiver itself, replacing the opaque placeholder that was emitted before. The
 declared name and declaring type come from the referenced definition; which override

@@ -21,18 +21,7 @@ fn token(bytes: &[u8], name: &str) -> u32 {
 #[allow(dead_code)]
 mod fixture_contract;
 
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "CastCases.Ops",
-        "UnsupportedGeneric",
-        "cast needs a local class definition; external/interface casts need more facts",
-    ),
-    (
-        "CastCases.Ops",
-        "UnsupportedInterface",
-        "callvirt on an opaque external receiver needs dependency facts",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

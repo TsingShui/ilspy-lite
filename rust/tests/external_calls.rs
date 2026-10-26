@@ -14,19 +14,12 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
     ),
 ];
 
-/// Foreign interface and generic instance dispatch remain outside this subset.
-const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
-    (
-        "ExternalCallCases.Ops",
-        "UnsupportedInterface",
-        "callvirt on an opaque external receiver needs dependency facts: external call target is declared on an interface",
-    ),
-    (
-        "ExternalCallCases.Ops",
-        "UnsupportedGeneric",
-        "external generic instance dispatch needs dependency facts",
-    ),
-];
+/// Foreign generic method instance dispatch remains outside this subset.
+const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[(
+    "ExternalCallCases.Ops",
+    "UnsupportedGeneric",
+    "external generic instance dispatch needs dependency facts",
+)];
 
 fn context(bytes: &[u8], library: &[u8]) -> DependencyContext {
     let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
@@ -72,15 +65,18 @@ fn declared_reference_dispatch_admits_external_class_calls() {
 }
 
 #[test]
-fn the_same_fixture_without_the_declared_reference_stays_gated() {
+fn absent_source_facts_retain_exact_runtime_calls_instead_of_guessing_names() {
     for (bytes, _) in IMAGES {
         for name in ["CallVirtual", "CallDirect", "CallEcho"] {
             let result = ilspy_lite::decompile(bytes, token(bytes, name)).unwrap();
-            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
             assert!(
-                result
-                    .text
-                    .contains("callvirt on an opaque external receiver needs dependency facts"),
+                result.text.contains("__cil_callvirt_"),
+                "{name}: {}",
+                result.text
+            );
+            assert!(
+                !result.text.contains("service.@"),
                 "{name}: {}",
                 result.text
             );

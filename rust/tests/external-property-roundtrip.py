@@ -17,6 +17,17 @@ support = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(support)
 
 
+def module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    result = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(result)
+    return result
+
+
+leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
+structural = module("generic_declaring", ROOT / "tests/generic-declaring-roundtrip.py")
+
+
 def mutate(name, body):
     if name == "Get":
         changed, count = re.subn(r"\.Number;", ".Value;", body, count=1)
@@ -71,15 +82,16 @@ def main():
                 raise ValueError("Scan/default-view admission drift")
             body = "\n".join(line for line in result.stdout.splitlines()
                 if not line.startswith(("// Dependency", "// Dependencies")))
-            methods[name] = body
+            methods[name] = structural.inline_structural_types(body)
             (OUT / f"{config}-{name}.cs").write_text(body)
         if not methods:
             raise ValueError("Owned property selection is empty")
 
+        aliases, helpers = leaves.plan(support, harness, fixture, OUT, methods.values(), "ExternalPropertyCases.Ops", library)
         def compile_carrier(label, bodies):
             source = OUT / f"{label}-{config}.cs"
-            support.write_changed(source, "namespace ExternalPropertyCases { public static class Recovered {\n"
-                + "\n".join(bodies.values()) + "\n} }\n")
+            support.write_changed(source, aliases + "namespace ExternalPropertyCases { public static class Recovered {\n"
+                + helpers + "\n".join(bodies.values()) + "\n} }\n")
             binary = source.with_suffix(".dll")
             support.compile_cs(binary, [source], references=[fixture, library])
             return binary

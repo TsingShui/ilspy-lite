@@ -833,7 +833,7 @@ impl Writer<'_, '_> {
             }
             "castclass" | "isinst" => {
                 let token = i.operand.token().ok_or("missing cast type token")?;
-                let target = self.image.cast_class(token)?;
+                let target = self.image.cast_class(token, self.type_context)?;
                 let value = self.pop()?;
                 if value.ty.kind() != StackKind::Ref && value.ty != Ty::Null {
                     return Err("cast needs an admitted reference operand".into());
@@ -1018,28 +1018,14 @@ impl Writer<'_, '_> {
                                 .into(),
                         );
                     }
-                    // Dispatch on a locally defined class is verified here, and a
-                    // constructed receiver only reaches this arm after its local,
-                    // concrete definition was resolved, so its chain is verified
-                    // too. An external class receiver is admitted only when the
-                    // supplied references establish an instance, non-interface,
-                    // non-generic target that can be named on the receiver itself.
-                    if !matches!(owner, Ty::Class(_) | Ty::StructuralRef(_))
-                        && !matches!(
-                            (owner, self.image.external_call(t.0)),
-                            (Ty::ExternalClass(_), Some(Ok(_)))
-                        )
-                    {
-                        // Keep the blocker stable but name the concrete refusal, so an
-                        // interface or accessor receiver is diagnosable from the reason.
-                        return Err(match self.image.external_call(t.0) {
-                            Some(Err(reason)) => format!(
-                                "callvirt on an opaque external receiver needs dependency facts: {reason}"
-                            )
-                            .into(),
-                            _ => "callvirt on an opaque external receiver needs dependency facts"
-                                .into(),
-                        });
+                    // Exact reference dispatch needs the original token and checked
+                    // stack signature, not a guessed external implementation. Source
+                    // property/member syntax has a separate dependency-backed proof.
+                    if !matches!(
+                        owner,
+                        Ty::Class(_) | Ty::StructuralRef(_) | Ty::ExternalClass(_)
+                    ) {
+                        return Err("callvirt needs a nominal reference receiver".into());
                     }
                     method.target = format!("__cil_callvirt_{:08X}", t.0);
                 }
@@ -1132,6 +1118,7 @@ impl Writer<'_, '_> {
                     // and evaluation order of the original instruction.
                     if virtual_call
                         && matches!(owner, Ty::StructuralRef(_))
+                        && !method.exact_reference
                         && t.table() != Some(cildec::TableId::MethodSpec)
                     {
                         method.target = format!("{}.@{}", receiver.name, method.name);
@@ -1380,7 +1367,11 @@ impl Writer<'_, '_> {
                         if value.ty.stack() != declared.stack() {
                             return Err("box operand type differs from its declared type".into());
                         }
-                        format!("((object)(({})({})))", declared.cs(self.image)?, value.name)
+                        if declared == Ty::Bool && value.ty != Ty::Bool {
+                            format!("((object)({}))", declared.store(&value.name, self.image)?)
+                        } else {
+                            format!("((object)(({})({})))", declared.cs(self.image)?, value.name)
+                        }
                     }
                 };
                 self.lines.push("// box: the value is copied into one fresh boxed instance at this point; later mutations of the original value are not visible through it.".into());
@@ -1388,6 +1379,23 @@ impl Writer<'_, '_> {
             }
             "unbox.any" => {
                 let token = i.operand.token().ok_or("missing unbox type")?;
+                if let Some(target) = self
+                    .image
+                    .reference_unbox_target(token, self.type_context)?
+                {
+                    let value = self.pop()?;
+                    if value.ty.kind() != StackKind::Ref && value.ty != Ty::Null {
+                        return Err(
+                            "reference unbox.any needs an admitted reference operand".into()
+                        );
+                    }
+                    self.lines.push("// Reference-type unbox.any: exact runtime castclass check; null passes through, wrong type throws InvalidCastException, and reference identity is preserved.".into());
+                    self.push(
+                        target,
+                        format!("(({})(object){})", target.cs(self.image)?, value.name),
+                    )?;
+                    return Ok(());
+                }
                 let declared = self.image.boxed_value_type(token)?;
                 let value = self.pop()?;
                 if value.ty != crate::ir::Ty::Object {

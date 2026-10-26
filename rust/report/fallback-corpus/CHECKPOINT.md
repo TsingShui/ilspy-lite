@@ -7,7 +7,33 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: static/nonvirtual MethodSpec calls
+## Current verified state: scoped reference-call foundation
+
+- `report/reference-call-foundation/corpus-scan/baseline.json`: 417,799
+  Decompiled / 352,949 Partial of 770,748; aggregate fallback 45.79305%.
+- +30,189 in 226 images, zero regressions/incomplete. Decrease 3.91684 percentage
+  points, not the hoped-for ten; no bucket-total recovery promises.
+  OpenRA.Game +247 / Common +683.
+- Exact external reference calls are separated from optional source proof;
+  foreign constructed call signatures, qualified core Object/String/Array
+  identities, reference TypeSpec casts and reference unbox.any are implemented.
+  GVM, value/layout, allocation, byref and unproved inheritance gates remain.
+- 393 tests; clippy/fmt green. Reference fixture: 107 comparisons / 13 methods per
+  config/ordinary-or-unbox variant, five rejected mutants each. Expanded legacy
+  properties/casts/equality/external/virtual/generic gates and MethodSpec pass.
+- Eleven source/IL triples self-reviewed: no changed semantic differences found.
+  Metadata-only core fixture never executed; no third-party code execution.
+- Larger grouped development remains requested. Next foundational target:
+  general typed managed locations/byref arguments and generic assignment.
+  Preserve aliases, location acquisition time, null/bounds checks, writes on
+  exception and address escape rules; audit before implementation.
+- Current goal aggregate <=5%; fixed references/scope. No agents or unrequested
+  pushes. Evidence: `acceptance/corpus/REFERENCE_CALL_FOUNDATION.md`,
+  `report/reference-call-foundation/AUDIT.md` and `review/review-source.md`.
+- User explicitly requests continued autonomous work overnight and an honest
+  progress summary, not an unverified promise of reaching the goal by morning.
+
+## Previous verified state: static/nonvirtual MethodSpec calls
 
 - `report/method-instantiations/corpus-scan/baseline.json`: 387,610 Decompiled /
   383,138 Partial of 770,748; aggregate fallback 49.70989%.

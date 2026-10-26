@@ -382,6 +382,16 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--reference-call-plan")
+        {
+            ReferenceCallPlan(args);
+            return;
+        }
+        if (args[1] == "--reference-call-check")
+        {
+            ReferenceCallMain(args);
+            return;
+        }
         if (args[1] == "--method-instantiation-check")
         {
             MethodInstantiationMain(args);
@@ -498,7 +508,8 @@ internal static partial class GenericReferenceRoundtrip
             return;
         }
         originals = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
-            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal)).ToArray();
+            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal)
+                || root == "GenericReferenceCases" && m.Name == "UnsupportedDispatch").ToArray();
         recovered = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[1])).GetType("Recovered")
             ?? throw new Exception("Recovered carrier missing.");
         if (root == "ArrayReferenceCases") { ArrayCases(args); return; }
@@ -521,6 +532,7 @@ internal static partial class GenericReferenceRoundtrip
             object[] lists = { null, new List<int>(), new List<int> { 1, -2, int.MinValue, int.MaxValue } };
             foreach (object value in lists)
             {
+                Check("UnsupportedDispatch", null, new[] { value, (object)13 }, null, value == null ? typeof(NullReferenceException) : null);
                 Check("ExternalIdentity", null, new[] { value }, value);
                 Check("Snapshot", null, new[] { value }, value);
                 Check("Upcast", null, new[] { value }, value);
@@ -553,7 +565,7 @@ internal static partial class GenericReferenceRoundtrip
                     Check("StaticExchange", null, new[] { value }, before);
                 }
             }
-            if (Covered.Count != 15 || originals.Length != 15) throw new Exception("Owned generic coverage drift.");
+            if (Covered.Count != 16 || originals.Length != 16) throw new Exception("Owned generic coverage drift.");
         }
         Console.WriteLine($"Generic reference behavior: {checks} cases, {Covered.Count} recovered methods; exact types, reference identity, reachable fields/collections/arrays, static state and exception types match.");
     }

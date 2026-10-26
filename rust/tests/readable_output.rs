@@ -31,10 +31,9 @@ fn readable_class_view_uses_declarations_without_dumping_diagnostic_records() {
             .text
             .contains("public static string Unsupported(string value)")
     );
-    assert!(readable.text.contains("// IL fallback:"));
+    assert!(!readable.text.contains("// IL fallback:"));
     assert!(!readable.text.contains("see --details"));
-    assert!(readable.text.contains("// IL_0001: callvirt"));
-    assert!(readable.text.contains("// IL_0006: ret"));
+    assert!(readable.text.contains("__cil_callvirt_"));
     let good = readable
         .text
         .split("Good(int value)")
@@ -59,17 +58,23 @@ fn readable_class_view_uses_declarations_without_dumping_diagnostic_records() {
             readable.text
         );
     }
-    assert!(detailed.text.contains(".method-status") && detailed.text.contains(".code-bytes"));
+    assert!(
+        detailed.text.contains(".method-status") && detailed.text.contains("// IL_0001: callvirt")
+    );
 }
 
 #[test]
 fn readable_fallback_keeps_complete_il_inside_its_method_and_class_body() {
     for (bytes, ty, name) in [
-        (IMAGE, "ClassCases.Mixed", "Unsupported"),
         (
-            include_bytes!("fixtures/class-debug.bin").as_slice(),
-            "ClassCases.Mixed",
-            "Unsupported",
+            include_bytes!("fixtures/reference-call-release.bin").as_slice(),
+            "ReferenceCallCases.Ops",
+            "UnsupportedByRef",
+        ),
+        (
+            include_bytes!("fixtures/reference-call-debug.bin").as_slice(),
+            "ReferenceCallCases.Ops",
+            "UnsupportedByRef",
         ),
         (
             include_bytes!("fixtures/release.bin").as_slice(),
@@ -596,15 +601,14 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
         ])
         .output()
         .unwrap();
-    assert_eq!(default.status.code(), Some(2));
-    assert_eq!(details.status.code(), Some(2));
+    assert_eq!(default.status.code(), Some(0));
+    assert_eq!(details.status.code(), Some(0));
     assert_eq!(default.stderr, details.stderr);
     let text = String::from_utf8(default.stdout).unwrap();
     assert!(text.contains("public static class Mixed"));
-    let fallback = text.split("Unsupported(string value)").nth(1).unwrap();
-    assert!(fallback.contains("// IL_0001: callvirt"), "{fallback}");
-    assert!(fallback.contains("// IL_0006: ret"), "{fallback}");
-    assert!(!fallback.contains("see --details"));
+    let body = text.split("Unsupported(string value)").nth(1).unwrap();
+    assert!(body.contains("__cil_callvirt_"), "{body}");
+    assert!(!body.contains("// IL fallback:") && !body.contains("see --details"));
     assert_eq!(
         String::from_utf8(details.stdout).unwrap(),
         decompile_type(IMAGE, "ClassCases.Mixed").unwrap().text

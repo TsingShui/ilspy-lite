@@ -5,6 +5,22 @@ The CLI defaults to a readable class/method view; `--details` preserves the full
 image-scoped metadata/IL evidence record. Original metadata is authoritative.
 All operations below are semantic notation; the CLI does not ship a runtime adapter.
 
+## Exact scoped reference calls
+
+Ordinary external reference callvirt can remain `__cil_callvirt_TOKEN` without
+guessing a dependency implementation. `__cil_reference_call_TOKEN` is the exact
+direct/static call for a foreign constructed reference owner; its caller-scoped
+signature supplies argument/result types. Metadata-proven property/member source
+syntax is optional and separate from the exact runtime call. These are original
+IL call leaves, not selected-method/body proxies. Value layout, arbitrary
+inheritance, allocation kind, byrefs and GVM lookup remain separately gated.
+
+Proved reference TypeSpecs can be cast/tested; reference-type unbox.any uses
+castclass semantics, preserving null and successful reference identity. Qualified
+core Object/String/Array spellings share their known reference identity, with
+vectors assignable to Array only in the valid direction. See
+[reference-call foundation](acceptance/corpus/REFERENCE_CALL_FOUNDATION.md).
+
 ## Generic method instantiation calls
 
 `__cil_methodspec_call_TOKEN` is an exact original MethodSpec direct/static

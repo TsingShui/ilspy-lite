@@ -64,51 +64,30 @@ fn metadata_associated_external_properties_keep_dispatch() {
     }
 }
 
-const NEGATIVE: &[(&str, &str)] = &[
-    (
-        "Orphan",
-        "callvirt on an opaque external receiver needs dependency facts: external call target is a special-name accessor without a supported property association",
-    ),
-    (
-        "Indexed",
-        "callvirt on an opaque external receiver needs dependency facts: external property needs a public non-indexed ordinary accessor",
-    ),
-    (
-        "Generic",
-        "constructed member needs a local definition; external constructed members need dependency facts",
-    ),
-    (
-        "Interface",
-        "callvirt on an opaque external receiver needs dependency facts: external call target is declared on an interface",
-    ),
-];
+const EXACT_ONLY: &[&str] = &["Orphan", "Indexed", "Generic", "Interface"];
 
 #[test]
-fn property_refusals_and_scan_accounting_are_explicit() {
+fn unproved_source_properties_keep_exact_calls_and_complete_scan_accounting() {
     for (bytes, library) in IMAGES {
         let ctx = context(bytes, library);
         let mut expected = Vec::new();
-        let mut negatives = Vec::new();
+        let mut exact = Vec::new();
         for method in list_methods(bytes).unwrap() {
             let result = ctx.decompile(method.token, OutputStyle::Details).unwrap();
-            if result.status == Status::Partial {
-                negatives.push((
-                    method.simple_name.clone(),
-                    result
-                        .text
-                        .lines()
-                        .find_map(|line| line.strip_prefix("// IL FALLBACK: "))
-                        .expect("Partial must explain its refusal")
-                        .to_owned(),
-                ));
+            assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+            if EXACT_ONLY.contains(&method.simple_name.as_str()) {
+                assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
+                let readable = ctx.decompile(method.token, OutputStyle::Readable).unwrap();
+                assert!(!readable.text.contains(").Number"), "{}", readable.text);
+                exact.push(method.simple_name.clone());
             }
             expected.push((method.token, result.status));
         }
         assert_eq!(
-            negatives,
-            NEGATIVE
+            exact,
+            EXACT_ONLY
                 .iter()
-                .map(|(name, reason)| (name.to_string(), reason.to_string()))
+                .map(|name| name.to_string())
                 .collect::<Vec<_>>()
         );
         let mut actual = Vec::new();
@@ -138,7 +117,9 @@ fn unrelated_references_do_not_supply_property_facts() {
             let after = unrelated
                 .decompile(method.token, OutputStyle::Readable)
                 .unwrap();
-            assert_eq!(before.status, Status::Partial, "{}", before.text);
+            assert_eq!(before.status, Status::Decompiled, "{}", before.text);
+            assert!(before.text.contains("__cil_callvirt_"), "{}", before.text);
+            assert!(!before.text.contains(").Number"), "{}", before.text);
             assert_eq!(after.status, before.status);
             let body = |text: &str| {
                 text.split("// Dependency")
@@ -153,7 +134,8 @@ fn unrelated_references_do_not_supply_property_facts() {
             assert_eq!(body(&before.text), body(&after.text), "{}", method.name);
             let bare = ilspy_lite::decompile_with_style(bytes, method.token, OutputStyle::Readable)
                 .unwrap();
-            assert_eq!(bare.status, Status::Partial, "{}", bare.text);
+            assert_eq!(bare.status, Status::Decompiled, "{}", bare.text);
+            assert!(bare.text.contains("__cil_callvirt_"), "{}", bare.text);
         }
     }
 }
@@ -243,8 +225,22 @@ fn property_metadata_is_required_and_must_be_consistent() {
             let result = context(bytes, &patched)
                 .decompile(caller, OutputStyle::Readable)
                 .unwrap();
-            assert_eq!(result.status, Status::Partial, "{label}: {}", result.text);
-            assert!(result.text.contains("property"), "{label}: {}", result.text);
+            assert_eq!(
+                result.status,
+                Status::Decompiled,
+                "{label}: {}",
+                result.text
+            );
+            assert!(
+                result.text.contains("__cil_callvirt_"),
+                "{label}: {}",
+                result.text
+            );
+            assert!(
+                !result.text.contains(").Number"),
+                "{label}: {}",
+                result.text
+            );
         }
     }
 }

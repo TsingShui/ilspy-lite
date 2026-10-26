@@ -23,6 +23,7 @@ def module(name, path):
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
 adapter = module("reference_roundtrip", ROOT / "tests/reference-roundtrip.py")
+leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
 
 
 SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
@@ -38,7 +39,7 @@ def main():
     args = parser.parse_args()
     prefix = "array" if args.arrays else "generic"
     family = "ArrayReferenceCases" if args.arrays else "GenericReferenceCases"
-    expected = 21 if args.arrays else 15
+    expected = 21 if args.arrays else 16
     out = ROOT / f"report/{prefix}-reference-roundtrip"
     if not args.cli.is_file():
         parser.error("Existing Rust CLI is required")
@@ -56,7 +57,7 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(rf" ({family}\.(?:Cell|Ops))::([A-Za-z][A-Za-z0-9_]*)\(", signature)
-            if match and not match[2].startswith("Unsupported"):
+            if match and (not match[2].startswith("Unsupported") or (not args.arrays and match[2] == "UnsupportedDispatch")):
                 selected.append((token, match[2]))
         if len(selected) != expected or len({name for _, name in selected}) != expected:
             raise ValueError("Owned generic method selection drift")
@@ -86,7 +87,8 @@ def main():
         # Resolve only signature tokens in the owned module. No selected body is
         # synthesized or invoked while supplying these closed type aliases.
         alias_source = support.run([support.DOTNET / "dotnet", harness, fixture, "--aliases", directives]).stdout
-        text = alias_source + "\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n"
+        exact_aliases, helpers = leaves.plan(support, harness, fixture, out, snippets, family + ".Ops")
+        text = alias_source + exact_aliases + "\npublic static class Recovered\n{\n" + helpers + "\n".join(snippets) + "\n}\n"
         suffix = config + ("-readable" if args.readable else "-details")
         source = out / f"Recovered-{suffix}.cs"
         support.write_changed(source, text)

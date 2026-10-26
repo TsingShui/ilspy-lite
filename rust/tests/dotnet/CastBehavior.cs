@@ -60,7 +60,8 @@ internal static partial class GenericReferenceRoundtrip
         Type abstractOther = fixture.GetType("CastCases.AbstractOther")
             ?? throw new Exception("Owned second abstract child missing.");
         object[] values = { null, baseValue, derivedValue, otherValue, "text", "",
-            Activator.CreateInstance(abstractChild), Activator.CreateInstance(abstractOther), 123 };
+            Activator.CreateInstance(abstractChild), Activator.CreateInstance(abstractOther), 123,
+            Activator.CreateInstance(fixture.GetType("CastCases.GenericBase`1").MakeGenericType(typeof(int))) };
         foreach (MethodInfo original in selected)
         {
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)
@@ -73,6 +74,7 @@ internal static partial class GenericReferenceRoundtrip
                 : type == @base ? new object[] { null, baseValue, derivedValue }
                 : type == derived ? new object[] { null, derivedValue }
                 : type == other ? new object[] { null, otherValue }
+                : type == typeof(IComparable) ? new object[] { null, "text", 123 }
                 : values;
             var cases = new System.Collections.Generic.List<object[]>();
             foreach (object first in Candidates(parameters.FirstOrDefault() ?? typeof(object)))

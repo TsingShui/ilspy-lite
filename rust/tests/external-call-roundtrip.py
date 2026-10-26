@@ -16,6 +16,7 @@ def module(name, path):
     result = importlib.util.module_from_spec(spec); spec.loader.exec_module(result); return result
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
+leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
 
 
 def without_dependency_report(text):
@@ -54,7 +55,7 @@ def main():
                     for record in map(json.loads, scan.stdout.splitlines())
                     if record["status"] == "Decompiled" and owners.get(record["token"]) == "ExternalCallCases.Ops"]
         if not selected: raise ValueError("external-call selection is empty")
-        snippets, skipped = [], []
+        snippets = []
         for token, name in selected:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details",
                                    "--no-auto-references", "--reference", library])
@@ -69,28 +70,20 @@ def main():
             body = without_dependency_report(readable.stdout)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
-            code = "\n".join(line for line in body.splitlines()
-                              if not line.lstrip().startswith("//"))
-            if "__cil_" in code:
-                skipped.append(name)
-                continue
             snippets.append(body)
-        # Every selected body here is compilable; an unusable alias would mean the
-        # readable view regressed, so it must fail rather than shrink the selection.
-        if skipped:
-            raise ValueError("unexpected unexecutable selection: " + repr(skipped))
         if not snippets: raise ValueError("external-call carrier is empty")
-        carrier = ("namespace ExternalCallCases\n{\npublic static class Recovered\n{\n"
-                   + "\n".join(snippets) + "\n}\n}\n")
+        aliases, helpers = leaves.plan(support, harness, fixture, OUT, snippets, "ExternalCallCases.Ops", library)
+        carrier = (aliases + "namespace ExternalCallCases\n{\npublic static class Recovered\n{\n"
+                   + helpers + "\n".join(snippets) + "\n}\n}\n")
         source = OUT / f"Recovered-{config}.cs"
         support.write_changed(source, carrier)
         recovered = source.with_suffix(".dll")
         compile_ms += support.compile_cs(recovered, [source], references=[fixture, library])
         result = support.run([support.DOTNET / "dotnet", harness, fixture,
                               "--external-call-check", recovered, library])
-        print(config + ": " + result.stdout.strip() + f" [skipped {skipped}]", flush=True)
+        print(config + ": " + result.stdout.strip(), flush=True)
         rows.append({"configuration": config, "behavior": result.stdout.strip(),
-                     "skipped": skipped})
+                     "selected": [name for _, name in selected]})
         if args.mutation_control:
             # Pointing the dispatch at a different declared method on the same
             # receiver must change a result; that is what makes the target name

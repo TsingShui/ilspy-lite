@@ -63,10 +63,21 @@ internal static partial class GenericReferenceRoundtrip
             {
                 Outcome before = Capture(() => OriginalCall(original)(null, arguments), new System.Collections.Generic.List<State>());
                 Outcome after = Capture(() => lowered.Invoke(null, arguments), new System.Collections.Generic.List<State>());
+                bool boxedBoolean = original.Name == "UnsupportedExternal";
+                if (boxedBoolean && before.Error == null)
+                {
+                    if (before.Value is not bool || after.Value is not bool
+                        || ReferenceEquals(before.Value, after.Value)
+                        || arguments.Any(argument => ReferenceEquals(argument, after.Value))
+                        || ReferenceEquals(after.Value, lowered.Invoke(null, arguments)))
+                        throw new Exception("Recovered equality boxed result lost its type or fresh identity.");
+                }
                 string expected = before.Error != null ? "throw:" + before.Error.Name
+                    : boxedBoolean ? "boxed:" + before.Value.GetType().FullName + ":" + before.Value
                     : parameters.Length == 0 || original.ReturnType != typeof(object) ? "value:" + before.Value
                     : "identity:" + Identity(before.Value);
                 string actual = after.Error != null ? "throw:" + after.Error.Name
+                    : boxedBoolean ? "boxed:" + after.Value.GetType().FullName + ":" + after.Value
                     : parameters.Length == 0 || original.ReturnType != typeof(object) ? "value:" + after.Value
                     : "identity:" + Identity(after.Value);
                 if (expected != actual)

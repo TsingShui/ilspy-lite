@@ -30,11 +30,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "VirtualCallCases.Ops",
-        "Nested",
-        "callvirt on an opaque external receiver needs dependency facts",
-    ),
-    (
-        "VirtualCallCases.Ops",
         "UnsupportedConstrained",
         "unsupported opcode constrained.",
     ),

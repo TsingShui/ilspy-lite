@@ -21,7 +21,7 @@ using System;
 
 namespace ExternalProperties;
 
-public class Cell
+public class Cell : ICell
 {
     public int Value;
     public int Writes;

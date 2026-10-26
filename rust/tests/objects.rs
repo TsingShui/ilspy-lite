@@ -188,18 +188,11 @@ mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring). There
 // are no counts; a promotion must drop its row and a regression must add one.
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "ObjectCases.Ops",
-        "UnsupportedDispatch",
-        "callvirt on an opaque external receiver needs dependency facts",
-    ),
-    (
-        "ObjectCases.Ops",
-        "UnsupportedAllocation",
-        "external allocation needs dependency facts; only local classes and local instantiations are admitted",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "ObjectCases.Ops",
+    "UnsupportedAllocation",
+    "external allocation needs dependency facts; only local classes and local instantiations are admitted",
+)];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

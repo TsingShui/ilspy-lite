@@ -33,6 +33,7 @@ type InterfaceEdges =
     std::cell::OnceCell<std::result::Result<std::collections::BTreeMap<u32, Vec<u32>>, String>>;
 
 mod method_instantiations;
+mod reference_calls;
 
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
@@ -3299,7 +3300,27 @@ impl<'a> Image<'a> {
     }
 
     /// Cast target with locally verified class facts or an admitted core identity.
-    pub(crate) fn cast_class(&self, token: Token) -> Result<crate::ir::Ty> {
+    pub(crate) fn cast_class(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        if token.table() == Some(TableId::TypeSpec) {
+            let spec = self.type_spec(token)?;
+            if matches!(
+                spec.type_,
+                cildec::Type::GenericInst {
+                    is_value_type: false,
+                    ..
+                } | cildec::Type::SzArray(..)
+            ) {
+                let ty = crate::ir::Ty::from_sig_scoped(&spec.type_, self, context)?;
+                if ty.kind() == crate::ir::StackKind::Ref {
+                    return Ok(ty);
+                }
+            }
+            return Err("cast TypeSpec needs a proved reference shape".into());
+        }
         match self.core_type_name(token) {
             Ok("String") => return Ok(crate::ir::Ty::String),
             Ok("Object") => return Ok(crate::ir::Ty::Object),
@@ -3316,6 +3337,31 @@ impl<'a> Image<'a> {
         }
         self.class_name(token.0)?;
         Ok(crate::ir::Ty::Class(token.0))
+    }
+
+    /// Reference-type unbox.any is castclass; it does not copy a scalar from a box.
+    pub(crate) fn reference_unbox_target(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<crate::ir::Ty>> {
+        let reference = match token.table() {
+            Some(TableId::TypeSpec) => matches!(
+                self.type_spec(token)?.type_,
+                cildec::Type::GenericInst {
+                    is_value_type: false,
+                    ..
+                } | cildec::Type::SzArray(..)
+            ),
+            Some(TableId::TypeRef) => matches!(self.core_type_name(token), Ok("String" | "Object")),
+            Some(TableId::TypeDef) => self.class_name(token.0).is_ok(),
+            _ => false,
+        };
+        if reference {
+            self.cast_class(token, context).map(Some)
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn receiver(&self, method: u32) -> Result<crate::ir::Ty> {
@@ -3338,6 +3384,18 @@ impl<'a> Image<'a> {
         Ok(crate::ir::Ty::Class(token))
     }
 
+    fn intrinsic_reference_name(&self, ty: crate::ir::Ty) -> Result<Option<&'a str>> {
+        use crate::ir::Ty;
+        let name = match ty {
+            Ty::String => Some("String"),
+            Ty::Object => Some("Object"),
+            Ty::Class(token) => self.local_core_type_name(Token(token))?,
+            Ty::ExternalClass(token) => self.core_type_name(Token(token)).ok(),
+            _ => None,
+        };
+        Ok(name.filter(|name| matches!(*name, "String" | "Object" | "Array")))
+    }
+
     pub fn assignable(&self, actual: crate::ir::Ty, expected: crate::ir::Ty) -> Result<()> {
         use crate::ir::Ty;
         if actual == expected
@@ -3354,6 +3412,24 @@ impl<'a> Image<'a> {
                 ))
         {
             return Ok(());
+        }
+        if let Some(expected_name) = self.intrinsic_reference_name(expected)? {
+            if expected_name == "Object" && actual.kind() == crate::ir::StackKind::Ref
+                || self.intrinsic_reference_name(actual)? == Some(expected_name)
+            {
+                return Ok(());
+            }
+            if expected_name == "Array" {
+                let vector = matches!(actual, Ty::I4Array | Ty::U4Array)
+                    || if let Ty::StructuralRef(id) = actual {
+                        self.signature_types.borrow().is_vector(id)?
+                    } else {
+                        false
+                    };
+                if vector {
+                    return Ok(());
+                }
+            }
         }
         if let (Ty::ValueAddress(a), Ty::Value(b)) = (actual, expected) {
             if a == b {
@@ -3706,6 +3782,7 @@ impl<'a> Image<'a> {
                     tick_count: false,
                     constructor: true,
                     generic_virtual: false,
+                    exact_reference: false,
                 });
             }
             self.external_class_context(reference.class.0)?;
@@ -3730,6 +3807,7 @@ impl<'a> Image<'a> {
                     tick_count: false,
                     constructor: false,
                     generic_virtual: false,
+                    exact_reference: false,
                 });
             }
             if !sig.has_this
@@ -3754,6 +3832,7 @@ impl<'a> Image<'a> {
                 tick_count: false,
                 constructor: true,
                 generic_virtual: false,
+                exact_reference: false,
             });
         }
         if name == ".ctor" && t.table() == Some(TableId::MethodDef) {
@@ -3781,6 +3860,7 @@ impl<'a> Image<'a> {
                 tick_count: false,
                 constructor: true,
                 generic_virtual: false,
+                exact_reference: false,
             });
         }
         if name == ".ctor" || name == ".cctor" {
@@ -3806,12 +3886,16 @@ impl<'a> Image<'a> {
                 tick_count: true,
                 constructor: false,
                 generic_virtual: false,
+                exact_reference: false,
             });
         }
         if name.is_empty()
             || t.table() == Some(TableId::MethodDef) && self.row(t.0)?.flags & 0x1000 != 0
         {
             return Err("empty/runtime-special method reference needs IL fallback".into());
+        }
+        if let Some(method) = reference_calls::constructed(self, t, context)? {
+            return Ok(method);
         }
         // A member named through a local class instantiation (`C<int>` or the open
         // self `C<!0>`): the definition is local and concrete, so dispatch is
@@ -3852,6 +3936,7 @@ impl<'a> Image<'a> {
                 tick_count: false,
                 constructor: false,
                 generic_virtual: false,
+                exact_reference: false,
             });
         }
         let receiver = if sig.has_this {
@@ -3902,6 +3987,7 @@ impl<'a> Image<'a> {
                 tick_count: false,
                 constructor: false,
                 generic_virtual: false,
+                exact_reference: false,
             });
         }
         Ok(MethodRef {
@@ -3932,6 +4018,7 @@ impl<'a> Image<'a> {
             tick_count: false,
             constructor: false,
             generic_virtual: false,
+            exact_reference: false,
         })
     }
 
@@ -4084,6 +4171,7 @@ pub(crate) struct MethodRef {
     pub tick_count: bool,
     pub constructor: bool,
     pub generic_virtual: bool,
+    pub exact_reference: bool,
 }
 
 fn generic_flags(flags: u16) -> String {

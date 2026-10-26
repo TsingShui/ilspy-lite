@@ -3,7 +3,21 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (MethodSpec calls; aggregate 5% target)
+## Current position (reference-call foundation; aggregate 5% target)
+
+- 417,799 Decompiled / 352,949 Partial; fallback 45.79305%.
+- +30,189 in 226 images, zero regressions/incomplete, unchanged scope/references.
+- Shared exact-call/scoped-signature binding, qualified core reference identity,
+  reference TypeSpec conversions implemented separately from source syntax proofs.
+- 393 tests and expanded behavior/mutation gates pass; eleven corpus triples
+  self-reviewed. No third-party execution or independent verification claim.
+- Actual group gain 3.91684 percentage points, not ten. Next larger infrastructure:
+  typed managed locations and byref calls, then broader generic assignment.
+  Capture aliases, exception-visible writes and acquisition checks in owned gates.
+- Continue autonomously overnight as explicitly requested. Grouped development,
+  audit before code, no subagents, local commits only unless push is requested.
+
+## Previous position (MethodSpec calls; aggregate 5% target)
 
 - 387,610 Decompiled / 383,138 Partial, fallback 49.70989%.
 - +12,104 in 132 images, zero regressions/incomplete; no scope/reference changes.

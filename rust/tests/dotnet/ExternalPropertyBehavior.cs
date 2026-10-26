@@ -65,7 +65,14 @@ internal static partial class GenericReferenceRoundtrip
         {
             if (type == typeof(int)) return new object[] { 0, 3, -7 };
             if (type == typeof(bool)) return new object[] { false, true };
-            if (type != cellType) throw new Exception("Unexpected property argument type: " + type);
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == library.GetType("ExternalProperties.Generic`1"))
+            {
+                object value = Activator.CreateInstance(type);
+                type.GetProperty("Item").SetValue(value, 7);
+                return new[] { null, value };
+            }
+            if (type != cellType && type != library.GetType("ExternalProperties.ICell"))
+                throw new Exception("Unexpected property argument type: " + type);
             var values = new List<object> { null };
             foreach (Type receiver in receivers)
                 foreach (int initial in new[] { 0, 7 })

@@ -213,11 +213,6 @@ mod fixture_contract;
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "GenericReferenceCases.Ops",
-        "UnsupportedDispatch",
-        "constructed member needs a local definition; external constructed members need dependency facts",
-    ),
-    (
-        "GenericReferenceCases.Ops",
         "UnsupportedValue",
         "constructed value type needs a local definition; external instantiations need dependency facts",
     ),

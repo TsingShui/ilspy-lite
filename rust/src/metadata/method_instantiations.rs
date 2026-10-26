@@ -172,5 +172,6 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
         tick_count: false,
         constructor: false,
         generic_virtual,
+        exact_reference: true,
     })
 }
