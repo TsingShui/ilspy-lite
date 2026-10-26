@@ -168,6 +168,151 @@ fn static_field_alias_is_shared_by_its_declaration_load_and_store() {
     }
 }
 
+fn module_local_reference_variant(bytes: &[u8]) -> Vec<u8> {
+    let mut changed = rename_type(bytes, "Plain", "Q12`1");
+    let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();
+    let tables = md.tables();
+    let definition = |name| {
+        tables
+            .iter::<cildec::tables::TypeDefRow>()
+            .map(|(rid, row)| (rid, row.unwrap()))
+            .find(|(_, row)| md.strings().str(row.type_name).unwrap() == name)
+            .unwrap()
+            .0
+    };
+    let reference = |name| {
+        tables
+            .iter::<cildec::tables::TypeRefRow>()
+            .map(|(rid, row)| (rid, row.unwrap()))
+            .find(|(_, row)| md.strings().str(row.type_name).unwrap() == name)
+            .unwrap()
+            .0
+    };
+    let outer = definition("CollisionHost");
+    let inner = definition("Plain");
+    let root_ref = reference("Func`2");
+    let nested_ref = reference("CompilerGeneratedAttribute");
+    let root_name = tables
+        .raw_column(cildec::TableId::TypeDef, outer, 1)
+        .unwrap();
+    let root_namespace = tables
+        .raw_column(cildec::TableId::TypeDef, outer, 2)
+        .unwrap();
+    let inner_name = tables
+        .raw_column(cildec::TableId::TypeDef, inner, 1)
+        .unwrap();
+    for (rid, values) in [
+        (root_ref, [4, root_name, root_namespace]),
+        (nested_ref, [root_ref << 2 | 3, inner_name, 0]),
+    ] {
+        let row = tables.row_bytes(cildec::TableId::TypeRef, rid).unwrap();
+        assert_eq!(row.len(), 6);
+        let at = row.as_ptr() as usize - bytes.as_ptr() as usize;
+        for (column, value) in values.into_iter().enumerate() {
+            changed[at + column * 2..at + column * 2 + 2]
+                .copy_from_slice(&u16::try_from(value).unwrap().to_le_bytes());
+        }
+    }
+    let (_, field) = tables
+        .iter::<cildec::tables::FieldRow>()
+        .map(|(rid, row)| (rid, row.unwrap()))
+        .find(|(_, row)| md.strings().str(row.name).unwrap() == "Left")
+        .unwrap();
+    let signature = md.blobs().get(field.signature).unwrap();
+    assert_eq!(signature.len(), 3);
+    assert_eq!(&signature[..2], &[6, 0x12]);
+    let at = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+    changed[at + 2] = u8::try_from(nested_ref << 2 | 1).unwrap();
+    changed
+}
+
+#[test]
+fn module_local_typeref_uses_its_exact_definition_name_policy() {
+    for (index, &bytes) in IMAGES.iter().enumerate() {
+        let changed = module_local_reference_variant(bytes);
+        // The optional compiler gate consumes these independent mutated inputs,
+        // not a renderer-produced name table or implementation-derived oracle.
+        if let Some(directory) = std::env::var_os("ILSPY_LITE_NAMING_FIXTURE_DIR") {
+            let directory = std::path::PathBuf::from(directory);
+            std::fs::create_dir_all(&directory).unwrap();
+            std::fs::write(directory.join(format!("local-ref-{index}.bin")), &changed).unwrap();
+        }
+        let actual =
+            decompile_type_with_style(&changed, "NamingCases.CollisionHost", OutputStyle::Readable)
+                .unwrap();
+        assert!(
+            actual.text.contains("class __name_5131326031"),
+            "{}",
+            actual.text
+        );
+        assert!(
+            actual
+                .text
+                .contains("NamingCases.CollisionHost.__name_5131326031 Left;"),
+            "{}",
+            actual.text
+        );
+    }
+}
+
+#[test]
+fn ambiguous_or_cyclic_local_references_are_not_aliased_into_a_definition() {
+    for &bytes in IMAGES {
+        let base = module_local_reference_variant(bytes);
+        let md = cildec::PeImage::parse(&base).unwrap().metadata().unwrap();
+        let tables = md.tables();
+        let reference = tables
+            .iter::<cildec::tables::TypeRefRow>()
+            .map(|(rid, row)| (rid, row.unwrap()))
+            .find(|(_, row)| md.strings().str(row.type_name).unwrap() == "Q12`1")
+            .unwrap()
+            .0;
+        let name_index = tables
+            .raw_column(cildec::TableId::TypeRef, reference, 1)
+            .unwrap();
+        let user = tables
+            .iter::<cildec::tables::TypeDefRow>()
+            .map(|(rid, row)| (rid, row.unwrap()))
+            .find(|(_, row)| md.strings().str(row.type_name).unwrap() == "__name_3C583E5F5F")
+            .unwrap()
+            .0;
+        let row = tables.row_bytes(cildec::TableId::TypeDef, user).unwrap();
+        assert_eq!(row.len(), 14);
+        let at = row.as_ptr() as usize - base.as_ptr() as usize;
+        let mut ambiguous = base.clone();
+        ambiguous[at + 4..at + 6]
+            .copy_from_slice(&u16::try_from(name_index).unwrap().to_le_bytes());
+        let row = tables
+            .row_bytes(cildec::TableId::TypeRef, reference)
+            .unwrap();
+        let at = row.as_ptr() as usize - base.as_ptr() as usize;
+        let mut cyclic = base.clone();
+        cyclic[at..at + 2]
+            .copy_from_slice(&u16::try_from(reference << 2 | 3).unwrap().to_le_bytes());
+        for (changed, reason) in [(ambiguous, "ambiguous"), (cyclic, "cyclic")] {
+            let context = ilspy_lite::DependencyContext::new(changed.clone()).unwrap();
+            assert!(
+                context
+                    .resolve_type(0x01000000 | reference)
+                    .unwrap_err()
+                    .to_string()
+                    .contains(reason)
+            );
+            let actual = decompile_type_with_style(
+                &changed,
+                "NamingCases.CollisionHost",
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert!(
+                actual.text.contains("// Unreadable field"),
+                "{}",
+                actual.text
+            );
+        }
+    }
+}
+
 #[test]
 fn a_backtick_in_a_nongeneric_metadata_name_is_not_generic_context() {
     for &bytes in IMAGES {

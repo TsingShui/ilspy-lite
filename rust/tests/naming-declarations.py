@@ -37,6 +37,13 @@ def main():
     refs = sorted((latest10(dotnet / "packs/Microsoft.NETCore.App.Ref") / "ref/net10.0").glob("*.dll"))
     if not refs:
         raise RuntimeError("Installed reference pack is empty")
+    local_inputs = OUT / "local-inputs"
+    environment = dict(os.environ, ILSPY_LITE_NAMING_FIXTURE_DIR=str(local_inputs))
+    fixture = subprocess.run(["cargo", "test", "--locked", "--offline", "--test", "naming",
+                              "module_local_typeref_uses_its_exact_definition_name_policy"],
+                             cwd=ROOT, env=environment, capture_output=True, text=True, timeout=120)
+    (OUT / "local-fixture-test.log").write_text(fixture.stdout + fixture.stderr)
+    fixture.check_returncode()
     build = subprocess.run(["cargo", "build", "--release", "--locked", "--offline"],
                            cwd=ROOT, capture_output=True, text=True, timeout=120)
     (OUT / "cargo-build.log").write_text(build.stdout + build.stderr)
@@ -96,6 +103,21 @@ def main():
                 record["duplicateMutationExitCode"] = compile_source(directory, mutant, "Duplicate", True)
             records.append(record)
             print(f"{config}/{label}: actual declarations and references compile")
+    for index, config in enumerate(("release", "debug")):
+        directory = OUT / config / "module-local-reference"
+        directory.mkdir(parents=True, exist_ok=True)
+        command = [str(cli), "decompile", str(local_inputs / f"local-ref-{index}.bin"),
+                   "--type", "NamingCases.CollisionHost"]
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, text=True, timeout=120)
+        source = directory / "Actual.cs"
+        source.write_text(result.stdout)
+        (directory / "default.stderr.log").write_text(result.stderr)
+        if result.returncode:
+            raise RuntimeError(f"Module-local reference declaration failed: {directory}")
+        compile_source(directory, source, "Actual")
+        records.append({"configuration": config, "variant": "module-local-reference", "command": command,
+                        "source": str(source), "compileExitCode": 0, "noRuntimeProof": True})
+        print(f"{config}/module-local-reference: actual declarations and references compile")
     (OUT / "summary.json").write_text(json.dumps({"compilations": records,
         "positiveCompilations": len(records), "noRuntimeProof": True}, indent=2) + "\n")
     print(f"Report: {OUT / 'summary.json'}")

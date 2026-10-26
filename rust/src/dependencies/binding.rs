@@ -331,20 +331,7 @@ impl DependencyContext {
         visiting: &mut BTreeSet<(usize, u32)>,
     ) -> Result<(usize, ResolvedType)> {
         let image = self.binding_image(module)?;
-        let parents = nested_parents(&image)?;
-        let mut found = None;
-        for (rid, row) in image.md.tables().iter::<cildec::tables::TypeDefRow>() {
-            let row = row?;
-            if parents.get(&rid).copied() == parent
-                && image.md.strings().str(row.type_name)? == name
-                && (parent.is_some() || image.md.strings().str(row.type_namespace)? == namespace)
-            {
-                if found.is_some() {
-                    return Err("ambiguous type definition in resolved assembly".into());
-                }
-                found = Some(rid);
-            }
-        }
+        let found = image.find_type_definition(namespace, name, parent)?;
         let mut export = None;
         if parent.is_none() {
             for (rid, row) in image.md.tables().iter::<cildec::tables::ExportedTypeRow>() {
@@ -445,22 +432,5 @@ impl DependencyContext {
 }
 
 fn nested_parents(image: &Image<'_>) -> Result<BTreeMap<u32, u32>> {
-    let count = image.md.tables().row_count(TableId::TypeDef);
-    if count > 0x00ffffff {
-        return Err("type definition RID exceeds token width".into());
-    }
-    let mut parents = BTreeMap::new();
-    for (_, row) in image.md.tables().iter::<cildec::tables::NestedClassRow>() {
-        let row = row?;
-        let (child, parent) = (row.nested_class.get(), row.enclosing_class.get());
-        if child == 0
-            || child > count
-            || parent == 0
-            || parent > count
-            || parents.insert(child, parent).is_some()
-        {
-            return Err("invalid or duplicate nested type owner".into());
-        }
-    }
-    Ok(parents)
+    image.nested_type_parents()
 }

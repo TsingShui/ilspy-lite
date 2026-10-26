@@ -57,6 +57,16 @@ canonical arity spelling is removed only when appropriate for presentation.
 Generic bodies remain fenced. Declaration compilation also covers this case;
 logs use `naming-backtick-*`.
 
+The follow-up local-TypeRef case also reproduced a real declaration/reference
+mismatch: nongeneric `Q12\`1` was declared as an encoded alias while a nested,
+Module-scoped TypeRef rendered as `Q12`. The saved pre-fix output fails csc with
+CS0426 (`naming-local-typeref-before-compile.log`). Rendering now canonicalizes
+only exact in-module references to the same TypeDef, using the scoped definition
+lookup shared with binding. Ambiguous/cyclic local paths fail rather than choose
+a spelling. Foreign scopes do not become local matches. Sixteen actual complete
+owned declaration outputs compile; this is not original CLR loadability proof
+for adversarial metadata names.
+
 ## Verification contract
 
 Use public byte/context/CLI output as the test interface. Preserve scoped tokens

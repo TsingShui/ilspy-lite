@@ -1890,10 +1890,101 @@ impl<'a> Image<'a> {
             .collect()
     }
 
+    pub(crate) fn nested_type_parents(&self) -> Result<std::collections::BTreeMap<u32, u32>> {
+        let count = self.md.tables().row_count(TableId::TypeDef);
+        if count > Token::RID_MASK {
+            return Err("type definition RID exceeds token width".into());
+        }
+        let mut parents = std::collections::BTreeMap::new();
+        for (_, row) in self.md.tables().iter::<NestedClassRow>() {
+            let row = row?;
+            let (child, parent) = (row.nested_class.get(), row.enclosing_class.get());
+            if child == 0
+                || child > count
+                || parent == 0
+                || parent > count
+                || parents.insert(child, parent).is_some()
+            {
+                return Err("invalid or duplicate nested type owner".into());
+            }
+        }
+        Ok(parents)
+    }
+
+    pub(crate) fn find_type_definition(
+        &self,
+        namespace: &str,
+        name: &str,
+        parent: Option<u32>,
+    ) -> Result<Option<u32>> {
+        let parents = self.nested_type_parents()?;
+        let mut found = None;
+        for (rid, row) in self.md.tables().iter::<TypeDefRow>() {
+            let row = row?;
+            if parents.get(&rid).copied() == parent
+                && self.md.strings().str(row.type_name)? == name
+                && (parent.is_some() || self.md.strings().str(row.type_namespace)? == namespace)
+                && found.replace(rid).is_some()
+            {
+                return Err("ambiguous type definition in resolved assembly".into());
+            }
+        }
+        Ok(found)
+    }
+
+    /// Canonicalize only exact in-module references; foreign scopes stay opaque.
+    pub(crate) fn local_type_definition(&self, token: Token) -> Result<Option<Token>> {
+        fn resolve(image: &Image<'_>, token: Token, seen: &mut Vec<u32>) -> Result<Option<Token>> {
+            if token.rid() == 0 || seen.len() == 32 || seen.contains(&token.0) {
+                return Err("null, cyclic or excessive local type reference".into());
+            }
+            if token.table() == Some(TableId::TypeDef) {
+                image.md.tables().type_def(token.rid())?;
+                return Ok(Some(token));
+            }
+            if token.table() != Some(TableId::TypeRef) {
+                return Err("local type lookup requires TypeDef or TypeRef".into());
+            }
+            seen.push(token.0);
+            let row = image.md.tables().type_ref(token.rid())?;
+            let scope = image.metadata_coded_token(
+                cildec::CodedIndex::ResolutionScope,
+                image
+                    .md
+                    .tables()
+                    .raw_column(TableId::TypeRef, token.rid(), 0)?,
+            )?;
+            let namespace = image.md.strings().str(row.type_namespace)?;
+            let name = image.md.strings().str(row.type_name)?;
+            let parent = match scope.table() {
+                Some(TableId::Module) if scope.rid() == 1 => {
+                    image.md.tables().module(1)?;
+                    None
+                }
+                Some(TableId::TypeRef) => {
+                    if !namespace.is_empty() {
+                        return Err("nested TypeRef has a namespace".into());
+                    }
+                    let Some(parent) = resolve(image, scope, seen)? else {
+                        return Ok(None);
+                    };
+                    Some(parent.rid())
+                }
+                Some(TableId::AssemblyRef | TableId::ModuleRef) => return Ok(None),
+                _ => return Err("unsupported local type resolution scope".into()),
+            };
+            let rid = image
+                .find_type_definition(namespace, name, parent)?
+                .ok_or("type definition missing from current module")?;
+            Ok(Some(Token(0x02000000 | rid)))
+        }
+        resolve(self, token, &mut Vec::new())
+    }
+
     /// Resolve local class identity; external ancestry is not an assignability proof.
     pub fn class_name(&self, token: u32) -> Result<String> {
         self.class_chain(token)?;
-        crate::symbol_names::type_name(&self.md, Token(token), true)
+        crate::symbol_names::type_name(self, Token(token), true)
     }
 
     fn generic_declaring_context(&self, token: Token) -> Result<bool> {
@@ -2299,7 +2390,7 @@ impl<'a> Image<'a> {
                 }
                 format!(
                     "{}.{}",
-                    crate::symbol_names::type_name(&self.md, owner, true)?,
+                    crate::symbol_names::type_name(self, owner, true)?,
                     crate::symbol_names::verbatim(&name)
                 )
             },
@@ -2335,7 +2426,7 @@ impl<'a> Image<'a> {
         Ok((
             format!(
                 "{}.{name}",
-                crate::symbol_names::type_name(&self.md, Token(0x02000000 | owner.get()), true)?
+                crate::symbol_names::type_name(self, Token(0x02000000 | owner.get()), true)?
             ),
             crate::ir::Ty::from_sig(&sig.type_)?,
             row.flags & 0x20 != 0,

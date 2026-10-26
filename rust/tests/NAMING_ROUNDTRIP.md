@@ -19,11 +19,12 @@ output, never detailed statements or the source fixture as an implementation.
 ## Declaration/reference compilation
 
 The separate `python3 rust/tests/naming-declarations.py --mutate-collision`
-gate compiles fourteen actual complete default class outputs: both fixture
+gate compiles sixteen actual complete default class outputs: both fixture
 configurations with ordinary names, an encoded generated name versus its literal
 user spelling, a dot or literal nongeneric backtick inside one metadata type-name
 record, UTF-8 names, a keyword
-namespace, and the combined generated/namespace case. The compiler references
+namespace, the combined generated/namespace case, and in-module nested TypeRefs
+resolving to a nongeneric TypeDef with a numeric backtick in its literal name. The compiler references
 only installed framework assemblies. This is syntax/type-reference evidence,
 not runtime behavior. Both intentionally conflated alias mutants must fail
 specifically with compiler diagnostic CS0102.

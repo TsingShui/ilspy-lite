@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use crate::Result;
-use cildec::{Metadata, Rid, TableId, Token};
+use crate::{Result, metadata::Image};
+use cildec::{Rid, TableId, Token};
 
 /// Presentation names never participate in metadata identity or member lookup.
 pub(crate) fn ident(raw: &str) -> String {
@@ -81,8 +81,13 @@ pub(crate) fn type_ident(raw: &str, generic: bool, escaped: bool) -> String {
 }
 
 /// Construct the path from actual metadata rows, not a display full-name string.
-pub(crate) fn type_name(md: &Metadata<'_>, token: Token, escaped: bool) -> Result<String> {
-    let mut current = token;
+pub(crate) fn type_name(image: &Image<'_>, token: Token, escaped: bool) -> Result<String> {
+    let md = &image.md;
+    let mut current = if token.table() == Some(TableId::TypeRef) {
+        image.local_type_definition(token)?.unwrap_or(token)
+    } else {
+        token
+    };
     let mut seen = Vec::new();
     let mut parts = Vec::new();
     let namespace;

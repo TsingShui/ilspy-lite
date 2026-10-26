@@ -1162,7 +1162,7 @@ fn named_type_with_owners(
             method,
         );
     }
-    crate::symbol_names::type_name(&image.md, token, false)
+    crate::symbol_names::type_name(image, token, false)
 }
 fn cs_type(image: &Image<'_>, ty: &Type<'_>, owner: u32, method: u32) -> Result<String> {
     Ok(match ty {
