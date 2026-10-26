@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_COPIES.md`: constructed value types and external value types as
   whole-value copies, and the three-state rule that makes an unresolved reference
   leave output byte-identical.
+- `CONSTRAINED_DISPATCH.md`: exact ordinary constrained calls, invariant reference
+  CFG/local slots and narrow null/reference merges, with same-state execution.
 - `CONSTRUCTED_VALUE_CALLS.md`: exact constructed value calls and newobj, scoped
   field signatures and value/generic boxing, with receiver/constructor/copy gates.
 - `REFERENCE_RELATIONSHIPS.md`: scoped base/interface assignments, metadata-backed

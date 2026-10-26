@@ -275,6 +275,10 @@ private static D __CilBindField<D>(int token) where D : System.Delegate
                     && parameters[0].ParameterType == parameters[1].ParameterType)
                     foreach (object value in Candidates(parameters[0].ParameterType, parameters[0].Name))
                         cases.Add(new[] { value, value });
+                if (original.Name == "UnsupportedJoin")
+                    foreach (bool first in new[] { true, false })
+                    foreach (object location in Candidates(parameters[1].ParameterType, parameters[1].Name))
+                        cases.Add(new[] { (object)first, location, location });
                 closures++;
                 foreach (object[] arguments in cases)
                 foreach (int globalVariant in new[] { 0, 1, 2 })

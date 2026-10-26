@@ -33,11 +33,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "UnsupportedStruct",
         "value-type receiver needs IL fallback",
     ),
-    (
-        "NewObjectCases.Ops",
-        "UnsupportedGeneric",
-        "managed element address crossing a block needs IL fallback",
-    ),
 ];
 
 #[test]
@@ -75,13 +70,9 @@ fn allocation_is_one_fresh_identity_then_exact_constructor_in_order() {
 }
 
 #[test]
-fn allocation_keeps_external_struct_generic_and_open_targets_gated() {
+fn unproved_external_and_value_allocations_stay_gated() {
     for bytes in IMAGES {
-        for name in [
-            "UnsupportedExternal",
-            "UnsupportedStruct",
-            "UnsupportedGeneric",
-        ] {
+        for name in ["UnsupportedExternal", "UnsupportedStruct"] {
             let result = decompile(bytes, token(bytes, "NewObjectCases.Ops", name)).unwrap();
             assert!(
                 result.text.contains("IL FALLBACK"),

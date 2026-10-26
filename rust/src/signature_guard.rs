@@ -42,7 +42,7 @@ pub fn method_spec(bytes: &[u8]) -> crate::Result<cildec::MethodSpecSig<'_>> {
     Ok(cildec::MethodSpecSig::parse_with(bytes, OPTIONS)?)
 }
 
-/// Callers reject local flags/modifiers before requesting this plain-local seam.
+/// Callers reject pinned locals and modifiers; an optional managed byref is checked here.
 pub fn plain_locals(bytes: &[u8]) -> crate::Result<()> {
     check(bytes, Kind::PlainLocals)
 }
@@ -72,6 +72,9 @@ fn check(bytes: &[u8], kind: Kind) -> crate::Result<()> {
             s.expect(0x07)?;
             let count = s.count()?;
             for _ in 0..count {
+                if s.peek() == Some(et::BYREF) {
+                    s.byte()?;
+                }
                 s.ty()?;
             }
         }

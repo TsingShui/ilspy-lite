@@ -3,7 +3,23 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (constructed values/boxing; aggregate 5% target)
+## Current position (constrained/reference CFG; aggregate 5% target)
+
+- **496,379 Decompiled / 274,369 Partial; fallback 35.59776%**.
+- +3,662 in 125 images, zero losses/incomplete; fixed scope/references.
+  Decrease 0.47512 points. Game +26 / Common +29.
+- Exact constrained operations, invariant reference-edge/local transfers and
+  narrow Null/reference merge propagation preserve original storage and timing.
+- 418 tests, fmt/clippy and 24 owned drivers pass. New gate: 720 comparisons /
+  40 closed selections per config; five mutants. Legacy promotions execute.
+- Ten source/IL triples self-reviewed, no changed-semantic SUSPECT in sample.
+  No third-party execution or independent/formal verification claim.
+- Next: audit value initialization/constructor calls, generic/static/foreign
+  fields and broader exact exception creation/throw/catch identities. Keep GVM,
+  escape and unproved-reference gates; no forecasts from blocker totals.
+- Continue autonomous grouped work, no agents/push; <=5% still unmet.
+
+## Previous position (constructed values/boxing; aggregate 5% target)
 
 - **492,717 Decompiled / 278,031 Partial; fallback 36.07288%**.
 - +20,561 in 132 images, zero losses/incomplete, unchanged scope/references.

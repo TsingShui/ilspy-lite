@@ -104,6 +104,12 @@ internal static partial class GenericReferenceRoundtrip
                 if (type == typeof(System.Collections.Generic.IEnumerable<int>))
                     return new object[] { null, Array.Empty<int>(), new[] { 1, 2, 3 }, new System.Collections.Generic.List<int> { 7 } };
                 if (type == typeof(string)) return new object[] { "x", null };
+                if (type.FullName == "VirtualCallCases.Value") return new[] { int.MinValue, -2, 3 }.Select(number =>
+                {
+                    object value = Activator.CreateInstance(type);
+                    type.GetFields(BindingFlags.Public | BindingFlags.Instance).Single().SetValue(value, number);
+                    return value;
+                }).ToArray();
                 if (!type.IsValueType) return new object[] { null };
                 throw new Exception("Unexpected owned virtual-call parameter type: " + type);
             }
@@ -118,11 +124,21 @@ internal static partial class GenericReferenceRoundtrip
             {
                 Outcome before = Capture(() => OriginalCall(original)(null, arguments), new System.Collections.Generic.List<State>());
                 Outcome after = Capture(() => lowered.Invoke(null, arguments), new System.Collections.Generic.List<State>());
-                if (before.Error != after.Error || !Same(before.Value, after.Value))
+                bool sameResult = original.Name == "UnsupportedConstrained" ? Equals(before.Value, after.Value) : Same(before.Value, after.Value);
+                if (before.Error != after.Error || !sameResult)
                     throw new Exception("Recovered virtual dispatch differs: " + original.Name
                         + " args=(" + string.Join(",", arguments.Select(a => a == null ? "null" : a.GetType().Name)) + ")"
                         + " expected=" + (before.Error?.Name ?? before.Value?.ToString())
                         + " actual=" + (after.Error?.Name ?? after.Value?.ToString()));
+                if (original.Name == "UnsupportedConstrained" && before.Error == null)
+                {
+                    Outcome beforeAgain = Capture(() => OriginalCall(original)(null, arguments), new System.Collections.Generic.List<State>());
+                    Outcome afterAgain = Capture(() => lowered.Invoke(null, arguments), new System.Collections.Generic.List<State>());
+                    if (beforeAgain.Error != afterAgain.Error || !Equals(beforeAgain.Value, afterAgain.Value)
+                        || ReferenceEquals(before.Value, beforeAgain.Value) != ReferenceEquals(after.Value, afterAgain.Value))
+                        throw new Exception("Recovered constrained string freshness differs.");
+                    checks++;
+                }
                 checks++;
             }
         }

@@ -55,7 +55,7 @@ def main():
                 raise ValueError("allocation method not recovered: " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             statements = details.stdout
-            if args.readable and not name.startswith("UnsupportedGenericNew"):
+            if args.readable and not name.startswith("UnsupportedGeneric"):
                 readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"])
                 if readable.stderr != details.stderr: raise ValueError("view changed admission")
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
@@ -64,15 +64,24 @@ def main():
                 # This generic allocation is the exact core Activator MethodSpec,
                 # not an opaque newobj or a proxy for this recovered method.
                 readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
-                rows = re.findall(r"structural signature (__cil_generic_\w+) bytes=1E00:", readable)
-                if len(rows) != 1: raise ValueError("Generic factory alias missing")
+                generic_aliases = re.findall(r"structural signature (__cil_generic_\w+) bytes=1E00:", readable)
+                if len(generic_aliases) != 1: raise ValueError("Generic factory alias missing")
                 il = support.run([args.cli, "il", fixture, "--method", token]).stdout
                 if "System.Activator::CreateInstance<!!0>" not in il:
                     raise ValueError("Generic factory is not the expected core leaf")
-                statements = readable.replace(rows[0], "T")
+                statements = readable.replace(generic_aliases[0], "T")
                 statements, count = re.subn(r"__cil_methodspec_call_[0-9A-F]{8}\(\)",
                                            "global::System.Activator.CreateInstance<T>()", statements)
                 if count != 1: raise ValueError("Generic factory call missing")
+            if name.startswith("UnsupportedGeneric") and not name.startswith("UnsupportedGenericNew"):
+                readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
+                generic_aliases = re.findall(r"structural signature (__cil_generic_\w+) bytes=1E00:", readable)
+                if len(generic_aliases) != 1: raise ValueError("Generic nullable receiver alias missing")
+                statements = readable.replace(generic_aliases[0], "T")
+                il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+                if "System.Object::ToString" not in il: raise ValueError("Unexpected constrained generic target")
+                for operation in set(re.findall(r"__cil_constrained_[0-9A-F]{8}_[0-9A-F]{8}", statements)):
+                    shells.setdefault(operation, None)
             for token_hex in re.findall(r"__cil_newobj_([0-9A-F]{8})\(", statements):
                 key = "0x" + token_hex
                 owner = owners.get(key)
@@ -95,7 +104,9 @@ def main():
 
             statements = re.sub(r"__cil_direct_([0-9A-F]{8})\(([^()]*)\)", direct, statements)
             snippets.append(statements)
-        declared = "\n".join(
+        constrained = [key for key, value in shells.items() if value is None]
+        for key in constrained: del shells[key]
+        declared = "\n".join("private static string " + key + "<T>(ref T receiver) => receiver.ToString();" for key in constrained) + "\n" + "\n".join(
             f"static global::{owner} __cil_newobj_{key[2:]}(object[] a) => "
             f"(global::{owner})System.Activator.CreateInstance(typeof(global::{owner}), a);"
             for key, owner in sorted(shells.items()))

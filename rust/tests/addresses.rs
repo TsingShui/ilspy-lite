@@ -216,16 +216,12 @@ fn indirect_u4_rejects_ordinary_values_and_empty_stack() {
 }
 
 #[test]
-fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
+fn address_values_remain_distinct_from_integer_operations_and_escape_slots() {
     for bytes in IMAGES {
         let method = token(bytes, "Take");
         let mut acquire = vec![0x03, 0x04, 0x8f]; // Array, I4 index, ldelema.
         acquire.extend(element_token(bytes, method).0.to_le_bytes());
         for (tail, reason) in [
-            (
-                &[0x2b, 0x00, 0x26, 0x2a][..],
-                "managed element address crossing a block",
-            ),
             (
                 &[0x21, 1, 0, 0, 0, 0, 0, 0, 0, 0x55, 0x2a][..],
                 "indirect store width/kind differs from its storage element",
@@ -245,6 +241,11 @@ fn address_operations_and_cross_block_lifetimes_stay_outside_the_model() {
             assert!(result.text.contains(reason), "{}", result.text);
             assert!(result.text.contains("IL FALLBACK") && result.text.contains("ldelema"));
         }
+        let mut carried = acquire.clone();
+        carried.extend([0x2b, 0x00, 0x26, 0x2a]);
+        let result = decompile(&patched_body(bytes, method, &carried), method).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("= ref e"), "{}", result.text);
         // ldind.i4 over an already acquired element location is an ordinary read
         // of that location, so it no longer falls back.
         let mut read = acquire.clone();

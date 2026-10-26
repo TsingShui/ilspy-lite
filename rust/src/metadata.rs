@@ -1977,14 +1977,21 @@ impl<'a> Image<'a> {
         if sig
             .locals
             .iter()
-            .any(|l| l.pinned || l.by_ref || !l.custom_mods.is_empty())
+            .any(|l| l.pinned || !l.custom_mods.is_empty())
         {
             return Err("pinned/byref/modified local needs IL fallback".into());
         }
         crate::signature_guard::plain_locals(bytes)?;
         sig.locals
             .iter()
-            .map(|l| crate::ir::Ty::from_sig_scoped(&l.type_, self, context))
+            .map(|l| {
+                let ty = crate::ir::Ty::from_sig_scoped(&l.type_, self, context)?;
+                if l.by_ref {
+                    self.address_of(ty)
+                } else {
+                    Ok(ty)
+                }
+            })
             .collect()
     }
 

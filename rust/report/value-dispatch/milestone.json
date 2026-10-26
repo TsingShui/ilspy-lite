@@ -1,0 +1,52 @@
+{
+  "baseline": "7f0a225f4",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 278031,
+      "Decompiled": 492717
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 274369,
+      "Decompiled": 496379
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "newly_recovered": 3662,
+  "regressions": [],
+  "gained_images": 125,
+  "fallback_percent": 35.597756984124516,
+  "decrease_points": 0.4751228676558356,
+  "owned_tests": 418,
+  "owned_drivers": 24,
+  "behavior": {
+    "comparisons_per_configuration": 720,
+    "closed_selections_per_configuration": 40,
+    "mutants_per_configuration": 5
+  },
+  "self_review": {
+    "count": 10,
+    "crude_but_equivalent": 10,
+    "changed_semantic_suspect": 0,
+    "independent": false
+  },
+  "third_party_execution": false,
+  "reference_policy_changed": false,
+  "goal_met": false,
+  "previous_first_blockers_not_causal_estimates": {
+    "pinned/byref/modified local needs IL fallback": 193,
+    "incompatible evaluation stacks at join": 1054,
+    "unsupported opcode constrained.": 1954,
+    "managed element address crossing a block needs IL fallback": 461
+  }
+}

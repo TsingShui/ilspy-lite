@@ -98,6 +98,7 @@ mod reference_relations;
 
 #[path = "abstract_members.rs"]
 mod abstract_members;
+mod constrained_calls;
 #[path = "external_allocations.rs"]
 mod external_allocations;
 #[path = "floats.rs"]

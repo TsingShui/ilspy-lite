@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 mod cfg;
+mod constrained;
 mod dependencies;
 pub mod discovery_paths;
 mod eh;

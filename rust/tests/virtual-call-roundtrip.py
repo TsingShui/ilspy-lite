@@ -66,6 +66,16 @@ def main():
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
 
+            if name == "UnsupportedConstrained":
+                statements = generic.inline_structural_types(statements)
+                for alias in re.findall(r"structural signature (__cil_value_\w+) bytes=\\S+: valuetype VirtualCallCases.Value;", details.stdout):
+                    statements = statements.replace(alias, "global::VirtualCallCases.Value")
+                il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+                if "constrained." not in il or "VirtualCallCases.Value" not in il or "System.Object::ToString" not in il:
+                    raise ValueError("Unexpected constrained value receiver target")
+                statements, count = re.subn(r"__cil_constrained_[0-9A-F]{8}_[0-9A-F]{8}\(ref (\w+)\)",
+                                           r"global::VirtualCallCases.RecoveredReceivers.Value_Describe(ref \1)", statements)
+                if count != 1: raise ValueError("Constrained value receiver leaf missing")
             if name == "UnsupportedInterface":
                 readable = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"]).stdout
                 aliases = re.findall(r"structural signature (__cil_ref_\w+) bytes=\S+: (.*?);", readable)

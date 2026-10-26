@@ -7,7 +7,38 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: constructed values and boxing
+## Current verified state: constrained dispatch and reference control flow
+
+- `report/value-dispatch/corpus-scan/baseline.json`: **496,379 Decompiled /
+  274,369 Partial** of 770,748; aggregate fallback **35.597756984124516%**.
+- +3,662 in 125 images, zero recovered losses/incomplete; decrease 0.475122867655834
+  points. Fixed scope/reference policy. Game 2,668/2,099 (+26), Common
+  11,228/7,179 (+29). First-blocker counts are not promised future gains.
+- Exact adjacent constrained/callvirt leaves, strict prefix/CFG entry checks,
+  invariant address-edge transfers, scoped byref local rebinding and narrow
+  monotone Null/reference joins are implemented. GVM/escape/argument-slot/
+  pinned/modified/unmanaged gates remain independent.
+- Local red/green: constrained prefixes, managed-address CFG, byref locals and
+  Debug null/result joins. Initial C# escape-analysis failure fixed with scoped
+  scratch refs; wrong string-identity oracle fixed with contents plus repeat-call
+  freshness checks. Raw failures retained, not dismissed.
+- 418 tests, fmt/clippy, 24 owned drivers pass. New gate: 720 comparisons /
+  40 closed selections per config, five semantic mutants. Type/method scopes,
+  nulls, derived dispatch, receiver snapshots, same-cell joins, array checks and
+  exception writes execute. Argument/Replace support bodies are recovered.
+- Legacy promotions execute before negative-table updates: managed locations
+  1,059/48 per config/ordinary-initonly-Boolean variant, new-object 51/15 per
+  config, virtual 61/12 plus 9/2 direct receiver/freshness gate per config.
+- Ten default-source/ILSpy/original-IL triples self-reviewed, all
+  CRUDE-BUT-EQUIVALENT for changed semantics. No changed-semantic SUSPECT in the
+  bounded sample, third-party execution, independent or formal claim.
+- Local-only commit, no push. Goal <=5% still unmet. Evidence:
+  `acceptance/corpus/CONSTRAINED_DISPATCH.md` and `report/value-dispatch/`.
+- Next larger high-frequency foundation: value initialization/constructor calls,
+  generic/static/foreign fields and exact exception creation/throw/catch types,
+  after fresh production audit. Keep GVM refused and fixed input/reference policy.
+
+## Previous verified state: constructed values and boxing
 
 - `report/value-calls/corpus-scan/baseline.json`: **492,717 Decompiled /
   278,031 Partial** of 770,748; aggregate fallback **36.07287985178035%**.

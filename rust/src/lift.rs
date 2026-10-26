@@ -105,8 +105,15 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     {
         return Err("constructor receiver reassignment needs IL fallback".into());
     }
+    let constrained_calls = crate::constrained::calls(&instructions)?;
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
+    if blocks
+        .iter()
+        .any(|block| constrained_calls.contains_key(&block.offset))
+    {
+        return Err("control flow cannot enter between constrained prefix and callvirt".into());
+    }
     let regions = crate::eh::parse(image, body, &instructions)?;
     let mut entries: Vec<Option<Vec<Ty>>> = vec![None; blocks.len()];
     entries[0] = Some(Vec::new());
@@ -125,6 +132,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 .collect();
             let mut w = Writer {
                 image,
+                constrained_calls: &constrained_calls,
                 type_context: context,
                 stack,
                 lines: Vec::new(),
@@ -145,15 +153,25 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 }
             }
             let exit: Vec<_> = w.stack.iter().map(|v| v.ty).collect();
-            if !blocks[n].successors.is_empty()
-                && exit.iter().any(|ty| ty.kind() == StackKind::Address)
-            {
-                return Err("managed element address crossing a block needs IL fallback".into());
-            }
             for &s in &blocks[n].successors {
-                if let Some(existing) = &entries[s] {
-                    if existing != &exit {
+                if let Some(existing) = &mut entries[s] {
+                    if existing.len() != exit.len() {
                         return Err("incompatible evaluation stacks at join".into());
+                    }
+                    let mut changed = false;
+                    for (stored, &incoming) in existing.iter_mut().zip(&exit) {
+                        if *stored == incoming {
+                            continue;
+                        }
+                        if *stored == Ty::Null && incoming.kind() == StackKind::Ref {
+                            *stored = incoming;
+                            changed = true;
+                        } else if incoming != Ty::Null || stored.kind() != StackKind::Ref {
+                            return Err("incompatible evaluation stacks at join".into());
+                        }
+                    }
+                    if changed {
+                        queue.push_back(s);
                     }
                 } else {
                     entries[s] = Some(exit.clone());
@@ -172,6 +190,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     }
     let mut writer = Writer {
         image,
+        constrained_calls: &constrained_calls,
         type_context: context,
         stack: Vec::new(),
         lines: Vec::new(),
@@ -211,13 +230,29 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             let mut lines = Vec::new();
             for (slot, value) in stack.iter().enumerate() {
                 lines.push(format!(
-                    "{} e{n}_{successor}_{slot} = {};",
-                    value.ty.cs(image)?,
-                    value.name
+                    "{} e{n}_{successor}_{slot} = {}{};",
+                    entries[successor].as_ref().unwrap()[slot].cs(image)?,
+                    if value.ty.kind() == StackKind::Address {
+                        "ref "
+                    } else {
+                        ""
+                    },
+                    if value.ty == Ty::Null {
+                        "null"
+                    } else {
+                        &value.name
+                    }
                 ));
             }
-            for slot in 0..stack.len() {
-                lines.push(format!("s{successor}_{slot} = e{n}_{successor}_{slot};"));
+            for (slot, value) in stack.iter().enumerate() {
+                lines.push(format!(
+                    "s{successor}_{slot} = {}e{n}_{successor}_{slot};",
+                    if value.ty.kind() == StackKind::Address {
+                        "ref "
+                    } else {
+                        ""
+                    }
+                ));
             }
             let target = blocks[successor].offset;
             if regions.enters_try(last.offset, target) {
@@ -368,11 +403,27 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     ));
     for (i, t) in writer.locals.iter().enumerate() {
         let local = if *t == Ty::R4 { t.stack() } else { *t };
-        out.push_str(&format!("    {} l{i} = default;\n", local.cs(image)?));
+        if local.kind() == StackKind::Address {
+            out.push_str(&format!(
+                "    scoped {} l{i} = ref System.Runtime.CompilerServices.Unsafe.NullRef<{}>();\n",
+                local.cs(image)?,
+                image.address_element(local)?.cs(image)?
+            ));
+        } else {
+            out.push_str(&format!("    {} l{i} = default;\n", local.cs(image)?));
+        }
     }
     for (n, types) in entries.iter().enumerate() {
         for (s, t) in types.as_ref().unwrap().iter().enumerate() {
-            out.push_str(&format!("    {} s{n}_{s} = default;\n", t.cs(image)?));
+            if t.kind() == StackKind::Address {
+                out.push_str(&format!(
+                    "    scoped {} s{n}_{s} = ref System.Runtime.CompilerServices.Unsafe.NullRef<{}>();\n",
+                    t.cs(image)?,
+                    image.address_element(*t)?.cs(image)?
+                ));
+            } else {
+                out.push_str(&format!("    {} s{n}_{s} = default;\n", t.cs(image)?));
+            }
         }
     }
     for line in writer.lines {
@@ -391,6 +442,7 @@ struct Value {
 }
 struct Writer<'i, 'a> {
     image: &'i Image<'a>,
+    constrained_calls: &'i std::collections::BTreeMap<u32, cildec::Token>,
     type_context: crate::signature_types::TypeContext,
     stack: Vec<Value>,
     lines: Vec<String>,
@@ -443,12 +495,75 @@ impl Writer<'_, '_> {
         self.stack.push(Value { name, ty });
         Ok(())
     }
+    fn constrained_call(
+        &mut self,
+        token: cildec::Token,
+        constraint: cildec::Token,
+        method: &crate::metadata::MethodRef,
+    ) -> Result<()> {
+        if method.generic_virtual {
+            return Err("generic virtual dispatch needs runtime lookup-order modeling".into());
+        }
+        if method.receiver.is_none()
+            || method.constructor
+            || method.core_object_constructor.is_some()
+            || method.tick_count
+        {
+            return Err("constrained call needs an ordinary instance method".into());
+        }
+        for ty in method.args.iter().chain(std::iter::once(&method.ret)) {
+            self.track_type(*ty)?;
+        }
+        let mut values = Vec::new();
+        for &ty in method.args.iter().rev() {
+            let value = self.pop()?;
+            if value.ty.kind() == StackKind::Address && ty.kind() != StackKind::Address {
+                return Err(
+                    "constrained argument needs a value snapshot, not a managed location".into(),
+                );
+            }
+            self.image.assignable(value.ty, ty.stack())?;
+            values.push(if ty.kind() == StackKind::Address {
+                format!("ref {}", value.name)
+            } else if ty == Ty::R4 {
+                format!("__cil_call_arg_r4({})", value.name)
+            } else {
+                ty.store(&value.name, self.image)?
+            });
+        }
+        values.reverse();
+        let receiver = self.pop()?;
+        let element = self
+            .image
+            .location_operand(receiver.ty, constraint, self.type_context)?;
+        self.track_type(element)?;
+        values.insert(0, format!("ref {}", receiver.name));
+        self.lines.push(format!("// constrained type 0x{:08X}, callvirt method 0x{:08X}: exact runtime dispatch through this acquired location, including value boxing fallback or reference-slot dereference; no copied receiver.", constraint.0, token.0));
+        let call = format!(
+            "__cil_constrained_{:08X}_{:08X}({})",
+            constraint.0,
+            token.0,
+            values.join(", ")
+        );
+        if method.ret == Ty::Void {
+            self.lines.push(format!("{call};"));
+        } else {
+            let call = if method.ret == Ty::R4 {
+                format!("__cil_call_ret_r4({call})")
+            } else {
+                call
+            };
+            self.push(method.ret.stack(), call)?;
+        }
+        Ok(())
+    }
+
     fn instruction(&mut self, i: &Instruction) -> Result<()> {
         let op = i.opcode.canonical().name();
         self.lines
             .push(format!("// IL_{:04X}: {}", i.offset, i.opcode.name()));
         match op {
-            "nop" => {}
+            "nop" | "constrained." => {}
             "ldnull" => self.stack.push(Value {
                 name: "null".into(),
                 ty: Ty::Null,
@@ -710,6 +825,14 @@ impl Writer<'_, '_> {
                         format!("l{idx}"),
                     )
                 };
+                if op == "stloc"
+                    && ty.kind() == StackKind::Address
+                    && value.ty.kind() == StackKind::Address
+                {
+                    self.image.assignable(value.ty, ty)?;
+                    self.lines.push(format!("{dest} = ref {};", value.name));
+                    return Ok(());
+                }
                 if ty.kind() == StackKind::Address || value.ty.kind() == StackKind::Address {
                     return Err(
                         "managed argument/local slot reassignment needs lifetime analysis".into(),
@@ -1135,6 +1258,9 @@ impl Writer<'_, '_> {
                     return Err("byref call result needs escape/lifetime analysis".into());
                 }
                 let virtual_call = op == "callvirt";
+                if let Some(&constraint) = self.constrained_calls.get(&i.offset) {
+                    return self.constrained_call(t, constraint, &method);
+                }
                 if virtual_call {
                     if method.generic_virtual {
                         return Err(

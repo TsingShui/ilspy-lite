@@ -22,18 +22,11 @@ fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
 mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring).
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "VirtualCallCases.Ops",
-        "UnsupportedConstrained",
-        "unsupported opcode constrained.",
-    ),
-    (
-        "VirtualCallCases.Compute",
-        "Sum",
-        "expected int[] or uint[] evaluation-stack value",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "VirtualCallCases.Compute",
+    "Sum",
+    "expected int[] or uint[] evaluation-stack value",
+)];
 
 // Shape.Area is abstract: a legitimate bodyless declaration, not a fallback.
 const EXPECTED_DECLARATIONS: &[(&str, &str)] = &[("VirtualCallCases.Shape", "Area")];

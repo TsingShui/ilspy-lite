@@ -80,6 +80,7 @@ internal static partial class GenericReferenceRoundtrip
             {
                 Build(0), Build(-7), Build(int.MaxValue - 2)
             };
+            if (original.Name == "UnsupportedGeneric" && !parameters[0].IsValueType) tuples.Add(new object[] { null });
             foreach (object[] arguments in tuples)
             {
                 Outcome before = Capture(() => OriginalCall(original)(null, arguments), new System.Collections.Generic.List<State>());
@@ -90,7 +91,7 @@ internal static partial class GenericReferenceRoundtrip
                     throw new Exception("Recovered allocation differs: " + original.Name + " expected=" + expected + " actual=" + actual);
                 checks++;
             }
-            if (original.IsGenericMethod && !original.ReturnType.IsValueType)
+            if (original.IsGenericMethod && original.GetParameters().Length == 0 && !original.ReturnType.IsValueType)
             {
                 object first = lowered.Invoke(null, null), second = lowered.Invoke(null, null);
                 if (first == null || second == null || ReferenceEquals(first, second))

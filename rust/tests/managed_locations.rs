@@ -12,27 +12,13 @@ const IMAGES: [&[u8]; 2] = [
 mod fixture_contract;
 
 #[test]
-fn byref_returns_joins_and_reference_locals_keep_explicit_lifetime_gates() {
-    for (index, bytes) in IMAGES.into_iter().enumerate() {
-        let mut negatives = vec![
-            (
-                "ManagedLocationCases.Ops",
-                "UnsupportedReturn",
-                "byref return needs escape/lifetime analysis",
-            ),
-            (
-                "ManagedLocationCases.Ops",
-                "UnsupportedJoin",
-                "managed element address crossing a block needs IL fallback",
-            ),
-        ];
-        if index == 1 {
-            negatives.push((
-                "ManagedLocationCases.Ops",
-                "UnsupportedRefLocal",
-                "pinned/byref/modified local needs IL fallback",
-            ));
-        }
+fn byref_returns_keep_the_escape_gate_while_local_aliases_and_joins_are_recovered() {
+    for bytes in IMAGES {
+        let negatives = vec![(
+            "ManagedLocationCases.Ops",
+            "UnsupportedReturn",
+            "byref return needs escape/lifetime analysis",
+        )];
         fixture_contract::check(bytes, &negatives);
         fixture_contract::check_scan_parity(bytes);
     }

@@ -106,10 +106,25 @@ Direct field-store permission checks are separate. Constructor this-slot
 exposure remains refused without entry-this provenance.
 
 Flat readable compaction is disabled in ref-bound bodies so reads cannot be
-substituted with mutable aliases after a write. Byref results/returns, byref
-locals/pointer slots, addresses on CFG edges, unsupported modifiers/prefixes and
-unmanaged pointers remain refused. See
-[managed-location acceptance](acceptance/corpus/MANAGED_LOCATIONS.md).
+substituted with mutable aliases after a write. Unpinned/unmodified byref locals
+and identical-element address CFG edges use scoped reference scratch slots and
+parallel ref reassignment, not contents copies. Original argument-slot rebinding,
+byref result/return escapes, pinned/modified locals, unmanaged pointers and
+unsupported prefixes remain refused. Null/reference CFG joins merge only Null
+with the same exact reference identity, with successor dataflow reanalysis.
+See [managed-location acceptance](acceptance/corpus/MANAGED_LOCATIONS.md) and
+[constrained/control-flow acceptance](acceptance/corpus/CONSTRAINED_DISPATCH.md).
+
+## Ordinary constrained dispatch
+
+`__cil_constrained_TYPE_METHOD` retains the original adjacent constrained and
+callvirt tokens, checked signature and acquired managed receiver. The runtime
+selects interface/virtual dispatch, boxing fallback or reference-slot dereference;
+no copied receiver or guessed implementation replaces it. Prefix adjacency and
+CFG/EH entry boundaries are validated. Argument values and compiler-authored
+receiver snapshots remain at their IL instructions. GVM, byref results and
+constructor/intrinsic targets keep their separate refusal gates. See
+[constrained dispatch evidence](acceptance/corpus/CONSTRAINED_DISPATCH.md).
 
 ## Presentation versus semantics
 
