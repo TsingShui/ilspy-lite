@@ -32,6 +32,7 @@ pub(crate) struct SignatureValueTypes {
 type InterfaceEdges =
     std::cell::OnceCell<std::result::Result<std::collections::BTreeMap<u32, Vec<u32>>, String>>;
 
+mod exception_types;
 mod method_instantiations;
 mod reference_calls;
 pub(crate) mod reference_relations;
@@ -2958,13 +2959,20 @@ impl<'a> Image<'a> {
     }
 
     fn core_type_name(&self, token: Token) -> Result<&'a str> {
+        let (namespace, name) = self.core_type_parts(token)?;
+        if namespace != "System" {
+            return Err("unresolved core type identity".into());
+        }
+        Ok(name)
+    }
+
+    fn core_type_parts(&self, token: Token) -> Result<(&'a str, &'a str)> {
         if token.table() != Some(TableId::TypeRef) || token.rid() == 0 {
             return Err("operation needs a core TypeRef".into());
         }
         let row = self.md.tables().type_ref(token.rid())?;
         if row.resolution_scope.table() != Some(TableId::AssemblyRef)
             || row.resolution_scope.rid() == 0
-            || self.md.strings().str(row.type_namespace)? != "System"
         {
             return Err("unresolved core type identity".into());
         }
@@ -2984,7 +2992,10 @@ impl<'a> Image<'a> {
         {
             return Err("type scope is not an admitted core identity".into());
         }
-        Ok(self.md.strings().str(row.type_name)?)
+        Ok((
+            self.md.strings().str(row.type_namespace)?,
+            self.md.strings().str(row.type_name)?,
+        ))
     }
 
     pub fn array_element_type(&self, token: Token) -> Result<crate::ir::Ty> {
@@ -3015,26 +3026,8 @@ impl<'a> Image<'a> {
 
     /// A bounded set of core catch types whose runtime identities are fixed.
     pub(crate) fn handler_type_name(&self, token: Token) -> Result<String> {
-        let name = self
-            .core_type_name(token)
-            .map_err(|_| "EH catch type needs an admitted core exception identity")?;
-        if !matches!(
-            name,
-            "Exception"
-                | "SystemException"
-                | "ArithmeticException"
-                | "DivideByZeroException"
-                | "OverflowException"
-                | "ArgumentException"
-                | "ArgumentNullException"
-                | "ArgumentOutOfRangeException"
-                | "NullReferenceException"
-                | "InvalidOperationException"
-                | "IndexOutOfRangeException"
-        ) {
-            return Err("EH catch type needs an admitted core exception identity".into());
-        }
-        Ok(format!("global::System.{name}"))
+        let name = exception_types::core_name(self, token)?;
+        Ok(format!("global::{name}"))
     }
 
     pub fn external_class_name(&self, token: u32) -> Result<String> {
@@ -3045,27 +3038,72 @@ impl<'a> Image<'a> {
         Ok(format!("__cil_type_{token:08X}"))
     }
 
-    pub fn core_exception_name(&self, token: u32) -> Result<String> {
-        if self.core_type_name(Token(token))? != "ArgumentOutOfRangeException" {
-            return Err(
-                "exception type needs exact core ArgumentOutOfRangeException identity".into(),
-            );
+    pub(crate) fn exception_reference(&self, ty: crate::ir::Ty) -> Result<()> {
+        match ty {
+            crate::ir::Ty::ExternalClass(token) => {
+                self.core_exception_name(token)?;
+            }
+            crate::ir::Ty::Class(token) => {
+                self.class_name(token)?;
+                let chain = self.class_chain(token)?;
+                let root = *chain.last().ok_or("exception ancestry is empty")?;
+                let base = self.md.tables().type_def(root & 0xffffff)?.extends;
+                self.core_exception_name(base.0)?;
+            }
+            _ => return Err("throw/catch needs a proved nominal exception reference".into()),
         }
-        Ok("global::System.ArgumentOutOfRangeException".into())
+        Ok(())
     }
 
-    pub fn exception_constructor(&self, token: Token) -> Result<crate::ir::Ty> {
+    pub(crate) fn catch_type(&self, token: Token) -> Result<(crate::ir::Ty, String)> {
+        let ty = match token.table() {
+            Some(TableId::TypeDef) => crate::ir::Ty::Class(token.0),
+            Some(TableId::TypeRef) => crate::ir::Ty::ExternalClass(token.0),
+            _ => return Err("EH catch type needs an admitted nominal exception identity".into()),
+        };
+        self.exception_reference(ty)?;
+        Ok((ty, ty.cs(self)?))
+    }
+
+    pub fn core_exception_name(&self, token: u32) -> Result<String> {
+        self.handler_type_name(Token(token))
+    }
+
+    pub fn exception_constructor(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<(crate::ir::Ty, Vec<crate::ir::Ty>)>> {
         if token.table() != Some(TableId::MemberRef) || token.rid() == 0 {
-            return Err("newobj needs an admitted core exception constructor".into());
+            return Ok(None);
         }
         let member = self.md.tables().member_ref(token.rid())?;
-        self.core_exception_name(member.class.0)?;
-        if self.md.strings().str(member.name)? != ".ctor"
-            || self.md.blobs().get(member.signature)? != [0x20, 0x02, 0x01, 0x0e, 0x0e]
-        {
-            return Err("newobj needs exact instance void exception .ctor(string, string)".into());
+        if self.core_exception_name(member.class.0).is_err() {
+            return Ok(None);
         }
-        Ok(crate::ir::Ty::ExternalClass(member.class.0))
+        let signature = crate::signature_guard::method(self.md.blobs().get(member.signature)?)?;
+        if self.md.strings().str(member.name)? != ".ctor"
+            || !signature.has_this
+            || signature.explicit_this
+            || signature.calling_convention != cildec::CallConv::Default
+            || !signature.vararg_params.is_empty()
+            || signature.return_type.by_ref
+            || !signature.return_type.custom_mods.is_empty()
+            || !matches!(signature.return_type.type_, cildec::Type::Void)
+        {
+            return Err(
+                "exception allocation needs an ordinary instance void constructor signature".into(),
+            );
+        }
+        let parameters = signature
+            .params
+            .iter()
+            .map(|p| self.member_parameter(p, None, context))
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Some((
+            crate::ir::Ty::ExternalClass(member.class.0),
+            parameters,
+        )))
     }
 
     /// Positional arguments represent a named receiver only in their original
@@ -3634,6 +3672,11 @@ impl<'a> Image<'a> {
                     return Ok(());
                 }
             }
+        }
+        if let (Ty::ExternalClass(actual), Ty::ExternalClass(expected)) = (actual, expected)
+            && exception_types::core_assignable(self, actual, expected)
+        {
+            return Ok(());
         }
         if reference_relations::assignable(self, actual, expected)? {
             return Ok(());

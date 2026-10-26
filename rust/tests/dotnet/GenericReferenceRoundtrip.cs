@@ -382,6 +382,21 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--exception-type-legacy")
+        {
+            ExceptionTypeLegacyCheck(args[2]);
+            return;
+        }
+        if (args[1] == "--exception-type-plan")
+        {
+            ExceptionTypePlan(args[2]);
+            return;
+        }
+        if (args[1] == "--exception-type-check")
+        {
+            ExceptionTypeCheck(args[2]);
+            return;
+        }
         if (args[1] == "--constrained-plan")
         {
             ConstrainedPlan(args[2]);

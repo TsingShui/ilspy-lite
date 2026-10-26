@@ -1,13 +1,51 @@
 # Fixed corpus checkpoint
 
-> **Handoff:** to continue on another machine, read `HANDOFF.md` in this directory first;
-> it records the exact verified state, the uncommitted working tree, the open failures and
-> the next three steps.
+> The current verified section below is authoritative. `HANDOFF.md` retains
+> historical transfer notes; its older working-tree state is not the live checkpoint.
 
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: constrained dispatch and reference control flow
+## Current verified state: exception identities and construction
+
+- `report/exception-types/corpus-scan/baseline.json`: **521,684 Decompiled /
+  249,064 Partial** of 770,748; fallback **32.31458271704889%**.
+- **+25,305 in 213 images**, zero recovered-method losses/incomplete; decrease
+  3.2831742670756265 points. Fixed inventory, exclusions and references.
+  Game 2,754/2,013 (+86), Common 11,636/6,771 (+408). <=5% still unmet.
+- Bounded checked System/System.IO exception names and core parent facts,
+  signature-driven exact core constructors, local finite exception ancestry and
+  typed local catch identities are implemented. Ordinary allocation stays an
+  independent proof. Catch-object, generic/unknown foreign ancestry, filters/
+  faults and GVM remain gated.
+- Five public tests include red/green throw, constructor return subtyping,
+  local exception ancestry and core namespace cases; malformed/counterfeit
+  scope, constructor signature and unrelated local-base mutations stay Partial.
+- **423 Rust tests**, fmt/clippy and **28 owned driver invocations** pass.
+  New gate: **181 comparisons / 12 public methods plus 2 recovered private
+  helpers per config**, five semantic mutants. Messages/inner/actual identities,
+  freshness, argument trace/early throws, local handler ordering, rethrow and
+  finally execute. All 21 core parent facts are checked against the owned
+  target runtime. No selected method-body proxies or third-party execution.
+- Legacy promoted constructor cases execute before negative-table removal:
+  6 comparisons / 2 methods per config. Existing object-exception gate 259/config
+  and lexical EH 39/8/config with four mutants still pass.
+- Retained failures include initial constructor subtype/local proof reds,
+  namespace red, wrong static storage in the first local constructor oracle and
+  an unsupported command-line flag in an added legacy invocation. Correct
+  original declared static storage is shared/reset for original/recovered runs;
+  invocation corrected and rerun. No failure is counted as a passing comparison.
+- Twelve production default/ILSpy/original-IL triples self-reviewed: one
+  EQUIVALENT, eleven CRUDE-BUT-EQUIVALENT; no changed-semantic SUSPECT in sample.
+  No independent/formal or whole-corpus equivalence claim.
+- Evidence: `acceptance/corpus/EXCEPTION_IDENTITIES.md`,
+  `report/exception-types/{AUDIT.md,behavior-manifest.json,milestone.json,review/}`.
+  Validated group; local-only commit workflow, no push.
+- Next foundation: fresh audit of generic/static/foreign fields and value
+  initialization/constructor calls; broader typed arrays/signatures and foreign
+  value facts remain substantial independent blockers. Keep scope/GVM gates.
+
+## Previous verified state: constrained dispatch and reference control flow
 
 - `report/value-dispatch/corpus-scan/baseline.json`: **496,379 Decompiled /
   274,369 Partial** of 770,748; aggregate fallback **35.597756984124516%**.

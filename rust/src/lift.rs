@@ -875,10 +875,14 @@ impl Writer<'_, '_> {
                     )?;
                     return Ok(());
                 }
-                if self.image.exception_constructor(token).is_err() {
-                    let (allocated, args) = self
-                        .image
-                        .allocation_constructor(token, self.type_context)?;
+                {
+                    let (allocated, args) =
+                        match self.image.exception_constructor(token, self.type_context)? {
+                            Some(constructor) => constructor,
+                            None => self
+                                .image
+                                .allocation_constructor(token, self.type_context)?,
+                        };
                     for ty in std::iter::once(&allocated).chain(args.iter()) {
                         self.track_type(*ty)?;
                     }
@@ -922,26 +926,6 @@ impl Writer<'_, '_> {
                     )?;
                     return Ok(());
                 }
-                let result = self.image.exception_constructor(token)?;
-                let message = self.pop()?;
-                self.image.assignable(message.ty, Ty::String)?;
-                let parameter = self.pop()?;
-                self.image.assignable(parameter.ty, Ty::String)?;
-                self.lines.push(format!(
-                    "// newobj token 0x{:08X}: {}",
-                    token.0,
-                    crate::metadata::escape_line(
-                        &cildec::Names::new(&self.image.md).try_token(token)?
-                    )
-                ));
-                self.lines.push("// __cil_newobj: fresh object; exact constructor; parameter order retained (paramName, message); allocation/constructor effects occur here.".into());
-                self.push(
-                    result,
-                    format!(
-                        "__cil_newobj_{:08X}({}, {})",
-                        token.0, parameter.name, message.name
-                    ),
-                )?;
             }
             "newarr" => {
                 let token = i.operand.token().ok_or("missing element type token")?;
@@ -1607,12 +1591,8 @@ impl Writer<'_, '_> {
             }
             "throw" => {
                 let value = self.pop()?;
-                match value.ty {
-                    Ty::ExternalClass(token) => {
-                        self.image.core_exception_name(token)?;
-                    }
-                    Ty::Null => {}
-                    _ => return Err("throw needs an admitted exception reference or null".into()),
+                if value.ty != Ty::Null {
+                    self.image.exception_reference(value.ty)?;
                 }
                 self.lines.push(format!("throw {};", value.name));
                 // CLI throw empties the evaluation stack, including values below the object.

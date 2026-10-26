@@ -3,7 +3,26 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (constrained/reference CFG; aggregate 5% target)
+## Current position (exception identities/construction; aggregate 5% target)
+
+- **521,684 Decompiled / 249,064 Partial; fallback 32.31458%**.
+- +25,305 in 213 images, zero losses/incomplete; fixed scope/references.
+  Decrease 3.28317 points. Game +86 / Common +408.
+- Checked core exception constructors/parent relationships, local exception
+  ancestry and typed catch identities preserve original tokens and objects.
+  Catch-object, unknown foreign/generic exception facts and filters/faults remain.
+- 423 tests, fmt/clippy and 28 owned driver invocations pass. New gate:
+  181 comparisons / 12 public methods plus 2 recovered support helpers/config;
+  five mutants. Legacy promoted constructor cases execute before table updates.
+- Twelve source/IL triples self-reviewed: one equivalent, eleven crude but
+  equivalent, no changed-semantic suspect. No third-party execution or formal/
+  independent verification claim.
+- Next: audit generic/static/foreign fields and value initialization/constructor
+  calls, then broader typed arrays/signatures/foreign value proofs. Do not infer
+  promised gains from first-blocker totals; preserve GVM/ref-policy boundaries.
+- Continue autonomous grouped work, no agents/push; <=5% still unmet.
+
+## Previous position (constrained/reference CFG; aggregate 5% target)
 
 - **496,379 Decompiled / 274,369 Partial; fallback 35.59776%**.
 - +3,662 in 125 images, zero losses/incomplete; fixed scope/references.

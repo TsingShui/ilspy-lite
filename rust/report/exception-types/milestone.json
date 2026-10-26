@@ -1,0 +1,50 @@
+{
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 274369,
+      "Decompiled": 496379
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 249064,
+      "Decompiled": 521684
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 37
+  },
+  "newly_recovered": 25305,
+  "regressions": [],
+  "gained_images": 213,
+  "fallback_percent": 32.31458271704889,
+  "aggregate_gate_pass": false,
+  "rust_tests": 423,
+  "owned_drivers": 28,
+  "behavior": {
+    "comparisons_per_configuration": 181,
+    "public_methods": 12,
+    "recovered_private_helpers": 2,
+    "rejected_mutants_per_configuration": 5,
+    "legacy_promotions_comparisons_per_configuration": 6,
+    "legacy_promotions_methods": 2
+  },
+  "review": {
+    "triples": 12,
+    "equivalent": 1,
+    "crude_but_equivalent": 11,
+    "changed_semantic_suspect": 0,
+    "kind": "main-session self-review"
+  },
+  "third_party_execution": false,
+  "fixed_scope_and_reference_policy": true,
+  "baseline": "report/exception-types/corpus-scan/baseline.json",
+  "delta": "report/exception-types/delta.json"
+}

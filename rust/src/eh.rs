@@ -81,9 +81,7 @@ pub(crate) fn parse(
             return Err("EH clause has an empty range".into());
         }
         let catch = match raw.kind {
-            HandlerKind::Catch(token) => {
-                Some((Ty::ExternalClass(token.0), image.handler_type_name(token)?))
-            }
+            HandlerKind::Catch(token) => Some(image.catch_type(token)?),
             HandlerKind::Finally => None,
             _ => return Err("EH handler kind is not admitted".into()),
         };

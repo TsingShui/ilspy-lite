@@ -78,6 +78,7 @@ mod enums;
 mod equality;
 #[path = "exception_regions.rs"]
 mod exception_regions;
+mod exception_types;
 #[path = "exceptions.rs"]
 mod exceptions;
 #[path = "external.rs"]

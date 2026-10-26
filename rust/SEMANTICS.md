@@ -115,6 +115,22 @@ with the same exact reference identity, with successor dataflow reanalysis.
 See [managed-location acceptance](acceptance/corpus/MANAGED_LOCATIONS.md) and
 [constrained/control-flow acceptance](acceptance/corpus/CONSTRAINED_DISPATCH.md).
 
+## Exact exception identities
+
+A bounded checked core family in System/System.IO has explicit nominal parent
+facts for assignment; arbitrary names/suffixes are not exception evidence.
+Finite local nongeneric ancestry ending in that family admits the exact local
+reference for throw/catch. Catch TypeDefs retain local class identities.
+Null throw, incoming/caught exception objects, rethrow and finally use the target
+runtime's ordinary exception behavior.
+
+Core constructor lowering validates an ordinary instance void signature and
+retains the exact __cil_newobj_TOKEN operation, original arguments, allocation
+identity and effects. It does not infer arbitrary foreign allocation facts.
+Generic/unknown foreign exception ancestry, catch-object wrapping, filters/faults
+and unsupported transfers remain separate gates. See
+[exception identity evidence](acceptance/corpus/EXCEPTION_IDENTITIES.md).
+
 ## Ordinary constrained dispatch
 
 `__cil_constrained_TYPE_METHOD` retains the original adjacent constrained and

@@ -32,7 +32,7 @@ fn exception_allocation_keeps_exact_target_arguments_and_position() {
             assert!(
                 result
                     .text
-                    .contains("fresh object; exact constructor; parameter order retained")
+                    .contains("one fresh object identity allocated here, then the exact constructor runs in original argument order")
             );
             if name == "Make" {
                 assert!(result.text.contains("(v0, v1)"), "{}", result.text);
@@ -43,8 +43,8 @@ fn exception_allocation_keeps_exact_target_arguments_and_position() {
             Status::Decompiled
         );
         let class = decompile_type(bytes, "ExceptionCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 9); // Includes three throw bodies and core-base constructor.
-        assert_eq!(class.summary.partial, 2);
+        assert_eq!(class.summary.decompiled, 11); // Includes broader core constructor overloads.
+        assert_eq!(class.summary.partial, 0);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
     }
 }
@@ -87,12 +87,12 @@ fn throw_keeps_the_existing_object_and_terminates_with_an_empty_stack() {
 }
 
 #[test]
-fn only_the_exact_core_exception_type_and_two_string_constructor_are_admitted() {
+fn core_exception_identity_and_constructor_signature_boundaries_are_checked() {
     for bytes in IMAGES {
         for name in ["UnsupportedType", "UnsupportedOverload"] {
             let result = decompile(bytes, token(bytes, name)).unwrap();
-            assert_eq!(result.status, Status::Partial, "{}", result.text);
-            assert!(result.text.contains("IL FALLBACK"));
+            assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+            assert!(result.text.contains("__cil_newobj_"));
         }
         let method = token(bytes, "Make");
         let pe = cildec::PeImage::parse(bytes).unwrap();

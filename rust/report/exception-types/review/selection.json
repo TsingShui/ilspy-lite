@@ -1,0 +1,170 @@
+[
+  {
+    "id": 0,
+    "assembly": "FSharp.Core",
+    "origins": [
+      "FSharp/FSharp.Core.dll"
+    ],
+    "token": "0x06001F8D",
+    "owner": "Microsoft.FSharp.Core.Operators",
+    "name": "Raise",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "exception type needs exact core ArgumentOutOfRangeException identity"
+  },
+  {
+    "id": 3,
+    "assembly": "ICSharpCode.Decompiler",
+    "origins": [
+      "ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll"
+    ],
+    "token": "0x06000083",
+    "owner": "ICSharpCode.Decompiler.CecilExtensions",
+    "name": "ResolveOrThrow",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "throw needs an admitted exception reference or null"
+  },
+  {
+    "id": 1042,
+    "assembly": "OpenRA.Mods.Common",
+    "origins": [
+      "supplement:OpenRA.Mods.Common.dll"
+    ],
+    "token": "0x06000ECD",
+    "owner": "OpenRA.Mods.Common.Commands.DevCommands",
+    "name": "Crash",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "throw needs an admitted exception reference or null"
+  },
+  {
+    "id": 1041,
+    "assembly": "OpenRA.Game",
+    "origins": [
+      "supplement:OpenRA.Game.dll"
+    ],
+    "token": "0x06000119",
+    "owner": "OpenRA.FieldLoader",
+    "name": "ParseBooleanExpression",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "EH catch type needs an admitted core exception identity"
+  },
+  {
+    "id": 0,
+    "assembly": "FSharp.Core",
+    "origins": [
+      "FSharp/FSharp.Core.dll"
+    ],
+    "token": "0x060001AE",
+    "owner": "Microsoft.FSharp.Core.FSharpValueOption`1",
+    "name": "get_Value",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "external allocation needs dependency facts; only local classes and local instantiations are admitted"
+  },
+  {
+    "id": 626,
+    "assembly": "System",
+    "origins": [
+      "mcs/5.23/lib/mono/4.5/System.dll"
+    ],
+    "token": "0x06000E58",
+    "owner": "System.Diagnostics.TextWriterTraceListener",
+    "name": "Close",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "EH catch type needs an admitted core exception identity"
+  },
+  {
+    "id": 626,
+    "assembly": "System",
+    "origins": [
+      "mcs/5.23/lib/mono/4.5/System.dll"
+    ],
+    "token": "0x06000158",
+    "owner": "Mono.Net.Security.MobileAuthenticatedStream",
+    "name": "GetInvalidNestedCallException",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "exception type needs exact core ArgumentOutOfRangeException identity"
+  },
+  {
+    "id": 3,
+    "assembly": "ICSharpCode.Decompiler",
+    "origins": [
+      "ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll"
+    ],
+    "token": "0x0600004E",
+    "owner": "ICSharpCode.Decompiler.DecompilerSettings",
+    "name": "set_CSharpFormattingOptions",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "external allocation needs dependency facts; only local classes and local instantiations are admitted"
+  },
+  {
+    "id": 1041,
+    "assembly": "OpenRA.Game",
+    "origins": [
+      "supplement:OpenRA.Game.dll"
+    ],
+    "token": "0x0600059B",
+    "owner": "OpenRA.StreamExts",
+    "name": "ReadBytes",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "external allocation needs dependency facts; only local classes and local instantiations are admitted"
+  },
+  {
+    "id": 61,
+    "assembly": "IKVM.Reflection",
+    "origins": [
+      "NRefactory/IKVM.Reflection.dll"
+    ],
+    "token": "0x06000843",
+    "owner": "IKVM.Reflection.Reader.ModuleReader",
+    "name": "TokenOutOfRangeException",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "incompatible value/receiver types"
+  },
+  {
+    "id": 911,
+    "assembly": "System.Memory",
+    "origins": [
+      "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Memory.dll"
+    ],
+    "token": "0x06000019",
+    "owner": "System.ThrowHelper",
+    "name": "CreateArgumentOutOfRangeException_PrecisionTooLarge",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "incompatible value/receiver types"
+  },
+  {
+    "id": 425,
+    "assembly": "System.Data.Common",
+    "origins": [
+      "dotnet/netcore-2.2/System.Data.Common.dll"
+    ],
+    "token": "0x060013A2",
+    "owner": "System.Data.Common.ADP",
+    "name": "StreamClosed",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "incompatible value/receiver types"
+  }
+]
