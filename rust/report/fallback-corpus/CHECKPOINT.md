@@ -7,7 +7,37 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: typed managed-location foundation
+## Current verified state: scoped reference relationships
+
+- `report/reference-relations/corpus-scan-final/baseline.json`: **472,156
+  Decompiled / 298,592 Partial** of 770,748; aggregate fallback **38.74055%**.
+- +33,355 in 197 images, zero recovered-method regressions/incomplete; decrease
+  4.32761 points. OpenRA.Game +84 (2,557/2,210), Common +1,402 (11,116/7,291).
+- Scoped local/foreign base/interface proofs, variance with reference-argument
+  checks, symmetric open-self identity, typed original overload operands and
+  reference identity across declared foreign constructed bases are implemented.
+- Initial 18 regressions retained in `corpus-scan/`, `delta.json` and three
+  `regressions/` triples; owned null-formal red/green reproduced the cause.
+  Final scan has zero, not hidden by net gains.
+- 405 tests, fmt/clippy and 22 owned behavior drivers pass. New fixture:
+  143 comparisons / 36 closed selections per configuration; four mutants each.
+  Generic declaring-type runtime entry is retained for self-cast execution,
+  including null receivers; a wrong static-carrier attempt is retained.
+- Ten production source/IL triples self-reviewed: one EQUIVALENT, nine
+  CRUDE-BUT-EQUIVALENT, zero changed-semantic SUSPECT. No third-party execution
+  or independent/formal verification claim.
+- Eleven pre-audit triples retained. CVec.Minus is inconclusive for ILSpy due to
+  explicit unknown-result diagnostics. ActorIndex.Actors remains Partial in its
+  audited context; neither is excluded or claimed recovered.
+- Goal remains aggregate <=5%, not met. Scope/references fixed; no agents/push.
+  Evidence: `acceptance/corpus/REFERENCE_RELATIONSHIPS.md` and
+  `report/reference-relations/{AUDIT.md,DESIGN.md,review/review-source.md}`.
+- Next larger foundation: constructed value members/constructors, broader
+  boxing and ordinary constrained dispatch. The first three have production IL
+  leads in this group's audit; capture owned red cases before implementation.
+  GVM remains refused after its existing runtime lookup-order failure.
+
+## Previous verified state: typed managed-location foundation
 
 - `report/managed-locations/corpus-scan-validated/baseline.json`: **438,801
   Decompiled / 331,947 Partial** of 770,748; aggregate fallback **43.06816%**.

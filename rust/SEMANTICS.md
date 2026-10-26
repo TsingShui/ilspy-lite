@@ -36,6 +36,27 @@ snapshot model. External generic instance dispatch, unsupported modified
 signatures and unsupported arguments are separately refused. See
 [MethodSpec acceptance](acceptance/corpus/METHOD_INSTANTIATIONS.md).
 
+## Scoped reference relationships
+
+Assignment proofs retain complete constructed arguments and caller-qualified
+variables across local base/interface templates. Open-self structural and named
+declaring identities are interchangeable only after the scoped identity proof.
+Interface variance needs metadata flags, reference arguments and a directional
+proof; value arguments and managed-location elements remain invariant.
+
+Exact dependency origins project ancestor templates into the caller vocabulary.
+Unknown/unrepresentable relationships stay unproved. Demand-driven retries and a
+context-stamped registry avoid eager graph construction for unrelated operations;
+adding definitions and query order are covered by public tests. No foreign token
+is reinterpreted as a caller token.
+
+A proof inserts no runtime type check, copy or allocation. Formal-type operands
+retain the original source-named overload. Qualified declaration spelling does
+not require proving every foreign ancestor; a local class can retain reference
+identity across a declared foreign constructed base while ancestor assignments
+still require their own exact argument proof. See
+[reference-relationship acceptance](acceptance/corpus/REFERENCE_RELATIONSHIPS.md).
+
 ## Typed managed locations and byref calls
 
 Plain ref/out parameters carry managed pointers, not incoming value copies.

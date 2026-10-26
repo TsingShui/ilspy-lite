@@ -94,6 +94,7 @@ mod external_values;
 mod managed_locations;
 #[path = "reference_calls.rs"]
 mod reference_calls;
+mod reference_relations;
 
 #[path = "abstract_members.rs"]
 mod abstract_members;

@@ -34,12 +34,16 @@ type InterfaceEdges =
 
 mod method_instantiations;
 mod reference_calls;
+pub(crate) mod reference_relations;
 
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
     pub md: Metadata<'a>,
     core_definition: std::cell::OnceCell<std::result::Result<bool, String>>,
     interface_edges: InterfaceEdges,
+    pub(crate) reference_facts: std::cell::RefCell<reference_relations::Facts>,
+    pub(crate) reference_queries: std::cell::RefCell<std::collections::BTreeSet<u32>>,
+    pub(crate) reference_attempted: std::cell::RefCell<std::collections::BTreeSet<u32>>,
     location_types: std::cell::RefCell<crate::locations::LocationTypes>,
     struct_types: StructTypes,
     pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
@@ -98,6 +102,9 @@ impl<'a> Image<'a> {
             md,
             core_definition: std::cell::OnceCell::new(),
             interface_edges: std::cell::OnceCell::new(),
+            reference_facts: std::cell::RefCell::new(reference_relations::Facts::default()),
+            reference_queries: std::cell::RefCell::new(std::collections::BTreeSet::new()),
+            reference_attempted: std::cell::RefCell::new(std::collections::BTreeSet::new()),
             location_types: std::cell::RefCell::new(crate::locations::LocationTypes::new()?),
             struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
@@ -2874,9 +2881,7 @@ impl<'a> Image<'a> {
                 else {
                     return Err("constructed base needs member binding".into());
                 };
-                self.local_type_definition(*def)?.ok_or(
-                    "constructed base needs a local definition; external constructed bases need dependency facts",
-                )?
+                self.local_type_definition(*def)?.unwrap_or(*def)
             } else {
                 base
             };
@@ -3516,7 +3521,7 @@ impl<'a> Image<'a> {
         Ok(element)
     }
 
-    fn intrinsic_reference_name(&self, ty: crate::ir::Ty) -> Result<Option<&'a str>> {
+    pub(crate) fn intrinsic_reference_name(&self, ty: crate::ir::Ty) -> Result<Option<&'a str>> {
         use crate::ir::Ty;
         let name = match ty {
             Ty::String => Some("String"),
@@ -3592,6 +3597,11 @@ impl<'a> Image<'a> {
                 return Ok(());
             }
         }
+        if let (Ty::StructuralRef(a), Ty::Class(b)) = (actual, expected) {
+            if self.open_self_definition(a) == Some(b) {
+                return Ok(());
+            }
+        }
         if let (Ty::Class(a), Ty::ExternalClass(b)) = (actual, expected) {
             self.external_class_context(b)?;
             for owner in self.class_chain(a)? {
@@ -3599,6 +3609,9 @@ impl<'a> Image<'a> {
                     return Ok(());
                 }
             }
+        }
+        if reference_relations::assignable(self, actual, expected)? {
+            return Ok(());
         }
         Err("incompatible value/receiver types".into())
     }
@@ -3853,7 +3866,7 @@ impl<'a> Image<'a> {
             .map(|definition| definition.0))
     }
 
-    fn type_spec(&self, token: Token) -> Result<cildec::TypeSpecSig<'a>> {
+    pub(crate) fn type_spec(&self, token: Token) -> Result<cildec::TypeSpecSig<'a>> {
         let row = self.md.tables().type_spec(token.rid())?;
         crate::signature_guard::type_spec(self.md.blobs().get(row.signature)?)
     }

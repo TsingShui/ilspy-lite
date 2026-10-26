@@ -439,7 +439,31 @@ fn decompile_method(
         prime_external_fields(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
-    match lift::emit(image, token, &body) {
+    image.reference_queries.borrow_mut().clear();
+    let mut emitted = lift::emit(image, token, &body);
+    if let Some(context) = context {
+        for _ in 0..32 {
+            if emitted.is_ok() {
+                break;
+            }
+            let pending = std::mem::take(&mut *image.reference_queries.borrow_mut());
+            let pending = pending
+                .difference(&image.reference_attempted.borrow())
+                .copied()
+                .collect::<std::collections::BTreeSet<_>>();
+            if pending.is_empty() {
+                break;
+            }
+            image.reference_attempted.borrow_mut().extend(&pending);
+            if let Ok(facts) = context.reference_assignment_facts(&pending) {
+                let mut cached = image.reference_facts.borrow_mut();
+                cached.aliases.extend(facts.aliases);
+                cached.definitions.extend(facts.definitions);
+            }
+            emitted = lift::emit(image, token, &body);
+        }
+    }
+    match emitted {
         Ok(source) => Ok(DecompiledMethod {
             status: Status::Decompiled,
             text: format!("{banner}{source}"),

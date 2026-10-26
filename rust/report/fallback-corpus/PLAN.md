@@ -3,7 +3,26 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (managed locations; aggregate 5% target)
+## Current position (reference relationships; aggregate 5% target)
+
+- **472,156 Decompiled / 298,592 Partial; fallback 38.74055%**.
+- +33,355 in 197 images, zero regressions/incomplete; fixed scope/references.
+  Actual decrease 4.32761 points, not a forecast from blocker totals.
+- Instantiated relationship proofs, scoped self identity, metadata variance,
+  caller-projected foreign ancestors and original overload operands are landed.
+  Reference naming does not require proving all foreign ancestor details.
+- 405 tests, fmt/clippy and 22 owned behavior drivers pass. New fixture executes
+  143 comparisons / 36 closed selections per configuration; four mutants each.
+- Initial 18 regressions retained/reproduced/fixed; ten production triples
+  self-reviewed, with no changed-semantic SUSPECT in the bounded sample.
+- Next: owned red tests and semantic binding for constructed value members,
+  value constructors, broader boxing and ordinary constrained dispatch.
+  Preserve whole-value copies/locations, exact owner arguments and allocation
+  distinctions. GVM lookup-order failure remains an independent gate.
+- Continue autonomous grouped work, no agents, third-party execution or
+  unrequested pushes. Aggregate <=5% remains unmet.
+
+## Previous position (managed locations; aggregate 5% target)
 
 - **438,801 Decompiled / 331,947 Partial; fallback 43.06816%**.
 - +21,002 in 188 images, zero regressions/incomplete; fixed scope/references.

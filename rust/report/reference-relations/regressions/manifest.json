@@ -1,0 +1,50 @@
+[
+  {
+    "slug": "0055-06001A6B",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+    "token": "0x06001A6B",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0624-060012B8",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/System.Core.dll",
+    "token": "0x060012B8",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/mscorlib.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0895-06000619",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x06000619",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Memory.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Reflection.Metadata.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/netstandard.dll"
+    ],
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

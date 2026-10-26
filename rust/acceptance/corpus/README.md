@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_COPIES.md`: constructed value types and external value types as
   whole-value copies, and the three-state rule that makes an unresolved reference
   leave output byte-identical.
+- `REFERENCE_RELATIONSHIPS.md`: scoped base/interface assignments, metadata-backed
+  variance, exact foreign ancestor projection and original overload identity.
 - `MANAGED_LOCATIONS.md`: typed managed pointers, invariant byref operands,
   indirect storage operations, exact initonly field addresses and alias/snapshot gates.
 - `REFERENCE_CALL_FOUNDATION.md`: exact scoped external/reference calls,

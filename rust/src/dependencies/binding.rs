@@ -3,6 +3,7 @@
 
 mod members;
 mod presentation;
+pub(super) mod reference_relations;
 pub use members::{PropertyAccessor, ResolvedField, ResolvedMethod};
 
 use super::{

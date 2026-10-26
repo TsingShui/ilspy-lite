@@ -1165,6 +1165,13 @@ impl Writer<'_, '_> {
                     self.image.assignable(v.ty, ty.stack())?;
                     values.push(if ty.kind() == StackKind::Address {
                         format!("ref {}", v.name)
+                    } else if ty.kind() == StackKind::Ref && v.ty != ty {
+                        let formal = if let Ty::Class(token) = ty {
+                            crate::symbol_names::type_name(self.image, cildec::Token(token), true)?
+                        } else {
+                            ty.cs(self.image)?
+                        };
+                        format!("(({formal})({}))", v.name)
                     } else if ty == Ty::R4 {
                         format!("__cil_call_arg_r4({})", v.name)
                     } else {
@@ -1376,7 +1383,10 @@ impl Writer<'_, '_> {
                     }
                     owner => {
                         self.image.assignable(receiver.ty, owner)?;
-                        if receiver.ty == owner {
+                        if receiver.ty == owner
+                            || matches!((receiver.ty, owner), (Ty::StructuralRef(id), Ty::Class(definition))
+                            if self.image.open_self_definition(id) == Some(definition))
+                        {
                             format!("{}.{}", receiver.name, field.name)
                         } else {
                             // A cast keeps a hidden base field explicit, but a generic

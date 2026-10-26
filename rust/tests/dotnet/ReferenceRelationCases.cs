@@ -1,0 +1,79 @@
+// Copyright (c) 2026 Tsingshui
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this
+// software and associated documentation files (the "Software"), to deal in the Software
+// without restriction, including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+// to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+#if LIBRARY
+namespace RelationLibrary
+{
+    public interface IRoot { }
+    public interface IItem<T> { }
+    public class Base { public int Number; }
+    public class Middle : Base { }
+    public class Child : Middle, IRoot, IItem<string> { }
+    public class GenericBase<T> { public T Value; }
+    public class GenericChild<T> : GenericBase<T>, IItem<T> { }
+}
+#else
+namespace RelationCases
+{
+    public interface IItem<T> { }
+    public interface IRoot { }
+    public interface ISource<out T> { }
+    public interface IConsumer<in T> { }
+    public class Base<T> { public T Value; }
+    public class Child<T> : Base<T>, IItem<T>, IRoot { }
+    public class Swapped<A, B> : Base<B>, IItem<B> { }
+    public sealed class Closed : Child<string> { }
+    public sealed class Source : ISource<string> { }
+    public sealed class Consumer : IConsumer<object> { }
+    public class LocalForeign : RelationLibrary.Child { }
+    public class ClosedForeign : RelationLibrary.GenericBase<string> { }
+    public class Cell<T>
+    {
+        public T Value;
+        public T ReadCast(object input)
+        {
+            Cell<T> typed = input as Cell<T>;
+            return typed == null ? default : typed.Value;
+        }
+    }
+    public static class Ops
+    {
+        private static int AcceptClosedForeign(ClosedForeign input) => 37;
+        public static int NullForeignFormal() => AcceptClosedForeign(null);
+        public static int Pick(Base<string> input) => 11;
+        public static int Pick(Child<string> input) => 29;
+        public static int DeclaredOverload(Child<string> input) => Pick((Base<string>)input);
+        public static Base<T> Up<T>(Child<T> input) => input;
+        public static Base<B> Swap<A, B>(Swapped<A, B> input) => input;
+        public static Base<string> ClosedUp(Closed input) => input;
+        public static IItem<T> Interface<T>(Child<T> input) => input;
+        public static IRoot Root<T>(Child<T> input) => input;
+        public static IItem<B> SwappedInterface<A, B>(Swapped<A, B> input) => input;
+        public static ISource<object> Covariant(ISource<string> input) => input;
+        public static ISource<object> CovariantClosed(Source input) => input;
+        public static IConsumer<string> Contravariant(IConsumer<object> input) => input;
+        public static ISource<object> CovariantGeneric<T>(ISource<T> input) where T : class => input;
+        public static RelationLibrary.Base Foreign(RelationLibrary.Child input) => input;
+        public static RelationLibrary.IRoot ForeignInterface(RelationLibrary.Child input) => input;
+        public static RelationLibrary.IItem<string> ForeignGenericInterface(RelationLibrary.Child input) => input;
+        public static RelationLibrary.GenericBase<T> ForeignGeneric<T>(RelationLibrary.GenericChild<T> input) => input;
+        public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
+        public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
+    }
+}
+#endif

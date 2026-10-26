@@ -1,0 +1,33 @@
+{
+  "before": "report/managed-locations/corpus-scan-validated/baseline.json",
+  "after": "report/reference-relations/corpus-scan-final/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 298592,
+      "Decompiled": 472156
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "newly_recovered": 33355,
+  "gained_images": 197,
+  "regressions": 0,
+  "initial_regressions": 18,
+  "fallback_percent": 38.74054814284305,
+  "tests_passed": 405,
+  "behavior_drivers": 22,
+  "owned_fixture_comparisons_per_config": 143,
+  "owned_closed_selections_per_config": 36,
+  "mutants_per_config": 4,
+  "self_review": {
+    "samples": 10,
+    "equivalent": 1,
+    "crude_but_equivalent": 9,
+    "changed_semantic_suspect": 0
+  },
+  "third_party_execution": false,
+  "goal_met": false
+}

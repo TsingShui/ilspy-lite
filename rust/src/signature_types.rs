@@ -128,6 +128,17 @@ impl SignatureTypes {
             .ok_or_else(|| "unknown structural signature identity".into())
     }
 
+    pub fn signature(&self, id: TypeId) -> Result<(Vec<u8>, TypeContext)> {
+        let key = &self.entry(id)?.signature;
+        Ok((
+            key.bytes.clone(),
+            TypeContext {
+                type_scope: key.type_scope,
+                method_scope: key.method_scope,
+            },
+        ))
+    }
+
     pub fn is_vector(&self, id: TypeId) -> Result<bool> {
         Ok(self.entry(id)?.signature.bytes.first() == Some(&0x1d))
     }

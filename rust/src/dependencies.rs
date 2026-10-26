@@ -236,6 +236,7 @@ pub struct DependencyContext {
     kinds: BTreeMap<usize, AssemblyKind>,
     discovery_incomplete: bool,
     enum_types: ExternalValueCache,
+    reference_registry: std::cell::RefCell<Option<binding::reference_relations::CachedRegistry>>,
 }
 
 impl DependencyContext {
@@ -286,6 +287,7 @@ impl DependencyContext {
             candidates: Vec::new(),
             sources: BTreeMap::new(),
             enum_types: std::cell::RefCell::new(BTreeMap::new()),
+            reference_registry: std::cell::RefCell::new(None),
             limits,
             search_evidence: Vec::new(),
             search_diagnostics: diagnostic.into_iter().collect(),
