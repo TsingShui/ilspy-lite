@@ -2956,9 +2956,6 @@ impl<'a> Image<'a> {
         Ok(crate::ir::Ty::ExternalClass(member.class.0))
     }
 
-    /// Local reference-class allocation: a fresh identity plus one exact
-    /// constructor call. Value types, abstract/generic owners and external
-    /// constructors stay out of this subset.
     /// Receiver and supplied arguments for a member reference whose parent is a
     /// local class instantiation.
     ///
@@ -2985,8 +2982,13 @@ impl<'a> Image<'a> {
         let definition = self.local_type_definition(*def)?.ok_or(
             "constructed member needs a local definition; external constructed members need dependency facts",
         )?;
-        if self.md.tables().type_def(definition.rid())?.flags & (0x20 | 0x80) != 0 {
-            return Err("constructed member parent must be a concrete class".into());
+        // Abstract classes still declare callable members and base constructors.
+        // Only allocation requires a concrete owner; that check is separate.
+        if self.md.tables().type_def(definition.rid())?.flags & 0x20 != 0 {
+            return Err(
+                "constructed member parent must be a class; interface dispatch needs IL fallback"
+                    .into(),
+            );
         }
         let open_self = args
             .iter()

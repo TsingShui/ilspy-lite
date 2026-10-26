@@ -91,6 +91,8 @@ mod external_properties;
 #[path = "external_values.rs"]
 mod external_values;
 
+#[path = "abstract_members.rs"]
+mod abstract_members;
 #[path = "external_allocations.rs"]
 mod external_allocations;
 #[path = "floats.rs"]

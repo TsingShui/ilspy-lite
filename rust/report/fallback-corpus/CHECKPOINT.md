@@ -7,7 +7,24 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: external properties
+## Current verified state: abstract constructed member owners
+
+- `report/abstract-members/corpus-scan/baseline.json`: 343,545 Decompiled /
+  427,203 Partial of 770,748 (55.42707%), 34/319 passing, zero incomplete.
+  Gain +4,751 in 50 images, zero regressions; all gains were first-blocked by
+  the concrete-class requirement in constructed member lookup.
+- Abstract member lookup is allowed, but abstract allocation remains refused by
+  its separate guard. No dispatch, receiver or generic-substitution rule changed.
+- 377 Rust tests; 22 owned behavior comparisons per configuration and two
+  rejected dispatch mutants. Prior generic and allocation gates still pass.
+- Four pre-fix ILSpy/ours/IL audits drove the design; eight post-fix triples
+  self-reviewed with no semantic differences found for this admission change.
+- No subagents, no third-party execution; commit only, no push.
+- Evidence: `acceptance/corpus/ABSTRACT_CONSTRUCTED_MEMBERS.md`,
+  `report/abstract-members/AUDIT.md`, `review/review-source.md`.
+- Next: audit remaining receiver/generic-member differences before another repair.
+
+## Previous verified state: external properties
 
 - Latest scan: `report/external-properties/corpus-scan/baseline.json`.
   338,794 Decompiled / 431,954 Partial, 770,748 bodies, 56.04348% unrecovered,

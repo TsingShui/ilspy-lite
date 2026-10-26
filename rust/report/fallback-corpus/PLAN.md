@@ -3,7 +3,16 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (external properties)
+## Current position (abstract constructed members)
+
+- 343,545 Decompiled / 427,203 Partial (55.42707%), 34/319 passing.
+- +4,751 in 50 images, zero regressions/incomplete. Abstract lookup is allowed;
+  abstract allocation remains rejected. No reference policy change.
+- 377 tests, 22 owned comparisons and two dispatch mutations per configuration;
+  eight corpus triples self-reviewed. OpenRA.Game/Common each gain four.
+- Audit first, then bounded repair. No subagents and no automatic push.
+
+## Previous position (external properties)
 
 - 338,794 Decompiled / 431,954 Partial (56.04348%); 34/319 images passing.
 - +2,704 in 73 images, zero regressions/incomplete; every gain from the special-name
