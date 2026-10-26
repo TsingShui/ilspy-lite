@@ -1,19 +1,16 @@
-# Per-milestone independent source review
+# Per-milestone source review
 
 Every capability milestone runs this before its recovery counts are treated as
-final. It is a goal constraint, not an optional extra.
+final. The user has replaced subagent review with direct audit and review by the
+main session. Record it as self-review, never as independent verification.
 
 ## Trigger and shape
 
 - Starts after the capability's owned E2E and behavior gate pass, and before the
   milestone numbers are written into a report as final.
-- Runs as an independent, read-only, async subagent: it must not block the next
-  slice, must not edit `rust/src`, and must not execute any third-party assembly.
-- Use an exec-capable agent (`delegate`, `scout` or `worker`) and require read-only
-  behaviour except for its own report file. The builtin `reviewer` has no shell
-  (`tools: read, grep, find, ls, watchdog_diff, contact_supervisor`), so it can only
-  judge pre-dumped files; prefer the exec-capable agents and keep `reviewer` as a
-  fallback when dumps are already on disk.
+- The main session compares saved output triples itself. No subagents are launched.
+  No third-party assembly is executed. Reports explicitly separate self-review
+  from owned-fixture behavioral validation.
 - Output: `rust/report/<slice>/review-source.md` plus whatever dumps it needs.
 
 ## Inputs
@@ -38,7 +35,8 @@ operations that were dropped, merged, moved across a branch/loop, or duplicated.
 
 ## Verdicts and consequences
 
-- EQUIVALENT / CRUDE-BUT-EQUIVALENT / SUSPECT, per sampled method.
+- EQUIVALENT / CRUDE-BUT-EQUIVALENT / SUSPECT / INSUFFICIENT-EVIDENCE,
+  per sampled method. Missing evidence never counts as semantic equivalence.
 - Crude is acceptable. Semantically different is not.
 - Any SUSPECT finding means the affected shape does not count toward recovery
   gains: either fix it, or demote that shape back to fallback and restore the
@@ -58,5 +56,5 @@ executed behavior as separate evidence.
 ## Tooling note
 
 The `il` subcommand accepts exactly `il <asm> --method <token>`; it rejects
-`--no-auto-references`. Dump source and IL to files before delegating to a
-reviewer that may have no shell tool.
+`--no-auto-references`. Retain source, ILSpy output and original IL together so
+another session can reproduce each verdict.

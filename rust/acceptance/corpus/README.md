@@ -154,12 +154,12 @@ generated output remain ignored and retain their original license boundaries.
   `LOCAL_ALLOCATION.md`, `REFERENCE_EQUALITY.md`, `CAST_SEMANTICS.md`: the implemented semantic slices, each with its owned
   evidence, mutation controls and same-scope recovery delta.
 - `CORE_TYPE_ROOTS.md`: qualified core roots and reference-marker classification.
-- `AGENT_ROLES.md`: who writes, who builds and scans, who reviews. The worker is the
-  only agent that edits product code; verification owns the build, the corpus scan,
-  the behaviour drivers and the ILSpy reference dumps; review judges our output
-  against ILSpy's output with the original IL as third evidence.
-- `REVIEW_PROTOCOL.md`: the required independent source review before a
-  milestone's counts are treated as final.
+- `AGENT_ROLES.md`: direct main-session workflow, ILSpy-first audit, owned behavior
+  gates, self-review, and commit-only version control.
+- `REVIEW_PROTOCOL.md`: source-review evidence before a milestone's counts are
+  treated as final; IL is the semantic authority, not ILSpy's appearance.
+- `EXCEPTION_REGIONS.md`: bounded catch/finally regions, validated transfers and
+  executable default output, with filters/faults kept as explicit fallbacks.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

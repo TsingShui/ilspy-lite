@@ -73,8 +73,8 @@ fn readable_fallback_keeps_complete_il_inside_its_method_and_class_body() {
         ),
         (
             include_bytes!("fixtures/release.bin").as_slice(),
-            "LiteSamples.ControlFlowSample",
-            "Divide",
+            "LiteSamples.RecordSample",
+            "PrintMembers",
         ),
     ] {
         let token = list_methods(bytes)

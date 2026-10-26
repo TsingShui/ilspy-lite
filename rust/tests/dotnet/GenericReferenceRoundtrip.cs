@@ -392,6 +392,11 @@ internal static partial class GenericReferenceRoundtrip
             GenericValueMain(args);
             return;
         }
+        if (args[1] == "--exception-check")
+        {
+            ExceptionMain(args);
+            return;
+        }
         if (args[1] == "--external-allocation-check")
         {
             ExternalAllocationMain(args);

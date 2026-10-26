@@ -76,6 +76,8 @@ mod dependency_output;
 mod enums;
 #[path = "equality.rs"]
 mod equality;
+#[path = "exception_regions.rs"]
+mod exception_regions;
 #[path = "exceptions.rs"]
 mod exceptions;
 #[path = "external.rs"]

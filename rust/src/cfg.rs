@@ -12,7 +12,11 @@ pub(crate) struct Block {
     pub successors: Vec<usize>,
 }
 
-pub(crate) fn build(instructions: &[Instruction], code_size: usize) -> Result<Vec<Block>> {
+pub(crate) fn build(
+    instructions: &[Instruction],
+    code_size: usize,
+    boundaries: &[u32],
+) -> Result<Vec<Block>> {
     if instructions.is_empty() {
         return Err("empty method body".into());
     }
@@ -22,6 +26,17 @@ pub(crate) fn build(instructions: &[Instruction], code_size: usize) -> Result<Ve
         .map(|(i, ins)| (ins.offset, i))
         .collect();
     let mut leaders = BTreeSet::from([0usize]);
+    // Exception clause boundaries are leaders even when no branch targets them.
+    for &boundary in boundaries {
+        if boundary as usize == code_size {
+            continue;
+        }
+        leaders.insert(
+            *positions
+                .get(&boundary)
+                .ok_or("EH clause boundary is not an instruction start")?,
+        );
+    }
     for (i, ins) in instructions.iter().enumerate() {
         let mut target = |offset: u32| -> Result<()> {
             leaders.insert(

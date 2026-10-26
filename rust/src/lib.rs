@@ -4,6 +4,7 @@
 mod cfg;
 mod dependencies;
 pub mod discovery_paths;
+mod eh;
 mod ir;
 mod lift;
 mod metadata;

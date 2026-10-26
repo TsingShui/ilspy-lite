@@ -1,0 +1,145 @@
+[
+  {
+    "slug": "0002-060003AD",
+    "assembly": "ICSharpCode.Decompiler.Tests",
+    "owner": "ICSharpCode.Decompiler.Tests.TestCases.Correctness.YieldReturnTest/<YieldReturnWithTryFinally>d__8",
+    "name": "System.IDisposable.Dispose",
+    "token": "0x060003AD",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/nunit.framework.dll"
+    ]
+  },
+  {
+    "slug": "0003-060021FE",
+    "assembly": "ICSharpCode.Decompiler",
+    "owner": "ICSharpCode.Decompiler.TypeSystem.InheritanceHelper/<GetBaseMembers>d__1",
+    "name": "System.IDisposable.Dispose",
+    "token": "0x060021FE",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ]
+  },
+  {
+    "slug": "0004-06000138",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.Binder",
+    "name": "BindElementAccess",
+    "token": "0x06000138",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ]
+  },
+  {
+    "slug": "0005-0600058E",
+    "assembly": "Microsoft.CodeAnalysis",
+    "owner": "Microsoft.Cci.PdbWriter",
+    "name": "Finalize",
+    "token": "0x0600058E",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ]
+  },
+  {
+    "slug": "0006-06000B93",
+    "assembly": "Mono.Cecil",
+    "owner": "Mono.Cecil.ModuleDefinition/<GetTypes>d__129",
+    "name": "System.IDisposable.Dispose",
+    "token": "0x06000B93",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ]
+  },
+  {
+    "slug": "0007-06000F0C",
+    "assembly": "Newtonsoft.Json",
+    "owner": "Newtonsoft.Json.Linq.Extensions/<Values>d__11`2",
+    "name": "System.IDisposable.Dispose",
+    "token": "0x06000F0C",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Data.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.Serialization.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.Linq.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ]
+  },
+  {
+    "slug": "0008-06000386",
+    "assembly": "System.Collections.Immutable",
+    "owner": "System.Linq.ImmutableArrayExtensions/<SelectManyIterator>d__36`3",
+    "name": "System.IDisposable.Dispose",
+    "token": "0x06000386",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+    "references": []
+  },
+  {
+    "slug": "0009-06000ADD",
+    "assembly": "System.Reflection.Metadata",
+    "owner": "System.Reflection.Internal.ByteArrayMemoryProvider",
+    "name": "Finalize",
+    "token": "0x06000ADD",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Reflection.Metadata.dll",
+    "references": []
+  },
+  {
+    "slug": "0019-06000001",
+    "assembly": "catch",
+    "owner": "Program",
+    "name": "Main",
+    "token": "0x06000001",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/catch.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll"
+    ]
+  },
+  {
+    "slug": "1041-06000459",
+    "assembly": "OpenRA.Game",
+    "owner": "OpenRA.ObjectCreator",
+    "name": "Finalize",
+    "token": "0x06000459",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "references": []
+  },
+  {
+    "slug": "1042-0600193D",
+    "assembly": "OpenRA.Mods.Common",
+    "owner": "OpenRA.Mods.Common.Traits.PlayerResources",
+    "name": "GiveCash",
+    "token": "0x0600193D",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+    ]
+  }
+]

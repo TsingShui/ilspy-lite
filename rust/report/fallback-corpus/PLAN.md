@@ -3,7 +3,18 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Position (after the boxing milestone)
+## Current position (bounded EH)
+
+- 336,090 Decompiled / 434,658 Partial; 770,748 bodies, 56.39431% unrecovered.
+- 34/319 body images pass; zero incomplete; +1,191 in 119 images, zero regressions.
+- Evidence: `report/exception-regions/REPORT.md`; 369 tests, owned behavior
+  and four mutation controls pass in both fixture configurations.
+- Main-session audit, implementation and review only; no subagents.
+- Audit remaining blockers against ILSpy before selecting a repair. Unsupported
+  inputs remain recorded and denominators are not silently changed.
+- Commit validated slices; push only on explicit request.
+
+## Historical position (before bounded EH)
 
 | quantity | value |
 |---|---:|

@@ -649,15 +649,20 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         return "// Unreadable rendered body; see --details.".into();
     };
     let body = body.strip_suffix("}\n").unwrap_or(body);
-    let lines = body
+    let lines: Vec<String> = body
         .lines()
         .map(str::trim)
         .filter(|line| !line.starts_with("//"))
         .map(str::to_owned)
         .collect();
-    let mut lines = compact_lines(lines);
-    // Edge structuring can expose further adjacent immutable copy chains.
-    lines = compact_lines(lines);
+    // Exception regions keep their lexical boundaries and snapshot lifetimes.
+    // Flat-block compaction is not applied across runtime handler entries.
+    let lines = if lines.iter().any(|line| line == "try {") {
+        lines
+    } else {
+        let lines = compact_lines(lines);
+        compact_lines(lines)
+    };
     lines
         .into_iter()
         .map(|line| rewrite(&line, names) + "\n")

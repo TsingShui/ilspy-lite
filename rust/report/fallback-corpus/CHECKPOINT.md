@@ -7,7 +7,33 @@
 
 Goal: mvouhw7y-679jgb
 
-## Authoritative state (external facts, option C)
+## Current verified state: bounded EH regions
+
+- Work continues directly in the main session. No subagents; audit ILSpy before
+  repairs; original IL is the correctness basis. Commit validated slices, do not
+  push without an explicit request.
+- `report/exception-regions/corpus-scan/baseline.json`: 336,090 Decompiled /
+  434,658 Partial of 770,748 bodies (56.39431% unrecovered), 34/319 passing,
+  0 incomplete. Compared with the external-field baseline: +1,191 in 119 images,
+  zero regressions; every gain was previously blocked by EH/data sections.
+- Actual lexical try/catch/finally replaces flat handler annotations. Filters,
+  faults, custom catch types and unsupported layouts stay explicit fallbacks.
+- 369 tests pass, clippy warnings denied, fmt clean. Default readable owned
+  carriers: 39 comparisons per fixture configuration; four semantic mutations
+  rejected for finally effects, handler result, rethrow and exception identity.
+- Eleven corpus triples self-reviewed against ILSpy and original IL, no EH
+  differences found. This is self-review, not independent verification; no
+  third-party code executed.
+- The original exception-object tests/fixtures are preserved; region work has
+  separate fixtures. Scalar addresses are NOT collapsed into value snapshots.
+- Current evidence: `acceptance/corpus/EXCEPTION_REGIONS.md`,
+  `report/exception-regions/AUDIT.md`, `REPORT.md`, `review/review-source.md`.
+  HANDOFF and sections below are historical and may contain superseded numbers.
+- Next: audit the remaining external-call/value-receiver blockers before choosing
+  the next small repair. Do not treat a failed audit command as ILSpy failure or
+  silently change corpus denominators.
+
+## Historical state (external facts, option C)
 
 - Decision C is recorded in rust/acceptance/corpus/EXTERNAL_TYPE_FACTS.md and
   implemented: every scan now receives exactly the references its image declares, and

@@ -2901,13 +2901,34 @@ impl<'a> Image<'a> {
         self.type_reference(t, 0)
     }
 
+    /// A bounded set of core catch types whose runtime identities are fixed.
+    pub(crate) fn handler_type_name(&self, token: Token) -> Result<String> {
+        let name = self
+            .core_type_name(token)
+            .map_err(|_| "EH catch type needs an admitted core exception identity")?;
+        if !matches!(
+            name,
+            "Exception"
+                | "SystemException"
+                | "ArithmeticException"
+                | "DivideByZeroException"
+                | "OverflowException"
+                | "ArgumentException"
+                | "ArgumentNullException"
+                | "ArgumentOutOfRangeException"
+                | "NullReferenceException"
+                | "InvalidOperationException"
+                | "IndexOutOfRangeException"
+        ) {
+            return Err("EH catch type needs an admitted core exception identity".into());
+        }
+        Ok(format!("global::System.{name}"))
+    }
+
     pub fn external_class_name(&self, token: u32) -> Result<String> {
         self.external_class_context(token)?;
-        if self
-            .core_type_name(Token(token))
-            .is_ok_and(|name| name == "ArgumentOutOfRangeException")
-        {
-            return self.core_exception_name(token);
+        if let Ok(name) = self.handler_type_name(Token(token)) {
+            return Ok(name);
         }
         Ok(format!("__cil_type_{token:08X}"))
     }

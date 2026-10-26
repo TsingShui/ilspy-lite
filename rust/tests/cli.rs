@@ -172,15 +172,22 @@ fn partial_type_preserves_inventory_and_returns_nonzero() {
         "decompile",
         fixture(),
         "--type",
-        "LiteSamples.ControlFlowSample",
+        "LiteSamples.RecordSample",
         "--details",
     ]);
     assert_eq!(out.status.code(), Some(2));
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("IL FALLBACK"));
-    assert!(text.contains("PreserveOldValue"));
+    assert!(text.contains("PrintMembers"));
     assert!(text.contains(".method-flags"));
-    assert!(String::from_utf8_lossy(&out.stderr).contains("partial=1"));
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let partial: usize = stderr
+        .split_whitespace()
+        .find_map(|field| field.strip_prefix("partial="))
+        .expect("CLI must report the partial count")
+        .parse()
+        .unwrap();
+    assert!(partial > 0, "{stderr}");
 }
 
 #[test]

@@ -10,7 +10,7 @@ use cildec::{FlowControl, Instruction, MethodBody, Operand};
 use std::collections::{BTreeSet, HashSet, VecDeque};
 
 pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Result<String> {
-    if !body.exception_handlers.is_empty() || !body.unknown_sections.is_empty() {
+    if !body.unknown_sections.is_empty() {
         return Err("exception/data sections need IL fallback".into());
     }
     let row = image.row(token)?;
@@ -102,57 +102,67 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     {
         return Err("constructor receiver reassignment needs IL fallback".into());
     }
-    let blocks = crate::cfg::build(&instructions, body.code.len())?;
+    let boundaries = crate::eh::boundaries(body, &instructions)?;
+    let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
+    let regions = crate::eh::parse(image, body, &instructions)?;
     let mut entries: Vec<Option<Vec<Ty>>> = vec![None; blocks.len()];
     entries[0] = Some(Vec::new());
     let mut queue = VecDeque::from([0]);
-    while let Some(n) = queue.pop_front() {
-        let stack = entries[n]
-            .as_ref()
-            .unwrap()
-            .iter()
-            .enumerate()
-            .map(|(s, &ty)| Value {
-                name: format!("s{n}_{s}"),
-                ty,
-            })
-            .collect();
-        let mut w = Writer {
-            image,
-            type_context: context,
-            stack,
-            lines: Vec::new(),
-            next: 0,
-            args: args.clone(),
-            locals: locals.clone(),
-            ret,
-            constructor_owner,
-            static_constructor,
-            original_this: HashSet::new(),
-            structural_types: BTreeSet::new(),
-            enum_types: BTreeSet::new(),
-        };
-        for ins in &instructions[blocks[n].start..blocks[n].end] {
-            w.instruction(ins)?;
-            if w.stack.len() > usize::from(body.max_stack) {
-                return Err("declared maxstack exceeded".into());
-            }
-        }
-        let exit: Vec<_> = w.stack.iter().map(|v| v.ty).collect();
-        if !blocks[n].successors.is_empty() && exit.iter().any(|ty| ty.kind() == StackKind::Address)
-        {
-            return Err("managed element address crossing a block needs IL fallback".into());
-        }
-        for &s in &blocks[n].successors {
-            if let Some(existing) = &entries[s] {
-                if existing != &exit {
-                    return Err("incompatible evaluation stacks at join".into());
+    loop {
+        while let Some(n) = queue.pop_front() {
+            let stack = entries[n]
+                .as_ref()
+                .unwrap()
+                .iter()
+                .enumerate()
+                .map(|(s, &ty)| Value {
+                    name: format!("s{n}_{s}"),
+                    ty,
+                })
+                .collect();
+            let mut w = Writer {
+                image,
+                type_context: context,
+                stack,
+                lines: Vec::new(),
+                next: 0,
+                args: args.clone(),
+                locals: locals.clone(),
+                ret,
+                constructor_owner,
+                static_constructor,
+                original_this: HashSet::new(),
+                structural_types: BTreeSet::new(),
+                enum_types: BTreeSet::new(),
+            };
+            for ins in &instructions[blocks[n].start..blocks[n].end] {
+                w.instruction(ins)?;
+                if w.stack.len() > usize::from(body.max_stack) {
+                    return Err("declared maxstack exceeded".into());
                 }
-            } else {
-                entries[s] = Some(exit.clone());
-                queue.push_back(s);
+            }
+            let exit: Vec<_> = w.stack.iter().map(|v| v.ty).collect();
+            if !blocks[n].successors.is_empty()
+                && exit.iter().any(|ty| ty.kind() == StackKind::Address)
+            {
+                return Err("managed element address crossing a block needs IL fallback".into());
+            }
+            for &s in &blocks[n].successors {
+                if let Some(existing) = &entries[s] {
+                    if existing != &exit {
+                        return Err("incompatible evaluation stacks at join".into());
+                    }
+                } else {
+                    entries[s] = Some(exit.clone());
+                    queue.push_back(s);
+                }
             }
         }
+        let seeded = regions.seed_handlers(&blocks, &mut entries);
+        if seeded.is_empty() {
+            break;
+        }
+        queue.extend(seeded);
     }
     if entries.iter().any(Option::is_none) {
         return Err("unreachable basic block requires IL fallback".into());
@@ -172,6 +182,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         structural_types: BTreeSet::new(),
         enum_types: BTreeSet::new(),
     };
+    let mut previous = None;
     for (n, b) in blocks.iter().enumerate() {
         writer.stack = entries[n]
             .as_ref()
@@ -183,7 +194,12 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 ty,
             })
             .collect();
+        writer.lines.extend(regions.transition(previous, b.offset));
+        previous = Some(b.offset);
         writer.lines.push(format!("IL_{:04X}: ;", b.offset));
+        if let Some(variable) = regions.catch_variable(b.offset) {
+            writer.lines.push(format!("s{n}_0 = {variable};"));
+        }
         for ins in &instructions[b.start..b.end] {
             writer.instruction(ins)?;
         }
@@ -200,9 +216,24 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             for slot in 0..stack.len() {
                 lines.push(format!("s{successor}_{slot} = e{n}_{successor}_{slot};"));
             }
-            lines.push(format!("goto IL_{:04X};", blocks[successor].offset));
+            let target = blocks[successor].offset;
+            if regions.enters_try(last.offset, target) {
+                if successor != n + 1 || !stack.is_empty() {
+                    return Err("EH entry must fall through with an empty stack".into());
+                }
+            } else {
+                lines.push(format!("goto IL_{target:04X};"));
+            }
             Ok(lines)
         };
+        if last.opcode.canonical().name() == "endfinally" {
+            let index = regions
+                .finally_end(last.offset)
+                .ok_or("EH endfinally outside finally")?;
+            writer
+                .lines
+                .push(format!("goto __cil_finally_end_{index};"));
+        }
         match last.info().flow {
             FlowControl::Return | FlowControl::Throw => {}
             FlowControl::CondBranch => {
@@ -232,6 +263,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             _ => writer.lines.extend(edge(b.successors[0], &writer.stack)?),
         }
     }
+    writer
+        .lines
+        .extend(regions.transition(previous, body.code.len() as u32));
     let parameters = writer
         .args
         .iter()
@@ -1349,6 +1383,31 @@ impl Writer<'_, '_> {
                     ),
                 };
                 self.push(stack_ty, text)?;
+            }
+            "leave" | "leave.s" => {
+                self.lines.push("// leave: discards the evaluation stack; enclosing finally regions run innermost first, then control continues at the label.".into());
+                self.stack.clear();
+            }
+            "endfinally" => {
+                if !self.stack.is_empty() {
+                    return Err("endfinally with a non-empty stack needs IL fallback".into());
+                }
+                // The emitter transfers to the end of this lexical finally; the
+                // runtime resumes its original normal or exceptional continuation.
+            }
+            "endfilter" => {
+                let value = self.pop()?;
+                if !matches!(value.ty, Ty::Bool | Ty::I4 | Ty::U4) {
+                    return Err("endfilter needs an integer or boolean result".into());
+                }
+                return Err("EH filters need filter-region lowering".into());
+            }
+            "rethrow" => {
+                if !self.stack.is_empty() {
+                    return Err("rethrow with a non-empty stack needs IL fallback".into());
+                }
+                self.lines.push("// rethrow: `throw;` re-raises the original exception object, so identity and the recorded trace are preserved and no catch selection runs again for this group.".into());
+                self.lines.push("throw;".into());
             }
             _ => {
                 return Err(format!(

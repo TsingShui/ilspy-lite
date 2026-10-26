@@ -57,12 +57,24 @@ fn control_flow_calls_and_old_values_are_supported() {
 }
 
 #[test]
-fn exceptions_are_explicit_fallback_not_invented_source() {
+fn exceptions_are_lowered_with_explicit_region_evidence() {
+    // Runtime regions must survive in both output views, not just the IL evidence.
     let result = ilspy_lite::decompile(RELEASE, token("Divide")).unwrap();
-    assert_eq!(result.status, ilspy_lite::Status::Partial);
-    assert!(result.text.contains("IL FALLBACK"));
-    assert!(result.text.contains(".try"));
-    assert!(result.text.contains("endfinally"));
+    assert_eq!(
+        result.status,
+        ilspy_lite::Status::Decompiled,
+        "{}",
+        result.text
+    );
+    assert!(result.text.contains("try {"), "{}", result.text);
+    assert!(result.text.contains("finally {"), "{}", result.text);
+    assert!(
+        !result.text.contains("__cil_endfinally("),
+        "{}",
+        result.text
+    );
+    let il = ilspy_lite::disassemble(RELEASE, token("Divide")).unwrap();
+    assert!(il.contains(".try"));
 }
 
 #[test]
