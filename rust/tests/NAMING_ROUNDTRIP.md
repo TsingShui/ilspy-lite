@@ -16,6 +16,17 @@ It selects raw metadata name `NamingCases.Factory/<>c__DisplayClass0_0` in both
 `naming-release.bin` and `naming-debug.bin`, using only default `decompile --type`
 output, never detailed statements or the source fixture as an implementation.
 
+## Declaration/reference compilation
+
+The separate `python3 rust/tests/naming-declarations.py --mutate-collision`
+gate compiles twelve actual complete default class outputs: both fixture
+configurations with ordinary names, an encoded generated name versus its literal
+user spelling, a dot inside one metadata type-name record, UTF-8 names, a keyword
+namespace, and the combined generated/namespace case. The compiler references
+only installed framework assemblies. This is syntax/type-reference evidence,
+not runtime behavior. Both intentionally conflated alias mutants must fail
+specifically with compiler diagnostic CS0102.
+
 ## Recovered source and independence
 
 The complete CLI stdout, including constructor, method bodies, and diagnostic
