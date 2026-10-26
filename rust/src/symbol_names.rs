@@ -14,6 +14,10 @@ pub(crate) fn ident(raw: &str) -> String {
     }
 }
 
+pub(crate) fn aliased(raw: &str) -> bool {
+    !simple(raw) || reserved(raw)
+}
+
 fn bare(raw: &str) -> String {
     if simple(raw) && !reserved(raw) {
         raw.into()

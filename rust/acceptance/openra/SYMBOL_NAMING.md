@@ -36,6 +36,20 @@ Only ordinary existing shapes may become supported. Static initialization,
 unsupported types/instructions, generic/value-type/EH admission and new ordinary
 allocation remain outside this naming change.
 
+## Scoped naming corrections
+
+The generated-owner constructor gate is green in Debug and Release. Type paths
+are constructed from scoped TypeDef/TypeRef rows, not parsed display labels.
+The shared identifier rule reserves tool alias prefixes so a literal user name
+cannot impersonate an encoded generated name. Actual public declaration and
+field-reference tests reproduced the collision and mismatched path before the
+correction; logs use `naming-reserved-alias-*` and `naming-type-reference-*`.
+
+Presentation aliases are not source lookup names. A real external property named
+`__cil_X` must retain the exact call, rather than accessing an invented encoded
+property. That mutation reproduced the wrong access and is green after the
+source-binding fence; logs use `naming-property-alias-*`.
+
 ## Verification contract
 
 Use public byte/context/CLI output as the test interface. Preserve scoped tokens

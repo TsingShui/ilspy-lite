@@ -63,6 +63,9 @@ impl DependencyContext {
             }
         }
         identifier(&property.name)?;
+        if crate::symbol_names::aliased(&property.name) {
+            return Err("property alias is not a proven source name".into());
+        }
         if property.owner.flags & 0x20 != 0 || !property.owner.generic_arguments.is_empty() {
             return Err("property syntax needs a nongeneric class owner".into());
         }

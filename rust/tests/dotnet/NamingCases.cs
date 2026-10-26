@@ -31,6 +31,17 @@ public static class Factory
     }
 }
 
+public static class CollisionHost
+{
+    public sealed class Plain { public int Value; }
+    public sealed class __name_3C583E5F5F { public int Marker; }
+    public sealed class Holder
+    {
+        public Plain Left;
+        public __name_3C583E5F5F Right;
+    }
+}
+
 public sealed class Special
 {
     public static int Value;

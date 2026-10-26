@@ -69,6 +69,26 @@ fn reserved_property_identifiers_are_escaped_after_relationship_binding() {
 }
 
 #[test]
+fn a_presentation_alias_cannot_rename_a_proven_runtime_property_lookup() {
+    let input = replace_bytes(INPUT, b"Enabled", b"__cil_X");
+    let library = replace_bytes(LIBRARY, b"Enabled", b"__cil_X");
+    let mut context = DependencyContext::new(input.clone()).unwrap();
+    context
+        .add_reference("reserved property name", library)
+        .unwrap();
+    let actual = context
+        .decompile(method_token(&input, "Read"), OutputStyle::Readable)
+        .unwrap();
+    assert_eq!(actual.status, ilspy_lite::Status::Decompiled);
+    assert!(
+        actual.text.contains("__cil_memberref_call_"),
+        "{}",
+        actual.text
+    );
+    assert!(!actual.text.contains("base.__name_"), "{}", actual.text);
+}
+
+#[test]
 fn helper_like_user_member_names_and_string_literals_are_not_property_call_sites() {
     let bytes = include_bytes!("fixtures/property-release.bin");
     let md = cildec::PeImage::parse(bytes).unwrap().metadata().unwrap();

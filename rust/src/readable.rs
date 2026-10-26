@@ -4,6 +4,7 @@
 use crate::{
     DecompiledMethod, Result, Status,
     metadata::{Image, SelectedType},
+    symbol_names::{ident, keyword},
 };
 mod post_decrement;
 mod property;
@@ -1136,107 +1137,6 @@ fn rewrite(text: &str, names: &BTreeMap<String, String>) -> String {
     out
 }
 
-fn ident(name: &str) -> String {
-    if crate::metadata::identifier(name).is_err() {
-        return format!(
-            "__name_{}",
-            name.bytes().map(|b| format!("{b:02X}")).collect::<String>()
-        );
-    }
-    if keyword(name) {
-        format!("@{name}")
-    } else {
-        name.into()
-    }
-}
-fn keyword(name: &str) -> bool {
-    matches!(
-        name,
-        "class"
-            | "namespace"
-            | "event"
-            | "base"
-            | "this"
-            | "ref"
-            | "out"
-            | "in"
-            | "return"
-            | "new"
-            | "default"
-            | "switch"
-            | "case"
-            | "goto"
-            | "if"
-            | "else"
-            | "while"
-            | "for"
-            | "do"
-            | "break"
-            | "continue"
-            | "public"
-            | "private"
-            | "protected"
-            | "internal"
-            | "static"
-            | "readonly"
-            | "const"
-            | "void"
-            | "bool"
-            | "int"
-            | "uint"
-            | "long"
-            | "ulong"
-            | "float"
-            | "double"
-            | "string"
-            | "object"
-            | "null"
-            | "true"
-            | "false"
-            | "checked"
-            | "unchecked"
-            | "throw"
-            | "try"
-            | "catch"
-            | "finally"
-            | "using"
-            | "struct"
-            | "interface"
-            | "enum"
-            | "delegate"
-            | "operator"
-            | "params"
-            | "virtual"
-            | "override"
-            | "sealed"
-            | "abstract"
-            | "extern"
-            | "unsafe"
-            | "fixed"
-            | "sizeof"
-            | "typeof"
-            | "is"
-            | "as"
-            | "lock"
-            | "get"
-            | "set"
-            | "byte"
-            | "sbyte"
-            | "char"
-            | "short"
-            | "ushort"
-            | "decimal"
-            | "foreach"
-            | "volatile"
-            | "explicit"
-            | "implicit"
-            | "stackalloc"
-            | "__arglist"
-            | "__makeref"
-            | "__reftype"
-            | "__refvalue"
-    )
-}
 fn line(out: &mut String, indent: usize, value: &str) {
     out.push_str(&"    ".repeat(indent));
     out.push_str(value);
@@ -1268,12 +1168,7 @@ fn named_type_with_owners(
             method,
         );
     }
-    let names = cildec::Names::new(&image.md).try_token(token)?;
-    let name = names
-        .strip_prefix('[')
-        .and_then(|s| s.split_once(']').map(|(_, n)| n))
-        .unwrap_or(&names);
-    Ok(name.replace('/', "."))
+    crate::symbol_names::type_name(&image.md, token, false)
 }
 fn cs_type(image: &Image<'_>, ty: &Type<'_>, owner: u32, method: u32) -> Result<String> {
     Ok(match ty {
