@@ -1,5 +1,11 @@
 # Frozen naming: actual-default Object-only constructors
 
+This original bounded gate retains its own exclusions. The subsequent
+[singleton](FROZEN_NAMING_SINGLETONS.md) and
+[argument constructor](FROZEN_NAMING_ITERATOR_CONSTRUCTORS.md) gates execute the
+additional bodies; those exclusions are not unexecuted bodies in the final
+naming acceptance.
+
 Optional offline test, not final naming-goal completion. No corpus is checked in.
 From the repository root, with the existing .NET 10 SDK/reference pack/runtime in
 `~/.dotnet10` (or `DOTNET_ROOT`) and Cargo's existing offline cache:

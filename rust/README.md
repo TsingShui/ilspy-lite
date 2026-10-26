@@ -79,7 +79,7 @@ The unchanged twenty-class corpus improves from 2 to 25 supported bodies out of
 77; 52 still retain IL fallback. This does not add lambda/iterator desugaring,
 generic/value/EH bodies or new type/call semantics. See
 [symbol naming acceptance](acceptance/openra/SYMBOL_NAMING.md) for per-class and
-per-method evidence, executed cases and the five supported-but-unexecuted methods
+per-method evidence and bounded execution cases for all 27 supported methods
 across the twenty plus three separate supplemental owner trees.
 
 ### Automatic static dependencies

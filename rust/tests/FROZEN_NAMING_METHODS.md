@@ -1,5 +1,9 @@
 # Frozen naming: scalar method execution
 
+This original bounded gate retains its own exclusions. The subsequent
+[singleton-owner gate](FROZEN_NAMING_SINGLETONS.md) executes the additional body;
+that exclusion is not an unexecuted body in the final naming acceptance.
+
 Optional offline gate, not whole-class/game or naming-goal completion. It adds no
 production admission and does not modify the constructor gate.
 

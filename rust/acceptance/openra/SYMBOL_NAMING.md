@@ -106,8 +106,9 @@ AST/SSA framework was introduced.
 
 ## Integrated frozen results
 
-Production naming fixes through `015afc66e`; execution-gate integration at
-`3de7df578`. Subsequent report/document changes do not change body admission.
+Production naming fixes through `015afc66e`; initial execution-gate integration
+at `3de7df578`, followed by corrective iterator/singleton gates at `4d541fb0a`
+and `8d2952baa`. These test/report changes do not change body admission.
 The actual automatic and explicit outputs pass **20/20** frozen static selections
 and **3/3** separate supplemental selections, including independent declarations,
 ownership, nesting and method-owned complete fallback checks.
@@ -133,15 +134,15 @@ unchanged manifests and per-method report.
 | Selection | TypeDef / owner suffix | D/P | Executed methods |
 |---|---|---:|---:|
 | F1 | 02000B65 LatencyTooltipLogic/DisplayClass0_1 | 1/1 | 1 |
-| F2 | 02000F97 WithSpriteBodyInfo/<>c | 2/2 | 0 |
+| F2 | 02000F97 WithSpriteBodyInfo/<>c | 2/2 | 2 |
 | F3 | 020003E1 DamagedByTerrain | 0/2 | 0 |
 | F4 | 02000514 ProximityCapturable | 1/4 | 1 |
 | F5 | 0200047E MustBeDestroyed | 1/0 | 1 |
 | F6 | 02000CCC BaseBuilderQueueManager/DisplayClass23_1 | 1/1 | 1 |
 | F7 | 02000A38 AnonymousProfileTooltipLogic/DisplayClass0_0 | 1/1 | 1 |
 | F8 | 020000EB ProductionProperties | 1/3 | 1 |
-| F9 | 020003BB ZipFileLoader/ReadOnlyZipFile/get_Contents iterator | 2/7 | 1 |
-| F10 | 02000858 UnhardcodeBaseBuilderBotModule/BeforeUpdateActors iterator | 3/5 | 2 |
+| F9 | 020003BB ZipFileLoader/ReadOnlyZipFile/get_Contents iterator | 2/7 | 2 |
+| F10 | 02000858 UnhardcodeBaseBuilderBotModule/BeforeUpdateActors iterator | 3/5 | 3 |
 | F11 | 02000714 WithHarvestOverlay | 5/6 | 5 |
 | F12 | 020002EA Widget/DisplayClass28_0 | 1/1 | 1 |
 | F13 | 02000462 GivesExperienceMultiplier | 0/2 | 0 |
@@ -150,7 +151,7 @@ unchanged manifests and per-method report.
 | F16 | 020007A0 SimpleTeleport | 0/2 | 0 |
 | F17 | 02000B5C IntroductionPromptLogic/DisplayClass6_0 | 1/4 | 1 |
 | F18 | 02000B36 DownloadPackageLogic/DisplayClass20_0 | 2/2 | 2 |
-| F19 | 02000985 DefaultSpriteSequence/<>c | 1/2 | 0 |
+| F19 | 02000985 DefaultSpriteSequence/<>c | 1/2 | 1 |
 | F20 | 020008BA SkirmishLogic/DisplayClass1_1 | 1/1 | 1 |
 | S1 | 02000ABB GameSaveBrowserLogic/DisplayClass31_0 | 1/1 | 1 |
 | S2 | 02000A29 VideoPlayerWidget/DisplayClass26_1 | 1/1 | 1 |
@@ -196,21 +197,36 @@ Rust/static. All GPL-derived generated bodies remain in ignored reports.
   copied poststate. Proximity success, Actor/world initialization and its
   successful post-base write remain unproved.
 
-Thus **22 of 27 supported methods across all 23 trees have bounded execution
-cases** (20 of 25 in frozen20). Supported but NOT executed:
+The first completion audit rejected five static-only exclusions. That rejection
+was addressed with execution, not by weakening the goal or changing admission:
 
-1. WithSpriteBodyInfo/<>c ctor `0600468C` and constant method `0600468E`, and
-   DefaultSpriteSequence/<>c ctor `06002C76`: their owner initializers allocate
-   selected-original singleton implementations. Initializers are inspected and
-   excluded, never used as a recovered factory/leaf.
-2. Iterator argument constructors Game `06001477` and Common `0600276F`:
-   state/thread-identity setup is outside the field-free constructor gate. Their
-   actual output and complete original IL are retained, but no runtime
-   equivalence is claimed. The iterator as a whole is not reconstructed.
+- [Iterator argument constructors](../../tests/FROZEN_NAMING_ITERATOR_CONSTRUCTORS.md):
+  Game `06001477` and Common `0600276F` pass **280 pairs**, including **28 null
+  pairs**, on two distinct runtime threads. Four compiled state/thread-store
+  mutants fail specifically at runtime. One disclosed accessor-syntax adaptation
+  compiles the actual default statements; loaded IL proves the exact same core
+  getter and Object/state/getter/thread-store order. This does not reconstruct
+  the iterator or prove its full ABI.
+- [Singleton-owner fragments](../../tests/FROZEN_NAMING_SINGLETONS.md):
+  Common `0600468C`, `0600468E`, `06002C76` pass **48 pairs** and three compiled
+  runtime controls. The tiny original initializers are independently verified
+  and run only on the oracle side as a precondition. Recovered singleton setup
+  uses its own actual recovered constructor, not an original factory or copied
+  poststate. Positive body comparisons begin after both independent setups.
+  Constructor throw mutants execute during recovered preinitialization and
+  report that phase explicitly; they do not claim postinit comparisons. The
+  constant mutant reaches the postinit return comparison. This is not full
+  startup/type-initializer equivalence.
+
+**All 27 supported methods across all 23 trees now have bounded paired execution
+cases** (all 25 in frozen20 plus two supplemental constructors). There are no
+supported-body execution exclusions. Source spans, positive cases, mutation
+results and per-method limits are in the joined acceptance report. The additional
+five bodies contribute **328 pairs and seven compiled runtime controls**.
 
 The 56 Partial methods are not executed as recovered C#. They retain complete
 method-local evidence and their concrete first blocker in the per-method report.
-These limits are not hidden by the improved status count.
+Bounded cases do not prove every path/state, whole class or game behavior.
 
 ## Reproduction
 
@@ -223,6 +239,8 @@ python3 rust/tests/naming-declarations.py --mutate-collision
 python3 rust/tests/naming-roundtrip.py --mutate-store
 python3 rust/tests/frozen-naming-constructors.py --corpus "$PWD/rust/report/openra"
 python3 rust/tests/frozen-naming-methods.py --corpus "$PWD/rust/report/openra"
+python3 rust/tests/frozen-naming-iterator-constructors.py --corpus "$PWD/rust/report/openra"
+python3 rust/tests/frozen-naming-singletons.py --corpus "$PWD/rust/report/openra"
 python3 rust/acceptance/openra/validate_naming_samples.py \
   --cli rust/target/release/ilspy-lite --assemblies rust/report/openra/assemblies \
   --output rust/report/openra/naming-samples/new-report \
@@ -236,16 +254,20 @@ Existing provenance is reused; no acquisition, resampling or input changes occur
 
 Relevant bounded reviews: `4ff92e69` (initial naming/owned gate), `1e2d69bb`
 (backtick/real ctor gate, with a latent local-TypeRef finding), `4cb85278`
-(reproduced local-TypeRef fix closure), and `e45c98e8` (real scalar gate).
-These are source/log reviews, not independently rerun executions or whole-goal
-approval.
+(reproduced local-TypeRef fix closure), `e45c98e8` (real scalar gate), `a0492ae1`
+(iterator audit correction) and `314fcd40` (singleton audit correction). Both
+corrective reviews found no issues. These are source/log reviews, not independently
+rerun executions or whole-goal approval.
 
 ## Final integration checks
 
 At checkout `6dad4fd2f` (production `015afc66e`), full locked Rust Debug/Release,
 formatter and all-target clippy with warnings denied pass. Exit-zero markers and
 the checkout are recorded in `rust/report/naming-final-integration/`. Later
-changes only add this evidence index.
+corrective changes add only test gates and documentation, not production code.
+Their successful runs are in `rust/report/naming-iterator-audit-closure.log` and
+`rust/report/naming-singleton-audit-closure.log`, with per-token compiler/source/
+runtime evidence under the corresponding `frozen-naming-*` report directories.
 
 All affected actual-readable `--type` behavior gates ran serially: references,
 arrays, native values, conversions, addresses, core/base/delegated constructors,
