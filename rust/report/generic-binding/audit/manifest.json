@@ -1,0 +1,110 @@
+[
+  {
+    "slug": "0000-0600017A",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpRef`1",
+    "name": "set_Value",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600017A",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0001-06000009",
+    "assembly": "DiffLib",
+    "owner": "DiffLib.Diff`1",
+    "name": ".ctor",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+    "token": "0x06000009",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0002-06000008",
+    "assembly": "ICSharpCode.Decompiler.Tests",
+    "owner": "<>f__AnonymousType1`1",
+    "name": "GetHashCode",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+    "token": "0x06000008",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/nunit.framework.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0003-06000005",
+    "assembly": "ICSharpCode.Decompiler",
+    "owner": "<>f__AnonymousType0`2",
+    "name": "GetHashCode",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "token": "0x06000005",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000078",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpChoice`2/Choice1Of2@DebugTypeProxy",
+    "name": "get_Item",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000078",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 2,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

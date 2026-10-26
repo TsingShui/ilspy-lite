@@ -3051,12 +3051,70 @@ impl<'a> Image<'a> {
         Ok(crate::ir::Ty::ExternalClass(member.class.0))
     }
 
-    /// Receiver and supplied arguments for a member reference whose parent is a
-    /// local class instantiation.
-    ///
-    /// `None` means the parent is not a constructed local class, so the caller
-    /// keeps its existing path. An open self instantiation (`C<!0..>`) is the
-    /// declaring type itself and needs no substitution.
+    /// Positional arguments represent a named receiver only in their original
+    /// declaring scope or through a proved identity-mapped local base chain.
+    fn identity_member_owner(
+        &self,
+        definition: Token,
+        args: &[cildec::Type<'a>],
+        context: crate::signature_types::TypeContext,
+    ) -> Result<bool> {
+        let arity = self.md.tables().generic_params(definition)?.len();
+        if arity != args.len() || arity == 0 {
+            return Err("constructed member arity differs from its definition".into());
+        }
+        if (context.type_scope.count as usize) < arity
+            || !args.iter().enumerate().all(|(index, arg)|
+                matches!(arg, cildec::Type::Var(position) if *position as usize == index))
+        {
+            return Ok(false);
+        }
+        let mut current = Token(context.type_scope.owner);
+        let mut seen = Vec::new();
+        for _ in 0..64 {
+            if current == definition {
+                return Ok(true);
+            }
+            if current.table() != Some(TableId::TypeDef) || current.rid() == 0 {
+                return Ok(false);
+            }
+            if seen.contains(&current) {
+                return Err("cyclic identity-mapped member hierarchy needs IL fallback".into());
+            }
+            seen.push(current);
+            let base = self.md.tables().type_def(current.rid())?.extends;
+            if base.table() != Some(TableId::TypeSpec) {
+                return Ok(false);
+            }
+            let signature = self.type_spec(base)?;
+            let cildec::Type::GenericInst {
+                is_value_type: false,
+                def,
+                args: base_args,
+            } = signature.type_
+            else {
+                return Ok(false);
+            };
+            if base_args.len() < arity
+                || !base_args.iter().enumerate().all(|(index, arg)|
+                    matches!(arg, cildec::Type::Var(position) if *position as usize == index))
+            {
+                return Ok(false);
+            }
+            let Some(base) = self.local_type_definition(def)? else {
+                return Ok(false);
+            };
+            if self.md.tables().generic_params(base)?.len() != base_args.len() {
+                return Err("constructed base arity differs from its definition".into());
+            }
+            current = base;
+        }
+        Err("identity-mapped member hierarchy depth exceeded".into())
+    }
+
+    /// Receiver and arguments for a locally defined constructed class member.
+    /// Identity-mapped self/base owners retain their named representation; all
+    /// other instantiations carry structural identity and caller-scoped arguments.
     fn constructed_member_owner(
         &self,
         parent: Token,
@@ -3085,12 +3143,7 @@ impl<'a> Image<'a> {
                     .into(),
             );
         }
-        let open_self = args
-            .iter()
-            .enumerate()
-            .all(|(index, argument)| {
-                matches!(argument, cildec::Type::Var(position) if *position as usize == index)
-            });
+        let open_self = self.identity_member_owner(definition, args, context)?;
         if open_self {
             return Ok(Some(ConstructedOwner {
                 definition,
@@ -3439,11 +3492,7 @@ impl<'a> Image<'a> {
                         // `C<!0..!n-1>` is the open self instantiation that instance
                         // members of `C` name; it is the declaring type itself, not a
                         // constructed one, so no argument substitution applies.
-                        let open_self = args.iter().enumerate().all(
-                            |(index, argument)| {
-                                matches!(argument, cildec::Type::Var(position) if *position as usize == index)
-                            },
-                        );
+                        let open_self = self.identity_member_owner(definition, args, context)?;
                         if open_self {
                             let owner = match self.struct_type(definition)? {
                                 Some(id) => crate::ir::Ty::Value(id),
@@ -3538,7 +3587,7 @@ impl<'a> Image<'a> {
                 let substituted = substitute_type_arguments(&parameter.type_, arguments)?;
                 crate::ir::Ty::from_sig_scoped(&substituted, self, context)
             }
-            None => crate::ir::Ty::from_param(parameter, self),
+            None => crate::ir::Ty::from_param_scoped(parameter, self, context),
         }
     }
 
@@ -3758,8 +3807,7 @@ impl<'a> Image<'a> {
         // self `C<!0>`): the definition is local and concrete, so dispatch is
         // verified here and the declared signature is read with the site's
         // arguments substituted.
-        if sig.has_this
-            && t.table() == Some(TableId::MemberRef)
+        if t.table() == Some(TableId::MemberRef)
             && let Some(owner) =
                 self.constructed_member_owner(self.md.tables().member_ref(t.rid())?.class, context)?
         {
@@ -3782,8 +3830,12 @@ impl<'a> Image<'a> {
             return Ok(MethodRef {
                 token: t.0,
                 name: name.clone(),
-                receiver: Some(owner.receiver),
-                target: format!("__cil_direct_{:08X}", t.0),
+                receiver: sig.has_this.then_some(owner.receiver),
+                target: if sig.has_this {
+                    format!("__cil_direct_{:08X}", t.0)
+                } else {
+                    format!("__cil_static_call_{:08X}", t.0)
+                },
                 args,
                 ret,
                 core_object_constructor: None,

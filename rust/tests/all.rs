@@ -97,6 +97,8 @@ mod abstract_members;
 mod external_allocations;
 #[path = "floats.rs"]
 mod floats;
+#[path = "generic_binding.rs"]
+mod generic_binding;
 #[path = "generic_declaring.rs"]
 mod generic_declaring;
 #[path = "generic_references.rs"]

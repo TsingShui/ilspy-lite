@@ -1184,6 +1184,9 @@ impl Writer<'_, '_> {
                         );
                     }
                 }
+                if method.target.starts_with("__cil_static_call_") {
+                    self.lines.push("// Exact constructed static call: original token and instantiated declaring type, original generic type initialization and target-runtime effects; arguments evaluated once in order, no receiver or virtual dispatch.".into());
+                }
                 if method.tick_count {
                     self.lines.push("// Exact core Environment.TickCount: signed I4 clock read at this instruction, evaluated once.".into());
                 }

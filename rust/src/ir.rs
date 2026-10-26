@@ -196,7 +196,11 @@ impl Ty {
             let open_self = args.iter().enumerate().all(|(index, argument)| {
                 matches!(argument, cildec::Type::Var(position) if *position as usize == index)
             });
-            if open_self && let Some(definition) = image.local_type_definition(*def)? {
+            if open_self
+                && let Some(definition) = image.local_type_definition(*def)?
+                && definition.0 == context.type_scope.owner
+                && args.len() == context.type_scope.count as usize
+            {
                 image.register_open_self(id, definition.0);
             }
             return Ok(Self::StructuralRef(id));

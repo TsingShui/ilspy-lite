@@ -7,7 +7,29 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: grouped reference checks and interface semantics
+## Current verified state: grouped generic member binding
+
+- `report/generic-binding/corpus-scan-final/baseline.json`: 375,506 Decompiled /
+  395,242 Partial of 770,748; overall fallback 51.28031%.
+- +8,695 in 83 images, zero regressions/incomplete. First scan found 38
+  identity-prefix base-constructor regressions; captured owned red case,
+  fixed the exact proof and reran the full scan. Retain the initial scan evidence.
+- Group: preserve caller scopes for member params/results, distinguish other
+  constructed owners from self, qualify open-self registration, constructed
+  local static calls with exact target-runtime semantics.
+- 387 tests, clippy/fmt green. 240 owned comparisons / 60 closed method selections
+  per release/debug; four semantic mutants rejected, including generic type
+  initialization. Prior generic/abstract/reference behavior gates remain green.
+- Eleven corpus triples self-reviewed against ILSpy and IL; no changed semantic
+  differences found, no third-party execution. OpenRA.Game +2 / Common +1.
+- Target remains aggregate <=5%, not per-image1%; fixed scope/references retained.
+  Group repairs, no subagents, local validated commits only unless push requested.
+- Next: audit MethodSpec, external constructed receivers/calls and generic
+  assignments; avoid losing caller scope or collapsing different instantiations.
+- Evidence: `acceptance/corpus/GENERIC_MEMBER_SCOPES.md`,
+  `report/generic-binding/{AUDIT,DESIGN}.md` and `review/review-source.md`.
+
+## Previous verified state: grouped reference checks and interface semantics
 
 - Current user-approved acceptance: aggregate fallback <= 5% over the same fixed
   implementation scope; per-image rates remain reported, no per-image 1% gate.

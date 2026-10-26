@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_COPIES.md`: constructed value types and external value types as
   whole-value copies, and the three-state rule that makes an unresolved reference
   leave output byte-identical.
+- `GENERIC_MEMBER_SCOPES.md`: caller-qualified generic member binding,
+  distinct constructed owners and exact constructed static calls.
 - `LOCAL_INTERFACE_REFERENCES.md`: grouped abstract/core/interface runtime checks,
   local interface reference identity, exact dispatch and proven assignment.
 - `ABSTRACT_CONSTRUCTED_MEMBERS.md`: member lookup on abstract generic classes,

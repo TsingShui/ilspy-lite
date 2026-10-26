@@ -1,0 +1,210 @@
+[
+  {
+    "slug": "0000-0600017A",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpRef`1",
+    "name": "set_Value",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600017A",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06000078",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpChoice`2/Choice1Of2@DebugTypeProxy",
+    "name": "get_Item",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000078",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-0600007A",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpChoice`2/Choice2Of2@DebugTypeProxy",
+    "name": "get_Item",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600007A",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "incompatible value/receiver types",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-0600018B",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.FSharpOption`1",
+    "name": "op_Implicit",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600018B",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0004-06001B2D",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.PreciseAbstractFlowPass`1",
+    "name": "AdjustConditionalState",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x06001B2D",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "previous_reason": "generic static call owner needs IL fallback",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0004-06006047",
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "owner": "Microsoft.CodeAnalysis.CSharp.OverloadResolutionResult`1/<>c",
+    "name": "<CreatePool>b__42_0",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x06006047",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "previous_reason": "allocation owner must be a concrete nongeneric class",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06001D3C",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Collections.SeqModule/Scan@876",
+    "name": ".ctor",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06001D3C",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "regression recheck: previously Decompiled",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0000-06002000",
+    "assembly": "FSharp.Core",
+    "owner": "Microsoft.FSharp.Core.Operators/op_ComposeRight@3394",
+    "name": ".ctor",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06002000",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "previous_reason": "regression recheck: previously Decompiled",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "0005-06002851",
+    "assembly": "Microsoft.CodeAnalysis",
+    "owner": "Microsoft.CodeAnalysis.Emit.NoPia.EmbeddedTypesManager`21/CommonEmbeddedMember`1",
+    "name": ".ctor",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+    "token": "0x06002851",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "previous_reason": "regression recheck: previously Decompiled",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1041-06000B07",
+    "assembly": "OpenRA.Game",
+    "owner": "OpenRA.Primitives.LongBitSet`1",
+    "name": "Reset",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "token": "0x06000B07",
+    "references": [],
+    "previous_reason": "generic static call owner needs IL fallback",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  },
+  {
+    "slug": "1042-0600142B",
+    "assembly": "OpenRA.Mods.Common",
+    "owner": "OpenRA.Mods.Common.Traits.GrantConditionOnLayer`1",
+    "name": ".ctor",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+    "token": "0x0600142B",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+    ],
+    "previous_reason": "generic variable has no owner or exceeds declared positions",
+    "exit_codes": {
+      "ours": 0,
+      "il": 0,
+      "ilspy": 0
+    }
+  }
+]

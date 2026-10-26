@@ -3,7 +3,19 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (grouped reference repairs; aggregate 5% target)
+## Current position (generic binding group; aggregate 5% target)
+
+- 375,506 Decompiled / 395,242 Partial, overall fallback 51.28031%.
+- +8,695 in 83 images; final zero regressions/incomplete after resolving
+  38 prefix-base constructor regressions found in the first full scan.
+- 387 tests, 240 behavior comparisons / 60 closed selections per configuration,
+  four rejected mutants; eleven static corpus triples self-reviewed.
+- Preserve caller scope through member binding; foreign owner instantiations
+  stay structural, exact constructed static calls preserve initialization.
+- Next audit: MethodSpec calls, external constructed receivers and assignments.
+  Keep grouped milestones, fixed input/reference policy, no agents or push.
+
+## Previous position (grouped reference repairs; aggregate 5% target)
 
 - 366,811 Decompiled / 403,937 Partial of 770,748; aggregate fallback 52.40844%.
 - +23,266 in 119 images, zero regressions/incomplete; fixed references/scope.
