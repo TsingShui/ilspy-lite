@@ -238,5 +238,28 @@ Relevant bounded reviews: `4ff92e69` (initial naming/owned gate), `1e2d69bb`
 (backtick/real ctor gate, with a latent local-TypeRef finding), `4cb85278`
 (reproduced local-TypeRef fix closure), and `e45c98e8` (real scalar gate).
 These are source/log reviews, not independently rerun executions or whole-goal
-approval. Local execution uses macOS arm64, Rust/Cargo 1.98, Python 3.9 and
+approval.
+
+## Final integration checks
+
+At checkout `6dad4fd2f` (production `015afc66e`), full locked Rust Debug/Release,
+formatter and all-target clippy with warnings denied pass. Exit-zero markers and
+the checkout are recorded in `rust/report/naming-final-integration/`. Later
+changes only add this evidence index.
+
+All affected actual-readable `--type` behavior gates ran serially: references,
+arrays, native values, conversions, addresses, core/base/delegated constructors,
+clock, strings, exceptions, floats, external calls, properties and postfix
+(including checked compilation). Wait remains three supported bodies with exit
+0 in automatic, explicit, isolated and Details Release demos. Its ctor/subsequent
+Tick gate passes 242 comparisons and its separate Tick gate passes 193.
+Properties pass 40/config, postfix 960/config; RNG 22,941, resources/ammo 837 and
+Queue 20 remain passing. These older corpora are regression evidence, not new
+random-class selections.
+
+The independent binding oracle passes 406 comparisons with 18 rejected output
+mutations, and its fixture-shape self-tests pass. All 25 collector tests pass.
+Fresh frozen20 and supplemental3 static runs pass on the same production;
+`git diff 519982c88 -- random-classes.json` is empty. No push is performed.
+Unrelated root/TestTools/.pi work is preserved. Local execution uses macOS arm64, Rust/Cargo 1.98, Python 3.9 and
 SDK 10.0.401/runtime 10.0.12; no other-platform/runtime or Rust 1.85 claim.
