@@ -634,6 +634,17 @@ impl Writer<'_, '_> {
                             &cildec::Names::new(&self.image.md).try_token(token)?
                         )
                     ));
+                    if let Some(Ok(fact)) = self.image.external_allocation(token.0) {
+                        self.lines.push(format!(
+                            "// external allocation owner 0x{:08X}: {}{}; {}, {}; one fresh identity here, then .ctor with {} parameter(s) runs in original argument order; field initialisers are the defining image's, not visible here.",
+                            fact.owner_token,
+                            fact.owner_name,
+                            if fact.constructed { "<>" } else { "" },
+                            if fact.constructed { "constructed class" } else { "class" },
+                            if fact.owner_sealed { "sealed" } else { "not sealed" },
+                            fact.parameter_count
+                        ));
+                    }
                     self.lines.push("// __cil_newobj: one fresh object identity allocated here, then the exact constructor runs in original argument order; later reads observe the same instance.".into());
                     self.push(
                         allocated,
@@ -1320,7 +1331,10 @@ impl Writer<'_, '_> {
                         (
                             format!(
                                 "(({})(({})({})))",
-                                storage.cs(self.image)?,
+                                // The CLI value is the normalized integer category
+                                // (int32/int64), so converting to the narrow or unsigned
+                                // storage type here would not be assignable.
+                                storage.stack().cs(self.image)?,
                                 t.display(self.image)?,
                                 value.name
                             ),

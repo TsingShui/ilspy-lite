@@ -155,3 +155,11 @@ here and reverted, not shipped.
   poisons the type; only the failure descriptor is compared.
 - `beforefieldinit` ordering is metadata, not text: the emitted member is the static
   constructor either way.
+
+## Measured result
+
+The blanket row is gone from the scan. Bodies whose only blocker was the `.cctor`
+refusal: **1,386** now decompile (part of the defect-sweep scan, see
+`report/defect-sweep/REPORT.md`). Other static initializers move to their real blocker -
+typically allocation, external field facts or a generic instantiation - which is the
+intended outcome: the reason now describes the operation instead of the member kind.

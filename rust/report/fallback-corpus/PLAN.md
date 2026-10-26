@@ -9,11 +9,11 @@ Authoritative numbers and the ordered queue. Update this file when a milestone l
 |---|---:|
 | managed images / body images | 614 / 319 |
 | bodies | 770,748 |
-| Decompiled / Partial | **297,132 / 473,616** |
-| unrecovered | **61.44888%** |
+| Decompiled / Partial | **334,213 / 436,535** |
+| unrecovered | **56.6354%** |
 | body images within 1% | **33 / 319** |
 | incomplete scans | 0 |
-| recoveries still needed for every image to pass | **466,031** |
+| recoveries still needed for every image to pass | see `CLOSURE.md` (recomputed per scan) |
 | images needing <= 10 / 50 / 200 more | 71 / 111 / 176 |
 
 Sources: `report/boxing/corpus-scan-enum/baseline.json`,
@@ -30,11 +30,11 @@ Sources: `report/boxing/corpus-scan-enum/baseline.json`,
 
 | # | slice | expected bodies | notes |
 |---|---|---:|---|
-| 1 | static constructors (remove the `.cctor` blanket gate) | 13,335 rows, 236 images; ~2/3 of their `newobj` are local classes already supported | in flight |
-| 2 | boxing scalar stack-category fix + enum unbox cast | 896 + text | defects, must land before 1 counts |
-| 3 | allocation owner diagnosis and fix | 28,685 | scout is proving whether the reason masks a deeper failure |
-| 4 | external allocation (concrete external owner) | 24,893 | needs owner kind/name facts |
-| 5 | external constructed value types + external enum signatures | 39,281 + 35,218 | largest single rows; share cross-image naming |
+| 1 | static constructors (remove the `.cctor` blanket gate) | 13,335 rows, 236 images | landed: +1,386 direct, rest surfaces its real blocker |
+| 2 | boxing scalar stack-category fix + enum unbox cast | 390 + all enum widths | landed, contract re-baselined |
+| 3 | sealed-owner mask fix | 28,685 | landed: **+18,288** measured with the mask reverted as control |
+| 4 | external allocation (concrete external owner) | 24,893 | landed: **+1,116**, 0 lost; constructed/nested owners still gated |
+| 5 | external member facts (field read/write) | 24,893-ish remaining | next: `external member reference needs dependency facts` |
 | 6 | property/event accessor binding | 1,500 first-blockers in 60 images, more overall | brief ready |
 | 7 | external callvirt receiver type facts | 45 images, 11.4% median | design in `EXTERNAL_CALL_DISPATCH.md` |
 | 8 | byref/modified parameters; uninitialized locals | ~19,300; 9 images at 15% | fillers between big slices |

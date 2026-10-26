@@ -175,6 +175,9 @@ generated output remain ignored and retain their original license boundaries.
   leave output byte-identical.
 - `CONSTRUCTED_MEMBERS.md`: members reached through a constructed type - open self
   instantiation, substituted fields, calls, allocation and constructed base classes.
+- `EXTERNAL_ALLOCATION.md`: `newobj` on a constructor from a referenced image - the
+  owner/constructor facts, the three-state rule, the refusals, and the constructed and
+  nested owners that remain gated.
 - `BOXING.md`: `box`/`unbox.any` for core scalars, with the fresh-instance and unbox
   exception semantics written down; enums, structs and constructed values stay gated.
 - `STATIC_CONSTRUCTORS.md`: static constructor bodies lowered as the type's own

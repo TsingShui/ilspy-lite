@@ -59,15 +59,23 @@ def main():
                 for record in map(json.loads, support.run(
                     [args.cli, "scan", fixture, "--no-auto-references"]).stdout.splitlines())}
         # An enum unbox is only executable where its storage conversion is
-        # written; the two 32/64-bit storage owners are the recovered ones.
+        # written. Every storage width is recovered: `unbox.any` pushes the
+        # normalized integer category and casts to the storage type explicitly.
         unbox = []
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(r" EnumCases\.((?:S|U)(?:8|16|32|64)Ops)::UnsupportedUnbox\(", signature)
             if match and scan[token]["status"] == "Decompiled":
                 unbox.append((token, match[1], "UnsupportedUnbox"))
-        if sorted(owner for _, owner, _ in unbox) != ["S32Ops", "S64Ops"]:
-            raise ValueError("Owned enum unbox selection drift")
+        expected_unbox = [
+            "S8Ops", "U8Ops", "S16Ops", "U16Ops",
+            "S32Ops", "U32Ops", "S64Ops", "U64Ops",
+        ]
+        if sorted(owner for _, owner, _ in unbox) != sorted(expected_unbox):
+            raise ValueError(
+                "Owned enum unbox selection drift: "
+                + ",".join(sorted(owner for _, owner, _ in unbox))
+            )
         groups, identities = {}, {}
         for token, owner, name in selected + unbox:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details", "--no-auto-references"])

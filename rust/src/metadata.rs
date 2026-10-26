@@ -48,6 +48,12 @@ pub(crate) struct Image<'a> {
     >,
     external_value_defs:
         std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<u32, String>>>,
+    external_allocations: std::cell::RefCell<
+        std::collections::BTreeMap<
+            u32,
+            std::result::Result<crate::dependencies::ExternalAllocation, String>,
+        >,
+    >,
     external_calls: std::cell::RefCell<
         std::collections::BTreeMap<
             u32,
@@ -84,6 +90,7 @@ impl<'a> Image<'a> {
             open_self: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_structs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_value_defs: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_allocations: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_calls: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
@@ -2307,6 +2314,22 @@ impl<'a> Image<'a> {
         self.external_calls.borrow().get(&token).cloned()
     }
 
+    /// Facts for one foreign constructor, if the caller asked for them.
+    pub(crate) fn external_allocation(
+        &self,
+        token: u32,
+    ) -> Option<std::result::Result<crate::dependencies::ExternalAllocation, String>> {
+        self.external_allocations.borrow().get(&token).cloned()
+    }
+
+    pub(crate) fn cache_external_allocation(
+        &self,
+        token: u32,
+        value: std::result::Result<crate::dependencies::ExternalAllocation, String>,
+    ) {
+        self.external_allocations.borrow_mut().insert(token, value);
+    }
+
     pub(crate) fn cache_external_call(
         &self,
         token: u32,
@@ -2388,7 +2411,7 @@ impl<'a> Image<'a> {
         self.enum_types.borrow_mut().insert(token.0, Ok(value));
     }
 
-    fn has_core_base(&self, token: Token, name: &str) -> Result<bool> {
+    pub(crate) fn has_core_base(&self, token: Token, name: &str) -> Result<bool> {
         let tables = self.md.tables();
         let mut base = self.metadata_coded_token(
             cildec::CodedIndex::TypeDefOrRef,
@@ -2978,12 +3001,16 @@ impl<'a> Image<'a> {
                 }
                 let reference =
                     crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
-                let owner = self
-                    .constructed_member_owner(row.class, context)?
-                    .ok_or("external allocation needs dependency facts; only local classes and local instantiations are admitted")?;
-                let constructor =
-                    self.find_constructor(owner.definition, reference.params.len())?;
-                (constructor, Some(owner.receiver), owner.arguments)
+                match self.constructed_member_owner(row.class, context)? {
+                    Some(owner) => {
+                        let constructor =
+                            self.find_constructor(owner.definition, reference.params.len())?;
+                        (constructor, Some(owner.receiver), owner.arguments)
+                    }
+                    None => {
+                        return self.external_allocation_for(token, row.class, &reference);
+                    }
+                }
             }
             _ => return Err("allocation needs a local constructor definition".into()),
         };
@@ -3034,6 +3061,45 @@ impl<'a> Image<'a> {
             .map(|p| self.member_parameter(p, arguments.as_deref(), context))
             .collect::<Result<Vec<_>>>()?;
         Ok((allocated.unwrap_or(crate::ir::Ty::Class(owner.0)), args))
+    }
+
+    /// Admit `newobj` whose owner lives in a referenced image.
+    ///
+    /// The parameters are read in the caller's vocabulary so the same `assignable`
+    /// checks apply as for a local constructor; only the owner's kind, name and
+    /// shape come from the defining image.
+    fn external_allocation_for(
+        &self,
+        token: Token,
+        parent: Token,
+        reference: &cildec::MethodSig<'_>,
+    ) -> Result<(crate::ir::Ty, Vec<crate::ir::Ty>)> {
+        let fact = match self.external_allocation(token.0) {
+            Some(Ok(fact)) => fact,
+            Some(Err(reason)) => {
+                return Err(format!("external allocation needs dependency facts: {reason}").into());
+            }
+            None => {
+                return Err(
+                    "external allocation needs dependency facts; only local classes and local instantiations are admitted"
+                        .into(),
+                );
+            }
+        };
+        if fact.parameter_count != reference.params.len() {
+            return Err("external allocation argument count differs from its reference".into());
+        }
+        let spec = parent.table() == Some(TableId::TypeSpec);
+        if fact.constructed != spec {
+            return Err("external allocation owner shape differs from its reference".into());
+        }
+        let owner = crate::ir::Ty::ExternalClass(parent.0);
+        let arguments = reference
+            .params
+            .iter()
+            .map(|parameter| crate::ir::Ty::from_param(parameter, self))
+            .collect::<Result<Vec<_>>>()?;
+        Ok((owner, arguments))
     }
 
     /// Cast target for castclass/isinst: a locally verified class, so the

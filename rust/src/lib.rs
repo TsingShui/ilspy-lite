@@ -289,6 +289,47 @@ fn prime_external_calls(
     }
 }
 
+/// Prefetch the facts for `newobj` on a foreign constructor.
+///
+/// Only `MemberRef` operands named `.ctor` are asked about; local constructors and
+/// generic instantiations keep their existing paths. Asking during priming keeps a
+/// method's admission independent of which other method was lowered first.
+fn prime_external_allocations(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::MemberRef) || !seen.insert(candidate.0) {
+            continue;
+        }
+        if image.external_allocation(candidate.0).is_some() {
+            continue;
+        }
+        let Ok(row) = image.md.tables().member_ref(candidate.rid()) else {
+            continue;
+        };
+        if image.md.strings().str(row.name).ok() != Some(".ctor") {
+            continue;
+        }
+        image.cache_external_allocation(
+            candidate.0,
+            match context.external_allocation(candidate.0) {
+                crate::dependencies::ExternalAllocationLookup::Fact(fact) => Ok(fact),
+                crate::dependencies::ExternalAllocationLookup::Refused(reason) => Err(reason),
+                crate::dependencies::ExternalAllocationLookup::Unavailable => continue,
+            },
+        );
+    }
+}
+
 /// Prefetch admission for constructed value types whose definition is external.
 ///
 /// The proof is about the definition, so one fact covers every instantiation of
@@ -352,6 +393,7 @@ fn decompile_method(
     if let Some(context) = context {
         prime_external_enums(image, token, &body, context);
         prime_external_calls(image, &body, context);
+        prime_external_allocations(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
     match lift::emit(image, token, &body) {

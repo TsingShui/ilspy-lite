@@ -79,3 +79,16 @@ expected-`Partial` would keep hiding the bug.
 - Boxed enum/struct/constructed values and generic parameters are gated; that needs
   value identity plus constructed-value admission at the box site.
 - Box identity is not compared by the behaviour gate.
+
+## Defects found after the milestone
+
+Both are fixed and their rows re-baselined; the frozen contract promotes them instead of
+hiding them.
+
+- `DEFECT-enum-unbox-cast.md`: `unbox.any` now pushes the normalized integer category
+  (so `sbyte`/`byte`/`short`/`ushort` storage no longer fails with
+  `incompatible value/receiver types`) and renders the conversion to the storage type.
+  All eight storage widths decompile; the enum driver grew from 3,032 to 3,120
+  comparisons and still rejects its five mutants.
+- `DEFECT-box-scalar-stack-type.md`: scalar `box` compares the stack category, so
+  `char`/`bool`/narrow integers are admitted (390 bodies).

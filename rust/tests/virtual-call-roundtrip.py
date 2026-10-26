@@ -73,7 +73,21 @@ def main():
                 # the runtime: receiver.Name(args) is the same virtual call.
                 return f"{arguments[0]}.{names[target]}({', '.join(arguments[1:])})"
 
-            bound = re.sub(r"__cil_callvirt_([0-9A-F]{8})\(([^()]*)\)", dispatch, statements)
+            # The recovered body leaves local allocation to the runtime as
+            # `Type v = __cil_newobj_TOKEN(args)`; the concrete type is on the
+            # declaration, so the same fresh identity is `new Type(args)`.
+            def allocate(match):
+                indent, declared, variable, arguments = match.groups()
+                return f"{indent}{declared} {variable} = new {declared}({arguments});"
+
+            allocated = re.sub(
+                r"(?m)^(\s*)([\w.@:<>,]+) (\w+) = __cil_newobj_[0-9A-F]{8}\(([^()]*)\);$",
+                allocate,
+                statements,
+            )
+            if "__cil_newobj_" in allocated:
+                raise ValueError("nested allocation arguments need an explicit shell: " + name)
+            bound = re.sub(r"__cil_callvirt_([0-9A-F]{8})\(([^()]*)\)", dispatch, allocated)
             if "__cil_callvirt_" in bound:
                 raise ValueError("nested callvirt arguments need an explicit shell: " + name)
             snippets.append(bound)

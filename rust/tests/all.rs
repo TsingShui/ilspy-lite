@@ -86,6 +86,9 @@ mod external_calls;
 mod external_enums;
 #[path = "external_values.rs"]
 mod external_values;
+
+#[path = "external_allocations.rs"]
+mod external_allocations;
 #[path = "floats.rs"]
 mod floats;
 #[path = "generic_declaring.rs"]

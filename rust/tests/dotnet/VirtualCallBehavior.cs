@@ -58,10 +58,23 @@ internal static partial class GenericReferenceRoundtrip
                 || !lowered.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameters))
                 throw new Exception("Recovered virtual-call signature differs: " + original.Name);
             object[] shapes = { MakeSquare(3), MakeSquare(0), MakeSquare(-2), null };
+            // Candidates follow the declared parameter type. Passing a Shape to an
+            // int parameter only compared two invocation mechanisms (delegate unbox
+            // against reflection binding), which is not a property of the method.
+            object[] Candidates(Type type)
+            {
+                if (type == typeof(int)) return new object[] { 3, 0, -2 };
+                if (type == shape) return shapes;
+                if (type == typeof(string)) return new object[] { "x", null };
+                if (!type.IsValueType) return new object[] { null };
+                throw new Exception("Unexpected owned virtual-call parameter type: " + type);
+            }
             var cases = new System.Collections.Generic.List<object[]>();
-            if (parameters.Length == 1) foreach (object value in shapes) cases.Add(new[] { value });
+            if (parameters.Length == 1) foreach (object value in Candidates(parameters[0])) cases.Add(new[] { value });
             else if (parameters.Length == 2)
-                foreach (object first in shapes) foreach (object second in shapes) cases.Add(new[] { first, second });
+                foreach (object first in Candidates(parameters[0]))
+                    foreach (object second in Candidates(parameters[1]))
+                        cases.Add(new[] { first, second });
             else throw new Exception("Unexpected owned virtual-call arity.");
             foreach (object[] arguments in cases)
             {

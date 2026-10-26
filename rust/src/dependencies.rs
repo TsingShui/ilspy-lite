@@ -129,6 +129,30 @@ pub struct ExternalCall {
     pub is_abstract: bool,
 }
 
+/// Facts read from the defining image for `newobj` on a foreign constructor.
+///
+/// The owner name and the constructor's shape come from the definition; the
+/// parameter types the caller needs stay caller-scoped and are read from the
+/// reference signature by `allocation_constructor`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalAllocation {
+    pub owner_token: u32,
+    pub owner_name: String,
+    pub owner_sealed: bool,
+    pub constructed: bool,
+    pub arity: usize,
+    pub parameter_count: usize,
+}
+
+/// Outcome of asking the context about one foreign constructor. `Unavailable`
+/// leaves the caller byte-identical to a run without dependency facts.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalAllocationLookup {
+    Fact(ExternalAllocation),
+    Refused(String),
+    Unavailable,
+}
+
 /// A value type proven through the supplied references.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum ExternalValue {
@@ -313,6 +337,117 @@ impl DependencyContext {
     /// supplies them, and it must declare exactly the arity the call site used.
     /// A reference that cannot be resolved is reported as unavailable so the
     /// caller keeps the blocker it would have had without a context.
+    /// Facts for `newobj` whose constructor belongs to a referenced image.
+    ///
+    /// Errors before the defining image is reached are `Unavailable`; once it is
+    /// read, a failed proof is `Refused` with the precise reason.
+    pub(crate) fn external_allocation(&self, token: u32) -> ExternalAllocationLookup {
+        use cildec::Type;
+        let method = match self.resolve_method(token) {
+            Ok(method) => method,
+            Err(_) => return ExternalAllocationLookup::Unavailable,
+        };
+        if method.name != ".ctor" {
+            return ExternalAllocationLookup::Refused(
+                "allocation reference is not a constructor".into(),
+            );
+        }
+        if method.flags & 0x0010 != 0 {
+            return ExternalAllocationLookup::Refused("constructor is static".into());
+        }
+        if method.flags & 0x0440 != 0 {
+            return ExternalAllocationLookup::Refused("constructor is abstract or virtual".into());
+        }
+        let signature = match crate::signature_guard::method(&method.reference_signature) {
+            Ok(signature) => signature,
+            Err(_) => {
+                return ExternalAllocationLookup::Refused(
+                    "constructor signature is not usable".into(),
+                );
+            }
+        };
+        if signature.calling_convention != cildec::CallConv::Default
+            || !signature.vararg_params.is_empty()
+        {
+            return ExternalAllocationLookup::Refused(
+                "constructor signature is vararg or not an ordinary instance .ctor".into(),
+            );
+        }
+        if !signature.return_type.is_void() {
+            return ExternalAllocationLookup::Refused(
+                "constructor signature does not return void".into(),
+            );
+        }
+        for parameter in &signature.params {
+            if parameter.by_ref
+                || !parameter.custom_mods.is_empty()
+                || matches!(parameter.type_, Type::TypedByRef)
+            {
+                return ExternalAllocationLookup::Refused(
+                    "constructor parameter is byref or modified".into(),
+                );
+            }
+        }
+        let image = match self.image_for_source(&method.owner.definition.source) {
+            Ok(image) => image,
+            Err(_) => return ExternalAllocationLookup::Unavailable,
+        };
+        let definition = cildec::Token(method.owner.definition.token);
+        if definition.table() != Some(cildec::TableId::TypeDef) {
+            return ExternalAllocationLookup::Unavailable;
+        }
+        let flags = match image.md.tables().type_def(definition.rid()) {
+            Ok(row) => row.flags,
+            Err(_) => return ExternalAllocationLookup::Unavailable,
+        };
+        if flags & 0x0020 != 0 {
+            return ExternalAllocationLookup::Refused("owner is an interface".into());
+        }
+        if flags & 0x0080 != 0 {
+            return ExternalAllocationLookup::Refused("owner is abstract or a static class".into());
+        }
+        let is_value = matches!(image.has_core_base(definition, "ValueType"), Ok(true))
+            || matches!(image.has_core_base(definition, "Enum"), Ok(true));
+        if is_value {
+            return ExternalAllocationLookup::Refused(
+                "owner is a value type; value initialisation is not an object identity".into(),
+            );
+        }
+        let declared = match image.md.tables().generic_params(definition) {
+            Ok(parameters) => parameters.len(),
+            Err(_) => return ExternalAllocationLookup::Unavailable,
+        };
+        let constructed = !method.owner.generic_arguments.is_empty();
+        if declared == 0 && constructed {
+            return ExternalAllocationLookup::Refused(
+                "owner instantiation supplies arguments but the definition is not generic".into(),
+            );
+        }
+        if declared != 0 && !constructed {
+            return ExternalAllocationLookup::Refused(
+                "owner is an open generic definition without an instantiation".into(),
+            );
+        }
+        if constructed && method.owner.generic_arguments.len() != declared {
+            return ExternalAllocationLookup::Refused(format!(
+                "owner instantiation supplies {} arguments but the definition declares {declared}",
+                method.owner.generic_arguments.len()
+            ));
+        }
+        let owner_name = match crate::symbol_names::type_name(&image, definition, true) {
+            Ok(name) if !name.is_empty() => name,
+            _ => return ExternalAllocationLookup::Refused("owner name is not usable".into()),
+        };
+        ExternalAllocationLookup::Fact(ExternalAllocation {
+            owner_token: method.owner.definition.token,
+            owner_name,
+            owner_sealed: flags & 0x0100 != 0,
+            constructed,
+            arity: declared,
+            parameter_count: signature.params.len(),
+        })
+    }
+
     pub(crate) fn external_value_definition(
         &self,
         token: u32,
