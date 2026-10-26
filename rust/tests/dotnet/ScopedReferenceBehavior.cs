@@ -36,9 +36,9 @@ internal static partial class GenericReferenceRoundtrip
     static List<Specialization> Specializations()
     {
         MethodInfo[] methods = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
-            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall")
+            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall" || m.Name == "UnsupportedBox")
             .OrderBy(m => m.MetadataToken).ToArray();
-        if (methods.Length != 24) throw new Exception("Scoped owned method selection drift.");
+        if (methods.Length != 25) throw new Exception("Scoped owned method selection drift.");
         var result = new List<Specialization>();
         foreach (MethodInfo definition in methods)
         {
@@ -65,7 +65,7 @@ internal static partial class GenericReferenceRoundtrip
     {
         using var json = JsonDocument.Parse(File.ReadAllText(directivesPath));
         var directives = json.RootElement.EnumerateArray().ToDictionary(row => row.GetProperty("token").GetInt32());
-        if (directives.Count != 24) throw new Exception("Scoped signature directive coverage drift.");
+        if (directives.Count != 25) throw new Exception("Scoped signature directive coverage drift.");
         var result = new List<object>();
         foreach (Specialization test in cases)
         {
@@ -160,7 +160,10 @@ internal static partial class GenericReferenceRoundtrip
             Restore();
             Outcome after = Capture(() => generated.Invoke(null, original.IsStatic ? arguments : arguments.Prepend(receiver).ToArray()), graph);
             Restore();
-            bool SameResult(object left, object right) => original.ReturnType.IsValueType ? Same(left, right) : ReferenceEquals(left, right);
+            bool boxedValue = original.Name == "UnsupportedBox" && parameters[0].IsValueType;
+            bool SameResult(object left, object right) => original.ReturnType.IsValueType || boxedValue ? Same(left, right) : ReferenceEquals(left, right);
+            if (boxedValue && after.Value != null && ReferenceEquals(after.Value, arguments[0]))
+                throw new Exception("Recovered scoped boxing reused argument identity.");
             if (before.Error != null || !SameResult(before.Value, expectedValue))
                 throw new Exception("Owned scoped expectation differs: " + original.Name);
             if (before.Error != after.Error || !SameResult(before.Value, after.Value)
@@ -213,7 +216,7 @@ internal static partial class GenericReferenceRoundtrip
         {
             Assembly generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[2]));
             foreach (Specialization test in cases) ScopedCheck(test, generated);
-            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 24 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
+            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 25 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
         }
     }
 }

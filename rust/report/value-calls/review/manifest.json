@@ -1,0 +1,673 @@
+[
+  {
+    "id": 0,
+    "assembly": "FSharp.Core",
+    "origins": [
+      "FSharp/FSharp.Core.dll"
+    ],
+    "token": "0x0600006E",
+    "owner": "Microsoft.FSharp.Core.FSharpChoice`2",
+    "name": "GetHashCode",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "box/unbox needs an admitted core scalar or local enum",
+    "slug": "0000-0600006E",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x0600006E",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x0600006E"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x0600006E"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 0,
+    "assembly": "FSharp.Core",
+    "origins": [
+      "FSharp/FSharp.Core.dll"
+    ],
+    "token": "0x0600018F",
+    "owner": "Microsoft.FSharp.Core.FSharpResult`2",
+    "name": "NewOk",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "constructed member parent is not a class instantiation",
+    "slug": "0000-0600018F",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x0600018F",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x0600018F"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x0600018F"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 0,
+    "assembly": "FSharp.Core",
+    "origins": [
+      "FSharp/FSharp.Core.dll"
+    ],
+    "token": "0x06000190",
+    "owner": "Microsoft.FSharp.Core.FSharpResult`2",
+    "name": "get_IsOk",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "struct copies require a sealed nongeneric value definition",
+    "slug": "0000-06000190",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000190",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000190"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x06000190"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "origins": [
+      "ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+      "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.CSharp.dll"
+    ],
+    "token": "0x06000012",
+    "owner": "Microsoft.CodeAnalysis.CSharpExtensions",
+    "name": "IndexOf",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "constructed member parent is not a class instantiation",
+    "slug": "0004-06000012",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+          "--method",
+          "0x06000012",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+          "--method",
+          "0x06000012"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+          "-m",
+          "0x06000012"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 1041,
+    "assembly": "OpenRA.Game",
+    "origins": [
+      "supplement:OpenRA.Game.dll"
+    ],
+    "token": "0x06000478",
+    "owner": "OpenRA.Player",
+    "name": "RelationshipWith",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "constructed member parent is not a class instantiation",
+    "slug": "1041-06000478",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "references": [],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "--method",
+          "0x06000478",
+          "--no-auto-references"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "--method",
+          "0x06000478"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "-m",
+          "0x06000478"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 1041,
+    "assembly": "OpenRA.Game",
+    "origins": [
+      "supplement:OpenRA.Game.dll"
+    ],
+    "token": "0x0600010C",
+    "owner": "OpenRA.FieldLoader",
+    "name": "ParseColor",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "box/unbox needs an admitted core scalar or local enum",
+    "slug": "1041-0600010C",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+    "references": [],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "--method",
+          "0x0600010C",
+          "--no-auto-references"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "--method",
+          "0x0600010C"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+          "-m",
+          "0x0600010C"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 1042,
+    "assembly": "OpenRA.Mods.Common",
+    "origins": [
+      "supplement:OpenRA.Mods.Common.dll"
+    ],
+    "token": "0x06000117",
+    "owner": "OpenRA.Mods.Common.Warheads.Warhead",
+    "name": "IsValidTarget",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "constructed member parent is not a class instantiation",
+    "slug": "1042-06000117",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+          "--method",
+          "0x06000117",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+          "--method",
+          "0x06000117"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+          "-m",
+          "0x06000117"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "assembly": "ICSharpCode.Decompiler",
+    "origins": [
+      "ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll"
+    ],
+    "token": "0x06000925",
+    "owner": "ICSharpCode.Decompiler.Util.EmptyList`1",
+    "name": "System.Collections.IEnumerator.get_Current",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "box/unbox needs an admitted core scalar or local enum",
+    "slug": "0003-06000925",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x06000925",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x06000925"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "-m",
+          "0x06000925"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 55,
+    "assembly": "ICSharpCode.NRefactory.CSharp",
+    "origins": [
+      "NRefactory/ICSharpCode.NRefactory.CSharp.dll"
+    ],
+    "token": "0x060016E0",
+    "owner": "ICSharpCode.NRefactory.MonoCSharp.ReferenceEquality`1",
+    "name": "Equals",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "box/unbox needs an admitted core scalar or local enum",
+    "slug": "0055-060016E0",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+          "--method",
+          "0x060016E0",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+          "--method",
+          "0x060016E0"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+          "-m",
+          "0x060016E0"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": 895,
+    "assembly": "Microsoft.CodeAnalysis.CSharp",
+    "origins": [
+      "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.CSharp.dll"
+    ],
+    "token": "0x0600010B",
+    "owner": "Microsoft.CodeAnalysis.CSharp.Binder",
+    "name": "GetNewCompoundUseSiteInfo",
+    "status": "Decompiled",
+    "reason": null,
+    "previous_status": "Partial",
+    "previous_reason": "constructed member parent is not a class instantiation",
+    "slug": "0895-0600010B",
+    "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Memory.dll",
+      "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Reflection.Metadata.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/netstandard.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+          "--method",
+          "0x0600010B",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Collections.Immutable.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Memory.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Reflection.Metadata.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/netstandard.dll"
+        ],
+        "exit_code": 0,
+        "stderr": "decompiled=1 declarations=0 partial=0 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+          "--method",
+          "0x0600010B"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+          "-m",
+          "0x0600010B"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ]
+  }
+]

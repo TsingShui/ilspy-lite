@@ -139,11 +139,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "StructCopyCases.UnsupportedOps",
-        "UnsupportedBox",
-        "box/unbox needs an admitted core scalar",
-    ),
-    (
-        "StructCopyCases.UnsupportedOps",
         "UnsupportedRefLike",
         "byref-like struct copies need location/lifetime semantics",
     ),

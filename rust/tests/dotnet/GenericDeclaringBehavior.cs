@@ -52,14 +52,19 @@ internal static partial class GenericReferenceRoundtrip
             if (type == holder) return new[] { holderA, holderB };
             if (type == slot) return new[] { slotValue };
             if (type == typeof(int)) return new object[] { 0, 4, -2 };
+            if (type == typeof(string)) return new object[] { null, "owned-reference" };
+            if (type == typeof(object)) return new object[] { null, holderA, holderB };
             if (type.IsValueType) return new[] { Activator.CreateInstance(type) };
             return new object[] { null };
         }
 
-        foreach (MethodInfo original in selected)
+        foreach (MethodInfo definition in selected)
+        foreach (Type argument in definition.IsGenericMethodDefinition ? new[] { typeof(int), typeof(string), typeof(object), slot } : new[] { typeof(void) })
         {
+            MethodInfo original = definition.IsGenericMethodDefinition ? definition.MakeGenericMethod(argument) : definition;
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new Exception("Missing recovered generic-declaring method: " + original.Name);
+            if (lowered.IsGenericMethodDefinition) lowered = lowered.MakeGenericMethod(argument);
             Type[] parameters = original.GetParameters().Select(p => p.ParameterType).ToArray();
             if (lowered.ReturnType != original.ReturnType
                 || !lowered.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameters))

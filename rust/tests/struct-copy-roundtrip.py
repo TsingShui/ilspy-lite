@@ -51,7 +51,7 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(r" StructCopyCases\.(\w+Ops)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
-            if match and (not match[2].startswith("Unsupported") or match[2] in {"UnsupportedDefault", "UnsupportedMember", "UnsupportedNew", "UnsupportedByRef"}):
+            if match and (not match[2].startswith("Unsupported") or match[2] in {"UnsupportedDefault", "UnsupportedMember", "UnsupportedNew", "UnsupportedByRef", "UnsupportedBox"}):
                 selected.append((token, match[1], match[2]))
         if not selected:
             raise ValueError("Owned struct selection drift")

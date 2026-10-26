@@ -8,20 +8,7 @@ const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/generic-value-debug.bin"),
 ];
 
-/// Reading a field of a constructed value needs the instantiated field type,
-/// which is a separate capability.
-const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
-    (
-        "GenericValueCases.Ops",
-        "Sum",
-        "constructed member parent is not a class instantiation",
-    ),
-    (
-        "GenericValueCases.Ops",
-        "Peek",
-        "constructed member parent is not a class instantiation",
-    ),
-];
+const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[];
 
 fn token(bytes: &[u8], name: &str) -> u32 {
     list_methods(bytes)
@@ -35,7 +22,9 @@ fn token(bytes: &[u8], name: &str) -> u32 {
 #[test]
 fn constructed_value_plumbing_is_recovered_in_both_views() {
     for bytes in IMAGES {
-        for name in ["Identity", "Pass", "Boxed", "Wrapped", "Ignore"] {
+        for name in [
+            "Identity", "Pass", "Boxed", "Wrapped", "Ignore", "Sum", "Peek",
+        ] {
             for style in [OutputStyle::Readable, OutputStyle::Details] {
                 let result =
                     ilspy_lite::decompile_with_style(bytes, token(bytes, name), style).unwrap();

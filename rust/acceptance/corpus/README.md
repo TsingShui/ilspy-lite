@@ -175,6 +175,8 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_COPIES.md`: constructed value types and external value types as
   whole-value copies, and the three-state rule that makes an unresolved reference
   leave output byte-identical.
+- `CONSTRUCTED_VALUE_CALLS.md`: exact constructed value calls and newobj, scoped
+  field signatures and value/generic boxing, with receiver/constructor/copy gates.
 - `REFERENCE_RELATIONSHIPS.md`: scoped base/interface assignments, metadata-backed
   variance, exact foreign ancestor projection and original overload identity.
 - `MANAGED_LOCATIONS.md`: typed managed pointers, invariant byref operands,
@@ -196,8 +198,8 @@ generated output remain ignored and retain their original license boundaries.
 - `EXTERNAL_ALLOCATION.md`: `newobj` on a constructor from a referenced image - the
   owner/constructor facts, the three-state rule, the refusals, and the constructed and
   nested owners that remain gated.
-- `BOXING.md`: `box`/`unbox.any` for core scalars, with the fresh-instance and unbox
-  exception semantics written down; enums, structs and constructed values stay gated.
+- `BOXING.md`: historical core-scalar boxing foundation. Broader enum/value/generic
+  admission is recorded in the enum and constructed-value milestone documents.
 - `STATIC_CONSTRUCTORS.md`: static constructor bodies lowered as the type's own
   initializer instead of the former blanket refusal, with the bounded probe that
   decomposes the old row into the shapes that still block.

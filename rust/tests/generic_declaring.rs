@@ -11,23 +11,11 @@ const IMAGES: [&[u8]; 2] = [
 /// A base field read from a derived generic class needs the constructed base to be
 /// named in the access; the definition name alone is an open generic, so the shape
 /// stays gated with its own reason instead of printing an illegal cast.
-const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
-    (
-        "GenericDeclaringCases.Derived`1",
-        "Score",
-        "base field access needs the constructed owner name",
-    ),
-    (
-        "GenericDeclaringCases.Ops",
-        "BoxStruct",
-        "box/unbox needs an admitted core scalar or local enum",
-    ),
-    (
-        "GenericDeclaringCases.Ops",
-        "UnsupportedBoxGeneric",
-        "box/unbox needs an admitted core scalar or local enum",
-    ),
-];
+const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[(
+    "GenericDeclaringCases.Derived`1",
+    "Score",
+    "base field access needs the constructed owner name",
+)];
 
 fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
     list_methods(bytes)

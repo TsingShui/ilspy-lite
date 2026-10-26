@@ -36,7 +36,7 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "NewObjectCases.Ops",
         "UnsupportedGeneric",
-        "box/unbox needs an admitted core scalar or local enum",
+        "managed element address crossing a block needs IL fallback",
     ),
 ];
 

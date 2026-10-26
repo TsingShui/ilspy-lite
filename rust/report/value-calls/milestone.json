@@ -1,0 +1,82 @@
+{
+  "baseline": "a5b6d4eef",
+  "scope": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 278031,
+      "Decompiled": 492717
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 298592,
+      "Decompiled": 472156
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 278031,
+      "Decompiled": 492717
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 36
+  },
+  "newly_recovered": 20561,
+  "regressions": [],
+  "gained_images": 132,
+  "fallback_percent": 36.07287985178035,
+  "decrease_points": 2.667668291062708,
+  "reference_policy_changed": false,
+  "third_party_execution": false,
+  "owned_tests": 411,
+  "owned_behavior_drivers": 23,
+  "value_behavior": {
+    "comparisons_per_configuration": 522,
+    "closed_selections_per_configuration": 58,
+    "mutants_rejected_per_configuration": 10,
+    "configurations": [
+      "release",
+      "debug"
+    ]
+  },
+  "self_review": {
+    "methods": 10,
+    "crude_but_equivalent": 10,
+    "suspect_changed_semantics": 0,
+    "independent": false
+  },
+  "previous_first_blockers_not_isolated_causal_estimates": {
+    "box/unbox needs an admitted core scalar or local enum": 2467,
+    "constructed member parent is not a class instantiation": 14578,
+    "struct copies require a sealed nongeneric value definition": 3516
+  },
+  "openra": {
+    "OpenRA.Game": {
+      "bodies": 4767,
+      "counts": {
+        "Decompiled": 2642,
+        "Partial": 2125
+      }
+    },
+    "OpenRA.Mods.Common": {
+      "bodies": 18407,
+      "counts": {
+        "Decompiled": 11199,
+        "Partial": 7208
+      }
+    }
+  },
+  "goal_met": false
+}

@@ -7,7 +7,39 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: scoped reference relationships
+## Current verified state: constructed values and boxing
+
+- `report/value-calls/corpus-scan/baseline.json`: **492,717 Decompiled /
+  278,031 Partial** of 770,748; aggregate fallback **36.07287985178035%**.
+- **+20,561 in 132 images**, zero recovered-method regressions/incomplete;
+  decrease **2.667668291062708** points. Fixed scope/reference policy.
+  OpenRA.Game 2,642/2,125 (+85), Common 11,199/7,208 (+83).
+- Exact ordinary constructed-value calls, generic open-self value receivers,
+  local instantiated fields, separate value newobj and scoped value/generic
+  boxing/unbox.any are implemented. The class-only shared owner binder stays
+  class-only; no incidental MethodSpec/static-field/value allocation promotions.
+- Owned field-signature-index forgery exposed a real definition-vs-operand
+  identity hole; red/green retained and fixed by comparing exact substituted
+  stored identities. Shared-blob width and plain value-callvirt negatives remain.
+- **411 tests**, fmt/clippy, **23 owned behavior drivers** pass. New value gate:
+  **522 comparisons / 58 closed selections per config**, ten rejected mutants.
+  Local value/constructor/argument support bodies are recovered, real receiver
+  cells are shared, static ctor effects reset/compared, and failed construction
+  does not overwrite the destination.
+- Promoted frozen negatives execute before removal: generic Sum/Peek (8/7),
+  generic declaring (30/13), scoped (1,410/250 closed/25 methods), struct copies
+  (496), struct receivers (38/19), per config with meaningful mutation gates.
+- Ten production triples self-reviewed, all CRUDE-BUT-EQUIVALENT for changed
+  semantics; no changed-semantic SUSPECT in this bounded sample. CVec.Minus is
+  not a claimed gain. No third-party execution or independent/formal claim.
+- Evidence: `acceptance/corpus/CONSTRUCTED_VALUE_CALLS.md` and
+  `report/value-calls/{AUDIT.md,behavior-manifest.json,milestone.json,review/}`.
+- Local-only commit; no push. Aggregate <=5% still unmet. Next audit/design:
+  ordinary constrained dispatch and generic/static/foreign field/value-layout
+  gaps, then broader EH/signatures/arrays as justified by remaining blockers.
+  Existing GVM runtime lookup-order refusal remains mandatory.
+
+## Previous verified state: scoped reference relationships
 
 - `report/reference-relations/corpus-scan-final/baseline.json`: **472,156
   Decompiled / 298,592 Partial** of 770,748; aggregate fallback **38.74055%**.

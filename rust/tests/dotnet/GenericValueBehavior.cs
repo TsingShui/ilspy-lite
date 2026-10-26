@@ -47,10 +47,13 @@ internal static partial class GenericReferenceRoundtrip
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned generic-value selection is empty.");
 
-        foreach (MethodInfo original in selected)
+        foreach (MethodInfo originalDefinition in selected)
+        foreach (Type argument in originalDefinition.IsGenericMethodDefinition ? new[] { typeof(int), typeof(long) } : new[] { typeof(void) })
         {
+            MethodInfo original = originalDefinition.IsGenericMethodDefinition ? originalDefinition.MakeGenericMethod(argument) : originalDefinition;
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new Exception("Missing recovered generic-value method: " + original.Name);
+            if (lowered.IsGenericMethodDefinition) lowered = lowered.MakeGenericMethod(argument);
             Type[] parameters = original.GetParameters().Select(p => p.ParameterType).ToArray();
             if (lowered.ReturnType != original.ReturnType
                 || !lowered.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameters))

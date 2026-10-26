@@ -35,6 +35,7 @@ type InterfaceEdges =
 mod method_instantiations;
 mod reference_calls;
 pub(crate) mod reference_relations;
+mod value_calls;
 
 pub(crate) struct Image<'a> {
     pub pe: PeImage<'a>,
@@ -2913,24 +2914,23 @@ impl<'a> Image<'a> {
         Err("reference hierarchy depth exceeded".into())
     }
 
-    /// Recognize admitted core identities without loading dependencies.
-    /// A locally named System type is not a core type.
-    /// The core scalar named by a `box`/`unbox.any` operand.
-    ///
-    /// Only core scalars are admitted: a boxed enum or struct must keep its own
-    /// value identity, which needs a constructed-value admission this slice does not
-    /// have, so those stay gated instead of being boxed as a plain integer.
-    pub(crate) fn boxed_value_type(&self, token: Token) -> Result<crate::ir::Ty> {
-        use crate::ir::Ty;
-        // A local enum keeps its own boxed identity, so it is admitted with its
-        // declared name; a struct or constructed value still needs a name renderer.
+    /// The exact stored or caller-scoped type named by a box/unbox.any operand.
+    pub(crate) fn boxed_value_type(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        use crate::ir::{StackKind, Ty};
+        if token.table() == Some(TableId::TypeSpec) {
+            let ty = Ty::from_sig_scoped(&self.type_spec(token)?.type_, self, context)?;
+            if matches!(ty, Ty::Value(_) | Ty::GenericValue(_)) || ty.kind() == StackKind::Ref {
+                return Ok(ty);
+            }
+            return Err("box/unbox TypeSpec needs an admitted stored or generic identity".into());
+        }
         if token.table() != Some(TableId::TypeRef) || self.core_type_name(token).is_err() {
-            return match crate::ir::Ty::from_sig_scoped(
-                &cildec::Type::ValueType(token),
-                self,
-                crate::signature_types::TypeContext::default(),
-            ) {
-                Ok(ty @ crate::ir::Ty::Enum(_)) => Ok(ty),
+            return match Ty::from_sig_scoped(&cildec::Type::ValueType(token), self, context) {
+                Ok(ty @ (Ty::Enum(_) | Ty::Value(_))) => Ok(ty),
                 _ => Err("box/unbox needs an admitted core scalar or local enum".into()),
             };
         }
@@ -3191,6 +3191,14 @@ impl<'a> Image<'a> {
         found.ok_or_else(|| "constructed allocation names no constructor of its definition".into())
     }
 
+    pub(crate) fn value_constructor(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<(crate::ir::Ty, Vec<crate::ir::Ty>)>> {
+        value_calls::constructor(self, token, context)
+    }
+
     pub(crate) fn allocation_constructor(
         &self,
         token: Token,
@@ -3384,6 +3392,16 @@ impl<'a> Image<'a> {
         }
         // A value-type instance method receives a managed pointer to the caller's
         // storage; its receiver slot is a location, never a copied value.
+        let count = self.md.tables().generic_params(Token(token))?.len();
+        if count != 0 && self.has_core_base(Token(token), "ValueType")? {
+            let context = self.method_type_context(method, &self.signature(method)?)?;
+            let ty = cildec::Type::GenericInst {
+                is_value_type: true,
+                def: Token(token),
+                args: (0..count as u32).map(cildec::Type::Var).collect(),
+            };
+            return self.address_of(crate::ir::Ty::from_sig_scoped(&ty, self, context)?);
+        }
         if let Some(id) = self.struct_type(Token(token))? {
             return Ok(crate::ir::Ty::ValueAddress(id));
         }
@@ -3705,7 +3723,7 @@ impl<'a> Image<'a> {
                     Some(TableId::TypeSpec) => {
                         let spec = self.type_spec(row.class)?;
                         let cildec::Type::GenericInst {
-                            is_value_type: false,
+                            is_value_type,
                             def,
                             args,
                         } = &spec.type_
@@ -3720,6 +3738,35 @@ impl<'a> Image<'a> {
                         let field = self.find_field(definition, &name)?;
                         let field_row = self.md.tables().field(field.rid())?;
                         let blob = self.md.blobs().get(field_row.signature)?;
+                        if *is_value_type {
+                            let owner = crate::ir::Ty::from_sig_scoped(&spec.type_, self, context)?;
+                            let declared = self.field_from_parts(
+                                field.0,
+                                &name,
+                                context,
+                                FieldParts {
+                                    flags: field_row.flags,
+                                    signature: blob,
+                                    owner,
+                                    arguments: Some(args),
+                                },
+                            )?;
+                            let requested = self.field_from_parts(
+                                t.0,
+                                &name,
+                                context,
+                                FieldParts {
+                                    flags: field_row.flags,
+                                    signature: self.md.blobs().get(row.signature)?,
+                                    owner,
+                                    arguments: Some(args),
+                                },
+                            )?;
+                            if declared.ty != requested.ty {
+                                return Err("constructed value field reference signature differs from its declaration".into());
+                            }
+                            return Ok(declared);
+                        }
                         // `C<!0..!n-1>` is the open self instantiation that instance
                         // members of `C` name; it is the declaring type itself, not a
                         // constructed one, so no argument substitution applies.
@@ -4051,6 +4098,9 @@ impl<'a> Image<'a> {
             || t.table() == Some(TableId::MethodDef) && self.row(t.0)?.flags & 0x1000 != 0
         {
             return Err("empty/runtime-special method reference needs IL fallback".into());
+        }
+        if let Some(method) = value_calls::constructed(self, t, context)? {
+            return Ok(method);
         }
         if let Some(method) = reference_calls::constructed(self, t, context)? {
             return Ok(method);

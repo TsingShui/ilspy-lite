@@ -729,6 +729,29 @@ impl Writer<'_, '_> {
             }
             "newobj" => {
                 let token = i.operand.token().ok_or("missing constructor token")?;
+                if let Some((value, parameters)) =
+                    self.image.value_constructor(token, self.type_context)?
+                {
+                    self.track_type(value)?;
+                    let mut values = Vec::new();
+                    for parameter in parameters.iter().rev() {
+                        self.track_type(*parameter)?;
+                        let argument = self.pop()?;
+                        self.image.assignable(argument.ty, parameter.stack())?;
+                        values.push(if parameter.kind() == StackKind::Address {
+                            format!("ref {}", argument.name)
+                        } else {
+                            parameter.store(&argument.name, self.image)?
+                        });
+                    }
+                    values.reverse();
+                    self.lines.push("// Value newobj: initialize separate value storage, call the exact constructor, then copy the completed value; no reference-class identity is allocated.".into());
+                    self.push(
+                        value,
+                        format!("__cil_value_newobj_{:08X}({})", token.0, values.join(", ")),
+                    )?;
+                    return Ok(());
+                }
                 if self.image.exception_constructor(token).is_err() {
                     let (allocated, args) = self
                         .image
@@ -1493,8 +1516,15 @@ impl Writer<'_, '_> {
             }
             "box" => {
                 let token = i.operand.token().ok_or("missing box type")?;
-                let declared = self.image.boxed_value_type(token)?;
+                let declared = self.image.boxed_value_type(token, self.type_context)?;
+                self.track_type(declared)?;
                 let value = self.pop()?;
+                if declared.kind() == StackKind::Ref {
+                    self.image.assignable(value.ty, declared)?;
+                    self.lines.push("// box of a proved reference type preserves the reference, including null; no value box is allocated.".into());
+                    self.push(Ty::Object, format!("((object)({}))", value.name))?;
+                    return Ok(());
+                }
                 // An enum lives on the stack as its storage integer; boxing it must
                 // box the enum, not that integer, so the declared name is applied.
                 let expression = match declared {
@@ -1520,7 +1550,7 @@ impl Writer<'_, '_> {
                         }
                     }
                 };
-                self.lines.push("// box: the value is copied into one fresh boxed instance at this point; later mutations of the original value are not visible through it.".into());
+                self.lines.push("// box: the runtime converts this exact declared type to object. A non-nullable value is copied into a fresh box here; generic references retain identity and nullable values use CLR nullable boxing.".into());
                 self.push(crate::ir::Ty::Object, expression)?;
             }
             "unbox.any" => {
@@ -1542,12 +1572,13 @@ impl Writer<'_, '_> {
                     )?;
                     return Ok(());
                 }
-                let declared = self.image.boxed_value_type(token)?;
+                let declared = self.image.boxed_value_type(token, self.type_context)?;
+                self.track_type(declared)?;
                 let value = self.pop()?;
-                if value.ty != crate::ir::Ty::Object {
+                if value.ty.kind() != StackKind::Ref && value.ty != Ty::Null {
                     return Err("unbox.any needs an object reference".into());
                 }
-                self.lines.push("// unbox.any: null throws NullReferenceException, a different runtime type throws InvalidCastException, and the value is copied out of the box.".into());
+                self.lines.push("// unbox.any: exact runtime conversion to the declared type. Non-nullable values reject null and wrong boxed types and copy the value; generic references and nullable values retain CLR null behavior.".into());
                 // The stack carries an enum as its storage integer, so the cast names
                 // the enum for the runtime check and the conversion to that storage
                 // is written explicitly; the stack type stays the declared storage.
@@ -1570,7 +1601,7 @@ impl Writer<'_, '_> {
                         )
                     }
                     other => (
-                        format!("(({})({}))", other.cs(self.image)?, value.name),
+                        format!("(({})(object)({}))", other.cs(self.image)?, value.name),
                         other,
                     ),
                 };

@@ -5,6 +5,31 @@ The CLI defaults to a readable class/method view; `--details` preserves the full
 image-scoped metadata/IL evidence record. Original metadata is authoritative.
 All operations below are semantic notation; the CLI does not ship a runtime adapter.
 
+## Constructed value operations and scoped boxing
+
+`__cil_value_call_TOKEN` performs the original ordinary nongeneric call on an
+admitted constructed value owner. Type arguments remain caller-scoped, and an
+instance receiver is the exact managed location, not a copied or boxed receiver.
+Local generic value bodies use a structural open-self location. Local field
+access requires equality of the exact instantiated declaration and operand field
+types, not only a matching name or evaluation-stack width.
+
+`__cil_value_newobj_TOKEN` initializes separate value storage, executes the exact
+original constructor with evaluated arguments, then copies the completed value.
+It does not allocate a fresh reference-class identity. Exceptions keep constructor
+effects and prevent subsequent stores of a nonexistent completed result.
+
+Boxing uses the exact scoped type: known non-nullable values copy into fresh
+boxes, reference instantiations preserve identity, and nullable/generic types keep
+CLR boxing rules. Unbox.any retains exact runtime type/null checks and value
+copies, including generic reference and nullable cases. Managed locations are
+not silently read as ordinary values. Boolean storage still preserves raw bytes.
+
+The class-only shared owner binder remains class-only. This does not imply
+generic value MethodSpec calls, arbitrary static/foreign fields, unbox addresses,
+ordinary constrained dispatch or GVM admission. See
+[constructed value evidence](acceptance/corpus/CONSTRUCTED_VALUE_CALLS.md).
+
 ## Exact scoped reference calls
 
 Ordinary external reference callvirt can remain `__cil_callvirt_TOKEN` without

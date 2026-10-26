@@ -1,0 +1,59 @@
+{
+  "baseline": "a5b6d4eef",
+  "assembly": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+  "method": "0x0600006E",
+  "method_name": "Microsoft.FSharp.Core.FSharpChoice`2.GetHashCode",
+  "references": [
+    "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+    "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+    "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+    "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+  ],
+  "runs": [
+    {
+      "view": "ours",
+      "command": [
+        "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+        "decompile",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+        "--method",
+        "0x0600006E",
+        "--no-auto-references",
+        "--reference",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+        "--reference",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+        "--reference",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+        "--reference",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+      ],
+      "exit_code": 2,
+      "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+    },
+    {
+      "view": "il",
+      "command": [
+        "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+        "il",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+        "--method",
+        "0x0600006E"
+      ],
+      "exit_code": 0,
+      "stderr": ""
+    },
+    {
+      "view": "ilspy",
+      "command": [
+        "/Users/bytedance/.dotnet10/dotnet",
+        "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+        "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+        "-m",
+        "0x0600006E"
+      ],
+      "exit_code": 0,
+      "stderr": ""
+    }
+  ]
+}

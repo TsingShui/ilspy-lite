@@ -51,9 +51,9 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             name = signature.split("::", 1)[1].split("(", 1)[0].split("<", 1)[0]
-            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall")):
+            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall", "UnsupportedBox")):
                 selected.append((int(token, 16), name))
-        if len(selected) != 24:
+        if len(selected) != 25:
             raise ValueError("Owned scoped method selection drift")
         snippets, directives = {}, []
         for token, name in selected:
@@ -76,7 +76,7 @@ def main():
         path = OUT / f"directives-{config}.json"
         support.write_changed(path, json.dumps(directives, indent=2) + "\n")
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--scoped-plan", path]).stdout)
-        if len(plan) != 240:
+        if len(plan) != 250:
             raise ValueError("Scoped closure coverage drift")
         (OUT / f"plan-{config}.json").write_text(json.dumps(plan, indent=2) + "\n")
         for case in plan:

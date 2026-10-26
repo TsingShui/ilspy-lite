@@ -129,7 +129,7 @@ def main():
             if readable.stderr != details.stderr:
                 raise ValueError("view changed admission for " + name)
             body = inline_allocation(
-                inline_structural_types(without_dependency_report(readable.stdout)))
+                inline_structural_types(without_dependency_report(readable.stdout))).replace("!!0", "T").replace("!0", "T")
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
             code = "\n".join(line for line in body.splitlines()

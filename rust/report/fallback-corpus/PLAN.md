@@ -3,7 +3,23 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (reference relationships; aggregate 5% target)
+## Current position (constructed values/boxing; aggregate 5% target)
+
+- **492,717 Decompiled / 278,031 Partial; fallback 36.07288%**.
+- +20,561 in 132 images, zero losses/incomplete, unchanged scope/references.
+  Actual decrease 2.66767 points. OpenRA.Game +85 / Common +83.
+- Ordinary exact value calls, structural open-self receivers/fields, separate
+  value newobj and generic/value boxing/unbox.any are validated as one group.
+  A field signature forgery was reproduced/fixed before the milestone.
+- 411 tests, fmt/clippy and 23 owned drivers pass. New value gate: 522 comparisons
+  / 58 closed selections per config; ten mutants. Legacy promotions execute.
+- Ten source/IL triples self-reviewed, no changed-semantic SUSPECT in sample.
+  Static coverage is not third-party execution or independent verification.
+- Next: audit ordinary constrained dispatch and remaining generic/static/foreign
+  field/value proof gaps. Preserve GVM refusal and address-CFG/lifetime gates.
+- Continue autonomously in groups, no agents or unrequested push; <=5% unmet.
+
+## Previous position (reference relationships; aggregate 5% target)
 
 - **472,156 Decompiled / 298,592 Partial; fallback 38.74055%**.
 - +33,355 in 197 images, zero regressions/incomplete; fixed scope/references.

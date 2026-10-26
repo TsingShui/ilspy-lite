@@ -1,0 +1,121 @@
+// Copyright (c) 2026 Tsingshui
+// SPDX-License-Identifier: MIT
+
+use super::{Image, MethodRef, substitute_type_arguments};
+use crate::{Result, ir::Ty, signature_types::TypeContext};
+use cildec::{TableId, Token};
+
+pub(super) fn constructor(
+    image: &Image<'_>,
+    token: Token,
+    context: TypeContext,
+) -> Result<Option<(Ty, Vec<Ty>)>> {
+    if token.table() != Some(TableId::MemberRef) {
+        return Ok(None);
+    }
+    let member = image.md.tables().member_ref(token.rid())?;
+    if image.md.strings().str(member.name)? != ".ctor"
+        || member.class.table() != Some(TableId::TypeSpec)
+    {
+        return Ok(None);
+    }
+    let spec = image.type_spec(member.class)?;
+    let cildec::Type::GenericInst {
+        is_value_type: true,
+        args,
+        ..
+    } = &spec.type_
+    else {
+        return Ok(None);
+    };
+    let signature = crate::signature_guard::method(image.md.blobs().get(member.signature)?)?;
+    if !signature.has_this
+        || signature.explicit_this
+        || signature.calling_convention != cildec::CallConv::Default
+        || !signature.vararg_params.is_empty()
+        || signature.return_type.by_ref
+        || !signature.return_type.custom_mods.is_empty()
+        || !matches!(signature.return_type.type_, cildec::Type::Void)
+    {
+        return Err("value constructor needs an ordinary instance void signature".into());
+    }
+    let owner = Ty::from_sig_scoped(&spec.type_, image, context)?;
+    if !matches!(owner, Ty::Value(_)) {
+        return Err("value constructor needs an admitted value identity".into());
+    }
+    let parameters = signature
+        .params
+        .iter()
+        .map(|p| image.member_parameter(p, Some(args), context))
+        .collect::<Result<Vec<_>>>()?;
+    Ok(Some((owner, parameters)))
+}
+
+/// Direct value calls retain the requested instantiation and actual this location.
+pub(super) fn constructed(
+    image: &Image<'_>,
+    token: Token,
+    context: TypeContext,
+) -> Result<Option<MethodRef>> {
+    if token.table() != Some(TableId::MemberRef) {
+        return Ok(None);
+    }
+    let member = image.md.tables().member_ref(token.rid())?;
+    if member.class.table() != Some(TableId::TypeSpec) {
+        return Ok(None);
+    }
+    let spec = image.type_spec(member.class)?;
+    let cildec::Type::GenericInst {
+        is_value_type: true,
+        args,
+        ..
+    } = &spec.type_
+    else {
+        return Ok(None);
+    };
+    let name = image.md.strings().str(member.name)?;
+    if name.starts_with('.') {
+        return Ok(None);
+    }
+    let signature = crate::signature_guard::method(image.md.blobs().get(member.signature)?)?;
+    if name.is_empty()
+        || signature.explicit_this
+        || signature.calling_convention != cildec::CallConv::Default
+        || !signature.vararg_params.is_empty()
+    {
+        return Err("constructed value call needs an ordinary nongeneric signature".into());
+    }
+    let owner = Ty::from_sig_scoped(&spec.type_, image, context)?;
+    if !matches!(owner, Ty::Value(_)) {
+        return Err("value member owner needs an admitted value identity".into());
+    }
+    let parameter = |parameter: &cildec::Param<'_>| -> Result<Ty> {
+        if !parameter.custom_mods.is_empty() {
+            return Err("modified value-call parameter needs IL fallback".into());
+        }
+        let substituted = substitute_type_arguments(&parameter.type_, args)?;
+        let ty = Ty::from_sig_scoped(&substituted, image, context)?;
+        if parameter.by_ref {
+            image.address_of(ty)
+        } else {
+            Ok(ty)
+        }
+    };
+    Ok(Some(MethodRef {
+        token: token.0,
+        name: name.into(),
+        receiver: signature.has_this.then_some(owner),
+        target: format!("__cil_value_call_{:08X}", token.0),
+        args: signature
+            .params
+            .iter()
+            .map(&parameter)
+            .collect::<Result<Vec<_>>>()?,
+        ret: parameter(&signature.return_type)?,
+        core_object_constructor: None,
+        tick_count: false,
+        constructor: false,
+        generic_virtual: false,
+        exact_reference: true,
+    }))
+}

@@ -146,5 +146,6 @@ mod strings;
 mod struct_copies;
 #[path = "struct_receivers.rs"]
 mod struct_receivers;
+mod value_calls;
 #[path = "virtual_calls.rs"]
 mod virtual_calls;

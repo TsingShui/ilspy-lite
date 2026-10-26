@@ -1,0 +1,264 @@
+[
+  {
+    "name": "struct-copy",
+    "command": [
+      "python3",
+      "tests/struct-copy-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "struct-receiver",
+    "command": [
+      "python3",
+      "tests/struct-receiver-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "generic-reference",
+    "command": [
+      "python3",
+      "tests/generic-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "scoped-reference",
+    "command": [
+      "python3",
+      "tests/scoped-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "cast",
+    "command": [
+      "python3",
+      "tests/cast-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "equality",
+    "command": [
+      "python3",
+      "tests/equality-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "virtual-call",
+    "command": [
+      "python3",
+      "tests/virtual-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "object",
+    "command": [
+      "python3",
+      "tests/object-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "new-object",
+    "command": [
+      "python3",
+      "tests/new-object-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0
+  },
+  {
+    "name": "reference-relation",
+    "command": [
+      "python3",
+      "tests/reference-relation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "generic-value",
+    "command": [
+      "python3",
+      "tests/generic-value-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "external-enum",
+    "command": [
+      "python3",
+      "tests/external-enum-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "managed-location",
+    "command": [
+      "python3",
+      "tests/managed-location-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "method-instantiation",
+    "command": [
+      "python3",
+      "tests/method-instantiation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "reference-call",
+    "command": [
+      "python3",
+      "tests/reference-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "external-call",
+    "command": [
+      "python3",
+      "tests/external-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "external-property",
+    "command": [
+      "python3",
+      "tests/external-property-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "generic-binding",
+    "command": [
+      "python3",
+      "tests/generic-binding-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "generic-declaring",
+    "command": [
+      "python3",
+      "tests/generic-declaring-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "abstract-member",
+    "command": [
+      "python3",
+      "tests/abstract-member-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "interface-reference",
+    "command": [
+      "python3",
+      "tests/interface-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "external-allocation",
+    "command": [
+      "python3",
+      "tests/external-allocation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  },
+  {
+    "name": "value-call",
+    "command": [
+      "python3",
+      "tests/value-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0
+  }
+]

@@ -236,6 +236,7 @@ internal static partial class GenericReferenceRoundtrip
         object promotedZero = RuntimeHelpers.GetUninitializedObject(promotedPair);
         foreach (var (name, arguments, expected) in new (string, object[], object)[] {
             ("UnsupportedMember", new[] { promotedBox }, ReadState(promotedPair.GetField("Number"), promotedBox)),
+            ("UnsupportedBox", new[] { promotedBox }, promotedBox),
             ("UnsupportedNew", new object[] { 21 }, WithNumber(21)),
         })
         {

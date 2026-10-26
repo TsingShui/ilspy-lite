@@ -58,11 +58,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     ),
     (
         "StructReceiverCases.Ops",
-        "UnsupportedBox",
-        "box/unbox needs an admitted core scalar",
-    ),
-    (
-        "StructReceiverCases.Ops",
         "UnsupportedRefReturn",
         "byref return needs escape/lifetime analysis",
     ),

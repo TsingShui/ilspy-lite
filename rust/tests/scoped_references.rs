@@ -180,11 +180,6 @@ mod fixture_contract;
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "ScopedReferenceCases.MethodOps",
-        "UnsupportedBox",
-        "box/unbox needs an admitted core scalar",
-    ),
-    (
-        "ScopedReferenceCases.MethodOps",
         "UnsupportedAllocation",
         "operation needs a core TypeRef",
     ),

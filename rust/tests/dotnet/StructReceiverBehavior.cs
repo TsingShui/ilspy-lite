@@ -124,7 +124,7 @@ internal static partial class GenericReferenceRoundtrip
             .Where(f => !f.IsLiteral && !f.IsInitOnly).ToArray();
         MethodInfo[] selected = new[] { point, line, ops }.SelectMany(t => t.GetMethods(
                 BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedByRef" || m.Name == "UnsupportedLocalEscape")
+            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedByRef" || m.Name == "UnsupportedLocalEscape" || m.Name == "UnsupportedBox")
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned receiver selection is empty.");
         Type carrier = generated.GetType("StructReceiverCases.Recovered")
