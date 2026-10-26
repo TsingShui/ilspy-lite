@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "purpose": "Supplemental naming observations; does not replace the frozen random twenty",
+  "selection": {
+    "seed": "10146890a0227354b491c6d81e267078",
+    "eligible_count": 4473,
+    "algorithm": "Python random.Random(int(seed,16)).sample(all metadata classes,3); no support/name/size/visibility filter",
+    "record": "rust/report/openra/class-demo-gu5q325h/selection.json"
+  },
+  "baseline_ref": "519982c88",
+  "classes": [
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000ABB",
+      "name": "OpenRA.Mods.Common.Widgets.Logic.GameSaveBrowserLogic/<>c__DisplayClass31_0",
+      "baseline": {
+        "decompiled": 0,
+        "partial": 2,
+        "failed": 0
+      },
+      "first_blockers": {
+        "non-simple identifier needs IL fallback": 2
+      }
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x02000A29",
+      "name": "OpenRA.Mods.Common.Widgets.VideoPlayerWidget/<>c__DisplayClass26_1",
+      "baseline": {
+        "decompiled": 0,
+        "partial": 2,
+        "failed": 0
+      },
+      "first_blockers": {
+        "non-simple identifier needs IL fallback": 2
+      }
+    },
+    {
+      "assembly": "OpenRA.Mods.Common.dll",
+      "mvid": "daac77a9-0bf7-4155-8229-f659cf68d982",
+      "token": "0x020005C1",
+      "name": "OpenRA.Mods.Common.Traits.LegacyBridgeLayerInfo",
+      "baseline": {
+        "decompiled": 0,
+        "partial": 2,
+        "failed": 0
+      },
+      "first_blockers": {
+        "unsupported signature type needs IL fallback": 1,
+        "array element type needs IL fallback": 1
+      }
+    }
+  ]
+}

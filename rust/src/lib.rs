@@ -9,6 +9,7 @@ mod lift;
 mod metadata;
 mod readable;
 mod signature_guard;
+mod symbol_names;
 
 pub use dependencies::{
     AssemblyIdentity, AssemblyKind, AssemblyReference, AssemblyResolution, DefinitionLocation,

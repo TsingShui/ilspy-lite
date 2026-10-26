@@ -31,6 +31,13 @@ only owned metadata to check failure isolation and invalid ownership/ranges.
 They are parser/selection fixtures, not a semantic decompilation coverage claim.
 Snapshot revisions are pinned by Git without a separate hash manifest.
 
+The naming snapshots (`naming-release.bin`, `naming-debug.bin`) come from
+`../dotnet/NamingCases.cs`. Regenerate with
+`python3 rust/tests/build-naming-fixtures.py`, using the installed compiler without
+restore. They contain a generated captured-I4 class and a separate static
+constructor admission negative. Git pins the owned snapshots; the original
+metadata names remain the selection keys.
+
 The native-integer snapshots (`native-release.bin`, `native-debug.bin`) come from
 `../dotnet/NativeCases.cs`: native storage, fields, calls and conditional selection.
 Regenerate with `python3 rust/tests/build-native-fixtures.py`. The explicit

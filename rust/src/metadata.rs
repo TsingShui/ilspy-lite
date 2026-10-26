@@ -1893,7 +1893,7 @@ impl<'a> Image<'a> {
     /// Resolve local class identity; external ancestry is not an assignability proof.
     pub fn class_name(&self, token: u32) -> Result<String> {
         self.class_chain(token)?;
-        cs_owner(&Names::new(&self.md).type_def(Rid::new(token & 0xffffff))?)
+        crate::symbol_names::type_name(&self.md, Token(token), true)
     }
 
     fn class_chain(&self, token: u32) -> Result<Vec<u32>> {
