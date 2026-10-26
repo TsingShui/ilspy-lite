@@ -96,6 +96,7 @@ mod managed_locations;
 #[path = "reference_calls.rs"]
 mod reference_calls;
 mod reference_relations;
+mod static_fields;
 
 #[path = "abstract_members.rs"]
 mod abstract_members;

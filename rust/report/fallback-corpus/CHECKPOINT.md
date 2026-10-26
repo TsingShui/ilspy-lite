@@ -6,7 +6,45 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: exception identities and construction
+## Current verified state: generic and foreign static storage
+
+- `report/static-fields/corpus-scan/baseline.json`: **531,492 Decompiled /
+  239,256 Partial** of 770,748; fallback **31.0420526553426%**.
+- **+9,808 in 112 images**, zero recovered-method losses/incomplete; decrease
+  1.27253006170629 points. Fixed inputs/exclusions/references. Game 2,757/2,010
+  (+3), Common 11,870/6,537 (+234). Aggregate <=5% remains unmet.
+- New metadata/static_fields.rs owns exact load/store/address operations and
+  closed storage/readonly proof. Local class/value kind, arity and exact stored
+  operand/declaration signatures are checked. Foreign flags come only from
+  selected definitions; no instance layout is needed for static storage.
+- Six new public static-field tests. Literal storage admission was caught by an
+  owned mutation, generic stores exposed an integer-only tail, and local value
+  static owners exposed use of the class-only member binder. Readonly initializer
+  mutation changes only the closed owner and must remain Partial. Exact missing/
+  wrong/added references and signature-index forgeries are negative cases.
+- **430 Rust tests**, fmt/clippy and **30 owned driver invocations** pass.
+  New gate per config: **864 steady comparisons / 96 closed selections**,
+  **20 thread-static comparisons**, **20 fresh-process first-touch sequences**
+  with two calls each, **eight semantic mutants**. Mixed type/method scopes,
+  nullable/reference-bearing copies, closed storage isolation, acquisition timing,
+  initializer poison/one-time behavior and thread storage execute.
+- Three legacy frozen promotions execute before removal: scoped static cache
+  1,440/260 closures/26 methods per config; external allocation/static 26/9;
+  real CLR initializer mirrors 13 state comparisons/9 closed types, including
+  generic readonly Stamp. All retain semantic mutation controls.
+- Nine pre-audit triples and twelve gained production source/ILSpy/IL triples
+  retained. Self-review: twelve CRUDE-BUT-EQUIVALENT, no changed-semantic SUSPECT
+  in bounded sample. Path.DirectorySeparatorChar / DBNull.Value audit methods
+  remain Partial for unavailable exact foreign field facts, not claimed gains.
+- Evidence: `acceptance/corpus/STATIC_STORAGE.md` and
+  `report/static-fields/{AUDIT.md,REDS.md,behavior-manifest.json,milestone.json,review/}`.
+  No third-party execution, independent/formal or whole-corpus equivalence claim.
+  Local-only commit workflow; no push.
+- Next: fresh audit of broader typed arrays/signatures and remaining value/
+  constructor/receiver proof gaps. Preserve GVM, lifetime and exact reference
+  policy; first-blocker counts are not forecasts.
+
+## Previous verified state: exception identities and construction
 
 - `report/exception-types/corpus-scan/baseline.json`: **521,684 Decompiled /
   249,064 Partial** of 770,748; fallback **32.31458271704889%**.

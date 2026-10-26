@@ -1,0 +1,401 @@
+[
+  {
+    "name": "struct-copy",
+    "command": [
+      "python3",
+      "tests/struct-copy-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/struct-copy-final.log",
+    "seconds": 5.034
+  },
+  {
+    "name": "struct-receiver",
+    "command": [
+      "python3",
+      "tests/struct-receiver-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/struct-receiver-final.log",
+    "seconds": 2.934
+  },
+  {
+    "name": "generic-reference",
+    "command": [
+      "python3",
+      "tests/generic-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/generic-reference-final.log",
+    "seconds": 2.602
+  },
+  {
+    "name": "scoped-reference",
+    "command": [
+      "python3",
+      "tests/scoped-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/scoped-reference-final.log",
+    "seconds": 4.287
+  },
+  {
+    "name": "cast",
+    "command": [
+      "python3",
+      "tests/cast-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/cast-final.log",
+    "seconds": 2.453
+  },
+  {
+    "name": "equality",
+    "command": [
+      "python3",
+      "tests/equality-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/equality-final.log",
+    "seconds": 1.612
+  },
+  {
+    "name": "virtual-call",
+    "command": [
+      "python3",
+      "tests/virtual-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/virtual-call-final.log",
+    "seconds": 2.115
+  },
+  {
+    "name": "object",
+    "command": [
+      "python3",
+      "tests/object-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/object-final.log",
+    "seconds": 0.808
+  },
+  {
+    "name": "new-object",
+    "command": [
+      "python3",
+      "tests/new-object-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/new-object-final.log",
+    "seconds": 1.546
+  },
+  {
+    "name": "reference-relation",
+    "command": [
+      "python3",
+      "tests/reference-relation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/reference-relation-final.log",
+    "seconds": 5.598
+  },
+  {
+    "name": "generic-value",
+    "command": [
+      "python3",
+      "tests/generic-value-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/generic-value-final.log",
+    "seconds": 2.977
+  },
+  {
+    "name": "external-enum",
+    "command": [
+      "python3",
+      "tests/external-enum-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/external-enum-final.log",
+    "seconds": 4.895
+  },
+  {
+    "name": "managed-location",
+    "command": [
+      "python3",
+      "tests/managed-location-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/managed-location-final.log",
+    "seconds": 20.39
+  },
+  {
+    "name": "method-instantiation",
+    "command": [
+      "python3",
+      "tests/method-instantiation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/method-instantiation-final.log",
+    "seconds": 5.207
+  },
+  {
+    "name": "reference-call",
+    "command": [
+      "python3",
+      "tests/reference-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/reference-call-final.log",
+    "seconds": 11.899
+  },
+  {
+    "name": "external-call",
+    "command": [
+      "python3",
+      "tests/external-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/external-call-final.log",
+    "seconds": 3.763
+  },
+  {
+    "name": "external-property",
+    "command": [
+      "python3",
+      "tests/external-property-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/external-property-final.log",
+    "seconds": 5.148
+  },
+  {
+    "name": "generic-binding",
+    "command": [
+      "python3",
+      "tests/generic-binding-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/generic-binding-final.log",
+    "seconds": 5.004
+  },
+  {
+    "name": "generic-declaring",
+    "command": [
+      "python3",
+      "tests/generic-declaring-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/generic-declaring-final.log",
+    "seconds": 3.129
+  },
+  {
+    "name": "abstract-member",
+    "command": [
+      "python3",
+      "tests/abstract-member-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/abstract-member-final.log",
+    "seconds": 3.39
+  },
+  {
+    "name": "interface-reference",
+    "command": [
+      "python3",
+      "tests/interface-reference-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/interface-reference-final.log",
+    "seconds": 4.954
+  },
+  {
+    "name": "external-allocation",
+    "command": [
+      "python3",
+      "tests/external-allocation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/external-allocation-final.log",
+    "seconds": 4.212
+  },
+  {
+    "name": "value-call",
+    "command": [
+      "python3",
+      "tests/value-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/value-call-final.log",
+    "seconds": 10.724
+  },
+  {
+    "name": "constrained",
+    "command": [
+      "python3",
+      "tests/constrained-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/constrained-final.log",
+    "seconds": 7.875
+  },
+  {
+    "name": "exception-type",
+    "command": [
+      "python3",
+      "tests/exception-type-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/exception-type-final.log",
+    "seconds": 6.271
+  },
+  {
+    "name": "exception-type-legacy",
+    "command": [
+      "python3",
+      "tests/exception-type-roundtrip.py",
+      "--legacy",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/exception-type-legacy-final.log",
+    "seconds": 2.228
+  },
+  {
+    "name": "exception-regions",
+    "command": [
+      "python3",
+      "tests/exception-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/exception-regions-final.log",
+    "seconds": 5.482
+  },
+  {
+    "name": "exception-objects",
+    "command": [
+      "python3",
+      "tests/reference-roundtrip.py",
+      "--exceptions",
+      "--from-class",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/static-fields/exception-objects-final.log",
+    "seconds": 2.329
+  },
+  {
+    "name": "static-field",
+    "command": [
+      "python3",
+      "tests/static-field-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/static-field-final.log",
+    "seconds": 14.244
+  },
+  {
+    "name": "static-constructor",
+    "command": [
+      "python3",
+      "tests/static-constructor-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/static-fields/static-constructor-final.log",
+    "seconds": 1.643
+  }
+]

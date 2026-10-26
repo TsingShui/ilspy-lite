@@ -1,0 +1,49 @@
+{
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 249064,
+      "Decompiled": 521684
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 37
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 239256,
+      "Decompiled": 531492
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 37
+  },
+  "newly_recovered": 9808,
+  "regressions": [],
+  "gained_images": 112,
+  "fallback_percent": 31.0420526553426,
+  "aggregate_gate_pass": false,
+  "rust_tests": 430,
+  "owned_drivers": 30,
+  "behavior": {
+    "steady_comparisons_per_configuration": 864,
+    "steady_closed_selections": 96,
+    "thread_comparisons_per_configuration": 20,
+    "first_touch_sequences_per_configuration": 20,
+    "invocations_per_first_touch_sequence": 2,
+    "rejected_mutants_per_configuration": 8
+  },
+  "review": {
+    "triples": 12,
+    "crude_but_equivalent": 12,
+    "changed_semantic_suspect": 0,
+    "kind": "main-session self-review"
+  },
+  "fixed_scope_and_reference_policy": true,
+  "third_party_execution": false,
+  "baseline": "report/static-fields/corpus-scan/baseline.json",
+  "delta": "report/static-fields/delta.json"
+}

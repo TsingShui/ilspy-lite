@@ -109,10 +109,12 @@ public static class Caches
 public static class Registry<T>
 {
     public static int Count;
+    public static readonly int Stamp;
 
     static Registry()
     {
         Count = 1;
+        Stamp = Count + 7;
     }
 }
 

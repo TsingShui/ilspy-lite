@@ -51,9 +51,9 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             name = signature.split("::", 1)[1].split("(", 1)[0].split("<", 1)[0]
-            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall", "UnsupportedBox")):
+            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall", "UnsupportedBox", "UnsupportedStatic")):
                 selected.append((int(token, 16), name))
-        if len(selected) != 25:
+        if len(selected) != 26:
             raise ValueError("Owned scoped method selection drift")
         snippets, directives = {}, []
         for token, name in selected:
@@ -64,7 +64,7 @@ def main():
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             aliases = [{"alias": m[0], "bytes": m[1], "type_owner": int(m[2], 16), "method_owner": int(m[3], 16)}
                        for m in re.findall(r"// structural signature (\w+) bytes=([0-9A-F]+): [^\n]*?; type-owner=0x([0-9A-Fa-f]{8}) method-owner=0x([0-9A-Fa-f]{8});", details.stdout)]
-            directives.append({"token": token, "aliases": aliases})
+            directives.append({"token": token, "aliases": aliases, "static_fields": [int(t, 16) for t in sorted(set(re.findall(r"__cil_ldsfld_([0-9A-F]{8})", details.stdout)))]})
             statements = details.stdout
             if args.readable:
                 readable = support.run([args.cli, "decompile", fixture, "--method", f"0x{token:08X}", "--no-auto-references"])
@@ -76,7 +76,7 @@ def main():
         path = OUT / f"directives-{config}.json"
         support.write_changed(path, json.dumps(directives, indent=2) + "\n")
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--scoped-plan", path]).stdout)
-        if len(plan) != 250:
+        if len(plan) != 260:
             raise ValueError("Scoped closure coverage drift")
         (OUT / f"plan-{config}.json").write_text(json.dumps(plan, indent=2) + "\n")
         for case in plan:
@@ -90,7 +90,7 @@ def main():
                                   snippets[case["token"]])
             if "__cil_methodspec_call_" in case["body"]: raise ValueError("Unbound scoped generic call")
         pieces = ["namespace " + case["carrier"] + "\n{\n" + "\n".join(case["aliases"])
-                  + "\npublic static class Recovered\n{\n" + case.get("body", snippets[case["token"]]) + "\n}\n}\n"
+                  + "\npublic static class Recovered\n{\n" + "\n".join(case["helpers"]) + "\n" + case.get("body", snippets[case["token"]]) + "\n}\n}\n"
                   for case in plan]
         text = "\n".join(pieces)
         suffix = config + ("-readable" if args.readable else "-details")
@@ -113,7 +113,13 @@ def main():
                                         "Pair<global::System.String, global::System.Int32>", 1)
             if wrong_binding == text:
                 raise ValueError("Distinct VAR/MVAR mutation binding missing")
+            static_index = next(i for i, case in enumerate(plan) if case["name"] == "UnsupportedStatic")
+            copied, count = re.subn(r"(private static (.+) __cil_ldsfld_[0-9A-F]{8}\(\) => )([^;\n]+);",
+                r"\1\3 == null ? null : new \2(\3);", pieces[static_index], count=1)
+            if count != 1: raise ValueError("Static identity mutation target missing")
+            static_mutant = "\n".join(copied if i == static_index else piece for i, piece in enumerate(pieces))
             mutants = [
+                ("StaticIdentity", static_mutant, "Recovered scoped behavior differs: UnsupportedStatic"),
                 ("Body", mutated, "Recovered scoped behavior differs: Identity"),
                 ("Binding", wrong_binding, "Scoped runtime parameter/return identity differs: Mixed"),
             ]

@@ -17,6 +17,7 @@ const RECOVERED: &[(&str, &str)] = &[
     ("StaticConstructorCases.First", ".cctor"),
     ("StaticConstructorCases.Second", ".cctor"),
     ("StaticConstructorCases.Sized", ".cctor"),
+    ("StaticConstructorCases.Registry`1", ".cctor"),
     ("StaticConstructorCases.Failing", ".cctor"),
     ("StaticConstructorCases.Caches", "TwiceImpl"),
 ];
@@ -41,11 +42,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "StaticConstructorCases.Caches",
         ".cctor",
         "unsupported opcode ldftn at IL_0001",
-    ),
-    (
-        "StaticConstructorCases.Registry`1",
-        ".cctor",
-        "generic static field needs the constructed owner name",
     ),
     (
         "StaticConstructorCases.ExternalCache",
@@ -75,7 +71,7 @@ fn recovered_static_constructors_keep_their_member_shape() {
                 details.text
             );
             let readable = decompile_with_style(bytes, token, OutputStyle::Readable).unwrap();
-            let short = owner.rsplit('.').next().unwrap();
+            let short = owner.rsplit('.').next().unwrap().split('`').next().unwrap();
             if *name == ".cctor" {
                 // The initializer is rendered as the type's own static constructor:
                 // no method name, no return type, nothing to call twice.

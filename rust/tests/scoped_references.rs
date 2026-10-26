@@ -188,11 +188,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "UnsupportedConstruct",
         "constructed member needs a local definition; external constructed members need dependency facts",
     ),
-    (
-        "ScopedReferenceCases.MemberOps",
-        "UnsupportedStatic",
-        "generic static field needs the constructed owner name",
-    ),
 ];
 
 #[test]

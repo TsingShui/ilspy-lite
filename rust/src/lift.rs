@@ -754,14 +754,9 @@ impl Writer<'_, '_> {
             }
             "ldsflda" => {
                 let token = i.operand.token().ok_or("missing static field token")?;
-                let (target, element, readonly, _) = self.image.static_field(token)?;
-                let target = if readonly {
-                    format!("__cil_ldsflda_{:08X}()", token.0)
-                } else {
-                    target
-                };
-                self.track_type(element)?;
-                self.push(self.image.address_of(element)?, target)?;
+                let field = self.image.static_field(token, self.type_context)?;
+                self.track_type(field.ty)?;
+                self.push(self.image.address_of(field.ty)?, field.address())?;
             }
             "ldflda" => {
                 let t = i.operand.token().ok_or("missing field token")?;
@@ -1564,29 +1559,22 @@ impl Writer<'_, '_> {
             }
             "ldsfld" | "stsfld" => {
                 let t = i.operand.token().ok_or("missing field token")?;
-                let (field, ty, readonly, owner) = self.image.static_field(t)?;
+                let field = self.image.static_field(t, self.type_context)?;
+                let ty = field.ty;
                 self.track_type(ty)?;
                 self.lines.push(format!("// field token 0x{:08X}", t.0));
                 if op == "ldsfld" {
-                    self.push(ty.stack(), ty.load(&field, self.image)?)?;
+                    self.push(ty.stack(), field.load(self.image)?)?;
                 } else {
                     // A `static readonly` field is assignable only by the static
                     // constructor of its own declaring type; every other write would
                     // not be legal C# for the same storage.
-                    if readonly && self.static_constructor != Some(owner) {
+                    if !field.writable_in(self.static_constructor) {
                         return Err("readonly static field write needs IL fallback".into());
                     }
                     let v = self.pop()?;
-                    if matches!(
-                        ty.kind(),
-                        StackKind::Native | StackKind::Float | StackKind::Ref | StackKind::Value
-                    ) {
-                        self.image.assignable(v.ty, ty.stack())?;
-                    } else {
-                        expect(v.ty, ty.stack())?;
-                    }
-                    self.lines
-                        .push(format!("{field} = {};", ty.store(&v.name, self.image)?));
+                    self.image.assignable(v.ty, ty.stack())?;
+                    self.lines.push(field.store(&v.name, self.image)?);
                 }
             }
             "throw" => {

@@ -19,7 +19,6 @@ SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
 # set is frozen so a silently gated type cannot shrink the executed surface.
 UNSUPPORTED = {
     "Caches": "unsupported opcode ldftn at IL_0001",
-    "Registry`1": "generic static field needs the constructed owner name",
     "ExternalCache": "external allocation needs dependency facts",
 }
 
@@ -58,23 +57,37 @@ def shells(views):
     return declared
 
 
-def carrier(views):
+def carrier(views, field_names):
     """Compile each recovered type view as its own type, bodies exactly as written."""
     pieces = []
     for name, view in views.items():
         text = without_report(view).replace("namespace StaticConstructorCases;\n", "")
-        text, count = re.subn(rf"\b(class|struct) {re.escape(name)}\b", rf"\1 Recovered{name}", text, count=1)
+        short = name.split("`", 1)[0]
+        text, count = re.subn(rf"\b(class|struct) {re.escape(short)}\b", rf"\1 Recovered{short}", text, count=1)
         if count != 1:
             raise ValueError("recovered type declaration missing: " + name)
         # A `static readonly` field is assignable only by its declaring type, so the
         # qualified store moves to the recovered type's own field of the same name;
         # both sides are then read back and compared field by field.
-        text = text.replace(f"StaticConstructorCases.{name}.", f"Recovered{name}.")
+        text = text.replace(f"StaticConstructorCases.{name}.", f"Recovered{short}.")
+        def static_store(match):
+            indent, token, value = match.groups()
+            owner, field = field_names[token]
+            if owner != name or field not in ["Count", "Stamp"] or short != "Registry":
+                raise ValueError("Unexpected owned generic initializer storage")
+            return f"{indent}RecoveredRegistry<T>.{field} = {value};"
+        text = re.sub(r"(?m)^(\s*)__cil_stsfld_([0-9A-F]{8})\((.*)\);$", static_store, text)
+        def static_load(match):
+            owner, field = field_names[match[1]]
+            if owner != name or field not in ["Count", "Stamp"] or short != "Registry":
+                raise ValueError("Unexpected owned generic initializer read")
+            return f"RecoveredRegistry<T>.{field}"
+        text = re.sub(r"__cil_ldsfld_([0-9A-F]{8})\(\)", static_load, text)
         # The initializer's own name is the enclosing type name.
-        renamed = f"static Recovered{name}("
-        if f"static {name}(" not in text:
+        renamed = f"static Recovered{short}("
+        if f"static {short}(" not in text:
             raise ValueError("recovered static constructor missing: " + name)
-        text = text.replace(f"static {name}(", renamed)
+        text = text.replace(f"static {short}(", renamed)
         pieces.append(text.strip())
     return ("namespace StaticConstructorCases\n{\nusing static StaticConstructorCases.RecoveredShells;\n\n"
             + "public static class RecoveredShells\n{\n" + "\n".join(shells(views)) + "\n}\n\n"
@@ -139,8 +152,11 @@ def main():
             raise ValueError("static-constructor negative surface drifted: " + repr(gated))
         if not recovered:
             raise ValueError("static-constructor selection is empty")
-        views = {}
+        views, field_names = {}, {}
         for name in sorted(recovered):
+            original_il = support.run([args.cli, "il", fixture, "--method", recovered[name]]).stdout
+            for token, owner, field in re.findall(r"stsfld 0x([0-9A-F]{8}) class StaticConstructorCases\.([^<]+)<[^>]+>::(\w+)", original_il):
+                field_names[token] = (owner, field)
             view = support.run([args.cli, "decompile", fixture, "--type",
                                 "StaticConstructorCases." + name, "--no-auto-references"])
             if "decompiled=1" not in view.stderr:
@@ -148,7 +164,7 @@ def main():
             (OUT / f"{config}-{name}.type.txt").write_text(view.stdout)
             views[name] = view.stdout
         source = OUT / f"Recovered-{config}.cs"
-        support.write_changed(source, carrier(views))
+        support.write_changed(source, carrier(views, field_names))
         compiled = source.with_suffix(".dll")
         compile_ms += support.compile_cs(compiled, [source], references=[fixture])
         result = support.run([support.DOTNET / "dotnet", harness, fixture,
@@ -172,7 +188,7 @@ def main():
                 if mutated == views:
                     raise ValueError("static-constructor mutation target missing: " + label)
                 path = OUT / f"{label}-{config}.cs"
-                support.write_changed(path, carrier(mutated))
+                support.write_changed(path, carrier(mutated, field_names))
                 binary = path.with_suffix(".dll")
                 compile_ms += support.compile_cs(binary, [path], references=[fixture])
                 negative = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture),

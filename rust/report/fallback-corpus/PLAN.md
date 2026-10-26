@@ -3,7 +3,25 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (exception identities/construction; aggregate 5% target)
+## Current position (static storage; aggregate 5% target)
+
+- **531,492 Decompiled / 239,256 Partial; fallback 31.04205%**.
+- +9,808 in 112 images, zero losses/incomplete; fixed scope/references.
+  Decrease 1.27253 points. Game +3 / Common +234.
+- Exact static load/store/address operations retain generic scopes, values,
+  aliases, initializer context and thread-static storage; selected foreign
+  definition facts remain distinct from instance layout and source spelling.
+- 430 tests, fmt/clippy and 30 owned invocations pass. New gate per config:
+  864/96 closed selections, 20 thread checks, 20 first-touch sequences, eight
+  mutants; legacy promotions execute before frozen rows are removed.
+- Twelve gained source/IL triples self-reviewed crude but equivalent; no
+  changed-semantic suspect in the bounded sample. No third-party execution or
+  independent/formal verification claim.
+- Next: audit broad typed arrays/signatures and remaining value-constructor/
+  receiver proof gaps. Preserve GVM/lifetime/unknown-fact/reference-policy gates.
+  Continue autonomously, no agents or unrequested push; <=5% remains unmet.
+
+## Previous position (exception identities/construction; aggregate 5% target)
 
 - **521,684 Decompiled / 249,064 Partial; fallback 32.31458%**.
 - +25,305 in 213 images, zero losses/incomplete; fixed scope/references.

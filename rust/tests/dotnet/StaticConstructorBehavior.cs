@@ -75,10 +75,15 @@ internal static partial class GenericReferenceRoundtrip
             .Where(t => t.Name.StartsWith("Recovered", StringComparison.Ordinal) && !t.Name.EndsWith("Shells", StringComparison.Ordinal))
             .OrderBy(t => t.Name, StringComparer.Ordinal).ToArray();
         if (recovered.Length == 0) throw new Exception("Recovered static-constructor carrier is empty.");
-        var pairs = recovered.Select(type => (
-            Original: fixture.GetType("StaticConstructorCases." + type.Name.Substring("Recovered".Length))
-                ?? throw new Exception("Recovered carrier has no owned counterpart: " + type.Name),
-            Recovered: type)).ToArray();
+        var pairs = recovered.SelectMany(type => {
+            Type original = fixture.GetType("StaticConstructorCases." + type.Name.Substring("Recovered".Length))
+                ?? throw new Exception("Recovered carrier has no owned counterpart: " + type.Name);
+            if (!type.IsGenericTypeDefinition) return new[] { (Original: original, Recovered: type) };
+            if (type.GetGenericArguments().Length != 1 || original.GetGenericArguments().Length != 1)
+                throw new Exception("Unexpected owned initializer arity.");
+            return new[] { typeof(int), typeof(string), typeof(object) }.Select(argument =>
+                (Original: original.MakeGenericType(argument), Recovered: type.MakeGenericType(argument)));
+        }).ToArray();
         // Every original initializer runs first, then every recovered one, in the
         // same order, so a body that reads another type's static state reads the
         // same value in both phases.
@@ -86,7 +91,7 @@ internal static partial class GenericReferenceRoundtrip
         var actual = pairs.Select(pair => StaticInitializationFailure(pair.Recovered)).ToArray();
         for (int index = 0; index < pairs.Length; index++)
         {
-            string name = pairs[index].Original.Name;
+            string name = pairs[index].Original.ToString();
             if (expected[index] != actual[index])
                 throw new Exception("Recovered static constructor differs: " + name
                     + " expected=" + expected[index] + " actual=" + actual[index]);
@@ -104,7 +109,7 @@ internal static partial class GenericReferenceRoundtrip
             {
                 FieldInfo lowered = pairs[index].Recovered.GetField(original.Name, BindingFlags.Public | BindingFlags.Static)
                     ?? throw new Exception("Recovered type lost field: " + name + "." + original.Name);
-                if (lowered.FieldType != original.FieldType)
+                if (lowered.FieldType != original.FieldType || lowered.IsInitOnly != original.IsInitOnly)
                     throw new Exception("Recovered field type differs: " + name + "." + original.Name);
                 object before = original.GetValue(null);
                 object after = lowered.GetValue(null);

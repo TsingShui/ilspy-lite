@@ -56,7 +56,7 @@ def main():
                     for record in map(json.loads, scan.stdout.splitlines())
                     if record["status"] == "Decompiled" and owners.get(record["token"]) == "ExternalAllocationCases.Ops"]
         if not selected: raise ValueError("external-allocation selection is empty")
-        snippets, skipped = [], []
+        snippets, skipped, static_tokens = [], [], set()
         for token, name in selected:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details",
                                    "--no-auto-references", "--reference", library])
@@ -95,6 +95,8 @@ def main():
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
             code = "\n".join(line for line in body.splitlines()
                               if not line.lstrip().startswith("//"))
+            static_tokens.update(int(t, 16) for t in re.findall(r"__cil_ldsfld_([0-9A-F]{8})", code))
+            code = re.sub(r"__cil_ldsfld_[0-9A-F]{8}", "", code)
             if "__cil_" in support.without_boolean_helpers(code):
                 skipped.append(name)
                 continue
@@ -104,8 +106,11 @@ def main():
         if skipped:
             raise ValueError("unexpected unexecutable selection: " + repr(skipped))
         if not snippets: raise ValueError("external-allocation carrier is empty")
+        field_plan = OUT / f"static-fields-{config}.json"
+        support.write_changed(field_plan, json.dumps(sorted(static_tokens)))
+        static_helpers = support.run([support.DOTNET / "dotnet", harness, fixture, "--external-allocation-fields", field_plan, library]).stdout
         carrier = ("namespace ExternalAllocationCases\n{\npublic static class Recovered\n{\n"
-                   + "\n".join(snippets) + "\n}\n}\n")
+                   + static_helpers + "\n".join(snippets) + "\n}\n}\n")
         source = OUT / f"Recovered-{config}.cs"
         support.write_changed(source, carrier)
         recovered = source.with_suffix(".dll")
@@ -116,6 +121,19 @@ def main():
         rows.append({"configuration": config, "behavior": result.stdout.strip(),
                      "skipped": skipped})
         if args.mutation_control:
+            wrong_static, count = re.subn(r"(private static int __cil_ldsfld_[0-9A-F]{8}\(\) => )[^;]+;", r"\g<1>0;", carrier, count=1)
+            if count != 1: raise ValueError("Static field mutation missing")
+            path = OUT / f"WrongStatic-{config}.cs"
+            support.write_changed(path, wrong_static)
+            binary = path.with_suffix(".dll")
+            compile_ms += support.compile_cs(binary, [path], references=[fixture, library])
+            mutated = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture), "--external-allocation-check", str(binary), str(library)], text=True, capture_output=True, timeout=120)
+            log = mutated.stdout + mutated.stderr
+            (OUT / f"WrongStatic-{config}.log").write_text(log)
+            if mutated.returncode == 0 or "Recovered external allocation differs: UnsupportedStatic" not in log:
+                raise ValueError("Static storage mutation survived: " + log)
+            rows.append({"configuration": config, "mutation": "wrong-static-storage", "detected": True})
+            print(config + ": rejected static storage mutant", flush=True)
             # Returning null where a fresh instance is constructed must change the
             # observed object, so the identity/field comparison is the gate.
             import re as _re

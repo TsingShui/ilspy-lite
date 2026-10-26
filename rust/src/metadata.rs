@@ -36,6 +36,7 @@ mod exception_types;
 mod method_instantiations;
 mod reference_calls;
 pub(crate) mod reference_relations;
+mod static_fields;
 mod value_calls;
 
 pub(crate) struct Image<'a> {
@@ -4279,16 +4280,26 @@ impl<'a> Image<'a> {
         })
     }
 
-    /// A static field of this image, rendered with its declaring type's name.
-    ///
-    /// The declaring type token is reported so a write can be checked against the
-    /// constructor context: only the declaring type's own static constructor may
-    /// assign a `static readonly` field.
-    pub fn static_field(&self, t: Token) -> Result<(String, crate::ir::Ty, bool, u32)> {
+    /// Typed static storage operations retain the original operand and declaring
+    /// context. Readonly store permission needs the same owning initializer and
+    /// closed instantiation; address acquisition grants no direct-store permission.
+    pub fn static_field(
+        &self,
+        t: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<static_fields::StaticField> {
+        if let Some(field) = static_fields::referenced(self, t, context)? {
+            return Ok(field);
+        }
+        Ok(static_fields::StaticField::named(
+            t,
+            self.plain_static_field(t)?,
+        ))
+    }
+
+    fn plain_static_field(&self, t: Token) -> Result<(String, crate::ir::Ty, bool, u32)> {
         if t.table() == Some(TableId::MemberRef) {
-            // A static field named through a member reference has a declaring type
-            // this image does not define, so neither its storage nor its name can be
-            // written without more facts.
+            // Unproved MemberRef shapes cannot reuse a named local FieldDef.
             let parent = self.md.tables().member_ref(t.rid())?.class;
             return Err(match parent.table() {
                 Some(TableId::TypeSpec) => {

@@ -36,9 +36,9 @@ internal static partial class GenericReferenceRoundtrip
     static List<Specialization> Specializations()
     {
         MethodInfo[] methods = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
-            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall" || m.Name == "UnsupportedBox")
+            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall" || m.Name == "UnsupportedBox" || m.Name == "UnsupportedStatic")
             .OrderBy(m => m.MetadataToken).ToArray();
-        if (methods.Length != 25) throw new Exception("Scoped owned method selection drift.");
+        if (methods.Length != 26) throw new Exception("Scoped owned method selection drift.");
         var result = new List<Specialization>();
         foreach (MethodInfo definition in methods)
         {
@@ -65,7 +65,7 @@ internal static partial class GenericReferenceRoundtrip
     {
         using var json = JsonDocument.Parse(File.ReadAllText(directivesPath));
         var directives = json.RootElement.EnumerateArray().ToDictionary(row => row.GetProperty("token").GetInt32());
-        if (directives.Count != 25) throw new Exception("Scoped signature directive coverage drift.");
+        if (directives.Count != 26) throw new Exception("Scoped signature directive coverage drift.");
         var result = new List<object>();
         foreach (Specialization test in cases)
         {
@@ -91,7 +91,15 @@ internal static partial class GenericReferenceRoundtrip
                     throw new Exception("Invalid specialized reference alias.");
                 aliases.Add("using " + alias + " = " + TypeSource(type) + ";");
             }
-            result.Add(new { carrier = test.Carrier, token = test.Token, name = original.Name, aliases });
+            var helpers = new List<string>();
+            foreach (var fieldToken in directives[test.Token].GetProperty("static_fields").EnumerateArray()) {
+                var target = fixture.ManifestModule.ResolveField(fieldToken.GetInt32(), test.Types, test.Methods);
+                if (!target.IsStatic || target.Name != "Cache" || target.DeclaringType.GetGenericTypeDefinition() != fixture.GetType("ScopedReferenceCases.Receiver`1"))
+                    throw new Exception("Unexpected owned scoped static field.");
+                helpers.Add("private static " + TypeSource(target.FieldType) + " __cil_ldsfld_" + fieldToken.GetInt32().ToString("X8") + "() => "
+                    + TypeSource(target.DeclaringType) + ".Cache;");
+            }
+            result.Add(new { carrier = test.Carrier, token = test.Token, name = original.Name, aliases, helpers });
         }
         Console.WriteLine(JsonSerializer.Serialize(result));
     }
@@ -152,9 +160,13 @@ internal static partial class GenericReferenceRoundtrip
             || !generated.GetParameters().Select(p => p.ParameterType).SequenceEqual(expected))
             throw new Exception("Scoped runtime parameter/return identity differs: " + original.Name);
 
+        FieldInfo staticCache = original.Name == "UnsupportedStatic"
+            ? fixture.GetType("ScopedReferenceCases.Receiver`1").MakeGenericType(test.Methods[0]).GetField("Cache") : null;
         void Compare(object receiver, object[] arguments, object expectedValue)
         {
-            var graph = CaptureGraph(arguments.Prepend(receiver));
+            var graph = CaptureGraph(arguments.Prepend(receiver).Append(staticCache?.GetValue(null)));
+            if (staticCache != null) graph.Add(new State(() => new[] { staticCache.GetValue(null) },
+                values => staticCache.SetValue(null, values[0]), new[] { staticCache.GetValue(null) }, null));
             void Restore() { foreach (State slot in graph) slot.Write(slot.Initial); }
             Outcome before = Capture(() => OriginalCall(original)(receiver, arguments), graph);
             Restore();
@@ -175,7 +187,13 @@ internal static partial class GenericReferenceRoundtrip
         }
 
         string name = original.Name;
-        if (name == "Null") { Compare(null, Array.Empty<object>(), null); }
+        if (name == "UnsupportedStatic") {
+            foreach (object value in new[] { null, Sample(original.ReturnType, 0), Sample(original.ReturnType, 1) }) {
+                staticCache.SetValue(null, value);
+                Compare(null, Array.Empty<object>(), value);
+            }
+        }
+        else if (name == "Null") { Compare(null, Array.Empty<object>(), null); }
         else if (name == "Unused")
         {
             foreach (int value in new[] { int.MinValue, -1, 0, 1, int.MaxValue }) Compare(null, new object[] { value }, value);
@@ -216,7 +234,7 @@ internal static partial class GenericReferenceRoundtrip
         {
             Assembly generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[2]));
             foreach (Specialization test in cases) ScopedCheck(test, generated);
-            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 25 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
+            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 26 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
         }
     }
 }

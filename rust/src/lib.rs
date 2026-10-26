@@ -292,7 +292,7 @@ fn prime_external_calls(
     }
 }
 
-/// Prefetch the facts for instance fields read or written on a foreign type.
+/// Prefetch exact selected-definition facts for foreign field operations.
 ///
 /// Only operands of field opcodes are asked about, so a method reference never
 /// reaches the field resolver.

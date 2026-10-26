@@ -382,6 +382,10 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--static-field-once") { StaticFieldOnce(args[2]); return; }
+        if (args[1] == "--static-field-threads") { StaticFieldCheck(args[2], args[3], true); return; }
+        if (args[1] == "--static-field-plan") { StaticFieldPlan(args[2]); return; }
+        if (args[1] == "--static-field-check") { StaticFieldCheck(args[2], args[3]); return; }
         if (args[1] == "--exception-type-legacy")
         {
             ExceptionTypeLegacyCheck(args[2]);
@@ -487,6 +491,7 @@ internal static partial class GenericReferenceRoundtrip
             ExceptionMain(args);
             return;
         }
+        if (args[1] == "--external-allocation-fields") { ExternalAllocationFields(args[2], args[3]); return; }
         if (args[1] == "--external-allocation-check")
         {
             ExternalAllocationMain(args);

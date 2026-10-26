@@ -29,7 +29,6 @@ const EXPECTED_PARTIAL: &[(&str, &str)] = &[
         "UnsupportedStruct",
         "external allocation needs dependency facts: owner is a value type; value initialisation is not an object identity",
     ),
-    ("UnsupportedStatic", "external field needs IL fallback"),
     (
         "UnsupportedStructField",
         "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
@@ -102,6 +101,19 @@ fn declared_reference_constructors_allocate_one_fresh_identity() {
                 );
             }
         }
+    }
+}
+
+#[test]
+fn foreign_static_reads_keep_exact_storage_without_allocating() {
+    for (bytes, library) in IMAGES {
+        let context = context(bytes, library);
+        let result = context
+            .decompile(token(bytes, "UnsupportedStatic"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_ldsfld_"), "{}", result.text);
+        assert!(!result.text.contains("__cil_newobj_"), "{}", result.text);
     }
 }
 

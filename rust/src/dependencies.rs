@@ -162,7 +162,7 @@ pub(crate) enum ExternalAllocationLookup {
     Unavailable,
 }
 
-/// Facts read from the defining image for an instance field on a foreign type.
+/// Identity and storage flags read from the selected defining image of a foreign field.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ExternalField {
     pub name: String,
@@ -479,7 +479,8 @@ impl DependencyContext {
         })
     }
 
-    /// Facts for an instance field read or write whose owner is referenced.
+    /// Facts for a stored field whose owner is referenced. Static storage needs
+    /// no instance receiver layout; instance storage retains its class checks.
     ///
     /// Only the field's identity and flags come from the definition; its type is
     /// read from the caller-scoped `MemberRef` signature by `Image::field`.
@@ -489,7 +490,33 @@ impl DependencyContext {
             Err(_) => return ExternalFieldLookup::Unavailable,
         };
         if field.flags & 0x0010 != 0 {
-            return ExternalFieldLookup::Refused("field is static".into());
+            if field.flags & 0x1040 != 0 {
+                return ExternalFieldLookup::Refused(
+                    "static field has no ordinary stored representation".into(),
+                );
+            }
+            let image = match self.image_for_source(&field.owner.definition.source) {
+                Ok(image) => image,
+                Err(_) => return ExternalFieldLookup::Unavailable,
+            };
+            let owner = match image
+                .md
+                .tables()
+                .type_def(field.owner.definition.token & 0xffffff)
+            {
+                Ok(row) => row,
+                Err(_) => return ExternalFieldLookup::Unavailable,
+            };
+            if owner.flags & 0x20 != 0 {
+                return ExternalFieldLookup::Refused(
+                    "static interface storage needs a separate proof".into(),
+                );
+            }
+            return ExternalFieldLookup::Fact(ExternalField {
+                name: field.name,
+                owner_name: field.owner.name,
+                flags: field.flags,
+            });
         }
         if field.flags & 0x0040 != 0 {
             return ExternalFieldLookup::Refused("field is a literal with no storage".into());

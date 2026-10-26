@@ -8,9 +8,9 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Current exception-identity milestone: **521,684 / 770,748** implementation bodies
-recovered; **32.31458% fallback**, so the aggregate <=5% goal is unmet. See
-[exception identity evidence](EXCEPTION_IDENTITIES.md) for scope, owned execution,
+Current static-storage milestone: **531,492 / 770,748** implementation bodies
+recovered; **31.04205% fallback**, so the aggregate <=5% goal is unmet. See
+[static storage evidence](STATIC_STORAGE.md) for scope, owned execution,
 self-review and complete scan evidence.
 
 ## Acquire and independently inventory

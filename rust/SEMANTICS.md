@@ -115,6 +115,21 @@ with the same exact reference identity, with successor dataflow reanalysis.
 See [managed-location acceptance](acceptance/corpus/MANAGED_LOCATIONS.md) and
 [constrained/control-flow acceptance](acceptance/corpus/CONSTRAINED_DISPATCH.md).
 
+## Static storage operations
+
+Referenced static fields retain the exact original load/store/address operand
+and caller generic scopes. Local owner kind/arity and requested/declaration
+stored types must agree; foreign flags require an exact selected definition.
+One closed instantiation is never erased into another's storage. Static fields
+on value containers need no instance receiver/layout proof.
+
+Reads copy values, acquired addresses remain aliases and runtime initialization
+stays at the original access. Thread-static identity is the target runtime's.
+Readonly direct stores require the same owning initializer and closed storage;
+an address grants no source-store permission. Initializers remain actual CLR
+initializers, not ordinary methods. See
+[static storage evidence](acceptance/corpus/STATIC_STORAGE.md).
+
 ## Exact exception identities
 
 A bounded checked core family in System/System.IO has explicit nominal parent

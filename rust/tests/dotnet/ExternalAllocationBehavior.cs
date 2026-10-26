@@ -41,6 +41,19 @@ internal static partial class GenericReferenceRoundtrip
         return string.Join(",", parts);
     }
 
+    static void ExternalAllocationFields(string plan, string library)
+    {
+        Assembly definitions = AssemblyLoadContext.Default.LoadFromAssemblyPath(System.IO.Path.GetFullPath(library));
+        using var json = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(plan));
+        foreach (var value in json.RootElement.EnumerateArray()) {
+            int token = value.GetInt32();
+            var field = fixture.ManifestModule.ResolveField(token);
+            if (!field.IsStatic || field.FieldType != typeof(int) || field.Name != "Zero"
+                || field.DeclaringType != definitions.GetType("ExternalAllocations.Node")) throw new Exception("Unexpected owned static field.");
+            Console.WriteLine("private static int __cil_ldsfld_" + token.ToString("X8") + "() => global::ExternalAllocations.Node.Zero;");
+        }
+    }
+
     static void ExternalAllocationMain(string[] args)
     {
         if (args.Length != 4 || fixture.GetType("ExternalAllocationCases.Ops") == null)
@@ -71,6 +84,7 @@ internal static partial class GenericReferenceRoundtrip
             throw new Exception("Unexpected owned allocation parameter type: " + type);
         }
 
+        FieldInfo zero = resolved.GetType("ExternalAllocations.Node").GetField("Zero") ?? throw new Exception("Owned static storage missing.");
         foreach (MethodInfo original in selected)
         {
             MethodInfo lowered = carrier.GetMethod(original.Name, BindingFlags.Public | BindingFlags.Static)
@@ -89,12 +103,16 @@ internal static partial class GenericReferenceRoundtrip
                         cases.Add(new[] { first, second });
                 }
             foreach (object[] arguments in cases)
+            foreach (int initial in original.Name == "UnsupportedStatic" ? new[] { int.MinValue, -1, 0, 7, int.MaxValue } : new[] { 0 })
             {
-                Outcome before = Capture(() => OriginalCall(original)(null, arguments), new List<State>());
-                Outcome after = Capture(() => lowered.Invoke(null, arguments), new List<State>());
+                zero.SetValue(null, initial);
+                var state = new List<State> { new State(() => new[] { zero.GetValue(null) }, values => zero.SetValue(null, values[0]), new object[] { initial }, null) };
+                Outcome before = Capture(() => OriginalCall(original)(null, arguments), state);
+                zero.SetValue(null, initial);
+                Outcome after = Capture(() => lowered.Invoke(null, arguments), state);
                 string expected = before.Error != null ? "throw:" + before.Error.Name : AllocationDescriptor(before.Value);
                 string actual = after.Error != null ? "throw:" + after.Error.Name : AllocationDescriptor(after.Value);
-                if (expected != actual)
+                if (expected != actual || !before.State.Zip(after.State).All(pair => pair.First.SequenceEqual(pair.Second)))
                     throw new Exception("Recovered external allocation differs: " + original.Name
                         + " expected=" + expected + " actual=" + actual
                         + " args=" + string.Join("|", arguments.Select(a => a == null ? "null" : a.ToString())));
