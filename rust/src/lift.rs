@@ -4,7 +4,7 @@
 use crate::{
     Result,
     ir::{StackKind, Ty},
-    metadata::{Image, identifier},
+    metadata::Image,
 };
 use cildec::{FlowControl, Instruction, MethodBody, Operand};
 use std::collections::{BTreeSet, HashSet, VecDeque};
@@ -22,8 +22,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         return Err("method-body parser diagnostics need IL fallback".into());
     }
     let name = image.md.strings().str(row.name)?;
-    if name != ".ctor" {
-        identifier(name)?;
+    if name.is_empty() || name == ".cctor" || name != ".ctor" && row.flags & 0x1000 != 0 {
+        return Err("empty/static-initializer/runtime-special method needs IL fallback".into());
     }
     let sig = image.signature(token)?;
     if sig.explicit_this
@@ -258,7 +258,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         out.push_str("// Instance constructor initialization body on an existing receiver; does not allocate or certify a complete constructor chain.\n");
         format!("__cil_ctor_body_{token:08X}")
     } else {
-        format!("@{name}")
+        crate::symbol_names::verbatim(name)
     };
     out.push_str(&format!(
         "public static {} {body_name}({parameters})\n{{\n",

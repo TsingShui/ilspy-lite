@@ -72,6 +72,35 @@ fn generated_and_reserved_type_references_agree_with_their_declarations() {
 }
 
 #[test]
+fn generated_method_name_does_not_block_captured_i4_reads_and_writes() {
+    for &bytes in IMAGES {
+        let method = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == CLOSURE && m.simple_name == "<Accumulator>b__0")
+            .expect("owned captured-I4 method");
+        for style in [OutputStyle::Readable, OutputStyle::Details] {
+            let actual = decompile_with_style(bytes, method.token, style).unwrap();
+            assert_eq!(actual.status, Status::Decompiled, "{}", actual.text);
+        }
+    }
+}
+
+#[test]
+fn static_initialization_is_not_admitted_as_an_ordinary_renamed_method() {
+    for &bytes in IMAGES {
+        let method = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.declaring_type == "NamingCases.Special" && m.simple_name == ".cctor")
+            .expect("owned static constructor");
+        let actual = decompile_with_style(bytes, method.token, OutputStyle::Readable).unwrap();
+        assert_eq!(actual.status, Status::Partial, "{}", actual.text);
+        assert!(actual.text.contains("// IL_") && actual.text.contains("ret"));
+    }
+}
+
+#[test]
 fn generated_owner_name_does_not_block_an_admitted_object_base_constructor() {
     for &bytes in IMAGES {
         let ctor = list_methods(bytes)

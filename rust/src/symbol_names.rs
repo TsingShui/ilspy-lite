@@ -18,6 +18,10 @@ pub(crate) fn aliased(raw: &str) -> bool {
     !simple(raw) || reserved(raw)
 }
 
+pub(crate) fn verbatim(raw: &str) -> String {
+    format!("@{}", bare(raw))
+}
+
 fn bare(raw: &str) -> String {
     if simple(raw) && !reserved(raw) {
         raw.into()
