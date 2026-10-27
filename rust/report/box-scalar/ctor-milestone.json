@@ -1,0 +1,27 @@
+{
+  "group": "constructor receiver provenance",
+  "tests": 487,
+  "targeted": {
+    "ICSharpCode.Decompiler": [
+      9253,
+      9353
+    ],
+    "OpenRA.Mods.Common": [
+      16344,
+      16387
+    ],
+    "OpenRA.Game": [
+      4130,
+      4151
+    ],
+    "System.Private.CoreLib": [
+      15074,
+      15088
+    ],
+    "FSharp.Core": [
+      7493,
+      7493
+    ]
+  },
+  "third_party_bodies_executed": false
+}

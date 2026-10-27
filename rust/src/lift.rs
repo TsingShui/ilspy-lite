@@ -120,11 +120,15 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     }
     let regions = crate::eh::parse(image, body, &instructions)?;
     let mut entries: Vec<Option<Vec<Ty>>> = vec![None; blocks.len()];
+    // Stack index carrying the constructor's original `this` into each block, so
+    // a base-constructor call after a join still proves it uses that receiver.
+    let mut this_slots: Vec<Option<usize>> = vec![None; blocks.len()];
     entries[0] = Some(Vec::new());
     let mut queue = VecDeque::from([0]);
     loop {
         while let Some(n) = queue.pop_front() {
-            let stack = entries[n]
+            let mut original_seed: Option<String> = None;
+            let stack: Vec<Value> = entries[n]
                 .as_ref()
                 .unwrap()
                 .iter()
@@ -134,6 +138,11 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                     ty,
                 })
                 .collect();
+            if let Some(index) = this_slots[n]
+                && index < stack.len()
+            {
+                original_seed = Some(format!("s{n}_{index}"));
+            }
             let mut w = Writer {
                 image,
                 constrained_calls: &constrained_calls,
@@ -147,7 +156,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 ret,
                 constructor_owner,
                 static_constructor,
-                original_this: HashSet::new(),
+                original_this: original_seed.into_iter().collect(),
                 structural_types: BTreeSet::new(),
                 enum_types: BTreeSet::new(),
             };
@@ -177,11 +186,29 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                             return Err("incompatible evaluation stacks at join".into());
                         }
                     }
+                    let exit_this = w
+                        .original_this
+                        .iter()
+                        .filter_map(|name| w.stack.iter().position(|value| &value.name == name))
+                        .next();
+                    match (this_slots[s], exit_this) {
+                        (Some(existing), Some(incoming)) if existing == incoming => {}
+                        (None, incoming) if entries[s].as_ref().is_none() => {
+                            this_slots[s] = incoming;
+                        }
+                        (None, incoming) => this_slots[s] = incoming,
+                        _ => this_slots[s] = None,
+                    }
                     if changed {
                         queue.push_back(s);
                     }
                 } else {
                     entries[s] = Some(exit.clone());
+                    this_slots[s] = w
+                        .original_this
+                        .iter()
+                        .filter_map(|name| w.stack.iter().position(|value| &value.name == name))
+                        .next();
                     queue.push_back(s);
                 }
             }
@@ -223,6 +250,11 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 name: format!("s{n}_{s}"),
                 ty,
             })
+            .collect();
+        writer.original_this = this_slots[n]
+            .filter(|index| *index < writer.stack.len())
+            .map(|index| format!("s{n}_{index}"))
+            .into_iter()
             .collect();
         writer.lines.extend(regions.transition(previous, b.offset));
         previous = Some(b.offset);

@@ -209,6 +209,7 @@ generated output remain ignored and retain their original license boundaries.
 - `VOLATILE_ACCESS.md`: volatile fields and `volatile.`-prefixed reads/writes.
 - `STACK_JOIN_REFERENCE_MERGES.md`: reference-type merging at control-flow joins.
 - `EXTERNAL_VALUE_TYPE_FIELDS.md`: field access on referenced value types.
+- `CTOR_RECEIVER_PROVENANCE.md`: original `this` across control-flow joins.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.
