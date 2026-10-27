@@ -95,14 +95,24 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
     let receiver = if owner.table() == Some(TableId::TypeSpec) {
         let spec = image.type_spec(owner)?;
         let cildec::Type::GenericInst {
-            is_value_type: false,
+            is_value_type,
+            def,
             args,
-            ..
         } = &spec.type_
         else {
-            return Err("generic method owner needs a reference-class instantiation".into());
+            return Err("generic method owner needs a class or value instantiation".into());
         };
-        if signature.has_this {
+        if signature.has_this && *is_value_type {
+            // The receiver is the managed location of that exact value; the lift
+            // enforces it when the call is emitted.
+            let definition = image
+                .local_type_definition(*def)?
+                .ok_or("constructed value generic method needs a local definition")?;
+            let declaration = local_instance_method(image, definition, name, &signature)?;
+            generic_virtual = image.row(declaration.0)?.flags & 0x40 != 0;
+            type_arguments = Some(args.clone());
+            Some(Ty::from_sig_scoped(&spec.type_, image, context)?)
+        } else if signature.has_this {
             let bound = image
                 .constructed_member_owner(owner, context)?
                 .ok_or("generic instance method needs a constructed local owner")?;

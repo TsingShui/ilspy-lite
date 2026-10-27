@@ -8,9 +8,7 @@
 use crate::Result;
 use cildec::Instruction;
 
-pub(crate) fn check(
-    instructions: &[Instruction],
-) -> Result<std::collections::BTreeSet<u32>> {
+pub(crate) fn check(instructions: &[Instruction]) -> Result<std::collections::BTreeSet<u32>> {
     let mut calls = std::collections::BTreeSet::new();
     for (index, instruction) in instructions.iter().enumerate() {
         if instruction.opcode.name() != "tail." {
@@ -19,10 +17,7 @@ pub(crate) fn check(
         let target = instructions
             .get(index + 1)
             .ok_or("tail prefix has no following instruction")?;
-        if !matches!(
-            target.opcode.name(),
-            "call" | "callvirt" | "calli" | "jmp"
-        ) {
+        if !matches!(target.opcode.name(), "call" | "callvirt" | "calli" | "jmp") {
             return Err("tail prefix needs an immediately following call".into());
         }
         if matches!(target.opcode.name(), "call" | "callvirt") {

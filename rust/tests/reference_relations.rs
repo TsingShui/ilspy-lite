@@ -214,6 +214,25 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn constructed_value_generic_instantiations_call_through_their_location() {
+    for (bytes, _) in IMAGES {
+        let result = decompile_with_style(
+            bytes,
+            token(bytes, "RelationCases.Ops", "CallConstructedValueGeneric"),
+            OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(
+            result.text.contains("__cil_methodspec_call_"),
+            "{}",
+            result.text
+        );
+        assert!(result.text.contains("ref v0"), "{}", result.text);
+    }
+}
+
+#[test]
 fn volatile_field_access_keeps_acquire_release_operations() {
     for (bytes, _) in IMAGES {
         for name in [

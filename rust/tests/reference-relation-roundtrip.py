@@ -72,7 +72,7 @@ def main():
                 # receiver slot that this driver's leaf helpers do not model; the
                 # struct-receiver driver covers value receivers, and the token form
                 # is checked by the Rust test.
-                "CallValueGeneric", "CallLocalValueGeneric",
+                "CallValueGeneric", "CallLocalValueGeneric", "CallConstructedValueGeneric",
                 # A ref struct cannot be created through reflection for the
                 # candidate list; the Rust test covers the copy form, and the
                 # field-reading variant stays a documented separate gap.

@@ -52,6 +52,7 @@ namespace RelationCases
 {
     public interface IItem<T> { }
     public struct LocalBox { public int Seed; public T Echo<T>(T input) { Seed = 1; return input; } }
+    public struct LocalBox2<T> { public T Value; public U Echo<U>(U input) => input; }
     public sealed class VolatileHolder { public volatile int Value; public volatile object Reference = ""; }
     public static class VolatileStore { public static volatile int Shared; }
     public interface ITransform<T> { T Apply(T value); }
@@ -133,6 +134,7 @@ namespace RelationCases
         public static int CopyRefBox(RelationLibrary.RefBox box) { RelationLibrary.RefBox copy = box; return copy.Value; }
         public static int CallValueGeneric(RelationLibrary.SeededBox box, int value) => box.Echo(value);
         public static string CallLocalValueGeneric(LocalBox box, string value) => box.Echo(value);
+        public static int CallConstructedValueGeneric(LocalBox2<int> box, int value) => box.Echo(value);
         public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);
         public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
         public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;
