@@ -193,7 +193,8 @@ fn partial_type_preserves_inventory_and_returns_nonzero() {
 #[test]
 fn type_output_keeps_nested_state_machine_methods_visible() {
     let out = run(&["decompile", fixture(), "--type", "LiteSamples.AsyncSample"]);
-    assert_eq!(out.status.code(), Some(2));
+    // The state machine methods are recovered now; visibility remains the invariant.
+    assert_eq!(out.status.code(), Some(0));
     let text = String::from_utf8_lossy(&out.stdout);
     assert!(text.contains("MoveNext"));
     assert!(text.contains("SetStateMachine"));
