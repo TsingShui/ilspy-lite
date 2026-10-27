@@ -30,3 +30,13 @@ parameters (1,374 methods in the last fixed scan).
 - 488 Rust tests, `cargo fmt --check`, clippy `-D warnings` and the release build
   pass. The form is F#-specific (C# emits a TypeSpec parent, already handled), so
   the owned construction drivers keep their existing coverage.
+
+## Open self value instantiations
+
+The open-self permission covers value types too: a `newobj` with a MethodDef
+constructor of a locally defined generic **struct** now yields `Ty::Value` of the
+open self instantiation (`S<!0..>`) instead of the class type `Ty::Class(S)`. A
+value type must never be represented as a class; the previous shape made later
+`class_chain`/assignability checks report `value-type receiver needs IL fallback`.
+Status counts on the four sampled images are unchanged, so this is a correctness
+fix rather than a measured gain; 488 tests pass.

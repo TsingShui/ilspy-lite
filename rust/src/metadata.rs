@@ -3314,7 +3314,13 @@ impl<'a> Image<'a> {
         let core = match name {
             "System.Runtime" => key == [0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a],
             "System.Private.CoreLib" => key == [0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e],
-            "mscorlib" => key == [0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89],
+            // The desktop core library and the Silverlight/mobile `mscorlib`
+            // (Microsoft key `7cec85d7bea7798e`, shared with System.Private.CoreLib)
+            // both define the ECMA core types.
+            "mscorlib" => {
+                key == [0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89]
+                    || key == [0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e]
+            }
             "netstandard" => key == [0xcc, 0x7b, 0x13, 0xff, 0xcd, 0x2d, 0xdd, 0x51],
             _ => false,
         };
@@ -3901,7 +3907,22 @@ impl<'a> Image<'a> {
             .iter()
             .map(|p| self.member_parameter(p, arguments.as_deref(), context))
             .collect::<Result<Vec<_>>>()?;
-        Ok((allocated.unwrap_or(crate::ir::Ty::Class(owner.0)), args))
+        let allocated = match allocated {
+            Some(ty) => ty,
+            None if self.has_core_base(owner, "ValueType")? => {
+                // The open self instantiation of a locally defined generic struct,
+                // allocated inside the type's own methods: `new S<!0..>(...)`.
+                let arity = self.md.tables().generic_params(owner)?.len() as u32;
+                let spec = cildec::Type::GenericInst {
+                    is_value_type: true,
+                    def: owner,
+                    args: (0..arity).map(cildec::Type::Var).collect(),
+                };
+                crate::ir::Ty::from_sig_scoped(&spec, self, context)?
+            }
+            None => crate::ir::Ty::Class(owner.0),
+        };
+        Ok((allocated, args))
     }
 
     /// Admit `newobj` whose owner lives in a referenced image.
