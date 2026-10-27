@@ -89,8 +89,8 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         ty.cs(image)?;
     }
     let locals = image.local_types(body, context)?;
-    if !locals.is_empty() && !body.flags.init_locals() {
-        return Err("uninitialized local analysis is not implemented".into());
+    if !locals.is_empty() && !body.flags.init_locals() && !body.exception_handlers.is_empty() {
+        return Err("uninitialized local exception-region analysis is not implemented".into());
     }
     let instructions = body
         .instructions()
@@ -108,6 +108,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     let constrained_calls = crate::constrained::calls(&instructions)?;
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
+    if !locals.is_empty() && !body.flags.init_locals() {
+        require_definite_local_assignment(&blocks, &instructions, locals.len())?;
+    }
     if blocks
         .iter()
         .any(|block| constrained_calls.contains_key(&block.offset))
@@ -1960,6 +1963,58 @@ fn receiver_matches(actual: Ty, expected: Ty) -> bool {
     actual == expected
         || matches!((actual, expected), (Ty::ValueAddress(a), Ty::Value(b)) if a == b)
 }
+/// Like ILSpy's definite-assignment visitor, propagate possible uninitialized
+/// slots by union at joins. Taking an address is a use, even for an out call.
+fn require_definite_local_assignment(
+    blocks: &[crate::cfg::Block],
+    instructions: &[Instruction],
+    local_count: usize,
+) -> Result<()> {
+    let mut entries = vec![None; blocks.len()];
+    entries[0] = Some(vec![true; local_count]);
+    let mut pending = VecDeque::from([0]);
+    while let Some(index) = pending.pop_front() {
+        let mut uninitialized = entries[index].as_ref().unwrap().clone();
+        let block = &blocks[index];
+        for instruction in &instructions[block.start..block.end] {
+            match instruction.opcode.canonical().name() {
+                "stloc" => {
+                    let slot = uninitialized
+                        .get_mut(var(instruction)?)
+                        .ok_or("local out of range")?;
+                    *slot = false;
+                }
+                "ldloc" | "ldloca"
+                    if *uninitialized
+                        .get(var(instruction)?)
+                        .ok_or("local out of range")? =>
+                {
+                    return Err("local may be used before definite assignment".into());
+                }
+                _ => {}
+            }
+        }
+        for &successor in &block.successors {
+            if let Some(existing) = &mut entries[successor] {
+                let mut changed = false;
+                for (old, &incoming) in existing.iter_mut().zip(&uninitialized) {
+                    if incoming && !*old {
+                        *old = true;
+                        changed = true;
+                    }
+                }
+                if changed {
+                    pending.push_back(successor);
+                }
+            } else {
+                entries[successor] = Some(uninitialized.clone());
+                pending.push_back(successor);
+            }
+        }
+    }
+    Ok(())
+}
+
 fn var(i: &Instruction) -> Result<usize> {
     if let Operand::Var(n) = i.operand {
         Ok(n as usize)

@@ -13,13 +13,18 @@ Goal: mvouhw7y-679jgb
   comparisons and two mutants per config); six of eight audited candidates
   decompile in targeted runs. No new aggregate coverage is claimed until the
   next batched scan. See `acceptance/corpus/EXCEPTION_ANCESTRY.md`.
+- Non-initialized local slots now use a class of ILSpy-style definite-assignment
+  proofs for methods without exception handlers. Branch, loop and acquired-address
+  owned behavior passes; potentially uninitialized reads/addresses and EH remain
+  Partial. Six of eight audited candidates decompile in targeted runs; full
+  corpus impact is not yet measured.
 - The acceptance tooling now evaluates the user-approved weighted <=5% integer
   gate; its historical per-image <=1% results remain informational only. The
   three new public-command checks were red before the fix and the 21-test
   corpus-tool suite passes. Applying the new gate to the last complete scan
   confirms it remains unmet; this is an arithmetic correction, not a recovery gain.
-- One post-checkpoint capability group is complete. Continue two more focused
-  capability groups before the next full fixed-corpus scan and bounded
+- Two post-checkpoint capability groups are complete. Continue one more focused
+  capability group before the next full fixed-corpus scan and bounded
   gained-method self-review, with a local commit per group.
 
 ## Current verified state: constructed foreign allocations and value arrays

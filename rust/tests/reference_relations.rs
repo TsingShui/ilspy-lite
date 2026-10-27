@@ -214,6 +214,77 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn uninitialized_local_slots_need_definite_assignment_on_every_path() {
+    for (bytes, _) in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        for name in ["SkipInitBranch", "SkipInitLoop", "SkipInitAddress"] {
+            let method = token(bytes, "RelationCases.Ops", name);
+            let body = cildec::MethodBody::from_image(
+                &pe,
+                &md.tables().method_def(method & 0xffffff).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+            assert!(!body.flags.init_locals(), "{name}");
+            assert!(body.local_var_sig.is_some(), "{name}");
+            let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+        let bypass = token(bytes, "RelationCases.Ops", "SkipInitBypass");
+        let result = decompile_with_style(bytes, bypass, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+
+        for (name, local) in [
+            ("SkipInitBranch", 0),
+            ("SkipInitLoop", 0),
+            ("SkipInitLoop", 1),
+        ] {
+            let method = token(bytes, "RelationCases.Ops", name);
+            let body = cildec::MethodBody::from_image(
+                &pe,
+                &md.tables().method_def(method & 0xffffff).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+            let store = body.instructions().map(Result::unwrap).find(|instruction| {
+                instruction.opcode.canonical().name() == "stloc"
+                    && matches!(instruction.operand, cildec::Operand::Var(index) if index == local)
+            }).expect("first store to owned local");
+            let at = body.code.as_ptr() as usize - bytes.as_ptr() as usize + store.offset as usize;
+            assert_eq!(bytes[at], 0x0a + u8::try_from(local).unwrap());
+            let mut missing_store = bytes.to_vec();
+            missing_store[at] = 0x26; // pop the assigned value without initializing the local.
+            let result =
+                decompile_with_style(&missing_store, method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            assert!(
+                result
+                    .text
+                    .contains("local may be used before definite assignment"),
+                "{}",
+                result.text
+            );
+        }
+        for (name, reason) in [
+            (
+                "AddressBeforeAssignment",
+                "local may be used before definite assignment",
+            ),
+            (
+                "ProtectedRegion",
+                "uninitialized local exception-region analysis is not implemented",
+            ),
+        ] {
+            let method = token(bytes, "RelationCases.LocalInitNegative", name);
+            let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            assert!(result.text.contains(reason), "{}", result.text);
+        }
+    }
+}
+
+#[test]
 fn interface_edges_cannot_prove_exception_ancestry() {
     for (bytes, library) in IMAGES {
         let pe = cildec::PeImage::parse(bytes).unwrap();

@@ -1,0 +1,222 @@
+{
+  "full_rust_tests": 467,
+  "fmt_clippy": "passed",
+  "owned_reference_relations": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Reference relation behavior: 163 comparisons, 40 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "release",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Reference relation behavior: 163 comparisons, 40 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "debug",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      }
+    ],
+    "third_party_execution": false
+  },
+  "owned_selected_version": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Reference relation behavior: 163 comparisons, 40 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "release",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Reference relation behavior: 163 comparisons, 40 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "debug",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      }
+    ],
+    "third_party_execution": false
+  },
+  "audited_candidate_results": [
+    {
+      "id": 483,
+      "token": "0x06000003",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 483,
+      "token": "0x060000C1",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 463,
+      "token": "0x06000003",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 473,
+      "token": "0x06000034",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 501,
+      "token": "0x06000018",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 531,
+      "token": "0x06000039",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 485,
+      "token": "0x06000020",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 469,
+      "token": "0x06000012",
+      "status": "Decompiled",
+      "exit": 0
+    }
+  ],
+  "full_corpus_delta": "pending next batch",
+  "third_party_bodies_executed": false
+}

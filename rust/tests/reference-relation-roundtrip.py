@@ -92,12 +92,17 @@ def main():
         if args.mutation_control:
             for name, replacement in [("DeclaredOverload", "return input == null ? 29 : 29;"),
                                        ("Swap", "return null;"), ("Foreign", "return null;"),
-                                       ("ReadCast", "return default;")]:
+                                       ("ReadCast", "return default;"),
+                                       ("SkipInitBranch", "return 0;"),
+                                       ("SkipInitLoop", "return 0;"),
+                                       ("SkipInitAddress", "return 0;")]:
                 selected = [i for i, text in enumerate(methods) if re.search(r"\b" + name + r"(?:<[^>]+>)?\(", text)]
                 if len(selected) != 1: raise ValueError("Mutation target differs: " + name)
                 changed = list(methods)
                 if name == "DeclaredOverload":
                     changed[selected[0]], count = re.subn(r"\(\(RelationCases\.Base<string>\)\(input\)\)", "input", changed[selected[0]], count=1)
+                elif name == "SkipInitAddress":
+                    changed[selected[0]], count = re.subn(r"RelationCases\.LocalInitNegative\.Increment\(ref [^)]*\);", "", changed[selected[0]], count=1)
                 else:
                     changed[selected[0]], count = re.subn(r"return [^;]+;", replacement, changed[selected[0]], count=1)
                 if count != 1: raise ValueError("Mutation return missing")

@@ -76,6 +76,61 @@ namespace RelationCases
         public static RelationLibrary.GenericBase<T> ForeignGeneric<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int SkipInitBranch(int value)
+        {
+            int result;
+            if (value >= 0) result = value + 3;
+            else result = value - 7;
+            return result + result;
+        }
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int SkipInitLoop(int limit)
+        {
+            int result = 0;
+            for (int i = 0; i < limit; i++) result += i;
+            return result;
+        }
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int SkipInitBypass(int value)
+        {
+            if (value == 0) return 7;
+            int result = value + 3;
+            return result + result;
+        }
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int SkipInitAddress(int value)
+        {
+            int result = value;
+            LocalInitNegative.Increment(ref result);
+            return result;
+        }
+    }
+
+    public static class LocalInitNegative
+    {
+        public static void Write(out int value) { value = 5; }
+        public static void Increment(ref int value) { value++; }
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int AddressBeforeAssignment()
+        {
+            int value;
+            Write(out value);
+            return value;
+        }
+
+        [System.Runtime.CompilerServices.SkipLocalsInit]
+        public static int ProtectedRegion(int value)
+        {
+            int result = value;
+            try { return result; }
+            finally { result++; }
+        }
     }
 }
 

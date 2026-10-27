@@ -25,7 +25,7 @@ for config in ("release", "debug"):
         with tempfile.TemporaryDirectory() as directory:
             response = Path(directory) / "compile.rsp"
             response.write_text("\n".join([
-                "-nologo", "-target:library", "-langversion:14", "-warnaserror+", "-deterministic+",
+                "-nologo", "-target:library", "-langversion:14", "-warnaserror+", "-deterministic+", "-unsafe+",
                 "-optimize+" if config == "release" else "-optimize-",
                 f'-out:"{output}"', *[f'-r:"{p}"' for p in sorted(refs.glob("*.dll"))],
                 *arguments, f'"{ROOT / "tests/dotnet/ReferenceRelationCases.cs"}"',
