@@ -1,0 +1,7 @@
+release: cached owned fixture
+debug: cached owned fixture
+release: Virtual call behavior: 64 comparisons, 13 recovered methods; virtual dispatch, null-check exceptions, argument order and results match.
+release: Value receiver behavior: 9 comparisons, 2 recovered methods; direct base/value receivers, virtual inner dispatch, signed values, null checks and result freshness match.
+debug: Virtual call behavior: 64 comparisons, 13 recovered methods; virtual dispatch, null-check exceptions, argument order and results match.
+debug: Value receiver behavior: 9 comparisons, 2 recovered methods; direct base/value receivers, virtual inner dispatch, signed values, null checks and result freshness match.
+Owned compilation: 0 ms; Rust compilation: none

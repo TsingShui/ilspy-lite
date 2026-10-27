@@ -649,6 +649,7 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         return "// Unreadable rendered body; see --details.".into();
     };
     let body = body.strip_suffix("}\n").unwrap_or(body);
+    let calls = call_names(text);
     let lines: Vec<String> = body
         .lines()
         .map(str::trim)
@@ -669,7 +670,7 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
     };
     lines
         .into_iter()
-        .map(|line| inline_literals(&rewrite(&line, names)) + "\n")
+        .map(|line| name_calls(&inline_literals(&rewrite(&line, names)), &calls) + "\n")
         .collect()
 }
 
@@ -719,6 +720,198 @@ fn inline_literals(line: &str) -> String {
     let after = tail.find(')').map(|i| &tail[i + 1..]).unwrap_or("");
     out.push_str(after);
     out
+}
+
+/// Member spelling for each call token, taken from the evidence comments.
+///
+/// The lift prints `// call token 0x...: Owner::Member` and
+/// `// newobj token 0x...: Owner::.ctor` for every call site, so the readable
+/// view can name the member without resolving anything again. Only the display
+/// changes: the exact token and its note stay in `--details`.
+fn call_names(evidence: &str) -> BTreeMap<u32, (String, String, bool)> {
+    let mut map = BTreeMap::new();
+    for line in evidence.lines() {
+        let line = line.trim_start();
+        if let Some(rest) = line.strip_prefix("// call token 0x") {
+            if let Some((token, owner, member)) = call_entry(rest) {
+                map.insert(token, (owner, member, false));
+            }
+        } else if let Some(rest) = line.strip_prefix("// newobj token 0x") {
+            if let Some((token, owner, member)) = call_entry(rest) {
+                map.insert(token, (owner, member, true));
+            }
+        }
+    }
+    map
+}
+
+fn call_entry(rest: &str) -> Option<(u32, String, String)> {
+    let (token, tail) = rest.split_at_checked(8)?;
+    if !token
+        .bytes()
+        .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_lowercase())
+    {
+        return None;
+    }
+    let token = u32::from_str_radix(token, 16).ok()?;
+    let (owner, member) = tail.strip_prefix(": ")?.rsplit_once("::")?;
+    if owner.trim().is_empty() || member.trim().is_empty() {
+        return None;
+    }
+    Some((token, owner.trim().to_owned(), member.trim().to_owned()))
+}
+
+/// Split at top-level commas, ignoring separators inside strings and brackets.
+fn split_arguments(arguments: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth = 0i32;
+    let mut start = 0usize;
+    let mut chars = arguments.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        match c {
+            '"' | '\'' => {
+                while let Some((_, ch)) = chars.next() {
+                    if ch == '\\' {
+                        chars.next();
+                    } else if ch == c {
+                        break;
+                    }
+                }
+            }
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(arguments[start..i].trim());
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(arguments[start..].trim());
+    parts
+}
+
+/// Return the argument text and the remainder after the closing parenthesis.
+fn split_call(body: &str) -> Option<(&str, &str)> {
+    let mut depth = 0i32;
+    let mut chars = body.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        match c {
+            '"' | '\'' => {
+                while let Some((_, ch)) = chars.next() {
+                    if ch == '\\' {
+                        chars.next();
+                    } else if ch == c {
+                        break;
+                    }
+                }
+            }
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' if depth == 0 => return Some((&body[..i], &body[i + 1..])),
+            ')' | ']' | '}' => depth -= 1,
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Rewrite `__cil_*_TOKEN(...)` calls to member, static or constructor syntax.
+fn name_calls(line: &str, names: &BTreeMap<u32, (String, String, bool)>) -> String {
+    let mut out = String::with_capacity(line.len());
+    let mut rest = line;
+    while let Some(at) = rest.find("__cil_") {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at + "__cil_".len()..];
+        let original = &rest[at..];
+        let Some((kind, tail)) = [
+            ("callvirt", tail.strip_prefix("callvirt_")),
+            ("direct", tail.strip_prefix("direct_")),
+            ("memberref", tail.strip_prefix("memberref_call_")),
+            ("static", tail.strip_prefix("static_call_")),
+            ("methodspec", tail.strip_prefix("methodspec_call_")),
+            ("newobj", tail.strip_prefix("newobj_")),
+        ]
+        .into_iter()
+        .find_map(|(kind, tail)| tail.map(|tail| (kind, tail))) else {
+            out.push_str("__cil_");
+            rest = &rest[at + "__cil_".len()..];
+            continue;
+        };
+        let replacement = (|| {
+            let token = tail.get(..8)?;
+            if !token
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_lowercase())
+            {
+                return None;
+            }
+            let token = u32::from_str_radix(token, 16).ok()?;
+            let body = tail.get(8..)?.strip_prefix('(')?;
+            let (arguments, after) = split_call(body)?;
+            let (owner, member, constructor) = names.get(&token)?;
+            // Only forms whose C# spelling has the same dispatch are rewritten.
+            // `direct` and `memberref` are exact non-virtual calls whose
+            // virtuality is unproven, so `receiver.M()` would change dispatch;
+            // `methodspec` also needs the instantiation spelled out.
+            // The exact token stays inline so the call target is still auditable
+            // from the readable view alone.
+            let token_note = format!(" /* __cil_{kind}_{token:08X} */");
+            // A member whose spelling carries generic arguments or scope
+            // variables (`OwnerEcho<!0>`) cannot be written as a plain call, so it
+            // keeps its helper form instead of producing invalid output.
+            if !member
+                .bytes()
+                .all(|b| b == b'_' || b.is_ascii_alphanumeric() || b == b'@')
+            {
+                return None;
+            }
+            let spelled = if *constructor || kind == "newobj" {
+                format!("new {}({arguments}){token_note}", short_owner(owner))
+            } else if kind == "static" {
+                format!("{}.{}({arguments}){token_note}", short_owner(owner), member)
+            } else if kind == "callvirt" {
+                let parts = split_arguments(arguments);
+                let (receiver, rest_args) = parts.split_first()?;
+                if receiver.is_empty() || receiver.starts_with("ref ") {
+                    return None;
+                }
+                if rest_args.is_empty() {
+                    format!("{receiver}.{member}(){token_note}")
+                } else {
+                    format!("{receiver}.{member}({}){token_note}", rest_args.join(", "))
+                }
+            } else {
+                return None;
+            };
+            Some((spelled, after))
+        })();
+        let Some((spelled, after)) = replacement else {
+            out.push_str(original);
+            rest = &rest[at + original.len()..];
+            continue;
+        };
+        out.push_str(&spelled);
+        rest = after;
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Owner spelling for a constructor or static call.
+///
+/// A short name would be wrong when the type is not in scope, so the whole
+/// metadata name is kept. The `[Assembly]` qualifier only records which
+/// reference supplied the identity and is not part of the type name.
+fn short_owner(owner: &str) -> String {
+    let owner = owner.trim();
+    match owner.strip_prefix('[') {
+        Some(rest) => rest
+            .split_once(']')
+            .map_or(owner, |(_, name)| name)
+            .trim()
+            .to_owned(),
+        None => owner.to_owned(),
+    }
 }
 
 fn generated_value(name: &str) -> bool {

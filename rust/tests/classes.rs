@@ -1,12 +1,21 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{decompile_type, list_methods};
+use ilspy_lite::{OutputStyle, Status, decompile_type, decompile_with_style, list_methods};
 
 const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/class-release.bin"),
     include_bytes!("fixtures/class-debug.bin"),
 ];
+
+fn token(bytes: &[u8], name: &str) -> u32 {
+    list_methods(bytes)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.declaring_type == "ClassCases.Mixed" && m.simple_name == name)
+        .unwrap()
+        .token
+}
 
 #[test]
 fn class_context_keeps_flags_base_and_interface_relations() {
@@ -415,4 +424,35 @@ fn class_entry_rejects_missing_type_and_invalid_image() {
     assert!(decompile_type(IMAGES[0], "ClassCases.Absent").is_err());
     assert!(decompile_type(IMAGES[0], "").is_err());
     assert!(decompile_type(&[], "ClassCases.Empty").is_err());
+}
+
+#[test]
+fn readable_calls_name_members_from_the_evidence_token_and_keep_the_helper_in_details() {
+    for bytes in IMAGES {
+        let readable =
+            decompile_with_style(bytes, token(bytes, "Unsupported"), OutputStyle::Readable)
+                .unwrap();
+        assert_eq!(readable.status, Status::Decompiled, "{}", readable.text);
+        assert!(
+            readable.text.contains("value.ToUpperInvariant()"),
+            "{}",
+            readable.text
+        );
+        // The exact token stays inline as a comment, so the call target is still
+        // auditable from the readable view; the configuration decides its value.
+        assert!(
+            readable
+                .text
+                .contains("ToUpperInvariant() /* __cil_callvirt_"),
+            "{}",
+            readable.text
+        );
+        let details =
+            decompile_with_style(bytes, token(bytes, "Unsupported"), OutputStyle::Details).unwrap();
+        assert!(
+            details.text.contains("__cil_callvirt_") && details.text.contains("call token 0x"),
+            "{}",
+            details.text
+        );
+    }
 }

@@ -1,0 +1,2 @@
+release: MethodSpec behavior: 125 comparisons, 14 selections; static and nonvirtual generic calls, reference/struct copies, arguments, state and exceptions match.
+debug: MethodSpec behavior: 125 comparisons, 14 selections; static and nonvirtual generic calls, reference/struct copies, arguments, state and exceptions match.

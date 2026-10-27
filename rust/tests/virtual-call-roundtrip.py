@@ -135,6 +135,9 @@ def main():
             body = re.sub(r"__cil_memberref_call_[0-9A-F]{8}\(ref (\w+)\)", r"\1.ToString()", body)
             body = re.sub(r'__cil_ldstr_[0-9A-F]{8}\(("(?:shape|value)")\)', r"\1", body)
             body = re.sub(r"__cil_callvirt_([0-9A-F]{8})\(([^()]*)\)", dispatch, body)
+            # The readable view spells a proven dispatch on its receiver and keeps
+            # the exact token as an inline comment; the receiver call is the code.
+            body = re.sub(r" /\* __cil_[a-z_]+_[0-9A-F]{8} \*/", "", body)
             executable = "\n".join(line for line in body.splitlines() if not line.strip().startswith("//"))
             if "__cil_" in support.without_boolean_helpers(executable): raise ValueError("Unbound recovered receiver body")
             receiver_snippets.append(body)

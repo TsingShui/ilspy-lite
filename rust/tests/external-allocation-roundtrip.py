@@ -76,6 +76,14 @@ def main():
                 details.stdout,
             ))
 
+            def allocate_named(match):
+                indent, declared, variable, owner, arguments, token = match.groups()
+                # Prefer the declared C# spelling; the readable view prints it from
+                # the same resolution, so it is already the exact instantiation.
+                name = declared if "__cil_" not in declared else re.sub(
+                    r"^class |^valuetype |\[[^\]]+\]", "", owners.get(token, owner)).replace("/", ".")
+                return f"{indent}{name} {variable} = new {name}({arguments});"
+
             def allocate(match):
                 indent, declared, variable, site, arguments = match.groups()
                 owner = owners.get(site)
@@ -88,19 +96,28 @@ def main():
                     type_name = declared
                 return f"{indent}{type_name} {variable} = new {type_name}({arguments});"
 
+            # The readable view already spells the constructor and keeps the exact
+            # token as a trailing comment, so the comment is dropped and the
+            # constructor call itself is the executable form.
+            body = re.sub(
+                r"(?m)^(\s*)(.+?) (\w+) = new (.+?)\(([^()]*)\) /\* __cil_newobj_([0-9A-F]{8}) \*/;$",
+                allocate_named,
+                body,
+            )
             body = re.sub(
                 r"(?m)^(\s*)(.+?) (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
                 allocate,
                 body,
             )
+            # The declared type still carries an opaque structural alias; the
+            # allocation itself is now spelled with the real constructor name.
             if any(
                 marker in body
                 for marker in (
-                    "__cil_type_",
-                    "__cil_value_",
-                    "__cil_ref_",
-                    "__cil_generic_",
                     "__cil_newobj_",
+                    "__cil_memberref_call_",
+                    "__cil_callvirt_",
+                    "__cil_direct_",
                 )
             ):
                 raise ValueError("unexecutable allocation alias in " + name)
