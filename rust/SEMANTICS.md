@@ -444,6 +444,12 @@ assignment proofs, multidimensional and lifetime/prefix extensions stay gated.
 
 ## Local enum storage
 
+[Captured enum storage and integer normalization](acceptance/corpus/ENUM_STORAGE_ACCESS.md)
+retains the exact ordinary public/assembly value__ and generated special __value
+encodings, not arbitrary name/flag relaxation. conv.i1/u1/i2/u2 truncate proved
+I4/I8/native inputs then sign/zero-extend the result to I4. Float/reference
+categories and unimplemented conversions remain gated.
+
 An exact local enum definition must have an admitted core Enum base and one
 unmodified public special value__ instance field of a fixed-width integer type.
 Sealed/nongeneric shape, raw base identity, field count/flags and underlying

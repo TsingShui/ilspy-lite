@@ -38,6 +38,60 @@ fn token(bytes: &[u8], name: &str) -> u32 {
 }
 
 #[test]
+fn exact_foreign_assembly_enum_storage_keeps_its_width_and_other_flags_checked() {
+    for (bytes, library) in IMAGES {
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let field = md
+            .tables()
+            .field_range(cildec::Rid::new(2))
+            .unwrap()
+            .next()
+            .unwrap();
+        let definition = md.tables().field(field).unwrap();
+        assert_eq!(md.strings().str(definition.name).unwrap(), "value__");
+        assert_eq!(definition.flags, 0x0606);
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::Field, field)
+            .unwrap();
+        let at = raw.as_ptr() as usize - library.as_ptr() as usize;
+        let name = md.strings().str(definition.name).unwrap();
+        let name_at = name.as_ptr() as usize - library.as_ptr() as usize;
+        for flags in [0x0603_u16, 0x0623, 0x0206, 0x0226] {
+            let admitted = flags == 0x0603 || flags == 0x0206;
+            let mut owned = library.to_vec();
+            owned[at..at + 2].copy_from_slice(&flags.to_le_bytes());
+            if flags == 0x0206 || flags == 0x0226 {
+                owned[name_at..name_at + 7].copy_from_slice(b"__value");
+            }
+            let context = context(bytes, &owned);
+            let result = context
+                .decompile(token(bytes, "Widen"), OutputStyle::Readable)
+                .unwrap();
+            assert_eq!(
+                result.status,
+                if admitted {
+                    Status::Decompiled
+                } else {
+                    Status::Partial
+                },
+                "{}",
+                result.text
+            );
+            if admitted {
+                assert!(
+                    result.text.contains("ExternalEnums.Level"),
+                    "{}",
+                    result.text
+                );
+                assert!(result.text.contains("byte"), "{}", result.text);
+            }
+        }
+    }
+}
+
+#[test]
 fn declared_reference_storage_admits_external_enums() {
     for (bytes, library) in IMAGES {
         let context = context(bytes, library);

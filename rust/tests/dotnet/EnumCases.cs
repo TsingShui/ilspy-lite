@@ -208,6 +208,22 @@ public class U64Ops
     public static U64[] UnsupportedArray(int count) => new U64[count];
 }
 
+public static class ConversionOps
+{
+    public static long NarrowSignedByte(int value) => unchecked((long)(sbyte)value);
+    public static long NarrowUnsignedByte(int value) => unchecked((long)(byte)value);
+    public static long NarrowSignedShort(int value) => unchecked((long)(short)value);
+    public static long NarrowUnsignedShort(int value) => unchecked((long)(ushort)value);
+    public static long NarrowSignedByte64(long value) => unchecked((long)(sbyte)value);
+    public static long NarrowUnsignedByte64(long value) => unchecked((long)(byte)value);
+    public static long NarrowSignedShort64(long value) => unchecked((long)(short)value);
+    public static long NarrowUnsignedShort64(long value) => unchecked((long)(ushort)value);
+    public static long NarrowSignedByteNative(nint value) => unchecked((long)(sbyte)value);
+    public static long NarrowUnsignedByteNative(nint value) => unchecked((long)(byte)value);
+    public static long NarrowSignedShortNative(nint value) => unchecked((long)(short)value);
+    public static long NarrowUnsignedShortNative(nint value) => unchecked((long)(ushort)value);
+}
+
 public static class External
 {
     public static DayOfWeek UnsupportedExternal(DayOfWeek value) => value;

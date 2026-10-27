@@ -27,10 +27,16 @@ def without_dependency_report(text):
 
 
 def main():
+    global OUT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, default=ROOT / "target/debug/ilspy-lite")
     parser.add_argument("--mutation-control", action="store_true")
+    parser.add_argument("--assembly-storage", action="store_true")
+    parser.add_argument("--generated-storage", action="store_true")
     args = parser.parse_args()
+    if args.assembly_storage and args.generated_storage: parser.error("Choose one enum storage variant")
+    if args.assembly_storage: OUT = ROOT / "report/value-metadata/external-enum-behavior"
+    if args.generated_storage: OUT = ROOT / "report/value-metadata/external-enum-generated-behavior"
     if not args.cli.is_file(): parser.error("Existing Rust CLI required")
     OUT.mkdir(parents=True, exist_ok=True)
     print(support.run([sys.executable, ROOT / "tests/build-external-enum-fixtures.py"]).stdout, end="", flush=True)
@@ -43,6 +49,11 @@ def main():
     for config in ("release", "debug"):
         fixture = ROOT / f"tests/fixtures/external-enum-{config}.bin"
         library = ROOT / f"tests/fixtures/external-enum-library-{config}.bin"
+        if args.assembly_storage or args.generated_storage:
+            variant = "generated" if args.generated_storage else "access"
+            patched = OUT / f"assembly-storage-{config}.dll"
+            print(support.run([support.DOTNET / "dotnet", harness, library, f"--enum-{variant}-fixture", patched]).stdout, end="", flush=True)
+            library = patched
         names, owners = {}, {}
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)

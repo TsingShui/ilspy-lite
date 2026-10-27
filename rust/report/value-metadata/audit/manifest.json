@@ -1,0 +1,634 @@
+[
+  {
+    "token": "0x060007AD",
+    "owner": "Microsoft.FSharp.Linq.QueryModule",
+    "name": "CommitTransInnerResult",
+    "status": "Partial",
+    "reason": "enum needs one ordinary public special value__ instance field",
+    "id": 129,
+    "slug": "0129-060007AD",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+          "--method",
+          "0x060007AD",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+          "--method",
+          "0x060007AD"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+          "-m",
+          "0x060007AD"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000145",
+    "owner": "Microsoft.FSharp.Core.MatchFailureException",
+    "name": ".ctor",
+    "status": "Partial",
+    "reason": "enum storage requires an exact local definition; external/value signatures need IL fallback",
+    "id": 0,
+    "slug": "0000-06000145",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000145",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000145"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x06000145"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000205",
+    "owner": "Microsoft.FSharp.Collections.FSharpMap`2",
+    "name": "OnSerializing",
+    "status": "Partial",
+    "reason": "enum storage requires an exact local definition; external/value signatures need IL fallback",
+    "id": 0,
+    "slug": "0000-06000205",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000205",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000205"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x06000205"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000222",
+    "owner": "Microsoft.FSharp.Collections.FSharpMap`2",
+    "name": "ComputeHashCode",
+    "status": "Partial",
+    "reason": "constructed value type needs a local definition; external instantiations need dependency facts",
+    "id": 0,
+    "slug": "0000-06000222",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000222",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "--method",
+          "0x06000222"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+          "-m",
+          "0x06000222"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x060000A6",
+    "owner": "ICSharpCode.Decompiler.PlainTextOutput",
+    "name": "get_Location",
+    "status": "Partial",
+    "reason": "value-type receiver needs IL fallback",
+    "id": 3,
+    "slug": "0003-060000A6",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x060000A6",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x060000A6"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "-m",
+          "0x060000A6"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000179",
+    "owner": "ICSharpCode.Decompiler.TypeSystem.DomRegion",
+    "name": "get_Begin",
+    "status": "Partial",
+    "reason": "value-type receiver needs IL fallback",
+    "id": 3,
+    "slug": "0003-06000179",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x06000179",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Core.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.dll",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "--method",
+          "0x06000179"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+          "-m",
+          "0x06000179"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x0600001D",
+    "owner": "Conv_I1",
+    "name": "ESByte_Conv_I1_SByte",
+    "status": "Partial",
+    "reason": "enum needs one ordinary public or assembly-visible special value__ instance field",
+    "id": 160,
+    "slug": "0160-0600001D",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+          "--method",
+          "0x0600001D",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+          "--method",
+          "0x0600001D"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+          "-m",
+          "0x0600001D"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "baseline": "intermediate enum access/narrow scan; before generated-storage admission in release binary",
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000047",
+    "owner": "Conv_I1",
+    "name": "ESByte_Conv_I1_IntPtr",
+    "status": "Partial",
+    "reason": "enum needs one ordinary public or assembly-visible special value__ instance field",
+    "id": 161,
+    "slug": "0161-06000047",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions_32.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions_32.exe",
+          "--method",
+          "0x06000047",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions_32.exe",
+          "--method",
+          "0x06000047"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions_32.exe",
+          "-m",
+          "0x06000047"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "baseline": "intermediate enum access/narrow scan; before generated-storage admission in release binary",
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000019",
+    "owner": "TestCases",
+    "name": "SByte_ESByte",
+    "status": "Partial",
+    "reason": "enum needs one ordinary public or assembly-visible special value__ instance field",
+    "id": 162,
+    "slug": "0162-06000019",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions.exe",
+          "--method",
+          "0x06000019",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions.exe",
+          "--method",
+          "0x06000019"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions.exe",
+          "-m",
+          "0x06000019"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "baseline": "intermediate enum access/narrow scan; before generated-storage admission in release binary",
+    "ilspy_unknown_result_diagnostics": false
+  },
+  {
+    "token": "0x06000003",
+    "owner": "TestCases",
+    "name": "M1",
+    "status": "Partial",
+    "reason": "enum needs one ordinary public or assembly-visible special value__ instance field",
+    "id": 164,
+    "slug": "0164-06000003",
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+    "references": [
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+    ],
+    "runs": [
+      {
+        "view": "ours",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "decompile",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+          "--method",
+          "0x06000003",
+          "--no-auto-references",
+          "--reference",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/mscorlib.dll"
+        ],
+        "exit_code": 2,
+        "stderr": "decompiled=0 declarations=0 partial=1 failed=0\n"
+      },
+      {
+        "view": "il",
+        "command": [
+          "/Users/bytedance/zhome/ilspy-lite/rust/target/release/ilspy-lite",
+          "il",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+          "--method",
+          "0x06000003"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      },
+      {
+        "view": "ilspy",
+        "command": [
+          "/Users/bytedance/.dotnet10/dotnet",
+          "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+          "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+          "-m",
+          "0x06000003"
+        ],
+        "exit_code": 0,
+        "stderr": ""
+      }
+    ],
+    "baseline": "intermediate enum access/narrow scan; before generated-storage admission in release binary",
+    "ilspy_unknown_result_diagnostics": false
+  }
+]

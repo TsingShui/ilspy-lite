@@ -6,7 +6,51 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: typed SZArray operations
+## Current verified state: enum storage encodings and narrow conversions
+
+- `report/value-metadata/corpus-scan-final/baseline.json`: **558,757
+  Decompiled / 211,991 Partial of 770,748**, fallback **27.504579966474125%**.
+  **+4,588 in 101 images**, zero losses/incomplete; fixed inputs, exclusions,
+  reference stamps and denominator. Game **2,898/1,869 (+13)**; Common
+  **12,115/6,292 (+12)**. Aggregate <=5% is unmet.
+- Captured real encodings: F# assembly-visible value__ (0x0603) and generated
+  public/specialname __value (0x0206); ordinary public value__ (0x0606) retained.
+  Matcher checks exact name/flag pairs, one instance fixed-width field, sealed
+  nongeneric exact-core enum, no modifiers/marshal/readonly storage. No arbitrary
+  field spelling, visibility or metadata relaxation. Foreign binding shares proof.
+- conv.i1/u1/i2/u2 preserve low bits then sign/zero extension to I4 for
+  I4/I8/native sources. Float/reference and other conversion gates remain.
+  Public reds: assembly storage, generated storage, I4 narrowing, wide/native
+  narrowing. New negative flag/name/source-category tests preserve boundaries.
+- **449 tests**, fmt/clippy and **38 owned driver invocations** pass.
+  Per config, each ordinary/assembly/generated enum variant executes **3,480
+  comparisons**, eight widths, four promoted enum narrowings and twelve observed
+  I4/I8/native conversions; **13 compiled semantic mutants**. Patched-owned runtime
+  probes validate exact field encodings before production admission.
+  Both foreign variants execute **30/9 methods/config**, three prior mutants.
+  Four frozen narrow rows execute before removal. No selected-body proxy.
+- First complete group scan retained **557,494/213,254**, +3,325; its remaining
+  enum failures exposed the generated __value variant. Extension remains the same
+  semantic group. Final scan has a separate path; earlier evidence is retained.
+  `delta-final.json` has no regressions. No gate based on first-error forecasts.
+- Audit: six candidate triples + four generated-layout triples and exact type IL.
+  Additional captures use the intermediate release before generated-shape
+  admission. Failed guessed type lookup is inconclusive, not BOTH_NO.
+  Fourteen gained production triples self-reviewed CRUDE-BUT-EQUIVALENT, no
+  changed-semantic SUSPECT in bounded sample; no ILSpy unknown-result diagnostics.
+- Docs/evidence: `acceptance/corpus/ENUM_STORAGE_ACCESS.md`,
+  `report/value-metadata/{AUDIT.md,REDS.md,milestone.json,behavior-manifest-final.json,
+  review/}`. Raw scans/logs/IL remain ignored local evidence; selected manifests
+  and docs travel with the local commit. No agents, push or third-party execution.
+- Next: exact ordinary local value construction/receivers (already audited
+  PlainTextOutput.get_Location and DomRegion.get_Begin), then nominal/constructed
+  foreign value proofs and ldftn/ldtoken foundations. Preserve GVM lookup order,
+  exact reference policy, category/lifetime/unknown-fact gates. Other candidates
+  in the audit are not claimed as gains. Continue grouped public red/green,
+  owned/mutation tests, milestone scan, source/IL self-review and local commit.
+  Next baseline is `report/value-metadata/corpus-scan-final/baseline.json`.
+
+## Previous verified state: typed SZArray operations
 
 - Baseline: `report/typed-arrays/corpus-scan/baseline.json`. **554,169
   Decompiled / 216,579 Partial of 770,748**, fallback **28.099845864017812%**.

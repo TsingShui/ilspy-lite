@@ -8,9 +8,9 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Current typed-vector milestone: **554,169 / 770,748** implementation bodies
-recovered; **28.09985% fallback**, so the aggregate <=5% goal is unmet. See
-[typed vector evidence](TYPED_ARRAYS.md) for scope, owned execution,
+Current enum-storage/conversion milestone: **558,757 / 770,748** implementation
+bodies recovered; **27.50458% fallback**, so the aggregate <=5% goal is unmet. See
+[enum storage/conversion evidence](ENUM_STORAGE_ACCESS.md) for scope, owned execution,
 self-review and complete scan evidence.
 
 ## Acquire and independently inventory

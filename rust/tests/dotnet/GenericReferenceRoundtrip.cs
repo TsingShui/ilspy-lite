@@ -584,7 +584,9 @@ internal static partial class GenericReferenceRoundtrip
             StructMain(args);
             return;
         }
-        if (args[1] == "--enum-plan" || args[1] == "--enum-check" || args[1] == "--enum-forward")
+        if (args[1] == "--enum-plan" || args[1] == "--enum-check" || args[1] == "--enum-forward"
+            || args[1] == "--enum-access-fixture" || args[1] == "--enum-access-probe"
+            || args[1] == "--enum-generated-fixture" || args[1] == "--enum-generated-probe")
         {
             EnumMain(args);
             return;

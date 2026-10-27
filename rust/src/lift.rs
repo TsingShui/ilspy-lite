@@ -604,6 +604,24 @@ impl Writer<'_, '_> {
                     format!("__cil_ldc_r4_bits(0x{:08X}u)", value.to_bits()),
                 )?;
             }
+            "conv.i1" | "conv.u1" | "conv.i2" | "conv.u2" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err(format!("{op} source category needs IL fallback").into());
+                }
+                let storage = match op {
+                    "conv.i1" => Ty::I1,
+                    "conv.u1" => Ty::U1,
+                    "conv.i2" => Ty::I2,
+                    "conv.u2" => Ty::U2,
+                    _ => unreachable!(),
+                };
+                let truncated = format!("unchecked(({})({}))", storage.cs(self.image)?, value.name);
+                self.push(Ty::I4, storage.load(&truncated, self.image)?)?;
+            }
             "conv.i4" | "conv.i8" | "conv.u8" => {
                 let value = self.pop()?;
                 let kind = value.ty.kind();

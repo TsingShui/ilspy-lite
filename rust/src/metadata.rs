@@ -2509,10 +2509,12 @@ impl<'a> Image<'a> {
                 continue;
             }
             if storage.is_some()
-                || self.md.strings().str(field.name)? != "value__"
-                || field.flags != 0x0606
+                || !matches!(
+                    (self.md.strings().str(field.name)?, field.flags),
+                    ("value__", 0x0606 | 0x0603) | ("__value", 0x0206)
+                )
             {
-                return Err("enum needs one ordinary public special value__ instance field".into());
+                return Err("enum needs one ordinary instance storage field with an admitted name and flags".into());
             }
             let signature = crate::signature_guard::field(self.md.blobs().get(field.signature)?)?;
             if !signature.custom_mods.is_empty() {

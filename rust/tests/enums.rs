@@ -18,6 +18,134 @@ fn method(bytes: &[u8], owner: &str, name: &str) -> u32 {
 }
 
 #[test]
+fn generated_special_storage_field_keeps_enum_bits_without_requiring_roslyn_spelling() {
+    for bytes in IMAGES {
+        let token = method(bytes, "EnumCases.S8Ops", "Identity");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let field = md
+            .tables()
+            .field_range(cildec::Rid::new(2))
+            .unwrap()
+            .next()
+            .unwrap();
+        let row = md.tables().field(field).unwrap();
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::Field, field)
+            .unwrap();
+        let at = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+        let name = md.strings().str(row.name).unwrap();
+        assert_eq!(name, "value__");
+        let name_at = name.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut owned = bytes.to_vec();
+        owned[at..at + 2].copy_from_slice(&0x0206_u16.to_le_bytes());
+        owned[name_at..name_at + 7].copy_from_slice(b"__value");
+        let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("underlying=sbyte"), "{}", result.text);
+        for flags in [0x0406_u16, 0x0226, 0x1206] {
+            let mut invalid = owned.clone();
+            invalid[at..at + 2].copy_from_slice(&flags.to_le_bytes());
+            let result = decompile_with_style(&invalid, token, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+        }
+        owned[name_at..name_at + 7].copy_from_slice(b"__valux");
+        let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+    }
+}
+
+#[test]
+fn wide_and_native_integer_sources_preserve_narrow_conversion_bits() {
+    for bytes in IMAGES {
+        for name in [
+            "NarrowSignedByte64",
+            "NarrowUnsignedByte64",
+            "NarrowSignedShort64",
+            "NarrowUnsignedShort64",
+            "NarrowSignedByteNative",
+            "NarrowUnsignedByteNative",
+            "NarrowSignedShortNative",
+            "NarrowUnsignedShortNative",
+        ] {
+            let token = method(bytes, "EnumCases.ConversionOps", name);
+            let result = decompile_with_style(bytes, token, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
+fn narrow_integer_conversions_do_not_infer_float_or_reference_source_categories() {
+    for bytes in IMAGES {
+        let token = method(bytes, "EnumCases.S8Ops", "UnsupportedNarrow");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let blob = md
+            .blobs()
+            .get(md.tables().method_def(token & 0xffffff).unwrap().signature)
+            .unwrap();
+        assert_eq!(blob.last(), Some(&8));
+        let at = blob.as_ptr() as usize - bytes.as_ptr() as usize + blob.len() - 1;
+        for kind in [0x0c, 0x1c] {
+            let mut owned = bytes.to_vec();
+            owned[at] = kind;
+            let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(
+                result.text.contains("source category needs IL fallback"),
+                "{}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
+fn integer_narrowing_preserves_low_bits_and_the_result_stack_interpretation() {
+    for bytes in IMAGES {
+        for owner in ["S8Ops", "U8Ops", "S16Ops", "U16Ops"] {
+            let token = method(bytes, &format!("EnumCases.{owner}"), "UnsupportedNarrow");
+            let result = decompile_with_style(bytes, token, OutputStyle::Readable).unwrap();
+            assert_eq!(
+                result.status,
+                Status::Decompiled,
+                "{owner}: {}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
+fn assembly_visible_enum_storage_preserves_its_declared_integer_width() {
+    for bytes in IMAGES {
+        let token = method(bytes, "EnumCases.S8Ops", "Identity");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let field = md
+            .tables()
+            .field_range(cildec::Rid::new(2))
+            .unwrap()
+            .next()
+            .unwrap();
+        let row = md.tables().field(field).unwrap();
+        assert_eq!(md.strings().str(row.name).unwrap(), "value__");
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::Field, field)
+            .unwrap();
+        let at = raw.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut owned = bytes.to_vec();
+        owned[at..at + 2].copy_from_slice(&0x0603_u16.to_le_bytes());
+        let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("underlying=sbyte"), "{}", result.text);
+    }
+}
+
+#[test]
 fn enum_underlying_field_shape_is_checked_instead_of_guessed() {
     use cildec::{Rid, TableId};
     let bytes = IMAGES[0];
@@ -42,7 +170,15 @@ fn enum_underlying_field_shape_is_checked_instead_of_guessed() {
         assert_eq!(result.status, Status::Partial, "{}", result.text);
         assert!(result.text.contains("fixed-width integer"));
     }
-    for flags in [0x406u16, 0x626, 0x8056] {
+    for flags in [
+        0x406u16,
+        0x626,
+        0x8056,
+        0x603 | 0x20,
+        0x603 | 0x1000,
+        0x600,
+        0x607,
+    ] {
         let mut patched = bytes.to_vec();
         patched[field_at..field_at + 2].copy_from_slice(&flags.to_le_bytes());
         let result = decompile(&patched, token).unwrap();
@@ -55,7 +191,7 @@ fn enum_underlying_field_shape_is_checked_instead_of_guessed() {
     patched[at + 2..at + 4].copy_from_slice(&u16::try_from(row.name.0).unwrap().to_le_bytes());
     let result = decompile(&patched, token).unwrap();
     assert_eq!(result.status, Status::Partial, "{}", result.text);
-    assert!(result.text.contains("one ordinary public special value__"));
+    assert!(result.text.contains("one ordinary instance storage field"));
 }
 
 #[test]
@@ -147,7 +283,7 @@ fn enum_scan_records_every_method_with_the_same_admission() {
 }
 
 #[test]
-fn enum_admission_keeps_unknown_external_storage_and_scalar_narrowing_gated() {
+fn enum_admission_keeps_unknown_external_storage_gated() {
     for bytes in IMAGES {
         let methods = list_methods(bytes).unwrap();
         // The frozen table is the list; a promotion removes its row instead of
@@ -173,33 +309,11 @@ mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring). There
 // are no counts; a promotion must drop its row and a regression must add one.
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "EnumCases.S8Ops",
-        "UnsupportedNarrow",
-        "unsupported opcode conv.i1 at IL_0001",
-    ),
-    (
-        "EnumCases.U8Ops",
-        "UnsupportedNarrow",
-        "unsupported opcode conv.u1 at IL_0001",
-    ),
-    (
-        "EnumCases.S16Ops",
-        "UnsupportedNarrow",
-        "unsupported opcode conv.i2 at IL_0001",
-    ),
-    (
-        "EnumCases.U16Ops",
-        "UnsupportedNarrow",
-        "unsupported opcode conv.u2 at IL_0001",
-    ),
-    (
-        "EnumCases.External",
-        "UnsupportedExternal",
-        "enum storage requires an exact local definition; external/value signatures need IL fallback",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "EnumCases.External",
+    "UnsupportedExternal",
+    "enum storage requires an exact local definition; external/value signatures need IL fallback",
+)];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

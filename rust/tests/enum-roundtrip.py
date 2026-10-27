@@ -30,11 +30,17 @@ SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
 
 
 def main():
+    global OUT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, default=ROOT / "target/debug/ilspy-lite")
     parser.add_argument("--readable", action="store_true")
     parser.add_argument("--mutation-control", action="store_true")
+    parser.add_argument("--assembly-storage", action="store_true")
+    parser.add_argument("--generated-storage", action="store_true")
     args = parser.parse_args()
+    if args.assembly_storage and args.generated_storage: parser.error("Choose one enum storage variant")
+    if args.assembly_storage: OUT = ROOT / "report/value-metadata/enum-behavior"
+    if args.generated_storage: OUT = ROOT / "report/value-metadata/enum-generated-behavior"
     if not args.cli.is_file():
         parser.error("Existing Rust CLI required")
     OUT.mkdir(parents=True, exist_ok=True)
@@ -47,13 +53,20 @@ def main():
     rows = []
     for config in ("release", "debug"):
         fixture = ROOT / f"tests/fixtures/enum-{config}.bin"
+        if args.assembly_storage or args.generated_storage:
+            variant = "generated" if args.generated_storage else "access"
+            patched = OUT / f"assembly-storage-{config}.dll"
+            print(support.run([support.DOTNET / "dotnet", harness, fixture, f"--enum-{variant}-fixture", patched]).stdout, end="", flush=True)
+            fixture = patched
+            probe = support.run([support.DOTNET / "dotnet", harness, fixture, f"--enum-{variant}-probe", "-"])
+            print(config + ": " + probe.stdout.strip(), flush=True)
         selected = []
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
-            match = re.search(r" EnumCases\.((?:S|U)(?:8|16|32|64)Ops)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
+            match = re.search(r" EnumCases\.((?:(?:S|U)(?:8|16|32|64)|Conversion)Ops)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
             if match and not match[2].startswith("Unsupported"):
                 selected.append((token, match[1], match[2]))
-        if len(selected) != 96:
+        if len(selected) != 108:
             raise ValueError("Owned enum selection drift")
         scan = {record["token"]: record
                 for record in map(json.loads, support.run(
@@ -76,8 +89,16 @@ def main():
                 "Owned enum unbox selection drift: "
                 + ",".join(sorted(owner for _, owner, _ in unbox))
             )
+        narrow = []
+        for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
+            token, signature = line.split(" ", 1)
+            match = re.search(r" EnumCases\.((?:S|U)(?:8|16)Ops)::UnsupportedNarrow\(", signature)
+            if match:
+                if scan[token]["status"] != "Decompiled": raise ValueError("Owned narrow enum method remains Partial: " + signature)
+                narrow.append((token, match[1], "UnsupportedNarrow"))
+        if len(narrow) != 4: raise ValueError("Owned narrow enum selection drift")
         groups, identities = {}, {}
-        for token, owner, name in selected + unbox:
+        for token, owner, name in selected + unbox + narrow:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details", "--no-auto-references"])
             if details.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("Enum method not recovered: " + owner + "." + name)
@@ -100,7 +121,7 @@ def main():
             if name == "Forward" and not re.search(r"Recovered\.@?Identity\(", rebound):
                 raise ValueError("Enum helper was not rebound")
             groups.setdefault(owner, []).append(rebound)
-        if len(identities) != 8 or len(groups) != 8:
+        if len(identities) != 8 or len(groups) != 9:
             raise ValueError("Owned enum storage coverage drift")
         directives = OUT / f"aliases-{config}.json"
         support.write_changed(directives, json.dumps(list(identities.values()), indent=2))
@@ -152,6 +173,32 @@ def main():
             mutants.append(("UnboxTarget", aliases + "\n" + "\n".join(
                 altered if key == "S32Ops" else value for key, value in pieces.items()),
                 "unbox differs: S32", "--enum-check"))
+            for method, replacement in [
+                ("NarrowSignedByte", "unchecked((long)(byte)a0)"),
+                ("NarrowUnsignedByte", "unchecked((long)(sbyte)a0)"),
+                ("NarrowSignedShort", "unchecked((long)(sbyte)a0)"),
+                ("NarrowUnsignedShort", "unchecked((long)(byte)a0)"),
+                ("NarrowSignedByte64", "a0"),
+                ("NarrowUnsignedShort64", "unchecked((long)(short)a0)"),
+                ("NarrowSignedByteNative", "unchecked((long)a0)"),
+                ("NarrowUnsignedShortNative", "unchecked((long)(short)a0)")]:
+                target = re.search(r"public static long @?" + method + r"\([^\n]+\)\n\{\n.*?\n\}", pieces["ConversionOps"], re.S)
+                if target is None: raise ValueError("Conversion mutation target missing")
+                changed, count = re.subn(r"\breturn [^;]+;", "return " + replacement + ";", target[0], count=1)
+                if count != 1: raise ValueError("Conversion mutation result missing")
+                altered = pieces["ConversionOps"][:target.start()] + changed + pieces["ConversionOps"][target.end():]
+                mutated = aliases + "\n" + "\n".join(altered if owner == "ConversionOps" else body for owner, body in pieces.items())
+                path = OUT / f"Wrong-{method}-{suffix}.cs"
+                support.write_changed(path, mutated)
+                binary = path.with_suffix(".dll")
+                compile_ms += support.compile_cs(binary, [path], references=[fixture])
+                negative = subprocess.run([str(support.DOTNET / "dotnet"), str(harness), str(fixture), "--enum-check", str(binary)],
+                    text=True, capture_output=True, timeout=120)
+                log = negative.stdout + negative.stderr
+                (OUT / f"Wrong-{method}-{suffix}.log").write_text(log)
+                if negative.returncode == 0 or "Recovered enum conversion differs: " + method not in log:
+                    raise ValueError("Integer conversion mutant survived: " + method + log)
+                print(config + ": rejected " + method + " mutant", flush=True)
             for label, mutated, expected, mode in mutants:
                 path = OUT / f"{label}Mutant-{suffix}.cs"
                 support.write_changed(path, mutated)

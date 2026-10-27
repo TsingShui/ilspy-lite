@@ -1,0 +1,45 @@
+{
+  "group": "enum-storage-and-narrow-conversions",
+  "prior_commit": "3961eefa1",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 216579,
+      "Decompiled": 554169
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 211991,
+      "Decompiled": 558757
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "newly_recovered": 4588,
+  "gained_images": 101,
+  "regressions": [],
+  "scope_and_reference_stamps_equal": true,
+  "fallback_percent": 27.504579966474125,
+  "rust_tests": 449,
+  "owned_driver_invocations": 38,
+  "enum_comparisons_per_config_per_variant": 3480,
+  "enum_variants": [
+    "ordinary-public",
+    "assembly-visible",
+    "generated-special"
+  ],
+  "enum_semantic_mutants_per_config_per_variant": 13,
+  "foreign_comparisons_per_config_per_variant": 30,
+  "reviewed_production_methods": 14,
+  "review_kind": "bounded main-session source/IL self-review",
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false
+}

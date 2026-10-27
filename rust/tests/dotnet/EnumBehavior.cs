@@ -21,6 +21,9 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
+using System.Reflection.PortableExecutable;
 using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -46,9 +49,52 @@ internal static partial class GenericReferenceRoundtrip
 
     static void EnumMain(string[] args)
     {
-        if (args.Length != 3 || fixture.GetType("EnumCases.S8Ops") == null) throw new Exception("Expected owned enum fixture.");
+        if (args.Length != 3) throw new Exception("Expected owned enum fixture.");
         Type[] enums = fixture.GetTypes().Where(t => t.IsEnum).OrderBy(t => t.MetadataToken).ToArray();
-        if (enums.Length != 8) throw new Exception("Owned enum coverage drift.");
+        if (enums.Length == 0) throw new Exception("Owned fixture has no enums.");
+        bool generatedStorage = args[1] == "--enum-generated-fixture" || args[1] == "--enum-generated-probe";
+        if (args[1] == "--enum-access-fixture" || args[1] == "--enum-generated-fixture") {
+            byte[] image = File.ReadAllBytes(args[0]);
+            using var pe = new PEReader(new MemoryStream(image));
+            var metadata = pe.GetMetadataReader(MetadataReaderOptions.None);
+            int start = pe.PEHeaders.MetadataStartOffset + metadata.GetTableMetadataOffset(TableIndex.Field);
+            int stride = metadata.GetTableRowSize(TableIndex.Field);
+            foreach (Type type in enums) {
+                var field = type.GetField("value__", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?? throw new Exception("Owned enum storage field missing.");
+                int offset = start + ((field.MetadataToken & 0xffffff) - 1) * stride;
+                if (BitConverter.ToUInt16(image, offset) != 0x0606) throw new Exception("Owned enum storage flags differ.");
+                image[offset] = generatedStorage ? (byte)6 : (byte)3;
+                image[offset + 1] = generatedStorage ? (byte)2 : (byte)6;
+                if (generatedStorage) {
+                    var definition = metadata.GetFieldDefinition(MetadataTokens.FieldDefinitionHandle(field.MetadataToken & 0xffffff));
+                    int nameOffset = pe.PEHeaders.MetadataStartOffset + metadata.GetHeapMetadataOffset(HeapIndex.String) + MetadataTokens.GetHeapOffset(definition.Name);
+                    string name = System.Text.Encoding.ASCII.GetString(image, nameOffset, 7);
+                    if (name != "value__" && name != "__value") throw new Exception("Owned enum storage name differs.");
+                    System.Text.Encoding.ASCII.GetBytes("__value").CopyTo(image, nameOffset);
+                }
+            }
+            File.WriteAllBytes(args[2], image);
+            Console.WriteLine($"Wrote {enums.Length} {(generatedStorage ? "generated special" : "assembly-visible")} enum storage fields.");
+            return;
+        }
+        if (fixture.GetType("EnumCases.S8Ops") == null || enums.Length != 8) throw new Exception("Owned enum coverage drift.");
+        if (args[1] == "--enum-access-probe" || args[1] == "--enum-generated-probe") {
+            foreach (Type type in enums) {
+                var field = type.GetField(generatedStorage ? "__value" : "value__", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?? throw new Exception("Owned enum storage field missing.");
+                if ((int)field.Attributes != (generatedStorage ? 0x0206 : 0x0603) || Enum.GetUnderlyingType(type) != field.FieldType)
+                    throw new Exception("Owned assembly enum storage identity differs.");
+                var identity = fixture.GetType("EnumCases." + type.Name + "Ops").GetMethod("Identity");
+                foreach (ulong bits in new[] { 0UL, 1UL, ulong.MaxValue, 0x8000000000000000UL }) {
+                    object value = Enum.ToObject(type, bits);
+                    object result = OriginalCall(identity)(null, new[] { value });
+                    if (result.GetType() != type || EnumBits(value) != EnumBits(result)) throw new Exception("Owned assembly enum runtime rejected storage.");
+                }
+            }
+            Console.WriteLine($"Eight {(generatedStorage ? "generated special" : "assembly-visible")} enums loaded and executed with exact underlying bits.");
+            return;
+        }
         if (args[1] == "--enum-plan")
         {
             using var json = JsonDocument.Parse(File.ReadAllText(args[2]));
@@ -66,6 +112,7 @@ internal static partial class GenericReferenceRoundtrip
             return;
         }
         Assembly generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[2]));
+        int[] narrowInputs = { int.MinValue, int.MaxValue, -65537, -65536, -32769, -32768, -257, -256, -129, -128, -1, 0, 1, 127, 128, 255, 256, 32767, 32768, 65535, 65536 };
         foreach (Type type in enums)
         {
             Type owner = fixture.GetType("EnumCases." + type.Name + "Ops") ?? throw new Exception("Owned enum operations missing.");
@@ -76,6 +123,20 @@ internal static partial class GenericReferenceRoundtrip
                 | BindingFlags.DeclaredOnly).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal)).ToArray();
             if (methods.Length != 12) throw new Exception("Owned enum method selection drift.");
             var storage = Storage(type);
+            if (storage.Width < 32) {
+                MethodInfo narrowed = owner.GetMethod("UnsupportedNarrow") ?? throw new Exception("Owned narrow enum method missing.");
+                MethodInfo loweredNarrow = carrier.GetMethod("UnsupportedNarrow") ?? throw new Exception("Recovered narrow enum method missing.");
+                if (loweredNarrow.ReturnType != type || loweredNarrow.GetParameters().Length != 1 || loweredNarrow.GetParameters()[0].ParameterType != typeof(int))
+                    throw new Exception("Recovered narrow enum ABI differs.");
+                foreach (int input in narrowInputs) {
+                    object before = OriginalCall(narrowed)(null, new object[] { input });
+                    object after = loweredNarrow.Invoke(null, new object[] { input });
+                    object expected = Enum.ToObject(type, input);
+                    if (!Same(before, expected)) throw new Exception("Owned enum narrowing expectation differs.");
+                    if (!Same(before, after)) throw new Exception("Recovered enum conversion differs: " + narrowed.Name);
+                    checks++;
+                }
+            }
             ulong mask = storage.Width == 64 ? ulong.MaxValue : (1UL << storage.Width) - 1;
             ulong sign = 1UL << (storage.Width - 1);
             object[] values = new[] { 0UL, 1UL, mask, sign, sign - 1, (sign + 1) & mask,
@@ -169,6 +230,32 @@ internal static partial class GenericReferenceRoundtrip
                 CheckUnbox(Activator.CreateInstance(Enum.GetUnderlyingType(type)), Enum.ToObject(type, 0), null);
                 Type sibling = enums.First(other => other != type);
                 CheckUnbox(Enum.ToObject(sibling, 0), null, typeof(InvalidCastException));
+            }
+        }
+        Type conversions = fixture.GetType("EnumCases.ConversionOps") ?? throw new Exception("Owned conversion type missing.");
+        Type loweredConversions = generated.GetType("Enum_Conversion.Recovered") ?? throw new Exception("Recovered conversion carrier missing.");
+        foreach (var item in new (string name, int width, bool signed)[] { ("NarrowSignedByte", 8, true), ("NarrowUnsignedByte", 8, false),
+            ("NarrowSignedShort", 16, true), ("NarrowUnsignedShort", 16, false) }) {
+            foreach (string suffix in new[] { "", "64", "Native" }) {
+                Type sourceType = suffix == "" ? typeof(int) : suffix == "64" ? typeof(long) : typeof(nint);
+                string name = item.name + suffix;
+                var source = conversions.GetMethod(name) ?? throw new Exception("Owned conversion method missing.");
+                var target = loweredConversions.GetMethod(name) ?? throw new Exception("Recovered conversion method missing.");
+                if (target.ReturnType != typeof(long) || target.GetParameters().Length != 1 || target.GetParameters()[0].ParameterType != sourceType)
+                    throw new Exception("Recovered integer conversion ABI differs.");
+                object[] inputs = suffix == "" ? narrowInputs.Cast<object>().ToArray()
+                    : suffix == "64" ? narrowInputs.Select(i => (long)i).Concat(new[] { long.MinValue, long.MaxValue, (1L << 32) + 32768, -(1L << 32) - 129 }).Cast<object>().ToArray()
+                    : narrowInputs.Select(i => (object)(nint)i).Concat(new object[] { nint.MinValue, nint.MaxValue }).ToArray();
+                foreach (object input in inputs) {
+                    long raw = input is int integer ? integer : input is long wide ? wide : ((nint)input).ToInt64();
+                    long bits = raw & ((1L << item.width) - 1);
+                    long expected = item.signed && bits >= 1L << (item.width - 1) ? bits - (1L << item.width) : bits;
+                    object before = OriginalCall(source)(null, new[] { input });
+                    object after = target.Invoke(null, new[] { input });
+                    if (!Equals(before, expected)) throw new Exception("Owned integer conversion expectation differs.");
+                    if (!Equals(before, after)) throw new Exception("Recovered enum conversion differs: " + name);
+                    checks++;
+                }
             }
         }
         Console.WriteLine($"Enum behavior: {checks} comparisons; eight exact storage types, values/bits, snapshots, fields/statics, direct helper calls and exceptions match.");

@@ -1,0 +1,50 @@
+[
+  {
+    "id": 129,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+    "file": "can-eliminate-type.il.txt",
+    "command": [
+      "/Users/bytedance/.dotnet10/dotnet",
+      "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+      "-t",
+      "Microsoft.FSharp.Linq.QueryModule+CanEliminate",
+      "--ilcode"
+    ],
+    "exit_code": 0,
+    "stderr": "",
+    "classification": "static encoding evidence"
+  },
+  {
+    "id": 160,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+    "file": "0160-ESByte.type.il.txt",
+    "command": [
+      "/Users/bytedance/.dotnet10/dotnet",
+      "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+      "-t",
+      "ESByte",
+      "--ilcode"
+    ],
+    "exit_code": 0,
+    "stderr": "",
+    "classification": "static encoding evidence"
+  },
+  {
+    "id": 164,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+    "file": "0164-MyEnum.type.il.txt",
+    "command": [
+      "/Users/bytedance/.dotnet10/dotnet",
+      "/Users/bytedance/zhome/ilspy-lite/ICSharpCode.ILSpyCmd/bin/Release/net10.0/ilspycmd.dll",
+      "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+      "-t",
+      "MyEnum",
+      "--ilcode"
+    ],
+    "exit_code": 65,
+    "stderr": "Could not find a type named 'MyEnum'.",
+    "classification": "inconclusive lookup failure"
+  }
+]

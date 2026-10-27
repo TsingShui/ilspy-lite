@@ -3,7 +3,27 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (typed vectors; aggregate 5% target)
+## Current position (enum storage/narrow conversions; aggregate 5% target)
+
+- **558,757 Decompiled / 211,991 Partial; fallback 27.50458%**.
+- +4,588 in 101 images, zero losses/incomplete; fixed scope/references.
+  Game +13 / Common +12; aggregate <=5% still unmet.
+- Exact captured public/assembly value__ and generated special __value shapes;
+  fixed-width and nominal core proofs remain strict. Narrow integer operations
+  preserve low bits and I4 extension for I4/I8/native inputs.
+- 449 tests, fmt/clippy and 38 owned drivers pass. Each of three field variants
+  executes 3,480 comparisons/config, thirteen mutants; foreign variants 30/9,
+  three mutants. Four frozen narrow rows execute before promotion.
+- Intermediate scan +3,325 is retained; final scan adds the separately captured
+  legitimate generated shape. No losses hidden by net counts.
+- Fourteen source/IL triples self-reviewed crude but equivalent; no changed-
+  semantic suspect. No third-party execution or independent/formal claim.
+- Next: ordinary local value construction/receivers already audited, then
+  nominal/constructed foreign value proofs, exact ldftn/ldtoken foundations.
+  Preserve GVM, lifetime/category and reference policy gates. Continue grouped
+  work autonomously with no agents or unrequested push.
+
+## Previous position (typed vectors; aggregate 5% target)
 
 - **554,169 Decompiled / 216,579 Partial; fallback 28.09985%**.
 - +22,677 in 221 images, zero losses/incomplete; fixed scope/references.
