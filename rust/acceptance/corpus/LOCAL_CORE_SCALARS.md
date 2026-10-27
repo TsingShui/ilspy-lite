@@ -40,3 +40,14 @@ knowledge this repository does not assume.
   regressions.
 - 488 Rust tests, `cargo fmt --check` and clippy `-D warnings` pass. Behavior is
   covered by the owned scalar/box drivers; no third-party body was executed.
+
+## Enums nested in generic types
+
+A nested type inside a generic type is instantiated as `GenericInst` over the nested
+definition, including when that definition is an **enum** (`Outer<T>/RegionPlace`).
+`admit_generic_value_definition` ran the struct field walk for it and refused with
+`value definition has no exact core ValueType base` because the enum's base is
+`System.Enum`. A definition whose exact core base is `Enum` is now admitted without
+that walk; the instantiation identity still comes from the interned signature. A
+method that also indexes the enum's storage keeps its own checks, so this is a
+narrow admission (one CoreLib method gained); 488 tests pass.

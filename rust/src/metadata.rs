@@ -2893,6 +2893,18 @@ impl<'a> Image<'a> {
     /// generic parameters: an instantiation supplies a value for each of them, so
     /// the field is still a value field. Modified, byref, typed-reference and
     /// unreadable fields are refused either way.
+    /// Type of a locally defined value storage owner: an enum keeps its enum
+    /// identity, a struct its value identity, and anything else is a class.
+    pub(crate) fn value_owner_ty(&self, token: Token) -> Result<crate::ir::Ty> {
+        if let Ok(enumeration) = self.enum_type(token) {
+            return Ok(crate::ir::Ty::Enum(enumeration));
+        }
+        if let Some(id) = self.struct_type(token)? {
+            return Ok(crate::ir::Ty::Value(id));
+        }
+        Ok(crate::ir::Ty::Class(token.0))
+    }
+
     pub(crate) fn value_definition_checks(&self, token: Token, open_fields: bool) -> Result<()> {
         use cildec::CodedIndex;
         let tables = self.md.tables();
@@ -3026,6 +3038,13 @@ impl<'a> Image<'a> {
         let declared = self.md.tables().generic_params(token)?.len();
         if arity == 0 || declared != arity {
             return Err("constructed value type argument count differs from the definition".into());
+        }
+        // A nested enum inside a generic type is instantiated as a generic value
+        // type over the enum definition; its storage is the enum's, so it needs no
+        // struct field walk. The instantiation identity still comes from the
+        // interned signature.
+        if self.has_core_base(token, "Enum")? {
+            return Ok(());
         }
         self.value_definition_checks(token, true)
     }
@@ -4447,10 +4466,7 @@ impl<'a> Image<'a> {
                             };
                         };
                         let field = self.find_field(definition, &name)?;
-                        let owner = match self.struct_type(definition)? {
-                            Some(id) => crate::ir::Ty::Value(id),
-                            None => crate::ir::Ty::Class(definition.0),
-                        };
+                        let owner = self.value_owner_ty(definition)?;
                         let field_row = self.md.tables().field(field.rid())?;
                         let blob = self.md.blobs().get(field_row.signature)?;
                         self.field_from_parts(
