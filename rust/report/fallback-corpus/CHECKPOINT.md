@@ -35,7 +35,17 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: nested enums in generic types
+## Current verified state: value constructors on existing storage
+
+- `report/value-ctor-call/corpus-scan/baseline.json`: **724,225 Decompiled / 46,523
+  Partial of 770,748**, fallback **6.035186%**. Zero incomplete images; raw gate
+  4,652,300 > 3,853,740, so <=5% is unmet (7,986 bodies to go).
+- Against `report/final-scan/corpus-scan/baseline.json`: **+964 in 72 images, zero
+  regressions**.
+- The group routes `call <constructed value>::.ctor` through the value-constructor
+  resolution instead of the class-only path; `newobj` keeps its allocation path.
+
+## Previous verified state: nested enums in generic types
 
 - `report/final-scan/corpus-scan/baseline.json`: **723,261 Decompiled / 47,487
   Partial of 770,748**, fallback **6.161160%**. Zero incomplete images; raw gate

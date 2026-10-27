@@ -1,0 +1,30 @@
+{
+  "groups": [
+    "3302dfe71 value constructors on existing storage"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 46523,
+      "Decompiled": 724225
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 84,
+    "unrecovered": 46523,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 964,
+  "gained_images": 72,
+  "regressions": 0,
+  "fallback_percent": 6.036084427076036,
+  "acceptance_integer": {
+    "left": 4652300,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 488,
+  "third_party_bodies_executed": false
+}
