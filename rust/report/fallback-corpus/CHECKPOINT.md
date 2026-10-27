@@ -1284,3 +1284,26 @@ foreign parent projection for constructed types (covers roughly the first, fourt
 eighth rows: about 15k blocker occurrences) and pinned/fixed lowering (~1.7k). Until
 those are implemented and validated, the gate cannot pass and completion must not be
 claimed.
+
+## Audit note: remaining reference-mismatch shapes
+
+Two shapes were traced in the `incompatible value/receiver types` bucket while
+looking for a foreign-parent projection fix (instrumentation reverted; no code
+change):
+
+1. **Local sibling classes.** `Class(A) <- Class(B)` and `Class(B) <- Class(A)`
+   appear for the same two generated F# closure classes (for example
+   `060010AD`/`060010AF`). Both directions fail the class-chain proof, so the two
+   static types are unrelated; the receiver type must be coming from a merged or
+   re-typed stack slot rather than from the IL's declared instance. The join merge
+   (`join_reference_type`) and the closure-class base templates need to be audited
+   together before any widening.
+2. **Foreign parents are reached but not compared.** A `prove` trace for the same
+   methods shows edge terms that are **textually identical to the expected term**
+   (same `TypeDef[118]`, same `[Primitive(24), Primitive(14)]` arguments) yet the
+   top-level pair still fails; the failing top-level pair is a different one, so the
+   trace alone does not establish which `prove` call missed. A per-call correlation
+   (actual/expected plus the term walk) is needed before touching `same_or_variant`
+   or the facts projection.
+
+Both notes are diagnostic only: nothing here is claimed as recovered.
