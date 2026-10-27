@@ -180,6 +180,14 @@ pub(crate) struct Image<'a> {
         std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<(), String>>>,
 }
 
+/// Member-owner tokens collected with a method's operands: value-type TypeRefs
+/// and the arity of a constructed value definition.
+#[derive(Default)]
+struct MemberOwners {
+    tokens: Vec<Token>,
+    value_definitions: Vec<(Token, usize)>,
+}
+
 impl<'a> Image<'a> {
     pub fn parse(bytes: &'a [u8]) -> Result<Self> {
         if bytes.len() > 512 * 1024 * 1024 {
@@ -2334,7 +2342,7 @@ impl<'a> Image<'a> {
     /// Member owner tokens whose value facts this method depends on. Collecting
     /// them here keeps admission independent of which method happened to be
     /// lowered first in a scan.
-    fn member_owner_tokens(&self, target: Token) -> Result<Vec<Token>> {
+    fn member_owner_tokens(&self, target: Token) -> Result<MemberOwners> {
         use cildec::CodedIndex;
         let parent = match target.table() {
             Some(TableId::MemberRef) => self.md.tables().member_ref(target.rid())?.class,
@@ -2346,23 +2354,26 @@ impl<'a> Image<'a> {
                         .raw_column(TableId::MethodSpec, target.rid(), 0)?,
                 )?;
                 if inner.table() != Some(TableId::MemberRef) {
-                    return Ok(Vec::new());
+                    return Ok(MemberOwners::default());
                 }
                 self.md.tables().member_ref(inner.rid())?.class
             }
-            _ => return Ok(Vec::new()),
+            _ => return Ok(MemberOwners::default()),
         };
         let mut owners = Vec::new();
+        let mut value_definitions = Vec::new();
         match parent.table() {
             Some(TableId::TypeRef) => owners.push(parent),
             Some(TableId::TypeSpec) => {
                 if let Ok(spec) = self.type_spec(parent) {
                     match spec.type_ {
+                        // A constructed value owner needs its arity fact, which the
+                        // value-definition priming records.
                         cildec::Type::GenericInst {
                             is_value_type: true,
                             def,
-                            ..
-                        } => owners.push(def),
+                            args,
+                        } => value_definitions.push((def, args.len())),
                         cildec::Type::ValueType(token) => owners.push(token),
                         _ => {}
                     }
@@ -2370,7 +2381,10 @@ impl<'a> Image<'a> {
             }
             _ => {}
         }
-        Ok(owners)
+        Ok(MemberOwners {
+            tokens: owners,
+            value_definitions,
+        })
     }
 
     pub(crate) fn value_type_tokens(
@@ -2431,16 +2445,14 @@ impl<'a> Image<'a> {
                 break;
             };
             let (blob, field, owners) = match instruction.operand {
-                cildec::Operand::Method(target) => (
-                    self.member_signature(target)?,
-                    false,
-                    self.member_owner_tokens(target)?,
-                ),
-                cildec::Operand::Field(target) => (
-                    self.member_signature(target)?,
-                    true,
-                    self.member_owner_tokens(target)?,
-                ),
+                cildec::Operand::Method(target) => {
+                    let owners = self.member_owner_tokens(target)?;
+                    (self.member_signature(target)?, false, owners)
+                }
+                cildec::Operand::Field(target) => {
+                    let owners = self.member_owner_tokens(target)?;
+                    (self.member_signature(target)?, true, owners)
+                }
                 // `newarr`/`initobj`/`box` name their type directly, so a foreign
                 // element or target only gets a fact if its token is collected here.
                 cildec::Operand::Type(target)
@@ -2451,7 +2463,8 @@ impl<'a> Image<'a> {
                 }
                 _ => continue,
             };
-            tokens.operands.extend(owners);
+            tokens.operands.extend(owners.tokens);
+            tokens.value_definitions.extend(owners.value_definitions);
             let Some(blob) = blob else { continue };
             if field {
                 if let Ok(signature) = crate::signature_guard::field(blob) {

@@ -45,3 +45,14 @@ token as `__cil_ctor_call_<token>`, run on the managed location by the lift's
 existing value-constructor rule. `newobj` keeps its own allocation path.
 Targeted: the decompiler test image 1,175 -> 1,176 decompiled,
 `System.Private.CoreLib` +4, `OpenRA.Mods.Common` +13, `OpenRA.Game` +3; 488 tests.
+
+## Referenced constructed value owners
+
+When the constructed value type is defined in another assembly, its arity fact is
+now primed from the call operand (`value_type_tokens` records the `GenericInst`
+definition and argument count for a member owner), and the instantiation resolver
+falls back to `external_method_instantiation` for the declaration and virtuality
+instead of requiring a local definition. The receiver is the instantiated value
+identity. The fixed-corpus scan moved by four bodies (zero regressions), so this is
+a narrow completeness fix; the remaining cases still lack the dependency facts for
+the value definition.
