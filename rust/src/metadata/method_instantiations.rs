@@ -132,11 +132,9 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
                 local_instance_method(image, owner, name, &signature)?
             };
             generic_virtual = image.row(declaration.0)?.flags & 0x40 != 0;
-            let ty = image.receiver(declaration.0)?;
-            if ty.kind() != crate::ir::StackKind::Ref {
-                return Err("generic instance method needs a reference receiver".into());
-            }
-            Some(ty)
+            // A value-type receiver is called on its managed location; the lift
+            // checks that the acquired location has this exact value type.
+            Some(image.receiver(declaration.0)?)
         } else {
             None
         }

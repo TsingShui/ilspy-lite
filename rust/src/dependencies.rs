@@ -579,14 +579,6 @@ impl DependencyContext {
                 "instantiated method is declared on an interface".into(),
             );
         }
-        if matches!(image.has_core_base(owner, "ValueType"), Ok(true))
-            || matches!(image.has_core_base(owner, "Enum"), Ok(true))
-        {
-            return ExternalMethodInstantiationLookup::Refused(
-                "instantiated method owner is a value type; its receiver needs managed-location semantics"
-                    .into(),
-            );
-        }
         if method.flags & 0x0400 != 0 {
             return ExternalMethodInstantiationLookup::Refused(
                 "instantiated definition is abstract".into(),

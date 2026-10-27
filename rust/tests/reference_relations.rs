@@ -214,6 +214,42 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn value_type_generic_instantiations_call_through_the_managed_location() {
+    for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
+        let configuration = if index == 0 { "release" } else { "debug" };
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .discover_references(
+                std::path::Path::new("tests/fixtures/reference-relation-release.bin"),
+                &ilspy_lite::ReferenceSearchOptions {
+                    automatic: false,
+                    files: vec![std::path::PathBuf::from(format!(
+                        "tests/fixtures/relation-library-{configuration}.bin"
+                    ))],
+                    version_policy: ilspy_lite::ReferenceVersionPolicy::IlSpy,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        for name in ["CallValueGeneric", "CallLocalValueGeneric"] {
+            let result = context
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("__cil_methodspec_call_"),
+                "{name}: {}",
+                result.text
+            );
+            assert!(result.text.contains("ref v0"), "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
 fn local_constructed_interface_dispatch_uses_the_exact_token() {
     for (bytes, _) in IMAGES {
         let result = decompile_with_style(

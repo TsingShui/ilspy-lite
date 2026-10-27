@@ -68,6 +68,11 @@ def main():
                 "Difference",
                 # Negative case: a foreign constructed field write stays refused.
                 "WriteForeignValue",
+                # Value-type MethodSpec receivers are dispatched through a `ref`
+                # receiver slot that this driver's leaf helpers do not model; the
+                # struct-receiver driver covers value receivers, and the token form
+                # is checked by the Rust test.
+                "CallValueGeneric", "CallLocalValueGeneric",
             }
             if match and not match[2].startswith(".") and match[2] not in excluded:
                 names[token] = (match[1], match[2])

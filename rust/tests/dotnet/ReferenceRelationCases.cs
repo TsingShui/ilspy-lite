@@ -25,6 +25,7 @@ namespace RelationLibrary
     public struct Bits { public int Value; }
     public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
     public struct Holder<T> { public T Value; }
+    public struct SeededBox { public int Seed; public T Echo<T>(T input) { Seed = 1; return input; } }
     public interface IItem<T> { }
     public class Base { public int Number; }
     public class Middle : Base { }
@@ -49,6 +50,7 @@ namespace RelationLibrary
 namespace RelationCases
 {
     public interface IItem<T> { }
+    public struct LocalBox { public int Seed; public T Echo<T>(T input) { Seed = 1; return input; } }
     public interface ITransform<T> { T Apply(T value); }
     public sealed class UpperTransform : ITransform<string>
     {
@@ -119,6 +121,8 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static int CallValueGeneric(RelationLibrary.SeededBox box, int value) => box.Echo(value);
+        public static string CallLocalValueGeneric(LocalBox box, string value) => box.Echo(value);
         public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);
         public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
         public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;

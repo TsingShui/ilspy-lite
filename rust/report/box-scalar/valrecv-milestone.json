@@ -1,0 +1,31 @@
+{
+  "group": "value-type generic receivers",
+  "tests": 485,
+  "relation_driver": {
+    "comparisons": 662,
+    "selections": 64,
+    "excluded": [
+      "CallValueGeneric",
+      "CallLocalValueGeneric"
+    ]
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      14316,
+      14327
+    ],
+    "OpenRA.Game": [
+      4077,
+      4085
+    ],
+    "OpenRA.Mods.Common": [
+      15939,
+      15951
+    ],
+    "FSharp.Core": [
+      7464,
+      7464
+    ]
+  },
+  "third_party_bodies_executed": false
+}
