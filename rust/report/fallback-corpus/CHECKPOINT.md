@@ -35,7 +35,17 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: byref call results
+## Current verified state: constructed-owner parameter substitution
+
+- `report/substituted-ctor/corpus-scan/baseline.json`: **727,331 Decompiled / 43,417
+  Partial of 770,748**, fallback **5.633105%**. Zero incomplete images; raw gate
+  4,341,700 > 3,853,740, so <=5% is unmet (4,880 bodies to go).
+- Against `report/byref-batch/corpus-scan/baseline.json`: **+2,380 in 137 images,
+  zero regressions**.
+- `390c6a76e` substitutes a constructed external owner's instantiation arguments into
+  its constructor parameters before decoding them.
+
+## Previous verified state: byref call results
 
 - `report/byref-batch/corpus-scan/baseline.json`: **724,951 Decompiled / 45,797
   Partial of 770,748**, fallback **5.942121%**. Zero incomplete images; raw gate

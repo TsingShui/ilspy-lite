@@ -1,0 +1,30 @@
+{
+  "groups": [
+    "390c6a76e constructed-owner parameter substitution"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 43417,
+      "Decompiled": 727331
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 87,
+    "unrecovered": 43417,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 2380,
+  "gained_images": 137,
+  "regressions": 0,
+  "fallback_percent": 5.63309927499001,
+  "acceptance_integer": {
+    "left": 4341700,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 489,
+  "third_party_bodies_executed": false
+}
