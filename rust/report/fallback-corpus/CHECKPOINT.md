@@ -35,7 +35,28 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Work after the external-cast scan (no full scan yet)
+## Current verified state: binary64 and unordered float comparisons
+
+- `report/binary64/corpus-scan/baseline.json`: **670,843 Decompiled / 99,905
+  Partial of 770,748**, fallback **12.995690%**. Zero incomplete images; raw gate
+  9,990,500 > 3,853,740, so <=5% is still unmet.
+- Against `report/external-casts/corpus-scan/baseline.json`: **+2,509 in 109
+  images, zero regressions**. OpenRA.Game **4,013/754 (+58)**; Common
+  **15,476/2,931 (+35)**.
+- Commits: `3869c14a5` unordered float comparisons (`!(a <= b)` semantics, NaN
+  aware, integer `.un` unchanged), `1d81d7f16` binary64 support (signature,
+  `ldc.r8`, `ldind/stind`, `conv.r8`, `conv.r4` rounding, `div` helper, float
+  operand equality in `expect`, float `neg`; unsigned division forms, bitwise
+  not and boxed double unboxing stay refused). Scan and three-method review:
+  `5877f5fe5`.
+- 473 Rust tests, fmt/clippy, release build and the relation driver
+  (528 comparisons / 52 closed selections / 10 mutants per config) pass. No
+  third-party body was executed.
+- Next candidates: multidimensional array Get/Set/Address mapping (F# 76),
+  pointer signatures (CoreLib 794, unsafe semantics), constructed/foreign member
+  facts (F# `external allocation` 278 and counting), and cross-image value facts.
+
+## Previous work after the external-cast scan
 
 - Commit `3869c14a5` fixes unordered float comparisons: `.un` forms on `F`
   operands are true when either value is NaN, so they now lower to the negated
