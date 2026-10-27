@@ -26,8 +26,11 @@ const EXPECTED_PARTIAL: &[(&str, &str)] = &[
         "nested/generic/unresolved external class needs IL fallback",
     ),
     (
+        // Value owners are admitted now; under exact-policy references this body
+        // still stops because the referenced struct's own value identity cannot be
+        // proved without the framework the library targets.
         "UnsupportedStruct",
-        "external allocation needs dependency facts: owner is a value type; value initialisation is not an object identity",
+        "enum storage requires an exact local definition; external/value signatures need IL fallback",
     ),
     (
         "UnsupportedStructField",

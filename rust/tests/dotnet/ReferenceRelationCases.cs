@@ -23,6 +23,7 @@ namespace RelationLibrary
     public interface ITagged { int Tag { get; } }
     public sealed class Tagged : ITagged { public int Tag => 3; }
     public struct Bits { public int Value; }
+    public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
     public interface IItem<T> { }
     public class Base { public int Number; }
     public class Middle : Base { }
@@ -111,6 +112,7 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static RelationLibrary.Seeded SeededValue(int seed) => new RelationLibrary.Seeded(seed);
         public static RelationLibrary.Child[] ForeignArray(int length) => new RelationLibrary.Child[length];
         public static RelationLibrary.Bits[] ForeignValueArray(int length) => new RelationLibrary.Bits[length];
         public static uint ToUInt32(long value) => unchecked((uint)value);

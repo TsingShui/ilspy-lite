@@ -203,6 +203,9 @@ pub(crate) struct ExternalAllocation {
     pub owner_token: u32,
     pub owner_name: String,
     pub owner_sealed: bool,
+    /// Selected definition is a value type: the allocation initializes a value,
+    /// so the caller keeps value identity, not a fresh object identity.
+    pub value_type: bool,
     pub constructed: bool,
     pub arity: usize,
     pub parameter_count: usize,
@@ -665,11 +668,6 @@ impl DependencyContext {
         }
         let is_value = matches!(image.has_core_base(definition, "ValueType"), Ok(true))
             || matches!(image.has_core_base(definition, "Enum"), Ok(true));
-        if is_value {
-            return ExternalAllocationLookup::Refused(
-                "owner is a value type; value initialisation is not an object identity".into(),
-            );
-        }
         let declared = match image.md.tables().generic_params(definition) {
             Ok(parameters) => parameters.len(),
             Err(_) => return ExternalAllocationLookup::Unavailable,
@@ -699,6 +697,7 @@ impl DependencyContext {
             owner_token: method.owner.definition.token,
             owner_name,
             owner_sealed: flags & 0x0100 != 0,
+            value_type: is_value,
             constructed,
             arity: declared,
             parameter_count: signature.params.len(),

@@ -3854,9 +3854,17 @@ impl<'a> Image<'a> {
         }
         // A constructed owner keeps the same structural identity its signature
         // uses, so the allocated value stays assignable to the declared type.
+        // A value type allocates a value: the referenced struct's own identity,
+        // zero-initialized and then constructed, exactly like C# `new S(...)`.
         let owner = if spec {
             let signature = self.type_spec(parent)?;
-            crate::ir::Ty::StructuralRef(self.intern_signature_type(&signature.type_, context)?)
+            if fact.value_type {
+                crate::ir::Ty::from_sig_scoped(&signature.type_, self, context)?
+            } else {
+                crate::ir::Ty::StructuralRef(self.intern_signature_type(&signature.type_, context)?)
+            }
+        } else if fact.value_type {
+            crate::ir::Ty::from_sig_scoped(&cildec::Type::ValueType(parent), self, context)?
         } else {
             crate::ir::Ty::ExternalClass(parent.0)
         };

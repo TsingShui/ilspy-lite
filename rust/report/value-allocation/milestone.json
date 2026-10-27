@@ -1,0 +1,32 @@
+{
+  "groups": [
+    "697ee9a2f reference box/unbox",
+    "external value allocation"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 91353,
+      "Decompiled": 679395
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 62,
+    "unrecovered": 91353,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 5417,
+  "gained_images": 120,
+  "regressions": 0,
+  "fallback_percent": 11.852512105123854,
+  "acceptance_integer": {
+    "left": 9135300,
+    "right": 3853740,
+    "passes": false
+  },
+  "review": "report/value-allocation/review/review-source.md",
+  "tests": 479,
+  "third_party_bodies_executed": false
+}

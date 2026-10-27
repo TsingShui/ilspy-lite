@@ -1121,7 +1121,11 @@ impl Writer<'_, '_> {
                             fact.parameter_count
                         ));
                     }
-                    self.lines.push("// __cil_newobj: one fresh object identity allocated here, then the exact constructor runs in original argument order; later reads observe the same instance.".into());
+                    if allocated.kind() == StackKind::Ref {
+                        self.lines.push("// __cil_newobj: one fresh object identity allocated here, then the exact constructor runs in original argument order; later reads observe the same instance.".into());
+                    } else {
+                        self.lines.push("// __cil_newobj: zero-initialize separate value storage here, run the exact constructor in original argument order, then copy the completed value; no object identity or shared storage is created.".into());
+                    }
                     self.push(
                         allocated,
                         format!("__cil_newobj_{:08X}({})", token.0, values.join(", ")),

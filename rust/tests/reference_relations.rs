@@ -214,6 +214,43 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn referenced_value_type_construction_keeps_value_identity() {
+    for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
+        let configuration = if index == 0 { "release" } else { "debug" };
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        // Mirror the acceptance CLI: one explicit reference and the ILSpy version
+        // policy, with no automatic discovery. The referenced struct's value
+        // identity is proved through its own ValueType base.
+        context
+            .discover_references(
+                std::path::Path::new("tests/fixtures/reference-relation-release.bin"),
+                &ilspy_lite::ReferenceSearchOptions {
+                    automatic: false,
+                    files: vec![std::path::PathBuf::from(format!(
+                        "tests/fixtures/relation-library-{configuration}.bin"
+                    ))],
+                    version_policy: ilspy_lite::ReferenceVersionPolicy::IlSpy,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let result = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "SeededValue"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_newobj_"), "{}", result.text);
+        assert!(
+            result.text.contains("RelationLibrary.Seeded"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn referenced_class_array_elements_resolve_their_kind() {
     for (bytes, library) in IMAGES {
         // The element's class-versus-value distinction comes from its selected
