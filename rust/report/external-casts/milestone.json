@@ -1,0 +1,54 @@
+{
+  "revision": "a065ca1dd",
+  "reference_policy": "ilspy",
+  "scan": "report/external-casts/corpus-scan/baseline.json",
+  "baseline_scan": "report/constructed-base/corpus-scan/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 102414,
+      "Decompiled": 668334
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 61,
+    "unrecovered": 102414,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 6368,
+  "gained_images": 165,
+  "regressions": 0,
+  "unrecovered": 102414,
+  "bodies": 770748,
+  "fallback_percent": 13.28761151504772,
+  "acceptance_integer": {
+    "left": 10241400,
+    "right": 3853740,
+    "passes": false
+  },
+  "openra": [
+    {
+      "id": 1041,
+      "assembly": "OpenRA.Game",
+      "counts": {
+        "Decompiled": 3955,
+        "Partial": 812
+      },
+      "bodies": 4767
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "counts": {
+        "Decompiled": 15441,
+        "Partial": 2966
+      },
+      "bodies": 18407
+    }
+  ],
+  "self_review": "report/external-casts/review/review-source.md",
+  "third_party_bodies_executed": false,
+  "rust_tests": 471
+}
