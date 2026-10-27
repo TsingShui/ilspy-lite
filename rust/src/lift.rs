@@ -655,6 +655,16 @@ impl Writer<'_, '_> {
                 };
                 self.push(target, expression)?;
             }
+            "conv.r.un" => {
+                let value = self.pop()?;
+                let suffix = match value.ty.kind() {
+                    StackKind::I4 => "u4",
+                    StackKind::I8 => "u8",
+                    _ => return Err("conv.r.un source category needs IL fallback".into()),
+                };
+                self.lines.push("// Unsigned integer converted to CLI F (binary64, round to nearest); the source bits are read unsigned.".into());
+                self.push(Ty::R8, format!("__cil_conv_r_{suffix}({})", value.name))?;
+            }
             "conv.r8" => {
                 let value = self.pop()?;
                 match value.ty.kind() {

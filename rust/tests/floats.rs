@@ -46,14 +46,33 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             );
         }
         let class = decompile_type(bytes, "FloatCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 23);
+        assert_eq!(class.summary.decompiled, 24);
         assert_eq!(class.summary.partial, 2);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
-        for name in ["UnsupportedUnsigned", "UnsupportedDoubleUnbox"] {
+        for name in ["UnsupportedUnsignedNative", "UnsupportedDoubleUnbox"] {
             let result = decompile(bytes, token(bytes, name)).unwrap();
             assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
             assert!(result.text.contains("IL FALLBACK"));
         }
+    }
+}
+
+#[test]
+fn unsigned_integer_sources_convert_through_the_cli_float() {
+    for bytes in IMAGES {
+        let result = decompile(bytes, token(bytes, "RecoveredUnsigned")).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("conv.r.un"), "{}", result.text);
+        assert!(result.text.contains("__cil_conv_r_u4("), "{}", result.text);
+        let native = decompile(bytes, token(bytes, "UnsupportedUnsignedNative")).unwrap();
+        assert_eq!(native.status, Status::Partial, "{}", native.text);
+        assert!(
+            native
+                .text
+                .contains("conv.r.un source category needs IL fallback"),
+            "{}",
+            native.text
+        );
     }
 }
 

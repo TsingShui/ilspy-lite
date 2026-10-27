@@ -51,3 +51,17 @@ and both infinities, and rejects ten mutants including `DoubleSum`.
 473 Rust tests, fmt, clippy and the release build pass. Targeted scans:
 FSharp.Core 7,177 -> 7,276 (+99), System.Private.CoreLib 13,431 -> 13,607 (+176).
 A full batch scan is due with the next group.
+
+## Unsigned integer to float conversion
+
+`conv.r.un` reads its integer source unsigned and produces CLI `F` with
+round-to-nearest. The lift now emits a width-specific helper (`__cil_conv_r_u4`
+for an `I4`-carried source, `__cil_conv_r_u8` for `I8`) and pushes binary64, so a
+following `conv.r4` performs the binary32 rounding exactly as the IL requests.
+Native-width unsigned sources remain refused with their own reason.
+
+Owned evidence: the float fixture's `UnsupportedUnsigned` became
+`RecoveredUnsigned` (red before the change, green after), and a new negative
+`UnsupportedUnsignedNative` keeps the native-source boundary visible. 474 Rust
+tests, fmt and clippy pass. The 49 first-blocker occurrences in the last full scan
+make this a small group; the full batch scan lands with the next groups.

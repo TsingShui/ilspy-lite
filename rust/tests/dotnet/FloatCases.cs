@@ -63,7 +63,8 @@ public class Cells
         Number = replacement;
         return System.Math.Abs(old);
     }
-    public static float UnsupportedUnsigned(uint value) => value;
+    public static float RecoveredUnsigned(uint value) => value;
+    public static float UnsupportedUnsignedNative(nuint value) => value;
     public static double RecoveredDouble(double value) => value;
     public static double UnsupportedDoubleUnbox(object value) => (double)value;
 }
