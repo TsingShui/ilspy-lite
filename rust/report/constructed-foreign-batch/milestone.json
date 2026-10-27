@@ -1,0 +1,83 @@
+{
+  "inventory": "report/core-type-roots/scope-policy/implementation-inventory.json",
+  "revision": "2639ae5e5",
+  "reference_policy": "ilspy",
+  "DOTNET_ROOT": "/Users/bytedance/.dotnet10",
+  "scan": "report/constructed-foreign-batch/corpus-scan-final/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 130523,
+      "Decompiled": 640225
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 51
+  },
+  "unrecovered": 130523,
+  "fallback_percent": 16.934588218198424,
+  "acceptance_integer": {
+    "left": 13052300,
+    "right": 3853740,
+    "passes": false
+  },
+  "delta_from_catch_general": {
+    "baseline": "report/catch-general/corpus-scan/baseline.json",
+    "gained": 13983,
+    "regressions": 0,
+    "gained_images": 189,
+    "details": "report/constructed-foreign-batch/delta-final.json"
+  },
+  "initial_scan_regressions": 34,
+  "status_changes_after_cache_fix": {
+    "gained": 0,
+    "regressions": 0
+  },
+  "openra": [
+    {
+      "id": 1041,
+      "assembly": "OpenRA.Game",
+      "counts": {
+        "Decompiled": 3929,
+        "Partial": 838
+      },
+      "bodies": 4767
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "counts": {
+        "Decompiled": 14423,
+        "Partial": 3984
+      },
+      "bodies": 18407
+    }
+  ],
+  "first_blockers": {
+    "incompatible value/receiver types": 12207,
+    "unsupported signature type needs IL fallback": 10959,
+    "EH catch type needs an admitted core exception identity": 10476,
+    "external generic instance dispatch needs dependency facts": 9253,
+    "cast needs a local class definition; external/interface casts need more facts": 7503,
+    "external allocation needs dependency facts: owner is a value type; value initialisation is not an object identity": 5674,
+    "uninitialized local analysis is not implemented": 5447,
+    "constructor call needs a reference-class owner": 5259,
+    "byref-like struct copies need location/lifetime semantics": 3731,
+    "integer operation on non-integer value": 3637,
+    "array allocation needs exact external element kind facts": 3538,
+    "constructed member needs a local definition; external constructed members need dependency facts": 3456,
+    "reference comparison needs identical or null static types": 3339,
+    "generic variable has no owner or exceeds declared positions": 2536,
+    "box/unbox needs an admitted core scalar or local enum": 2331,
+    "generic method owner needs a reference-class instantiation": 2142,
+    "unsupported opcode tail.": 2082,
+    "invalid user-string encoding: terminal flag differs from code units": 2001,
+    "constructor call needs same owning constructor and original this": 1784,
+    "constructed member parent must be a class; interface dispatch needs IL fallback": 1737
+  },
+  "self_review": "report/constructed-foreign-batch/review/review-source.md",
+  "test_count": 463,
+  "test_outcome": "passed",
+  "third_party_bodies_executed": false
+}

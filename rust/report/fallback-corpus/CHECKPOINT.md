@@ -6,7 +6,37 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: general catch clauses
+## Current verified state: constructed foreign allocations and value arrays
+
+- `report/constructed-foreign-batch/corpus-scan-final/baseline.json`:
+  **640,225 Decompiled / 130,523 Partial of 770,748**; **16.934588218198424%**
+  weighted fallback. Fixed scope: 614 managed images, 319 with bodies, zero
+  incomplete. Raw gate: 13,052,300 > 3,853,740; <=5% is not met.
+- Against the general-catch scan: **+13,983 in 189 images, zero regressions**.
+  An initial 34-loss scan and its correction remain recorded; the final
+  correctness fixes caused no further status changes. OpenRA.Game is
+  **3,929/838 (+236)**; Common is **14,423/3,984 (+740)**.
+- The correction commit is `2639ae5e5`: operand-only refusals cannot poison
+  other type uses, cyclic constructed owners fall back, MemberRef handle kind
+  follows the field/method signature, and unused general catch objects emit a
+  valid bare catch. Catch objects that are used still fall back.
+- **463 tests**, fmt/clippy, release build, and relevant owned exception,
+  token, typed-array and scoped-reference drivers pass; the exception driver
+  executes 51 comparisons and rejects six mutants per configuration, and the
+  token driver executes 20 comparisons and rejects three. External-enum and
+  static-constructor drivers also passed after the catch/cache correction.
+  No third-party bodies were executed.
+- Eight production-default/ILSpy/IL triples are retained in the compressed
+  evidence archive and reviewed by the main session, not independently:
+  `report/constructed-foreign-batch/review/`. The bounded sample found no
+  changed-semantic suspect. The earlier invalid catch equivalence verdict is
+  withdrawn in its own review.
+- Milestone and 34 initial losses are preserved in
+  `report/constructed-foreign-batch/{milestone.json,regression-evidence.json}`.
+  Next batch starts from this fixed scan and must study ILSpy first for each
+  selected improvement group. No agents or push.
+
+## Previous verified state: general catch clauses
 
 - `report/catch-general/corpus-scan/baseline.json`: **626,242 Decompiled / 144,506
   Partial of 770,748**, fallback **18.7488%**. **+578 in 88 images**, zero
@@ -17,11 +47,12 @@ Goal: mvouhw7y-679jgb
   fall back. The earlier `catch (object ...)` output failed C# compilation and
   its prior equivalence claim is withdrawn. `System.OutOfMemoryException` joins
   the bounded core parent table with its parent read from CoreLib metadata.
-- Owned red-then-green: `ExceptionRegionCases.GeneralCatch`, `.OutOfMemory`.
-  Frozen negative kept: `.ForeignException` (non-core scope) must stay Partial.
+- Owned `GeneralCatch` red-to-green and `OutOfMemory` behavior coverage;
+  `ForeignException` (non-core scope) remains Partial. The original group had
   **460 tests**, fmt/clippy green.
-- Five gained triples self-reviewed CRUDE-BUT-EQUIVALENT; no changed-semantic
-  SUSPECT. No third-party execution, no agents, no push.
+- The prior five-triple equivalence verdict is withdrawn: its `catch (object)`
+  output failed C# compilation. See `report/catch-general/review/review-source.md`
+  and the corrected current batch. No third-party execution, agents or push.
 - Next: the bounded core parent table now limits the rest of the EH bucket; a
   proper group should walk ancestry from the defining image through dependency
   facts instead of extending the whitelist by name. Other queued gaps: external
