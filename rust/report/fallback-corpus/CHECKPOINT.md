@@ -35,7 +35,21 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Work after the conv.r.un scan (no full scan yet)
+## Current verified state: integer conversions
+
+- `report/int-conversions/corpus-scan/baseline.json`: **672,118 Decompiled /
+  98,630 Partial of 770,748**, fallback **12.796651%**. Zero incomplete images;
+  raw gate 9,863,000 > 3,853,740, so <=5% is unmet.
+- Against `report/conv-run/corpus-scan/baseline.json`: **+1,254 in 76 images,
+  zero regressions**. OpenRA.Game unchanged; Common +2. Commit `3fa4a47a3`
+  (conv.u4/conv.u/conv.i by source width, integer stack-category assignment),
+  scan and two-method review `ff9b3c616`.
+- 475 Rust tests, fmt/clippy, release build and the relation driver (538
+  comparisons / 54 selections / 10 mutants) pass. No third-party body executed.
+- Next: multidimensional-array access mapping, pointer signatures,
+  constructed/foreign member facts, then the next batch scan.
+
+## Previous work after the conv.r.un scan
 
 - Commit `3fa4a47a3` lowers `conv.u4`, `conv.u` and `conv.i` by source width and
   adds the CLI integer stack-category assignment rule (Boolean destination and
