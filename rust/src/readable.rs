@@ -669,8 +669,56 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
     };
     lines
         .into_iter()
-        .map(|line| rewrite(&line, names) + "\n")
+        .map(|line| inline_literals(&rewrite(&line, names)) + "\n")
         .collect()
+}
+
+/// Rewrite `__cil_ldstr_TOKEN("literal")` to the literal itself.
+///
+/// The helper only records the original module string-literal load position; the
+/// value it yields is exactly the literal, so the readable view prints the
+/// literal and the token evidence stays in `--details`.
+fn inline_literals(line: &str) -> String {
+    const PREFIX: &str = "__cil_ldstr_";
+    let Some(at) = line.find(PREFIX) else {
+        return line.to_owned();
+    };
+    let rest = &line[at + PREFIX.len()..];
+    let Some(open) = rest.find('(') else {
+        return line.to_owned();
+    };
+    if !rest[..open]
+        .bytes()
+        .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_lowercase())
+    {
+        return line.to_owned();
+    }
+    let body = &rest[open + 1..];
+    if !body.starts_with('"') {
+        return line.to_owned();
+    }
+    // The literal is a single quoted run with backslash escapes, so the closing
+    // quote is the first unescaped one.
+    let mut end = 1usize;
+    let bytes = body.as_bytes();
+    while end < bytes.len() {
+        match bytes[end] {
+            b'\\' => end += 2,
+            b'"' => break,
+            _ => end += 1,
+        }
+    }
+    if end >= bytes.len() || !body[end + 1..].trim_start().starts_with(')') {
+        return line.to_owned();
+    }
+    let literal = &body[..end + 1];
+    let mut out = String::with_capacity(line.len());
+    out.push_str(&line[..at]);
+    out.push_str(literal);
+    let tail = &body[end + 1..];
+    let after = tail.find(')').map(|i| &tail[i + 1..]).unwrap_or("");
+    out.push_str(after);
+    out
 }
 
 fn generated_value(name: &str) -> bool {

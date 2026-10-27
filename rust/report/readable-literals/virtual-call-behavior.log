@@ -1,0 +1,13 @@
+release: cached owned fixture
+debug: cached owned fixture
+release: Virtual call behavior: 64 comparisons, 13 recovered methods; virtual dispatch, null-check exceptions, argument order and results match.
+release: Value receiver behavior: 9 comparisons, 2 recovered methods; direct base/value receivers, virtual inner dispatch, signed values, null checks and result freshness match.
+release: rejected direct-dispatch mutant
+release: rejected Shape receiver mutant
+release: rejected Value receiver mutant
+debug: Virtual call behavior: 64 comparisons, 13 recovered methods; virtual dispatch, null-check exceptions, argument order and results match.
+debug: Value receiver behavior: 9 comparisons, 2 recovered methods; direct base/value receivers, virtual inner dispatch, signed values, null checks and result freshness match.
+debug: rejected direct-dispatch mutant
+debug: rejected Shape receiver mutant
+debug: rejected Value receiver mutant
+Owned compilation: 2822 ms; Rust compilation: none

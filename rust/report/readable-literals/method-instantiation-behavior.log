@@ -1,0 +1,10 @@
+release: MethodSpec behavior: 125 comparisons, 14 selections; static and nonvirtual generic calls, reference/struct copies, arguments, state and exceptions match.
+release: rejected Int mutant
+release: rejected Owner mutant
+release: rejected ExternalCreate mutant
+release: rejected NonvirtualOrder mutant
+debug: MethodSpec behavior: 125 comparisons, 14 selections; static and nonvirtual generic calls, reference/struct copies, arguments, state and exceptions match.
+debug: rejected Int mutant
+debug: rejected Owner mutant
+debug: rejected ExternalCreate mutant
+debug: rejected NonvirtualOrder mutant

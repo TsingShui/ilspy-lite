@@ -1,7 +1,9 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
-use ilspy_lite::{Status, decompile, decompile_type, list_methods};
+use ilspy_lite::{
+    OutputStyle, Status, decompile, decompile_type, decompile_with_style, list_methods,
+};
 
 const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/string-release.bin"),
@@ -98,4 +100,38 @@ fn malformed_user_string_keeps_raw_evidence_without_dropping_utf16_bytes() {
         decompile(&patched, method).unwrap().status,
         Status::Decompiled
     );
+}
+
+#[test]
+fn readable_literals_are_printed_instead_of_load_helper_calls() {
+    for bytes in IMAGES {
+        for (name, literal) in [
+            ("Ascii", "\"plain-text\""),
+            ("Shared", "\"same\""),
+            (
+                "Escapes",
+                "\"\\u0000\\\"\\\\\\u000D\\u000A\\u0009\\u0008\\u000C\\u000B\\u001F\\u007F\"",
+            ),
+        ] {
+            let result =
+                decompile_with_style(bytes, token(bytes, name), OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains(literal), "{name}: {}", result.text);
+            assert!(
+                !result.text.contains("__cil_ldstr_"),
+                "{name}: {}",
+                result.text
+            );
+            assert!(result.text.is_ascii());
+        }
+        let details = decompile(bytes, token(bytes, "Ascii")).unwrap();
+        assert!(
+            details.text.contains("__cil_ldstr_70")
+                && details
+                    .text
+                    .contains("original module string-literal policy"),
+            "{}",
+            details.text
+        );
+    }
 }
