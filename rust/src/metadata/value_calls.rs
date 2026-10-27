@@ -89,7 +89,11 @@ fn parameters(
         || signature.calling_convention != cildec::CallConv::Default
         || !signature.vararg_params.is_empty()
         || signature.return_type.by_ref
-        || !signature.return_type.custom_mods.is_empty()
+        || signature
+            .return_type
+            .custom_mods
+            .iter()
+            .any(|modifier| modifier.required)
         || !matches!(signature.return_type.type_, cildec::Type::Void)
     {
         return Err("value constructor needs an ordinary instance void signature".into());

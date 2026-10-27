@@ -1,0 +1,28 @@
+{
+  "group": "optional parameter modifiers",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Decompiled": 728029,
+      "Partial": 42719
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 87,
+    "unrecovered": 42719,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 39,
+  "gained_images": 2,
+  "regressions": 0,
+  "fallback_percent": 5.542537898249493,
+  "acceptance_integer": {
+    "left": 4271900,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 490,
+  "third_party_bodies_executed": false
+}

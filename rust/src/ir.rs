@@ -281,7 +281,9 @@ impl Ty {
         image: &Image<'_>,
         context: crate::signature_types::TypeContext,
     ) -> Result<Self> {
-        if !p.custom_mods.is_empty() {
+        // Optional modifiers (`modopt`) carry attributes, not a stack or byref
+        // change; required ones (`modreq`) do change the type contract.
+        if p.custom_mods.iter().any(|modifier| modifier.required) {
             return Err("byref/modified parameter needs IL fallback".into());
         }
         let ty = Self::from_sig_scoped(&p.type_, image, context)?;

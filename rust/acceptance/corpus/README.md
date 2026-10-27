@@ -227,6 +227,7 @@ generated output remain ignored and retain their original license boundaries.
 - `BOXED_VALUE_TESTS.md`: `isinst`/`castclass` with a boxed value-type target.
 - `BYREF_CALL_RESULTS.md`: managed references returned by calls.
 - `CONSTRUCTOR_CALLVIRT.md`: `callvirt` on a reference constructor.
+- `PARAMETER_MODIFIERS.md`: optional `modopt` modifiers on parameters and returns.
 - `EXCEPTION_REGION_DEFINITE_ASSIGNMENT.md`: definite assignment across exception
   regions.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
