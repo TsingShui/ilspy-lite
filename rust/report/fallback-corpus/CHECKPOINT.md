@@ -35,7 +35,18 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: open-self allocation
+## Current verified state: scalar TypeRefs and external float calls
+
+- `report/floatcall-batch/corpus-scan/baseline.json`: **716,283 Decompiled / 54,465
+  Partial of 770,748**, fallback **7.066477%**. Zero incomplete images; raw gate
+  5,446,500 > 3,853,740, so <=5% is unmet (15,928 bodies to go).
+- Against `report/openself-batch/corpus-scan/baseline.json`: **+1,569 in 133 images,
+  zero regressions**. OpenRA.Game +19, OpenRA.Mods.Common +115.
+- Groups: core scalar TypeRefs keep the scalar stack model; external float calls are
+  emitted as ordinary calls with the existing float32 packing (the exact
+  `Math.Abs(float32)` specialization keeps its token check).
+
+## Previous verified state: open-self allocation
 
 - `report/openself-batch/corpus-scan/baseline.json`: **714,714 Decompiled / 56,034
   Partial of 770,748**, fallback **7.269927%**. Zero incomplete images; raw gate
