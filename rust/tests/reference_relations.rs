@@ -233,6 +233,25 @@ fn constructed_value_generic_instantiations_call_through_their_location() {
 }
 
 #[test]
+fn byref_call_results_bind_a_reference_alias() {
+    for (bytes, _) in IMAGES {
+        let result = decompile_with_style(
+            bytes,
+            token(bytes, "RelationCases.Ops", "ReadFirst"),
+            OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("ref int v"), "{}", result.text);
+        assert!(
+            result.text.contains("ref RelationCases.RefHelpers.First("),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn volatile_field_access_keeps_acquire_release_operations() {
     for (bytes, _) in IMAGES {
         for name in [

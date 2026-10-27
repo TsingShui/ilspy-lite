@@ -100,6 +100,11 @@ namespace RelationCases
             return typed == null ? default : typed.Value;
         }
     }
+    public static class RefHelpers
+    {
+        public static ref int First(int[] values) => ref values[0];
+    }
+
     public static class Ops
     {
         private static int AcceptClosedForeign(ClosedForeign input) => 37;
@@ -125,6 +130,7 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static int ReadFirst(int[] values) => RefHelpers.First(values);
         public static int ReadVolatile(VolatileHolder holder) => holder.Value;
         public static int WriteVolatile(VolatileHolder holder, int value) { holder.Value = value; return value; }
         public static bool VolatileReferenceNull(VolatileHolder holder) => holder.Reference == null;

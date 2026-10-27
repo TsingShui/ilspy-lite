@@ -1753,9 +1753,6 @@ impl Writer<'_, '_> {
                     return self.array_intrinsic(intrinsic);
                 }
                 let mut method = self.image.method_ref(t, self.type_context)?;
-                if method.ret.kind() == StackKind::Address {
-                    return Err("byref call result needs escape/lifetime analysis".into());
-                }
                 let virtual_call = op == "callvirt";
                 if let Some(&constraint) = self.constrained_calls.get(&i.offset) {
                     return self.constrained_call(t, constraint, &method);
@@ -1995,6 +1992,12 @@ impl Writer<'_, '_> {
                 ));
                 if method.ret == Ty::Void {
                     self.lines.push(format!("{expression};"));
+                } else if method.ret.kind() == StackKind::Address {
+                    // A byref result is bound as a ref local: reading or writing
+                    // through the alias keeps the callee's referent and the same
+                    // dereference point as the original pointer.
+                    self.lines.push("// byref call result: bind the returned managed reference as a ref local; later reads/writes alias the callee's referent.".into());
+                    self.push(method.ret, expression)?;
                 } else {
                     let result = if method.ret == Ty::R4 {
                         format!("__cil_call_result_r4({expression})")
@@ -2605,10 +2608,8 @@ fn check_block_reads(
                     .ok_or("local out of range")?;
                 *slot = false;
             }
-            "ldloc" | "ldloca" => {
-                if *state.get(var(instruction)?).ok_or("local out of range")? {
-                    return Err("local may be used before definite assignment".into());
-                }
+            "ldloc" | "ldloca" if *state.get(var(instruction)?).ok_or("local out of range")? => {
+                return Err("local may be used before definite assignment".into());
             }
             _ => {}
         }
@@ -2649,7 +2650,7 @@ fn require_definite_local_assignment(
         while let Some(index) = pending.pop_front() {
             let mut uninitialized = entries[index].as_ref().unwrap().clone();
             let block = &blocks[index];
-            apply_block_writes(image, &instructions, block, &mut uninitialized)?;
+            apply_block_writes(image, instructions, block, &mut uninitialized)?;
             for &successor in &block.successors {
                 if let Some(existing) = &mut entries[successor] {
                     let mut changed = false;
@@ -2699,7 +2700,7 @@ fn require_definite_local_assignment(
                 while let Some(index) = queue.pop_front() {
                     let mut uninitialized = entries[index].as_ref().unwrap().clone();
                     let block = &blocks[index];
-                    apply_block_writes(image, &instructions, block, &mut uninitialized)?;
+                    apply_block_writes(image, instructions, block, &mut uninitialized)?;
                     for &successor in &block.successors {
                         let existing =
                             entries[successor].get_or_insert_with(|| uninitialized.clone());
@@ -2725,7 +2726,7 @@ fn require_definite_local_assignment(
         let Some(mut uninitialized) = entries[index].clone() else {
             continue;
         };
-        check_block_reads(image, &instructions, block, &mut uninitialized)?;
+        check_block_reads(image, instructions, block, &mut uninitialized)?;
     }
     Ok(())
 }

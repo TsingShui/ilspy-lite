@@ -1,0 +1,23 @@
+{
+  "group": "byref call results",
+  "tests": 488,
+  "targeted": {
+    "System.Private.CoreLib": [
+      16845,
+      17023
+    ],
+    "OpenRA.Game": [
+      4308,
+      4309
+    ],
+    "FSharp.Core": [
+      8764,
+      8764
+    ],
+    "OpenRA.Mods.Common": [
+      16916,
+      16916
+    ]
+  },
+  "third_party_bodies_executed": false
+}

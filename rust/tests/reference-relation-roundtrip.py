@@ -77,6 +77,9 @@ def main():
                 # candidate list; the Rust test covers the copy form, and the
                 # field-reading variant stays a documented separate gap.
                 "ReadRefBox", "CopyRefBox",
+                # The byref-returning call binds a ref local; the leaf helpers
+                # return values, so this case is covered by the Rust test instead.
+                "ReadFirst",
                 # The write forms mutate the candidate instance and the static
                 # field; this driver compares instance state across two calls, so
                 # the mutation itself would be the difference. Their read forms
