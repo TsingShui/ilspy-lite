@@ -146,10 +146,13 @@ def main():
             for name, replacement in [("DeclaredOverload", "return input == null ? 29 : 29;"),
                                        ("Swap", "return null;"), ("Foreign", "return null;"),
                                        ("ReadCast", "return default;"),
+                                       ("ClosedSiblingJoin", ""), ("ForeignSiblingJoin", ""),
+                                       ("SiblingJoinIsNull", ""),
                                        ("SkipInitBranch", "return 0;"),
                                        ("SkipInitLoop", "return 0;"),
                                        ("SkipInitAddress", "return 0;"),
                                        ("ExternalGeneric", "return 0;"),
+                                       ("ForeignValueArgumentOnly", "return 29;"),
                                        ("FloatLe", "return false;"),
                                        ("DoubleSum", "return 5.0;")]:
                 selected = [i for i, text in enumerate(methods) if re.search(r"\b" + name + r"(?:<[^>]+>)?\(", text)]
@@ -162,6 +165,8 @@ def main():
                         r"(__cil_callvirt_[0-9A-F]{8}\([^,]+, )value\)", r"\g<1>0)", changed[selected[0]], count=1)
                 elif name == "SkipInitAddress":
                     changed[selected[0]], count = re.subn(r"RelationCases\.LocalInitNegative\.Increment\(ref [^)]*\);", "", changed[selected[0]], count=1)
+                elif name in ("ClosedSiblingJoin", "ForeignSiblingJoin", "SiblingJoinIsNull"):
+                    changed[selected[0]], count = re.subn(r"choose != 0", "choose == 0", changed[selected[0]], count=1)
                 else:
                     changed[selected[0]], count = re.subn(r"return [^;]+;", replacement, changed[selected[0]], count=1)
                 if count != 1: raise ValueError("Mutation return missing")

@@ -1,0 +1,433 @@
+{
+  "scope": "four targeted production scans with two threads; FSharp compared to modopt baseline, others to one-thread constructor targeted scans; not an aggregate gate",
+  "images": [
+    {
+      "id": 0,
+      "assembly": "FSharp.Core",
+      "bodies": 9622,
+      "comparison": "last complete baseline",
+      "before_decompiled": 9365,
+      "after_decompiled": 9429,
+      "gains": [
+        {
+          "token": "0x060010AD",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1127-1",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010AF",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1127-2",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010B1",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1127-3",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010B3",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1127-4",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010B4",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1127-5",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010B6",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1129-6",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010B8",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1129-7",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010BA",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1129-8",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010BC",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1129-9",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010BD",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1129-10",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C0",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1132-12",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C2",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1132-13",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C4",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1132-14",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C6",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1132-15",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C7",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1132-16",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010C9",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1134-17",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010CB",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1134-18",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010CD",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1134-19",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010CF",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1134-20",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D0",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1134-21",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D3",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1119-22",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D5",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1119-23",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D6",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1119-24",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D7",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1119-25",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010D8",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1119-26",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010DA",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1118-27",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010DC",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1118-28",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010DD",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1118-29",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010DE",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1118-30",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010DF",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1118-31",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E1",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1120-32",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E3",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1120-33",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E4",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1120-34",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E5",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1120-35",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E6",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1120-36",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010E8",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1121-37",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010EA",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1121-38",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010EB",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1121-39",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010EC",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1121-40",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010ED",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1121-41",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010EF",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1116-42",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F1",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1116-43",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F2",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1116-44",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F3",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1116-45",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F4",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1116-46",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F6",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1122-47",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F8",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1122-48",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010F9",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1122-49",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010FA",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1122-50",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010FB",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1122-51",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010FD",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1117-52",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060010FF",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1117-53",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001100",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1117-54",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001101",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1117-55",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001102",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1117-56",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001104",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1123-57",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001105",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1123-58",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001106",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1123-59",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001107",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1123-60",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001108",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicNumberToString$cont@1123-61",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001110",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "basicFloatToString",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001116",
+          "owner": "Microsoft.FSharp.Core.PrintfImpl",
+          "name": "getValueConverter",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x060019DE",
+          "owner": "Microsoft.FSharp.Reflection.Impl",
+          "name": "getTupleReader",
+          "previous_reason": "incompatible value/receiver types"
+        },
+        {
+          "token": "0x06001ABC",
+          "owner": "Microsoft.FSharp.Collections.MapModule",
+          "name": "ToSeq",
+          "previous_reason": "constructed value type needs a local definition; external instantiations need dependency facts"
+        }
+      ],
+      "regressions": []
+    },
+    {
+      "id": 3,
+      "assembly": "ICSharpCode.Decompiler",
+      "bodies": 9737,
+      "comparison": "prior constructor targeted scan (one thread)",
+      "before_decompiled": 9498,
+      "after_decompiled": 9498,
+      "gains": [],
+      "regressions": []
+    },
+    {
+      "id": 1041,
+      "assembly": "OpenRA.Game",
+      "bodies": 4767,
+      "comparison": "prior constructor targeted scan (one thread)",
+      "before_decompiled": 4325,
+      "after_decompiled": 4325,
+      "gains": [],
+      "regressions": []
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "bodies": 18407,
+      "comparison": "prior constructor targeted scan (one thread)",
+      "before_decompiled": 17058,
+      "after_decompiled": 17058,
+      "gains": [],
+      "regressions": []
+    }
+  ],
+  "newly_recovered": 64,
+  "regressions": [],
+  "third_party_execution": false
+}

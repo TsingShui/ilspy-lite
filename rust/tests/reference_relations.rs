@@ -91,6 +91,147 @@ fn local_constructed_reference_relationships_preserve_arguments_and_scope() {
 }
 
 #[test]
+fn reference_joins_keep_a_proved_closed_constructed_base() {
+    for (bytes, library) in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        for (method_name, child_name, wrong_name) in [
+            ("ClosedSiblingJoin", "ClosedSiblingB", "ClosedSiblingWrong"),
+            (
+                "ForeignSiblingJoin",
+                "ForeignSiblingB",
+                "ForeignSiblingWrong",
+            ),
+        ] {
+            let method = token(bytes, "RelationCases.Ops", method_name);
+            let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+            context
+                .add_reference("owned relation library", library.to_vec())
+                .unwrap();
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(
+                result.status,
+                Status::Decompiled,
+                "{method_name}: {}",
+                result.text
+            );
+
+            let type_row = |name: &str| {
+                let rid = md
+                    .tables()
+                    .iter::<cildec::tables::TypeDefRow>()
+                    .find(|(_, row)| {
+                        md.strings().str(row.as_ref().unwrap().type_name).unwrap() == name
+                    })
+                    .unwrap()
+                    .0;
+                (
+                    rid,
+                    md.tables()
+                        .row_bytes(cildec::TableId::TypeDef, rid)
+                        .unwrap(),
+                )
+            };
+            let (child_rid, child) = type_row(child_name);
+            let (wrong_rid, wrong) = type_row(wrong_name);
+            assert_eq!(child.len(), 14);
+            assert_eq!(wrong.len(), 14);
+            let child_base = md
+                .tables()
+                .raw_column(cildec::TableId::TypeDef, child_rid, 3)
+                .unwrap();
+            let wrong_base = md
+                .tables()
+                .raw_column(cildec::TableId::TypeDef, wrong_rid, 3)
+                .unwrap();
+            assert_ne!(child_base, wrong_base);
+            assert_eq!(u16::from_le_bytes([child[8], child[9]]) as u32, child_base);
+            assert_eq!(u16::from_le_bytes([wrong[8], wrong[9]]) as u32, wrong_base);
+            let at = child.as_ptr() as usize - bytes.as_ptr() as usize + 8;
+            let mut patched = bytes.to_vec();
+            patched[at..at + 2].copy_from_slice(&wrong[8..10]);
+            let mut context = DependencyContext::new(patched).unwrap();
+            context
+                .add_reference("owned relation library", library.to_vec())
+                .unwrap();
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(
+                result.status,
+                Status::Partial,
+                "{method_name}: {}",
+                result.text
+            );
+            assert!(
+                result.text.contains("incompatible value/receiver types"),
+                "{method_name}: {}",
+                result.text
+            );
+        }
+        let method = token(bytes, "RelationCases.Ops", "SiblingJoinIsNull");
+        let details = decompile_with_style(bytes, method, OutputStyle::Details).unwrap();
+        assert_eq!(details.status, Status::Decompiled, "{}", details.text);
+        assert!(
+            details.text.contains("structural signature __cil_ref_"),
+            "{}",
+            details.text
+        );
+        assert!(
+            details.text.contains("RelationCases.Base`1<string>"),
+            "{}",
+            details.text
+        );
+    }
+}
+
+#[test]
+fn constructed_value_method_arguments_are_independent_of_scan_order() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "RelationCases.Ops", "ForeignValueArgumentOnly");
+        let absent = DependencyContext::new(bytes.to_vec()).unwrap();
+        let refused = absent.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(refused.status, Status::Partial, "{}", refused.text);
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let direct = context.decompile(method, OutputStyle::Readable).unwrap();
+        let mut scanned = None;
+        ilspy_lite::scan_methods_with_context(bytes, Some(&context), |token, status, reason| {
+            if token == method {
+                scanned = Some((status, reason));
+            }
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(
+            scanned.as_ref().unwrap().0,
+            Status::Decompiled,
+            "{scanned:?}"
+        );
+        let factory = || {
+            let mut context = DependencyContext::new(bytes.to_vec())?;
+            context.add_reference("owned relation library", library.to_vec())?;
+            Ok(Some(context))
+        };
+        let mut parallel = None;
+        ilspy_lite::scan_methods_parallel(bytes, 2, Some(&factory), |token, status, reason| {
+            if token == method {
+                parallel = Some((status, reason));
+            }
+            Ok(())
+        })
+        .unwrap();
+        assert_eq!(parallel, scanned);
+        assert_eq!(direct.status, Status::Decompiled, "{}", direct.text);
+        assert!(
+            direct.text.contains("__cil_methodspec_call_"),
+            "{}",
+            direct.text
+        );
+    }
+}
+
+#[test]
 fn open_self_cast_references_keep_their_declaring_member_identity() {
     for (bytes, _) in IMAGES {
         let result = decompile_with_style(

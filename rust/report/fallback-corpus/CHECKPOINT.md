@@ -6,6 +6,30 @@
 
 Goal: mvouhw7y-679jgb
 
+## Post-baseline constructed-reference joins (targeted measurements only)
+
+Two local sibling classes can now merge to a closed constructed class base only
+when both incoming reference types are proved assignable to that exact base.
+Four targeted scans show 64 gains in FSharp.Core and no recovered-status losses
+in the four sampled images; they do not establish a new aggregate rate. The
+reference-relations driver executes 839 comparisons / 77 selections per
+configuration; 494 Rust tests pass. The related constructor group is below.
+
+The earlier claim that `32dcafe8b` made foreign constructed-value facts generally
+independent of scan order is **withdrawn for MethodSpec instantiation arguments**:
+FSharp.Core `0x06001ABC` was Decompiled in one whole-image scan and Partial when
+decompiled alone. The prefetch now walks those argument types. An owned red/green
+case, missing-reference negative, sequential/two-worker scan comparison and
+behavioral mutant are recorded in `report/constructed-join/AUDIT.md`. The fixed
+FSharp.Core one- and two-worker scans agree on every status and reason. No
+whole-corpus parity is claimed; the previous complete scan's counts remain
+observed scan counts, not proof that every individual result agreed with it.
+
+The earlier closure explanation that the incompatible-type bucket principally
+required foreign-parent projection was too broad: diagnostic probes also found
+I4-to-native and I4-to-pointer failures in that same bucket. Those are separate
+width/stack/unsafe cases, not claimed as gains of the reference-join repair.
+
 ## Post-baseline constructor group (targeted measurements only)
 
 External constructed base calls now retain the exact MemberRef and substitute

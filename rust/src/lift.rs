@@ -339,6 +339,11 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     writer
         .lines
         .extend(regions.transition(previous, body.code.len() as u32));
+    for types in entries.iter().flatten() {
+        for &ty in types {
+            writer.track_type(ty)?;
+        }
+    }
     let parameters = writer
         .args
         .iter()
@@ -2508,10 +2513,40 @@ fn join_reference_type(image: &crate::metadata::Image<'_>, stored: Ty, incoming:
             let base = Ty::Class(ancestor);
             // An open generic definition is not a value type in C# and would
             // drop the instantiation; only a closed definition can merge here.
-            if image.generic_definition_name(base).unwrap_or(false) {
-                continue;
+            if !image.generic_definition_name(base).unwrap_or(false)
+                && image.assignable(Ty::Class(b), base).is_ok()
+            {
+                return Some(base);
             }
-            if image.assignable(Ty::Class(b), base).is_ok() {
+            // A closed constructed base is a usable stack slot only when both
+            // incoming types are proved assignable to that exact instantiation.
+            let constructed = (|| -> Result<Ty> {
+                let encoded = image.md.tables().raw_column(
+                    cildec::TableId::TypeDef,
+                    ancestor & 0xffffff,
+                    3,
+                )?;
+                let token =
+                    image.metadata_coded_token(cildec::CodedIndex::TypeDefOrRef, encoded)?;
+                if token.table() != Some(cildec::TableId::TypeSpec) {
+                    return Err("reference join has no constructed base".into());
+                }
+                let spec = image.type_spec(token)?;
+                if !matches!(
+                    spec.type_,
+                    cildec::Type::GenericInst {
+                        is_value_type: false,
+                        ..
+                    }
+                ) {
+                    return Err("reference join base is not a constructed class".into());
+                }
+                Ty::from_sig_scoped(&spec.type_, image, Default::default())
+            })();
+            if let Ok(base) = constructed
+                && image.assignable(stored, base).is_ok()
+                && image.assignable(incoming, base).is_ok()
+            {
                 return Some(base);
             }
         }

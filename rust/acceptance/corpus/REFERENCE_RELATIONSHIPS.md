@@ -69,3 +69,42 @@ source recompilation is claimed. No third-party or metadata-only core toy runs.
 Arbitrary unproved foreign relationships, generic value members/constructors,
 broader boxing, constrained dispatch and GVM lookup-order modeling remain
 separate capabilities. Missing references do not authorize guessing.
+
+## Follow-up: closed constructed bases at stack joins
+
+When two local nominal reference classes meet at an IL stack join, the lift may
+use a closed constructed class from their declared local base chains as the
+stack-slot type, but only after the existing assignability proof accepts both
+incoming references to that exact instantiation. Complete type arguments stay in
+the signature arena; no open generic definition, guessed identity, layout, new
+cast, allocation or dispatch is introduced. The emitted edge copies select the
+same original value, including null. Structural types appearing only in synthetic
+stack slots receive their own signature evidence. Unproved, open and foreign-only
+ancestor relationships retain their existing fallbacks.
+
+The owned positive first failed, then passed for both local and foreign declared
+bases in Debug and Release. Mutating just one child's declared base to a different
+instantiation remains Partial. The reference-relation driver now executes 839
+comparisons / 77 selections per configuration, including nulls and identity at
+both new joins. Reversing each join branch is detected by three semantic mutants.
+The original failing compiler-shape experiment and its corrected fixture are
+retained in `report/constructed-join/evidence.zip`.
+
+Self-review also exposed a separate scan-order defect: FSharp.Core `ToSeq`
+was Decompiled in a whole-image scan but Partial when decompiled alone because
+foreign constructed-value facts from MethodSpec arguments had not been collected.
+The earlier claim that `32dcafe8b` made these facts generally scan-order
+independent is **withdrawn for MethodSpec instantiation arguments**. The prefetch
+now walks those arguments, and an owned case tests missing references, individual
+output, sequential scan and two-worker scan. The recovered exact MethodSpec call
+is executed in the owned reference driver, and a wrong-result mutant is rejected.
+The repaired FSharp.Core single-token result and complete one- versus two-thread
+scan agree; this does not claim parity across the corpus.
+
+Five self-reviewed FSharp join samples and the MethodSpec case retain their
+production default/ILSpy/IL triples. Four targeted scans show 64 gains in
+FSharp.Core (63 previously reported as incompatible types, one as the foreign
+value-fact blocker) and no status losses in the four images tested. These are not
+a complete corpus scan. Rust fmt/clippy and 494 tests pass; see
+`report/constructed-join/{AUDIT.md,targeted-final.json,evidence.zip}` for the
+red/green tests, behavioral controls, comparison and bounded main-session review.

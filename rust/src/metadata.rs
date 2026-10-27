@@ -2446,6 +2446,15 @@ impl<'a> Image<'a> {
             };
             let (blob, field, owners) = match instruction.operand {
                 cildec::Operand::Method(target) => {
+                    if target.table() == Some(TableId::MethodSpec)
+                        && let Ok(row) = self.md.tables().method_spec(target.rid())
+                        && let Ok(blob) = self.md.blobs().get(row.instantiation)
+                        && let Ok(spec) = crate::signature_guard::method_spec(blob)
+                    {
+                        for argument in &spec.args {
+                            walk(argument, &mut tokens);
+                        }
+                    }
                     let owners = self.member_owner_tokens(target)?;
                     (self.member_signature(target)?, false, owners)
                 }

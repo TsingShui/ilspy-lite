@@ -85,6 +85,12 @@ namespace RelationCases
     public class Child<T> : Base<T>, IItem<T>, IRoot { }
     public class Swapped<A, B> : Base<B>, IItem<B> { }
     public sealed class Closed : Child<string> { }
+    public sealed class ClosedSiblingA : Base<string> { }
+    public sealed class ClosedSiblingB : Base<string> { }
+    public sealed class ClosedSiblingWrong : Base<object> { }
+    public sealed class ForeignSiblingA : RelationLibrary.GenericBase<string> { }
+    public sealed class ForeignSiblingB : RelationLibrary.GenericBase<string> { }
+    public sealed class ForeignSiblingWrong : RelationLibrary.GenericBase<object> { }
     public sealed class Source : ISource<string> { }
     public sealed class Consumer : IConsumer<object> { }
     public class LocalForeign : RelationLibrary.Child { }
@@ -130,6 +136,10 @@ namespace RelationCases
     {
         public static ref int First(int[] values) => ref values[0];
     }
+    public static class ValueSpecHelper
+    {
+        public static int Target<T>() => typeof(T) == typeof(RelationLibrary.Holder<string>) ? 37 : 29;
+    }
 
     public static class Ops
     {
@@ -141,6 +151,12 @@ namespace RelationCases
         public static Base<T> Up<T>(Child<T> input) => input;
         public static Base<B> Swap<A, B>(Swapped<A, B> input) => input;
         public static Base<string> ClosedUp(Closed input) => input;
+        public static Base<string> ClosedSiblingJoin(int choose, ClosedSiblingA first, ClosedSiblingB second)
+            => choose != 0 ? first : second;
+        public static bool SiblingJoinIsNull(int choose, ClosedSiblingA first, ClosedSiblingB second)
+            => (choose != 0 ? (Base<string>)first : second) is null;
+        public static RelationLibrary.GenericBase<string> ForeignSiblingJoin(int choose, ForeignSiblingA first, ForeignSiblingB second)
+            => choose != 0 ? first : second;
         public static IItem<T> Interface<T>(Child<T> input) => input;
         public static IRoot Root<T>(Child<T> input) => input;
         public static IItem<B> SwappedInterface<A, B>(Swapped<A, B> input) => input;
@@ -176,6 +192,7 @@ namespace RelationCases
         public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);
         public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
         public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;
+        public static int ForeignValueArgumentOnly() => ValueSpecHelper.Target<RelationLibrary.Holder<string>>();
         public static void WriteForeignValue(RelationLibrary.GenericBase<string> box, string value) => box.Value = value;
         public static object BoxDouble(double value) => value;
         public static object BoxSingle(float value) => value;
