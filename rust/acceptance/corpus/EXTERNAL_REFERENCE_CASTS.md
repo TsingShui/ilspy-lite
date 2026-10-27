@@ -31,3 +31,10 @@ allocation is added.
   mscorlib 4.5 18,230 -> 18,254, System 13,705 -> 14,038 (+333),
   System.Data.Common 5,243 -> 5,480 (+237), OpenRA.Mods.Common 15,413 -> 15,441.
   These are local measurements; a full batch scan is still due.
+
+## Boxed value-type targets
+
+A value-type target is not a reference cast but a boxed-value test. `BOXED_VALUE_TESTS.md`
+records how it is emitted (`x is S ? x : null` for `isinst`, the same test with
+`InvalidCastException` for `castclass`); the refusal below applies only to targets
+whose value identity cannot be admitted.

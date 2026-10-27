@@ -224,6 +224,7 @@ generated output remain ignored and retain their original license boundaries.
   method, so scan and decompile agree.
 - `LOCAL_CORE_SCALARS.md`: core scalars named by their local TypeDef.
 - `LOCAL_HANDLE_TYPES.md`: `ldtoken` handle structs defined by the image itself.
+- `BOXED_VALUE_TESTS.md`: `isinst`/`castclass` with a boxed value-type target.
 - `EXCEPTION_REGION_DEFINITE_ASSIGNMENT.md`: definite assignment across exception
   regions.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities

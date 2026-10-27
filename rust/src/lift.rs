@@ -1466,7 +1466,20 @@ impl Writer<'_, '_> {
             }
             "castclass" | "isinst" => {
                 let token = i.operand.token().ok_or("missing cast type token")?;
-                let target = self.image.cast_class(token, self.type_context)?;
+                // A value-type target is a boxed-value test: the runtime checks the
+                // box's type and the result is still the object reference (the same
+                // box on success, null for a failed isinst). The declared value type
+                // is used only inside the C# type test.
+                let boxed = self
+                    .image
+                    .boxed_value_type(token, self.type_context)
+                    .ok()
+                    .filter(|ty| matches!(ty, Ty::Value(_) | Ty::Enum(_)));
+                let target = if boxed.is_some() {
+                    Ty::Object
+                } else {
+                    self.image.cast_class(token, self.type_context)?
+                };
                 let value = self.pop()?;
                 if value.ty.kind() != StackKind::Ref && value.ty != Ty::Null {
                     return Err("cast needs an admitted reference operand".into());
@@ -1483,7 +1496,21 @@ impl Writer<'_, '_> {
                 // Both forms are exact: a C# reference cast performs castclass
                 // (null passes through, incompatibility throws InvalidCast), and
                 // the as-expression performs isinst (null on failure, no throw).
-                let expression = if op == "isinst" {
+                let expression = if let Some(declared) = boxed {
+                    let declared = declared.cs(self.image)?;
+                    self.lines.push("// Boxed-value test: the runtime checks the box's exact type; the result stays an object reference (the same box on success, null for a failed isinst).".into());
+                    if op == "isinst" {
+                        format!(
+                            "((object)({} is {declared} ? {} : null))",
+                            value.name, value.name
+                        )
+                    } else {
+                        format!(
+                            "((object)({} is {declared} ? {} : throw new global::System.InvalidCastException()))",
+                            value.name, value.name
+                        )
+                    }
+                } else if op == "isinst" {
                     self.lines.push("// isinst: runtime type test yielding null on failure; no exception and no user code.".into());
                     format!("((object){} as {})", value.name, name)
                 } else {
