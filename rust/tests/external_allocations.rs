@@ -19,7 +19,7 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
 const EXPECTED_PARTIAL: &[(&str, &str)] = &[
     (
         "MakeBox",
-        "constructed member needs a local definition; external constructed members need dependency facts",
+        "generic variable has no owner or exceeds declared positions",
     ),
     (
         "MakeNested",

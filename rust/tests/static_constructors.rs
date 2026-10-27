@@ -41,7 +41,7 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "StaticConstructorCases.Caches",
         ".cctor",
-        "constructed member needs a local definition",
+        "external allocation needs dependency facts",
     ),
     (
         "StaticConstructorCases.ExternalCache",

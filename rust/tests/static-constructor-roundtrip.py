@@ -18,7 +18,7 @@ SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
 # Types whose initializer still needs a capability this slice does not have. The
 # set is frozen so a silently gated type cannot shrink the executed surface.
 UNSUPPORTED = {
-    "Caches": "unsupported opcode ldftn at IL_0001",
+    "Caches": "external allocation needs dependency facts",
     "ExternalCache": "external allocation needs dependency facts",
 }
 

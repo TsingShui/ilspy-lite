@@ -2076,6 +2076,15 @@ impl<'a> Image<'a> {
                 image.md.tables().type_def(token.rid())?;
                 return Ok(Some(token));
             }
+            if token.table() == Some(TableId::TypeSpec) {
+                // A constructed type canonicalizes through its definition; a
+                // foreign instantiation still resolves to no local definition.
+                let spec = image.type_spec(token)?;
+                let cildec::Type::GenericInst { def, .. } = spec.type_ else {
+                    return Ok(None);
+                };
+                return resolve(image, def, seen);
+            }
             if token.table() != Some(TableId::TypeRef) {
                 return Err("local type lookup requires TypeDef or TypeRef".into());
             }
@@ -3157,6 +3166,13 @@ impl<'a> Image<'a> {
     }
 
     pub fn external_class_name(&self, token: u32) -> Result<String> {
+        // A constructed foreign owner has no TypeRef of its own; its structural
+        // signature is the identity the rest of the output already uses.
+        if Token(token).table() == Some(TableId::TypeSpec) {
+            let spec = self.type_spec(Token(token))?;
+            let id = self.intern_signature_type(&spec.type_, Default::default())?;
+            return self.signature_types.borrow().name(id);
+        }
         self.external_class_context(token)?;
         if let Ok(name) = self.handler_type_name(Token(token)) {
             return Ok(name);
@@ -3392,6 +3408,14 @@ impl<'a> Image<'a> {
                 }
                 let reference =
                     crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+                // A constructed owner defined in another image has no local rows to
+                // consult; its allocation proof is the dependency fact, exactly as
+                // for a non-constructed foreign class.
+                if row.class.table() == Some(TableId::TypeSpec)
+                    && !self.local_constructed_parent(row.class)?
+                {
+                    return self.external_allocation_for(token, row.class, &reference, context);
+                }
                 match self.constructed_member_owner(row.class, context)? {
                     Some(owner) => {
                         let constructor =
@@ -3399,7 +3423,7 @@ impl<'a> Image<'a> {
                         (constructor, Some(owner.receiver), owner.arguments)
                     }
                     None => {
-                        return self.external_allocation_for(token, row.class, &reference);
+                        return self.external_allocation_for(token, row.class, &reference, context);
                     }
                 }
             }
@@ -3459,11 +3483,21 @@ impl<'a> Image<'a> {
     /// The parameters are read in the caller's vocabulary so the same `assignable`
     /// checks apply as for a local constructor; only the owner's kind, name and
     /// shape come from the defining image.
+    /// Whether a constructed member parent names a definition this image owns.
+    fn local_constructed_parent(&self, parent: Token) -> Result<bool> {
+        let spec = self.type_spec(parent)?;
+        let cildec::Type::GenericInst { def, .. } = spec.type_ else {
+            return Err("constructed member parent is not a generic instantiation".into());
+        };
+        Ok(self.local_type_definition(def)?.is_some())
+    }
+
     fn external_allocation_for(
         &self,
         token: Token,
         parent: Token,
         reference: &cildec::MethodSig<'_>,
+        context: crate::signature_types::TypeContext,
     ) -> Result<(crate::ir::Ty, Vec<crate::ir::Ty>)> {
         let fact = match self.external_allocation(token.0) {
             Some(Ok(fact)) => fact,
@@ -3484,7 +3518,14 @@ impl<'a> Image<'a> {
         if fact.constructed != spec {
             return Err("external allocation owner shape differs from its reference".into());
         }
-        let owner = crate::ir::Ty::ExternalClass(parent.0);
+        // A constructed owner keeps the same structural identity its signature
+        // uses, so the allocated value stays assignable to the declared type.
+        let owner = if spec {
+            let signature = self.type_spec(parent)?;
+            crate::ir::Ty::StructuralRef(self.intern_signature_type(&signature.type_, context)?)
+        } else {
+            crate::ir::Ty::ExternalClass(parent.0)
+        };
         let arguments = reference
             .params
             .iter()

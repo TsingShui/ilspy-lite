@@ -19,9 +19,9 @@ not allocate anything on the handle's behalf.
 Owned fixture `tests/dotnet/TokenCases.cs` covers `typeof(T)` over a generic
 parameter, a closed core type, a nested type and a vector, an array initializer
 (`ldtoken` field plus `RuntimeHelpers.InitializeArray`), and static/instance
-delegate creation (`ldfn` plus a delegate constructor). With host references the
-ten reachable bodies recover; the two delegate bodies stop at the separate
-external-constructed-member gate, which is retained as a negative boundary.
+delegate creation (`ldfn` plus a delegate constructor). With host references all twelve bodies recover, including the two delegate
+bodies (`ldftn` plus a constructed `Func<,>` constructor); without references they
+stop at the allocation-fact gate, which stays a negative boundary.
 
 Rust seam coverage: token operands are no longer reported as an unsupported
 opcode; a UserString operand is refused as "not a type, field or method token";

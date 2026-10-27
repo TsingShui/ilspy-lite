@@ -180,7 +180,7 @@ mod fixture_contract;
 const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
     "ScopedReferenceCases.MethodOps",
     "UnsupportedConstruct",
-    "constructed member needs a local definition; external constructed members need dependency facts",
+    "external allocation needs dependency facts",
 )];
 
 #[test]
