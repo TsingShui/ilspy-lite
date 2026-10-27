@@ -16,16 +16,10 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
 
 /// Constructed and nested external owners, and value-type initialisation, stay
 /// gated with their own reasons instead of borrowing the plain-class path.
-const EXPECTED_PARTIAL: &[(&str, &str)] = &[
-    (
-        "MakeBox",
-        "generic variable has no owner or exceeds declared positions",
-    ),
-    (
-        "MakeNested",
-        "nested/generic/unresolved external class needs IL fallback",
-    ),
-];
+const EXPECTED_PARTIAL: &[(&str, &str)] = &[(
+    "MakeNested",
+    "nested/generic/unresolved external class needs IL fallback",
+)];
 
 /// Positives must name the owner and its kind, keep the argument order, and report
 /// exactly one fresh identity per site.
@@ -113,6 +107,14 @@ fn foreign_static_reads_keep_exact_storage_without_allocating() {
 fn gated_external_owners_keep_their_own_reason() {
     for (bytes, library) in IMAGES {
         let context = context(bytes, library);
+        // A constructed external owner's constructor parameters are substituted from
+        // its instantiation, so the allocation is recovered without relying on the
+        // caller's type scope.
+        let promoted = context
+            .decompile(token(bytes, "MakeBox"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
+        assert!(promoted.text.contains("__cil_newobj_"), "{}", promoted.text);
         // A referenced value type's identity is primed from the member owners, so
         // the allocation and field read are recovered independently of scan order.
         let promoted = context

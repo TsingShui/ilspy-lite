@@ -4016,10 +4016,41 @@ impl<'a> Image<'a> {
         } else {
             crate::ir::Ty::ExternalClass(parent.0)
         };
+        // A constructed owner supplies the definition's type parameters, so its
+        // constructor parameters are substituted before decoding; a TypeRef owner
+        // keeps the caller's context.
+        let spec_arguments = if spec {
+            match self.type_spec(parent)?.type_ {
+                cildec::Type::GenericInst { args, .. } => Some(args),
+                _ => None,
+            }
+        } else {
+            None
+        };
         let arguments = reference
             .params
             .iter()
-            .map(|parameter| crate::ir::Ty::from_param_scoped(parameter, self, context))
+            .map(|parameter| {
+                if parameter
+                    .custom_mods
+                    .iter()
+                    .any(|modifier| modifier.required)
+                {
+                    return Err("byref/modified parameter needs IL fallback".into());
+                }
+                let ty = match &spec_arguments {
+                    Some(args) => {
+                        let substituted = substitute_type_arguments(&parameter.type_, args)?;
+                        crate::ir::Ty::from_sig_scoped(&substituted, self, context)?
+                    }
+                    None => crate::ir::Ty::from_param_scoped(parameter, self, context)?,
+                };
+                if parameter.by_ref && spec_arguments.is_some() {
+                    self.address_of(ty)
+                } else {
+                    Ok(ty)
+                }
+            })
             .collect::<Result<Vec<_>>>()?;
         Ok((owner, arguments))
     }
