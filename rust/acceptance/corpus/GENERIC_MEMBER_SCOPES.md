@@ -79,3 +79,18 @@ concrete nongeneric allocation owner 112; generic static owner 46. These sum
 to 8,695 but are attribution by old reason, not isolated causal measurements.
 The first scan's net +8,644 and 38 regressions are superseded, not discarded as
 evidence. The current overall <=5% goal is not yet met.
+
+## External constructor and allocation signatures
+
+`external_allocation_for` and the referenced-constructor path decoded their
+parameter and return types with `Ty::from_param`, which uses an empty type context.
+A constructor whose signature mentions its declaring type's own parameters
+(`C<!0>::.ctor(!0)`, common for local generic classes inside `FSharpMap<K,V>`) then
+failed with `generic variable has no owner or exceeds declared positions` even
+though the call site's context names those parameters. Both paths now use
+`Ty::from_param_scoped` with the caller's context, so the parameters keep their
+exact variable identity. The check that a constructor returns `void` uses the same
+scoped decoding.
+
+Evidence: `FSharp.Core` 8,617 -> 8,631 decompiled (+14) with no other image change;
+488 Rust tests, fmt and clippy pass.

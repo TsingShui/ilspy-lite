@@ -1,0 +1,19 @@
+{
+  "group": "scoped external constructor signatures",
+  "tests": 488,
+  "targeted": {
+    "FSharp.Core": [
+      8617,
+      8631
+    ],
+    "System.Private.CoreLib": [
+      15113,
+      15113
+    ],
+    "OpenRA.Mods.Common": [
+      16775,
+      16775
+    ]
+  },
+  "third_party_bodies_executed": false
+}

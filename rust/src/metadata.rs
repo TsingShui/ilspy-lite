@@ -3919,7 +3919,7 @@ impl<'a> Image<'a> {
         let arguments = reference
             .params
             .iter()
-            .map(|parameter| crate::ir::Ty::from_param(parameter, self))
+            .map(|parameter| crate::ir::Ty::from_param_scoped(parameter, self, context))
             .collect::<Result<Vec<_>>>()?;
         Ok((owner, arguments))
     }
@@ -4808,7 +4808,8 @@ impl<'a> Image<'a> {
                 });
             }
             if !sig.has_this
-                || crate::ir::Ty::from_param(&sig.return_type, self)? != crate::ir::Ty::Void
+                || crate::ir::Ty::from_param_scoped(&sig.return_type, self, context)?
+                    != crate::ir::Ty::Void
             {
                 return Err(
                     "external constructor needs an ordinary instance void signature".into(),
@@ -4822,7 +4823,7 @@ impl<'a> Image<'a> {
                 args: sig
                     .params
                     .iter()
-                    .map(|p| crate::ir::Ty::from_param(p, self))
+                    .map(|p| crate::ir::Ty::from_param_scoped(p, self, context))
                     .collect::<Result<Vec<_>>>()?,
                 ret: crate::ir::Ty::Void,
                 core_object_constructor: None,
