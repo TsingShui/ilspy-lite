@@ -1392,3 +1392,19 @@ change):
    or the facts projection.
 
 Both notes are diagnostic only: nothing here is claimed as recovered.
+
+## Audit note: constructed external base instantiation comparison
+
+While probing the `constructed member needs a local definition` bucket (743
+first blockers), a candidate admission for `.ctor` calls whose constructed owner is
+defined in another image was written and then reverted: the owned mutation that
+swaps the call owner's `TypeSpec` arguments (`ForeignOuter<!1,!0>` to
+`ForeignOuter<!0,!1>`) still decompiled, so the promotion would not have compared
+the declared base instantiation as `immediate_constructor_base` intends. That is
+either a gap in the check's normalization scope or a case where the ctor path
+bypasses it; it needs a focused fix and a mutation negative before that bucket can
+be admitted. The tree is unchanged by the probe, and no recovery is claimed from it.
+
+Latest verified numbers remain `report/substituted-ctor/corpus-scan` plus the
+four-body arity change: **727,335 / 43,413 = 5.6326%**, 4,876 bodies short of the
+5% gate.
