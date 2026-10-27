@@ -79,11 +79,19 @@ fn external_constructor_rejects_null_receivers_callvirt_and_unrelated_owners() {
             .find(|i| i.opcode.name() == "call")
             .unwrap();
         let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
-        for (offset, opcode) in [(load.offset, 0x14), (call.offset, 0x6f)] {
-            let mut patched = bytes.to_vec();
-            patched[start + offset as usize] = opcode;
-            assert_eq!(decompile(&patched, ctor).unwrap().status, Status::Partial);
-        }
+        let mut null_receiver = bytes.to_vec();
+        null_receiver[start + load.offset as usize] = 0x14; // ldnull as the receiver.
+        assert_eq!(
+            decompile(&null_receiver, ctor).unwrap().status,
+            Status::Partial
+        );
+        // A reference constructor invoked with callvirt is the same non-virtual call
+        // the runtime performs: no dispatch and no added null check.
+        let mut virtual_call = bytes.to_vec();
+        virtual_call[start + call.offset as usize] = 0x6f;
+        let result = decompile(&virtual_call, ctor).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(!result.text.contains("__cil_callvirt_"), "{}", result.text);
         let target = call.operand.token().unwrap();
         let raw = md
             .tables()

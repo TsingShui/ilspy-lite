@@ -1757,41 +1757,55 @@ impl Writer<'_, '_> {
                 if let Some(&constraint) = self.constrained_calls.get(&i.offset) {
                     return self.constrained_call(t, constraint, &method);
                 }
+                let mut dispatch = false;
                 if virtual_call {
                     if method.generic_virtual {
                         return Err(
                             "generic virtual dispatch needs runtime lookup-order modeling".into(),
                         );
                     }
-                    // Constructors and intrinsics are not virtual: callvirt on them
-                    // is invalid IL and must not be turned into a dispatch.
-                    if method.core_object_constructor.is_some()
-                        || method.tick_count
-                        || method.constructor
-                    {
-                        return Err("constructor/intrinsic callvirt needs IL fallback".into());
+                    // A static intrinsic has no receiver to check.
+                    if method.tick_count {
+                        return Err("intrinsic callvirt needs IL fallback".into());
                     }
-                    let owner = method
-                        .receiver
-                        .ok_or("callvirt needs an instance receiver")?;
-                    if owner.kind() != StackKind::Ref {
-                        return Err(
-                            "callvirt on a value-type receiver needs boxing/constrained dispatch"
-                                .into(),
-                        );
+                    // Constructors are never virtual. Some compilers emit callvirt on
+                    // a reference constructor; the runtime performs the same non-virtual
+                    // receiver call, so the constructor checks and target are kept and
+                    // nothing dispatches. A value-type constructor expects the managed
+                    // cell, and callvirt would treat that cell as an object reference,
+                    // so it stays refused.
+                    if method.constructor || method.core_object_constructor.is_some() {
+                        let reference_receiver = match method.receiver {
+                            Some(owner) => owner.kind() == StackKind::Ref,
+                            None => method.core_object_constructor.is_some(),
+                        };
+                        if !reference_receiver {
+                            return Err("constructor/intrinsic callvirt needs IL fallback".into());
+                        }
+                    } else {
+                        let owner = method
+                            .receiver
+                            .ok_or("callvirt needs an instance receiver")?;
+                        if owner.kind() != StackKind::Ref {
+                            return Err(
+                                "callvirt on a value-type receiver needs boxing/constrained dispatch"
+                                    .into(),
+                            );
+                        }
+                        // Exact reference dispatch needs the original token and checked
+                        // stack signature, not a guessed external implementation. Source
+                        // property/member syntax has a separate dependency-backed proof.
+                        if !matches!(
+                            owner,
+                            Ty::Class(_) | Ty::StructuralRef(_) | Ty::ExternalClass(_)
+                        ) {
+                            return Err("callvirt needs a nominal reference receiver".into());
+                        }
+                        method.target = format!("__cil_callvirt_{:08X}", t.0);
+                        dispatch = true;
                     }
-                    // Exact reference dispatch needs the original token and checked
-                    // stack signature, not a guessed external implementation. Source
-                    // property/member syntax has a separate dependency-backed proof.
-                    if !matches!(
-                        owner,
-                        Ty::Class(_) | Ty::StructuralRef(_) | Ty::ExternalClass(_)
-                    ) {
-                        return Err("callvirt needs a nominal reference receiver".into());
-                    }
-                    method.target = format!("__cil_callvirt_{:08X}", t.0);
                 }
-                let dispatch_note = if virtual_call {
+                let dispatch_note = if dispatch {
                     "callvirt receiver null check then target-runtime dispatch to the declared method"
                 } else {
                     "exact IL call; no virtual dispatch or added null check"

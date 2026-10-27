@@ -662,6 +662,34 @@ fn external_reference_casts_need_only_the_reference_kind_fact() {
 }
 
 #[test]
+fn callvirt_on_a_constructor_keeps_the_non_virtual_call() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "RelationCases.LocalOuter`2/NestedLocal", ".ctor");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md.tables().method_def(method & 0xffffff).unwrap();
+        let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+        let call = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+        let at = start + call.offset as usize;
+        assert_eq!(bytes[at], 0x28, "fixture calls the base constructor");
+        let mut patched = bytes.to_vec();
+        patched[at] = 0x6f; // callvirt on the same constructor token.
+        let mut context = DependencyContext::new(patched).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let result = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(!result.text.contains("__cil_callvirt_"), "{}", result.text);
+    }
+}
+
+#[test]
 fn nested_base_constructor_calls_compare_the_declared_instantiation() {
     for (bytes, library) in IMAGES {
         // A nested class that inherits its enclosing type's parameters names its

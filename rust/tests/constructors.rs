@@ -311,14 +311,26 @@ fn core_constructor_admission_rejects_spoofs_wrong_calls_and_receiver_contexts()
             assert_eq!(result.status, Status::Partial, "{}", result.text);
             assert!(result.text.contains("IL FALLBACK"));
         }
-        let mut code = vec![0x02, 0x6f]; // callvirt is not the admitted exact base call.
+        // A reference constructor invoked with callvirt is the same non-virtual
+        // call the runtime performs; nothing dispatches.
+        let mut code = vec![0x02, 0x6f];
         code.extend(target.0.to_le_bytes());
         code.push(0x2a);
-        assert_eq!(
-            decompile(&patch_body(bytes, base, &code), base)
-                .unwrap()
-                .status,
-            Status::Partial
+        let result = decompile(&patch_body(bytes, base, &code), base).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(!result.text.contains("__cil_callvirt_"), "{}", result.text);
+        // A null receiver is still not the original this.
+        let mut code = vec![0x14, 0x6f];
+        code.extend(target.0.to_le_bytes());
+        code.push(0x2a);
+        let result = decompile(&patch_body(bytes, base, &code), base).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("core constructor call needs unchanged original this"),
+            "{}",
+            result.text
         );
         let ordinary = method(bytes, "Reserved", 1);
         let mut code = vec![0x02, 0x28];
@@ -429,19 +441,34 @@ fn delegated_constructor_rejects_ordinary_other_receiver_and_invalid_target_cont
         )
         .unwrap()
         .unwrap();
-        let mut code = body.code.to_vec();
-        let offset = body
+        let call = body
             .instructions()
             .map(Result::unwrap)
             .find(|i| i.opcode.name() == "call")
-            .unwrap()
-            .offset as usize;
-        code[offset] = 0x6f; // Constructor callvirt remains unsupported.
-        assert_eq!(
-            decompile(&patch_body(bytes, caller, &code), caller)
-                .unwrap()
-                .status,
-            Status::Partial
+            .unwrap();
+        // A reference constructor invoked with callvirt is the same non-virtual
+        // call the runtime performs; nothing dispatches.
+        let mut code = body.code.to_vec();
+        code[call.offset as usize] = 0x6f;
+        let result = decompile(&patch_body(bytes, caller, &code), caller).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(!result.text.contains("__cil_callvirt_"), "{}", result.text);
+        // The delegated constructor still requires the original receiver.
+        let load = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "ldarg.0")
+            .unwrap();
+        let mut code = body.code.to_vec();
+        code[load.offset as usize] = 0x14; // ldnull instead of this.
+        let result = decompile(&patch_body(bytes, caller, &code), caller).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("same owning constructor and original this"),
+            "{}",
+            result.text
         );
     }
 }
