@@ -35,6 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
+## Work after the conv.r.un scan (no full scan yet)
+
+- Commit `3fa4a47a3` lowers `conv.u4`, `conv.u` and `conv.i` by source width and
+  adds the CLI integer stack-category assignment rule (Boolean destination and
+  cross-width conversions excluded). Owned red: `ToUInt32` was refused with
+  `incompatible value/receiver types`, `ToNativeUnsigned` with
+  `unsupported opcode conv.i`; both decompile now. 475 Rust tests and the relation
+  driver (538 comparisons / 54 selections) pass. First-blocker counts in the last
+  full scan were 940 (`conv.u4`) and 518 (`conv.u`); corpus effect pending.
+- Latest full scan remains `report/conv-run/corpus-scan` (670,864 / 99,884,
+  12.9593%). Next groups: multidimensional-array access mapping, pointer
+  signatures, constructed/foreign member facts; then a batch scan.
+
 ## Current verified state: unsigned-to-float conversion
 
 - `report/conv-run/corpus-scan/baseline.json`: **670,864 Decompiled / 99,884
