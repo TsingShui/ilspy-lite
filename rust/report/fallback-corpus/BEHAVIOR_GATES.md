@@ -1,4 +1,4 @@
-# Behavioral gates at revision `c1e690b26`
+# Behavioral gates at revision `5cce10dca`
 
 All drivers run owned fixtures only; **no third-party method body is executed**.
 Each compares original and recovered bodies for return values, state, identity and
@@ -36,4 +36,4 @@ Scope statements:
 Revision note: the external-allocation driver now accepts a constructed external
 owner (`MakeBox`) whose inlined declaration is a valid C# instantiation, so the
 matrix records 41 comparisons over 13 methods. All ten drivers were re-run at
-`c1e690b26`; no third-party body was executed.
+`5cce10dca`; every count is unchanged, and no third-party body was executed.
