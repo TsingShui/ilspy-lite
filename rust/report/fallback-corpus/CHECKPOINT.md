@@ -35,7 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: interface, receiver and byref-like batch
+## Current verified state: volatile and join-merge batch
+
+- `report/volatile-join-batch/corpus-scan/baseline.json`: **700,618 Decompiled /
+  70,130 Partial of 770,748**, fallback **9.098836%**. Zero incomplete images; raw
+  gate 7,013,000 > 3,853,740, so <=5% is unmet (31,593 bodies to go).
+- Against `report/byref-batch/corpus-scan/baseline.json`: **+2,988 in 119 images,
+  zero regressions**. OpenRA.Game +37, OpenRA.Mods.Common +6.
+- Groups: `0fec892f1` volatile field access (IsVolatile modifier + `volatile.`
+  prefix -> `System.Threading.Volatile.Read/Write`), `f9c1f89c3` reference-type
+  merging at control-flow joins.
+- Remaining largest first blockers are reported from this scan in the next section.
+
+## Previous verified state: interface, receiver and byref-like batch
 
 - `report/byref-batch/corpus-scan/baseline.json`: **697,630 Decompiled / 73,118
   Partial of 770,748**, fallback **9.486619%**. Zero incomplete images; raw gate

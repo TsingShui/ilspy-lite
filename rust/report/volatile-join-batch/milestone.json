@@ -1,0 +1,31 @@
+{
+  "groups": [
+    "0fec892f1 volatile field access",
+    "f9c1f89c3 reference join merges"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 70130,
+      "Decompiled": 700618
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 64,
+    "unrecovered": 70130,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 2988,
+  "gained_images": 119,
+  "regressions": 0,
+  "fallback_percent": 9.098953224659681,
+  "acceptance_integer": {
+    "left": 7013000,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 487,
+  "third_party_bodies_executed": false
+}
