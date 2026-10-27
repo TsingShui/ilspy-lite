@@ -89,9 +89,6 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         ty.cs(image)?;
     }
     let locals = image.local_types(body, context)?;
-    if !locals.is_empty() && !body.flags.init_locals() && !body.exception_handlers.is_empty() {
-        return Err("uninitialized local exception-region analysis is not implemented".into());
-    }
     let instructions = body
         .instructions()
         .collect::<std::result::Result<Vec<_>, _>>()?;
@@ -111,7 +108,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
     if !locals.is_empty() && !body.flags.init_locals() {
-        require_definite_local_assignment(&blocks, &instructions, locals.len())?;
+        require_definite_local_assignment(&blocks, &instructions, locals.len(), body)?;
     }
     if blocks
         .iter()
@@ -2486,13 +2483,124 @@ fn require_definite_local_assignment(
     blocks: &[crate::cfg::Block],
     instructions: &[Instruction],
     local_count: usize,
+    body: &cildec::MethodBody<'_>,
 ) -> Result<()> {
-    let mut entries = vec![None; blocks.len()];
+    // Handler entry states depend on every point of the protected region: an
+    // exception can leave the region at any instruction. Seeding a handler with
+    // the union of the region blocks' states is the conservative merge, and it is
+    // what C# itself requires before a local may be read in a handler/finally.
+    let handlers: Vec<(usize, usize, usize)> = body
+        .exception_handlers
+        .iter()
+        .filter_map(|handler| {
+            let start = handler.try_offset as usize;
+            let end = start + handler.try_length as usize;
+            blocks
+                .iter()
+                .position(|block| block.offset == handler.handler_offset)
+                .map(|index| (index, start, end))
+        })
+        .collect();
+    let mut entries: Vec<Option<Vec<bool>>> = vec![None; blocks.len()];
     entries[0] = Some(vec![true; local_count]);
-    let mut pending = VecDeque::from([0]);
-    while let Some(index) = pending.pop_front() {
-        let mut uninitialized = entries[index].as_ref().unwrap().clone();
-        let block = &blocks[index];
+    for _round in 0..32 {
+        let mut pending = VecDeque::new();
+        if _round == 0 {
+            pending.push_back(0);
+        }
+        while let Some(index) = pending.pop_front() {
+            let mut uninitialized = entries[index].as_ref().unwrap().clone();
+            let block = &blocks[index];
+            for instruction in &instructions[block.start..block.end] {
+                if instruction.opcode.canonical().name() == "stloc" {
+                    let slot = uninitialized
+                        .get_mut(var(instruction)?)
+                        .ok_or("local out of range")?;
+                    *slot = false;
+                }
+            }
+            for &successor in &block.successors {
+                if let Some(existing) = &mut entries[successor] {
+                    let mut changed = false;
+                    for (old, &incoming) in existing.iter_mut().zip(&uninitialized) {
+                        if incoming && !*old {
+                            *old = true;
+                            changed = true;
+                        }
+                    }
+                    if changed {
+                        pending.push_back(successor);
+                    }
+                } else {
+                    entries[successor] = Some(uninitialized.clone());
+                    pending.push_back(successor);
+                }
+            }
+        }
+        let mut grew = false;
+        for &(handler, start, end) in &handlers {
+            let mut seed = vec![false; local_count];
+            let mut reached = false;
+            for (index, block) in blocks.iter().enumerate() {
+                if (block.offset as usize) < start || (block.offset as usize) >= end {
+                    continue;
+                }
+                if let Some(state) = &entries[index] {
+                    reached = true;
+                    for (slot, &incoming) in seed.iter_mut().zip(state) {
+                        *slot |= incoming;
+                    }
+                }
+            }
+            if !reached {
+                return Err("uninitialized local handler region has no reachable block".into());
+            }
+            let existing = entries[handler].get_or_insert_with(|| vec![false; local_count]);
+            for (old, &incoming) in existing.iter_mut().zip(&seed) {
+                if incoming && !*old {
+                    *old = true;
+                    grew = true;
+                }
+            }
+            if grew {
+                // The handler itself and everything after it must be re-propagated.
+                let mut queue = VecDeque::from([handler]);
+                while let Some(index) = queue.pop_front() {
+                    let mut uninitialized = entries[index].as_ref().unwrap().clone();
+                    let block = &blocks[index];
+                    for instruction in &instructions[block.start..block.end] {
+                        if instruction.opcode.canonical().name() == "stloc" {
+                            let slot = uninitialized
+                                .get_mut(var(instruction)?)
+                                .ok_or("local out of range")?;
+                            *slot = false;
+                        }
+                    }
+                    for &successor in &block.successors {
+                        let existing =
+                            entries[successor].get_or_insert_with(|| uninitialized.clone());
+                        let mut changed = false;
+                        for (old, &incoming) in existing.iter_mut().zip(&uninitialized) {
+                            if incoming && !*old {
+                                *old = true;
+                                changed = true;
+                            }
+                        }
+                        if changed {
+                            queue.push_back(successor);
+                        }
+                    }
+                }
+            }
+        }
+        if !grew {
+            break;
+        }
+    }
+    for (index, block) in blocks.iter().enumerate() {
+        let Some(mut uninitialized) = entries[index].clone() else {
+            continue;
+        };
         for instruction in &instructions[block.start..block.end] {
             match instruction.opcode.canonical().name() {
                 "stloc" => {
@@ -2509,23 +2617,6 @@ fn require_definite_local_assignment(
                     return Err("local may be used before definite assignment".into());
                 }
                 _ => {}
-            }
-        }
-        for &successor in &block.successors {
-            if let Some(existing) = &mut entries[successor] {
-                let mut changed = false;
-                for (old, &incoming) in existing.iter_mut().zip(&uninitialized) {
-                    if incoming && !*old {
-                        *old = true;
-                        changed = true;
-                    }
-                }
-                if changed {
-                    pending.push_back(successor);
-                }
-            } else {
-                entries[successor] = Some(uninitialized.clone());
-                pending.push_back(successor);
             }
         }
     }

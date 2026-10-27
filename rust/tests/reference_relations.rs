@@ -811,21 +811,51 @@ fn uninitialized_local_slots_need_definite_assignment_on_every_path() {
                 result.text
             );
         }
-        for (name, reason) in [
-            (
-                "AddressBeforeAssignment",
-                "local may be used before definite assignment",
-            ),
-            (
-                "ProtectedRegion",
-                "uninitialized local exception-region analysis is not implemented",
-            ),
-        ] {
-            let method = token(bytes, "RelationCases.LocalInitNegative", name);
-            let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
-            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
-            assert!(result.text.contains(reason), "{}", result.text);
-        }
+        let method = token(
+            bytes,
+            "RelationCases.LocalInitNegative",
+            "AddressBeforeAssignment",
+        );
+        let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("local may be used before definite assignment"),
+            "{}",
+            result.text
+        );
+        // An exception-region body is now analyzed: the local assigned before the
+        // protected region is definitely assigned on every path into the handler,
+        // so the promoted case decompiles.
+        let method = token(bytes, "RelationCases.LocalInitNegative", "ProtectedRegion");
+        let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        // Dropping that assignment must still be refused, now through the
+        // exception-region analysis rather than the old blanket refusal.
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md.tables().method_def(method & 0xffffff).unwrap();
+        let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+        let store = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.canonical().name() == "stloc")
+            .unwrap();
+        let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+        let at = start + store.offset as usize;
+        assert_eq!(bytes[at], 0x0a, "fixture stores the local with stloc.0");
+        let mut unassigned = bytes.to_vec();
+        unassigned[at] = 0x26; // pop the value instead of storing it.
+        let result = decompile_with_style(&unassigned, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("local may be used before definite assignment"),
+            "{}",
+            result.text
+        );
     }
 }
 
