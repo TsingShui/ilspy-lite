@@ -1933,6 +1933,27 @@ fn comparison(op: &str, a: &Value, b: &Value) -> Result<String> {
             identity
         });
     }
+    // CLI F comparisons treat NaN as unordered: the `.un` forms are true when
+    // either operand is NaN, which is exactly the negation of the opposite
+    // ordered relation. Converting the operands to integers would compare
+    // representations instead of values.
+    if (matches!(a.ty.kind(), StackKind::Float) || matches!(b.ty.kind(), StackKind::Float))
+        && op.ends_with(".un")
+    {
+        return Ok(match op.split('.').next().unwrap_or("") {
+            "cgt" | "bgt" => format!("!({} <= {})", a.name, b.name),
+            "clt" | "blt" => format!("!({} >= {})", a.name, b.name),
+            "bge" => format!("!({} < {})", a.name, b.name),
+            "ble" => format!("!({} > {})", a.name, b.name),
+            "bne" | "beq" => format!(
+                "({} {} {})",
+                a.name,
+                if op.starts_with("bne") { "!=" } else { "==" },
+                b.name
+            ),
+            _ => return Err("unknown unordered float comparison".into()),
+        });
+    }
     expect(a.ty, b.ty)?;
     let symbol = match op.split('.').next().unwrap_or("") {
         "ceq" | "beq" => "==",

@@ -187,6 +187,8 @@ generated output remain ignored and retain their original license boundaries.
   the cross-image and different-instantiation boundaries.
 - `EXTERNAL_REFERENCE_CASTS.md`: runtime casts to referenced classes/interfaces,
   with the value-type and unavailable-definition boundaries.
+- `FLOAT_COMPARISONS.md`: unordered/NaN float comparison semantics, and the
+  prerequisite they form for float64 support.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

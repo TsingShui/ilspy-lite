@@ -214,6 +214,31 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn unordered_float_comparisons_stay_value_based() {
+    for (bytes, _) in IMAGES {
+        for name in ["FloatLe", "FloatGe", "FloatNotLe"] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("!("),
+                "{name} must use the unordered relation: {}",
+                result.text
+            );
+            assert!(
+                !result.text.contains("(uint)"),
+                "{name} must not compare representations: {}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
 fn external_reference_casts_need_only_the_reference_kind_fact() {
     for (bytes, library) in IMAGES {
         // An implicit upcast carries no IL operation, so only the two runtime

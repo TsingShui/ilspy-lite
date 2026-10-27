@@ -111,6 +111,9 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static bool FloatLe(float a, float b) => a <= b;
+        public static bool FloatGe(float a, float b) => a >= b;
+        public static bool FloatNotLe(float a, float b) => !(a <= b);
         public static object CastForeignInterface(RelationLibrary.Tagged value) => (RelationLibrary.ITagged)value;
         public static RelationLibrary.ITagged AsForeignInterface(object value) => value as RelationLibrary.ITagged;
         public static RelationLibrary.Tagged CastForeignClass(object value) => (RelationLibrary.Tagged)value;

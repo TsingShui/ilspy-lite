@@ -76,16 +76,22 @@ def main():
             executable = "\n".join(line for line in text.splitlines() if not line.strip().startswith("//"))
             bound = re.sub(r"__cil_(?:callvirt|reference_call|memberref_call|methodspec_call)_[0-9A-F]{8}", "__leaf", executable)
             bound = re.sub(r"__cil_type_[0-9A-F]{8}", "__alias", bound)
+            bound = re.sub(r"__cil_(?:arg|load|store|return|call_arg|call_result)_r4|__cil_F\b", "__float_leaf", bound)
             if "__cil_" in support.without_boolean_helpers(bound): raise ValueError("Unbound relation body: " + name)
             methods.append(text)
         if not methods: raise ValueError("Empty relation selection")
         if not any("class RecoveredCell<T>" in method for method in methods): raise ValueError("Owned self-cast selection missing")
         aliases, helpers = leaves.plan(support, harness, fixture, OUT, methods, "RelationCases.Ops", library)
 
+        float_alias = "using __cil_F = System.Single;\n" if any("__cil_F" in body for body in methods) else ""
+        float_helpers = ("static float __cil_arg_r4(float value) => value;\n"
+                         if any("__cil_arg_r4" in body for body in methods) else "")
+
         def compile_carrier(label, bodies):
             source = OUT / f"{label}-{config}.cs"
-            support.write_changed(source, aliases + "namespace RelationCases { public static class Recovered {\n"
-                                  + helpers + "\n".join(bodies) + "\n} }\n")
+            support.write_changed(source, float_alias + aliases
+                                  + "namespace RelationCases { public static class Recovered {\n"
+                                  + float_helpers + helpers + "\n".join(bodies) + "\n} }\n")
             binary = source.with_suffix(".dll")
             support.compile_cs(binary, [source], references=[fixture, library])
             return binary
@@ -101,7 +107,8 @@ def main():
                                        ("SkipInitBranch", "return 0;"),
                                        ("SkipInitLoop", "return 0;"),
                                        ("SkipInitAddress", "return 0;"),
-                                       ("ExternalGeneric", "return 0;")]:
+                                       ("ExternalGeneric", "return 0;"),
+                                       ("FloatLe", "return false;")]:
                 selected = [i for i, text in enumerate(methods) if re.search(r"\b" + name + r"(?:<[^>]+>)?\(", text)]
                 if len(selected) != 1: raise ValueError("Mutation target differs: " + name)
                 changed = list(methods)
