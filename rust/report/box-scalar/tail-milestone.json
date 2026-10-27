@@ -1,0 +1,24 @@
+{
+  "group": "tail call prefix",
+  "tests": 487,
+  "targeted": {
+    "FSharp.Core": [
+      7493,
+      8608
+    ],
+    "System.Private.CoreLib": [
+      15088,
+      15088
+    ],
+    "OpenRA.Game": [
+      4151,
+      4151
+    ],
+    "OpenRA.Mods.Common": [
+      16387,
+      16387
+    ]
+  },
+  "known_divergence": "CLI constant-stack guarantee not reproduced, matching ILSpy",
+  "third_party_bodies_executed": false
+}

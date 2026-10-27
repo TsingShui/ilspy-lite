@@ -107,6 +107,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     }
     let constrained_calls = crate::constrained::calls(&instructions)?;
     let volatile_accesses = crate::volatile::accesses(&instructions)?;
+    let tail_calls = crate::tail::check(&instructions)?;
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
     if !locals.is_empty() && !body.flags.init_locals() {
@@ -147,6 +148,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 image,
                 constrained_calls: &constrained_calls,
                 volatile_accesses: &volatile_accesses,
+                tail_calls: &tail_calls,
                 type_context: context,
                 stack,
                 lines: Vec::new(),
@@ -226,6 +228,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         image,
         constrained_calls: &constrained_calls,
         volatile_accesses: &volatile_accesses,
+        tail_calls: &tail_calls,
         type_context: context,
         stack: Vec::new(),
         lines: Vec::new(),
@@ -484,6 +487,7 @@ struct Writer<'i, 'a> {
     image: &'i Image<'a>,
     constrained_calls: &'i std::collections::BTreeMap<u32, cildec::Token>,
     volatile_accesses: &'i std::collections::BTreeSet<u32>,
+    tail_calls: &'i std::collections::BTreeSet<u32>,
     type_context: crate::signature_types::TypeContext,
     stack: Vec<Value>,
     lines: Vec<String>,
@@ -647,7 +651,7 @@ impl Writer<'_, '_> {
         self.lines
             .push(format!("// IL_{:04X}: {}", i.offset, i.opcode.name()));
         match op {
-            "nop" | "constrained." | "volatile." => {}
+            "nop" | "constrained." | "volatile." | "tail." => {}
             "ldnull" => self.stack.push(Value {
                 name: "null".into(),
                 ty: Ty::Null,
@@ -1720,6 +1724,9 @@ impl Writer<'_, '_> {
             }
             "call" | "callvirt" => {
                 let t = i.operand.token().ok_or("missing call token")?;
+                if self.tail_calls.contains(&i.offset) {
+                    self.lines.push("// tail. prefix: the CLI tail-call request has no C# equivalent, so this call is emitted normally; arguments, result, side effects and exceptions are unchanged.".into());
+                }
                 if let Some(intrinsic) = self.image.array_access(t, self.type_context)? {
                     return self.array_intrinsic(intrinsic);
                 }

@@ -16,6 +16,7 @@ mod readable;
 mod signature_guard;
 mod signature_types;
 mod symbol_names;
+mod tail;
 mod volatile;
 
 pub use dependencies::{
