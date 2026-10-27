@@ -3839,7 +3839,13 @@ impl<'a> Image<'a> {
             }
             None => {
                 if self.generic_declaring_context(owner)? {
-                    return Err("allocation owner must be a concrete nongeneric class".into());
+                    // A `newobj` with a MethodDef constructor inside the generic
+                    // type's own methods allocates the open self instantiation;
+                    // the caller's type scope names exactly those parameters.
+                    let arity = self.md.tables().generic_params(owner)?.len() as u32;
+                    if context.type_scope.owner != owner.0 || context.type_scope.count != arity {
+                        return Err("allocation owner must be a concrete nongeneric class".into());
+                    }
                 }
             }
         }

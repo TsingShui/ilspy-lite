@@ -1,0 +1,23 @@
+{
+  "group": "open self allocation",
+  "tests": 488,
+  "targeted": {
+    "FSharp.Core": [
+      8631,
+      8668
+    ],
+    "System.Private.CoreLib": [
+      15113,
+      15132
+    ],
+    "OpenRA.Mods.Common": [
+      16775,
+      16788
+    ],
+    "OpenRA.Game": [
+      4242,
+      4261
+    ]
+  },
+  "third_party_bodies_executed": false
+}
