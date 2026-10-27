@@ -119,10 +119,11 @@ impl DependencyContext {
         let arguments: Vec<Term> = (0..variance.len())
             .map(|i| Term::Parameter(i as u32))
             .collect();
-        let mut pending = vec![(module, root, arguments, Vec::<(usize, u32)>::new())];
+        let mut pending = vec![(module, root, arguments, Vec::<(usize, u32)>::new(), true)];
         let mut parents = Vec::new();
+        let mut exception = false;
         let mut work = 0;
-        while let Some((module, token, arguments, mut active)) = pending.pop() {
+        while let Some((module, token, arguments, mut active, class_path)) = pending.pop() {
             work += 1;
             if work > 256 || active.len() >= 32 || active.contains(&(module, token.0)) {
                 return Err("cyclic/excessive dependency reference hierarchy".into());
@@ -130,7 +131,11 @@ impl DependencyContext {
             let is_root = active.is_empty();
             active.push((module, token.0));
             let image = self.binding_image(module)?;
-            image.md.tables().type_def(token.rid())?;
+            let current = image.md.tables().type_def(token.rid())?;
+            let class_path = class_path && current.flags & 0x20 == 0;
+            if class_path && image.local_core_type_name(token)? == Some("Exception") {
+                exception = true;
+            }
             if image.md.tables().generic_params(token)?.len() != arguments.len() {
                 return Err("foreign reference owner argument count differs".into());
             }
@@ -150,11 +155,14 @@ impl DependencyContext {
             )?;
             let mut edges = Vec::new();
             if !base.is_null() {
-                edges.push(base);
+                if class_path && image.core_exception_name(base.0).is_ok() {
+                    exception = true;
+                }
+                edges.push((base, class_path));
             }
             for (rid, edge) in image.md.tables().iter::<cildec::tables::InterfaceImplRow>() {
                 if edge?.class.get() == token.rid() {
-                    edges.push(
+                    edges.push((
                         image.metadata_coded_token(
                             CodedIndex::TypeDefOrRef,
                             image
@@ -162,10 +170,11 @@ impl DependencyContext {
                                 .tables()
                                 .raw_column(TableId::InterfaceImpl, rid, 1)?,
                         )?,
-                    );
+                        false,
+                    ));
                 }
             }
-            for edge in edges {
+            for (edge, edge_class_path) in edges {
                 let (definition, args) = if edge.table() == Some(TableId::TypeSpec) {
                     let spec = image.type_spec(edge)?;
                     let Type::GenericInst {
@@ -191,12 +200,19 @@ impl DependencyContext {
                     self.bind_type_in(module, definition, &mut BTreeSet::new())
                     && self.relationship_definition_usable(&bound)
                 {
-                    pending.push((target, Token(bound.definition.token), args, active.clone()));
+                    pending.push((
+                        target,
+                        Token(bound.definition.token),
+                        args,
+                        active.clone(),
+                        edge_class_path,
+                    ));
                 }
             }
         }
         Ok(Definition {
             interface: row.flags & 0x20 != 0,
+            exception,
             variance,
             parents,
         })

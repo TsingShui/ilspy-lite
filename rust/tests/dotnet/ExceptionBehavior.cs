@@ -26,7 +26,9 @@ internal static partial class GenericReferenceRoundtrip
 {
     static void ExceptionMain(string[] args)
     {
-        if (args.Length != 3) throw new Exception("Expected owned fixture and recovered carrier.");
+        if (args.Length != 3 && args.Length != 4) throw new Exception("Expected owned fixture, recovered carrier, and optional library.");
+        if (args.Length == 4)
+            AssemblyLoadContext.Default.LoadFromAssemblyPath(System.IO.Path.GetFullPath(args[3]));
         Type ops = fixture.GetType("ExceptionRegionCases.Ops")
             ?? throw new Exception("Owned exception-region fixture missing.");
         FieldInfo trace = ops.GetField("Trace") ?? throw new Exception("Trace field missing.");
@@ -54,6 +56,18 @@ internal static partial class GenericReferenceRoundtrip
                 cases.Add(new object[] { new ArgumentOutOfRangeException("original", "message") });
                 cases.Add(new object[] { null });
             }
+            else if (parameters.Length == 1 && typeof(Exception).IsAssignableFrom(parameters[0]))
+            {
+                Assembly library = AppDomain.CurrentDomain.GetAssemblies()
+                    .Single(a => a.GetType("RelationLibrary.ForeignException") != null);
+                Type parent = library.GetType("RelationLibrary.ForeignException");
+                Type child = library.GetType("RelationLibrary.ForeignDerivedException");
+                cases.Add(new object[] { null });
+                cases.Add(new object[] { Activator.CreateInstance(parent) });
+                cases.Add(new object[] { Activator.CreateInstance(child) });
+                if (parameters[0] == typeof(Exception))
+                    cases.Add(new object[] { new InvalidOperationException("unrelated") });
+            }
             else throw new Exception("Unexpected owned exception parameters: " + original.Name);
             foreach (object[] arguments in cases)
             {
@@ -66,6 +80,16 @@ internal static partial class GenericReferenceRoundtrip
                 bool valuesMatch = original.ReturnType == typeof(object)
                     ? ReferenceEquals(before.Value, after.Value)
                     : Equals(before.Value, after.Value);
+                if (original.Name == "ForeignThrow" && arguments[0] is Exception input)
+                {
+                    Exception originalThrown = null, loweredThrown = null;
+                    try { OriginalCall(original)(null, arguments); }
+                    catch (Exception error) { originalThrown = error; }
+                    try { lowered.Invoke(null, arguments); }
+                    catch (TargetInvocationException error) { loweredThrown = error.InnerException; }
+                    if (!ReferenceEquals(originalThrown, input) || !ReferenceEquals(loweredThrown, input))
+                        throw new Exception("Recovered exception behavior differs: " + original.Name + " identity");
+                }
                 if (before.Error != after.Error || !valuesMatch || expectedTrace != actualTrace)
                     throw new Exception("Recovered exception behavior differs: " + original.Name
                         + " expected=" + (before.Error?.Name ?? Convert.ToString(before.Value))

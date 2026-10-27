@@ -57,6 +57,10 @@ internal static class CoreTypeFixtures
         Type("System.Runtime.CompilerServices", "ReferenceAssemblyAttribute", attribute, 4, 11,
             TypeAttributes.Public | TypeAttributes.Sealed);
         Type("System", "String", root, 4, 12, TypeAttributes.Public | TypeAttributes.Sealed);
+        var exception = Type("System", "Exception", root, 4, 13);
+        Type("System", "OwnedException", exception, 4, 14);
+        Type("Example", "Unrelated", root, 4, 15);
+        Type("Example", "ExceptionProbe", root, 4, 16);
         md.AddGenericParameter(generic, 0, md.GetOrAddString("T"), 0);
         md.AddFieldDefinition(FieldAttributes.Public, md.GetOrAddString("Value"), md.GetOrAddBlob(new byte[] { 6, 8 }));
         md.AddFieldDefinition(FieldAttributes.Public | FieldAttributes.SpecialName | FieldAttributes.RTSpecialName,
@@ -87,6 +91,11 @@ internal static class CoreTypeFixtures
         var markerCtor = Method(".ctor", true, 0x02, 0x28, 10, 0, 0, 6, 0x2a);
         md.AddMethodDefinition(MethodAttributes.Public, MethodImplAttributes.IL, md.GetOrAddString("ReturnSelf"),
             md.GetOrAddBlob(new byte[] { 0x20, 0, 0x0e }), Body(0x02, 0x2a), MetadataTokens.ParameterHandle(1));
+        Method(".ctor", true, 0x02, 0x28, 2, 0, 0, 6, 0x2a);
+        Method(".ctor", true, 0x02, 0x28, 13, 0, 0, 6, 0x2a);
+        Method(".ctor", true, 0x02, 0x28, 2, 0, 0, 6, 0x2a);
+        Method("ThrowLocal", false, 0x73, 14, 0, 0, 6, 0x7a);
+        Method("ThrowUnrelated", false, 0x73, 15, 0, 0, 6, 0x7a);
         if (genericMarker) md.AddGenericParameter(markerCtor, 0, md.GetOrAddString("U"), 0);
         if (marker) md.AddCustomAttribute(assembly, markerCtor, md.GetOrAddBlob(new byte[] { 1, 0, 0, 0 }));
         var pe = new BlobBuilder();

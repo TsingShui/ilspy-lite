@@ -1,0 +1,101 @@
+{
+  "full_rust_tests": 466,
+  "fmt_clippy": "passed",
+  "owned_foreign": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Exception behavior: 7 comparisons, 2 recovered methods; results, traces, exception types and rethrow identity match.",
+        "selected": [
+          "ForeignCatch",
+          "ForeignThrow"
+        ]
+      },
+      {
+        "configuration": "release",
+        "mutation": "ForeignCatch",
+        "detected": "Recovered exception behavior differs: ForeignCatch"
+      },
+      {
+        "configuration": "release",
+        "mutation": "ForeignThrow",
+        "detected": "Recovered exception behavior differs: ForeignThrow"
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Exception behavior: 7 comparisons, 2 recovered methods; results, traces, exception types and rethrow identity match.",
+        "selected": [
+          "ForeignCatch",
+          "ForeignThrow"
+        ]
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ForeignCatch",
+        "detected": "Recovered exception behavior differs: ForeignCatch"
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ForeignThrow",
+        "detected": "Recovered exception behavior differs: ForeignThrow"
+      }
+    ],
+    "executed_recovered_bodies": true,
+    "third_party_execution": false,
+    "mutation_control": true
+  },
+  "baseline_exception": "51 comparisons / 10 methods and six mutants per config",
+  "reference_relations": "143 comparisons / 36 selections and four mutants per config, both original and version-substituted",
+  "targeted_candidates": [
+    {
+      "id": 620,
+      "token": "0x06000016",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 620,
+      "token": "0x0600001B",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 628,
+      "token": "0x06000002",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 628,
+      "token": "0x06000094",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 483,
+      "token": "0x060000C5",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 5,
+      "token": "0x0600033E",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 993,
+      "token": "0x06000058",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 520,
+      "token": "0x06000006",
+      "status": "Decompiled",
+      "exit": 0
+    }
+  ],
+  "full_corpus_delta": "pending next batch",
+  "third_party_executed": false
+}

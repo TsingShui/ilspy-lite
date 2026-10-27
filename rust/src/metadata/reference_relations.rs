@@ -37,6 +37,7 @@ pub(crate) struct Facts {
 #[derive(Clone)]
 pub(crate) struct Definition {
     pub interface: bool,
+    pub exception: bool,
     pub variance: Vec<u16>,
     pub parents: Vec<Term>,
 }

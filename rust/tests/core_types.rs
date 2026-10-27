@@ -42,6 +42,28 @@ fn a_qualified_local_core_object_is_a_legal_reference_hierarchy_root() {
 }
 
 #[test]
+fn local_core_exception_ancestry_requires_the_qualified_exception_root() {
+    let method = token(CORE, "Example.ExceptionProbe", "ThrowLocal");
+    let result = decompile(CORE, method).unwrap();
+    assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+    for bytes in [
+        include_bytes!("fixtures/core-fake-name.bin").as_slice(),
+        include_bytes!("fixtures/core-wrong-key.bin").as_slice(),
+        include_bytes!("fixtures/core-wrong-culture.bin").as_slice(),
+    ] {
+        let result =
+            decompile(bytes, token(bytes, "Example.ExceptionProbe", "ThrowLocal")).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+    }
+    let unrelated = decompile(
+        CORE,
+        token(CORE, "Example.ExceptionProbe", "ThrowUnrelated"),
+    )
+    .unwrap();
+    assert_eq!(unrelated.status, Status::Partial, "{}", unrelated.text);
+}
+
+#[test]
 fn local_core_value_type_and_enum_descendants_are_not_reference_receivers() {
     // A struct receiver is a managed location of its own value type, which is not
     // a reference receiver; an enum receiver still needs its own storage model.

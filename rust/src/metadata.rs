@@ -3017,7 +3017,7 @@ impl<'a> Image<'a> {
             .map_err(|e| e.clone().into())
     }
 
-    fn local_core_type_name(&self, token: Token) -> Result<Option<&'a str>> {
+    pub(crate) fn local_core_type_name(&self, token: Token) -> Result<Option<&'a str>> {
         if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
             return Ok(None);
         }
@@ -3281,14 +3281,35 @@ impl<'a> Image<'a> {
     pub(crate) fn exception_reference(&self, ty: crate::ir::Ty) -> Result<()> {
         match ty {
             crate::ir::Ty::ExternalClass(token) => {
-                self.core_exception_name(token)?;
+                if self.core_exception_name(token).is_ok() {
+                    return Ok(());
+                }
+                let facts = self.reference_facts.borrow();
+                let token = facts.aliases.get(&token).copied().unwrap_or(token);
+                if facts
+                    .definitions
+                    .get(&token)
+                    .is_some_and(|fact| fact.exception)
+                {
+                    return Ok(());
+                }
+                drop(facts);
+                if !self.reference_attempted.borrow().contains(&token) {
+                    self.reference_queries.borrow_mut().insert(token);
+                }
+                return Err("EH catch type needs an admitted core exception identity".into());
             }
             crate::ir::Ty::Class(token) => {
                 self.class_name(token)?;
                 let chain = self.class_chain(token)?;
+                for &ancestor in &chain {
+                    if self.local_core_type_name(Token(ancestor))? == Some("Exception") {
+                        return Ok(());
+                    }
+                }
                 let root = *chain.last().ok_or("exception ancestry is empty")?;
                 let base = self.md.tables().type_def(root & 0xffffff)?.extends;
-                self.core_exception_name(base.0)?;
+                self.exception_reference(crate::ir::Ty::ExternalClass(base.0))?;
             }
             _ => return Err("throw/catch needs a proved nominal exception reference".into()),
         }

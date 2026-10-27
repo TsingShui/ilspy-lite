@@ -143,6 +143,138 @@ fn relationships_do_not_erase_positions_or_apply_variance_to_values() {
 }
 
 #[test]
+fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
+    for (bytes, library) in IMAGES {
+        let methods = ["ForeignCatch", "ForeignThrow"];
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        for name in methods {
+            let method = token(bytes, "ExceptionRegionCases.Ops", name);
+            assert_eq!(
+                context
+                    .decompile(method, OutputStyle::Readable)
+                    .unwrap()
+                    .status,
+                Status::Partial
+            );
+        }
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        for name in methods {
+            let method = token(bytes, "ExceptionRegionCases.Ops", name);
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let base = md
+            .tables()
+            .iter::<cildec::tables::TypeDefRow>()
+            .find(|(_, row)| {
+                md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "ForeignException"
+            })
+            .unwrap()
+            .0;
+        let object = md
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                let row = row.as_ref().unwrap();
+                md.strings().str(row.type_namespace).unwrap() == "System"
+                    && md.strings().str(row.type_name).unwrap() == "Object"
+            })
+            .unwrap()
+            .0;
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::TypeDef, base)
+            .unwrap();
+        assert_eq!(row.len(), 14);
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 8;
+        for replacement in [(object << 2) | 1, base << 2] {
+            let mut modified = library.to_vec();
+            modified[at..at + 2]
+                .copy_from_slice(&u16::try_from(replacement).unwrap().to_le_bytes());
+            let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+            context
+                .add_reference("unrelated or cyclic owned library", modified)
+                .unwrap();
+            for name in methods {
+                let result = context
+                    .decompile(
+                        token(bytes, "ExceptionRegionCases.Ops", name),
+                        OutputStyle::Readable,
+                    )
+                    .unwrap();
+                assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            }
+        }
+    }
+}
+
+#[test]
+fn interface_edges_cannot_prove_exception_ancestry() {
+    for (bytes, library) in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let typeref = |name: &str| {
+            md.tables()
+                .iter::<cildec::tables::TypeRefRow>()
+                .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == name)
+                .unwrap()
+                .0
+        };
+        let method = token(bytes, "ExceptionRegionCases.Ops", "ForeignThrow");
+        let signature = md
+            .blobs()
+            .get(md.tables().method_def(method & 0xffffff).unwrap().signature)
+            .unwrap();
+        assert_eq!(signature.len(), 5);
+        assert_eq!(&signature[..4], &[0, 1, 1, 0x12]);
+        assert_eq!(
+            signature[4],
+            u8::try_from((typeref("ForeignException") << 2) | 1).unwrap()
+        );
+        let at = signature.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut consumer = bytes.to_vec();
+        consumer[at + 4] = u8::try_from((typeref("Child") << 2) | 1).unwrap();
+
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let interface = md
+            .tables()
+            .iter::<cildec::tables::TypeDefRow>()
+            .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "IRoot")
+            .unwrap()
+            .0;
+        let exception = md
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Exception"
+            })
+            .unwrap()
+            .0;
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::TypeDef, interface)
+            .unwrap();
+        assert_eq!(row.len(), 14);
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 8;
+        let mut modified = library.to_vec();
+        modified[at..at + 2]
+            .copy_from_slice(&u16::try_from((exception << 2) | 1).unwrap().to_le_bytes());
+        let mut context = DependencyContext::new(consumer).unwrap();
+        context
+            .add_reference("owned malformed interface library", modified)
+            .unwrap();
+        let result = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+    }
+}
+
+#[test]
 fn cyclic_foreign_hierarchies_cannot_supply_assignment_proofs() {
     for (bytes, library) in IMAGES {
         let pe = cildec::PeImage::parse(library).unwrap();

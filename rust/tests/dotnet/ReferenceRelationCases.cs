@@ -24,6 +24,8 @@ namespace RelationLibrary
     public class Base { public int Number; }
     public class Middle : Base { }
     public class Child : Middle, IRoot, IItem<string> { }
+    public class ForeignException : System.Exception { }
+    public class ForeignDerivedException : ForeignException { }
     public class GenericBase<T> { public T Value; }
     public class GenericChild<T> : GenericBase<T>, IItem<T> { }
 }
@@ -74,6 +76,21 @@ namespace RelationCases
         public static RelationLibrary.GenericBase<T> ForeignGeneric<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
+    }
+}
+
+namespace ExceptionRegionCases
+{
+    public static class Ops
+    {
+        public static int Trace;
+        public static object ForeignCatch(System.Exception value)
+        {
+            try { throw value; }
+            catch (RelationLibrary.ForeignDerivedException caught) { Trace = 1; return caught; }
+            catch (RelationLibrary.ForeignException caught) { Trace = 2; return caught; }
+        }
+        public static void ForeignThrow(RelationLibrary.ForeignException value) { throw value; }
     }
 }
 #endif
