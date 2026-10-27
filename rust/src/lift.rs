@@ -108,7 +108,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
     if !locals.is_empty() && !body.flags.init_locals() {
-        require_definite_local_assignment(&blocks, &instructions, locals.len(), body)?;
+        require_definite_local_assignment(&blocks, &instructions, locals.len(), body, image)?;
     }
     if blocks
         .iter()
@@ -2479,11 +2479,122 @@ fn receiver_matches(actual: Ty, expected: Ty) -> bool {
 }
 /// Like ILSpy's definite-assignment visitor, propagate possible uninitialized
 /// slots by union at joins. Taking an address is a use, even for an out call.
+/// Whether a `ldloca` is immediately consumed as a write of the local's storage.
+/// Only the instructions that demonstrably write through the address are admitted;
+/// any other use (including an intervening argument load) stays a read.
+fn address_write(
+    image: &crate::metadata::Image<'_>,
+    instructions: &[Instruction],
+    index: usize,
+) -> bool {
+    let Some(next) = instructions.get(index + 1) else {
+        return false;
+    };
+    match next.opcode.canonical().name() {
+        "initobj" | "stobj" | "cpobj" => true,
+        name if name.starts_with("stind.") => true,
+        // A value-type constructor called on the freshly taken address
+        // initializes that storage (`ldloca; call S::.ctor`).
+        "call" | "callvirt" => next
+            .operand
+            .token()
+            .and_then(|token| member_name(image, token))
+            .is_some_and(|name| name == ".ctor"),
+        _ => false,
+    }
+}
+
+fn member_name(image: &crate::metadata::Image<'_>, token: cildec::Token) -> Option<String> {
+    use cildec::TableId;
+    match token.table()? {
+        TableId::MethodDef => Some(
+            image
+                .md
+                .strings()
+                .str(image.md.tables().method_def(token.rid()).ok()?.name)
+                .ok()?
+                .to_string(),
+        ),
+        TableId::MemberRef => Some(
+            image
+                .md
+                .strings()
+                .str(image.md.tables().member_ref(token.rid()).ok()?.name)
+                .ok()?
+                .to_string(),
+        ),
+        _ => None,
+    }
+}
+
+/// Apply the writes of one block to a may-be-unassigned state.
+fn apply_block_writes(
+    image: &crate::metadata::Image<'_>,
+    instructions: &[Instruction],
+    block: &crate::cfg::Block,
+    state: &mut [bool],
+) -> Result<()> {
+    for index in block.start..block.end {
+        let instruction = &instructions[index];
+        match instruction.opcode.canonical().name() {
+            "stloc" => {
+                let slot = state
+                    .get_mut(var(instruction)?)
+                    .ok_or("local out of range")?;
+                *slot = false;
+            }
+            "ldloca" if address_write(image, instructions, index) => {
+                let slot = state
+                    .get_mut(var(instruction)?)
+                    .ok_or("local out of range")?;
+                *slot = false;
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
+/// Refuse a read of a local that may still be unassigned after the block's writes
+/// were applied in order.
+fn check_block_reads(
+    image: &crate::metadata::Image<'_>,
+    instructions: &[Instruction],
+    block: &crate::cfg::Block,
+    state: &mut [bool],
+) -> Result<()> {
+    for index in block.start..block.end {
+        let instruction = &instructions[index];
+        match instruction.opcode.canonical().name() {
+            "stloc" => {
+                let slot = state
+                    .get_mut(var(instruction)?)
+                    .ok_or("local out of range")?;
+                *slot = false;
+            }
+            "ldloca" if address_write(image, instructions, index) => {
+                let slot = state
+                    .get_mut(var(instruction)?)
+                    .ok_or("local out of range")?;
+                *slot = false;
+            }
+            "ldloc" | "ldloca" => {
+                if *state.get(var(instruction)?).ok_or("local out of range")? {
+                    return Err("local may be used before definite assignment".into());
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 fn require_definite_local_assignment(
     blocks: &[crate::cfg::Block],
     instructions: &[Instruction],
     local_count: usize,
     body: &cildec::MethodBody<'_>,
+    image: &crate::metadata::Image<'_>,
 ) -> Result<()> {
     // Handler entry states depend on every point of the protected region: an
     // exception can leave the region at any instruction. Seeding a handler with
@@ -2511,14 +2622,7 @@ fn require_definite_local_assignment(
         while let Some(index) = pending.pop_front() {
             let mut uninitialized = entries[index].as_ref().unwrap().clone();
             let block = &blocks[index];
-            for instruction in &instructions[block.start..block.end] {
-                if instruction.opcode.canonical().name() == "stloc" {
-                    let slot = uninitialized
-                        .get_mut(var(instruction)?)
-                        .ok_or("local out of range")?;
-                    *slot = false;
-                }
-            }
+            apply_block_writes(image, &instructions, block, &mut uninitialized)?;
             for &successor in &block.successors {
                 if let Some(existing) = &mut entries[successor] {
                     let mut changed = false;
@@ -2568,14 +2672,7 @@ fn require_definite_local_assignment(
                 while let Some(index) = queue.pop_front() {
                     let mut uninitialized = entries[index].as_ref().unwrap().clone();
                     let block = &blocks[index];
-                    for instruction in &instructions[block.start..block.end] {
-                        if instruction.opcode.canonical().name() == "stloc" {
-                            let slot = uninitialized
-                                .get_mut(var(instruction)?)
-                                .ok_or("local out of range")?;
-                            *slot = false;
-                        }
-                    }
+                    apply_block_writes(image, &instructions, block, &mut uninitialized)?;
                     for &successor in &block.successors {
                         let existing =
                             entries[successor].get_or_insert_with(|| uninitialized.clone());
@@ -2601,24 +2698,7 @@ fn require_definite_local_assignment(
         let Some(mut uninitialized) = entries[index].clone() else {
             continue;
         };
-        for instruction in &instructions[block.start..block.end] {
-            match instruction.opcode.canonical().name() {
-                "stloc" => {
-                    let slot = uninitialized
-                        .get_mut(var(instruction)?)
-                        .ok_or("local out of range")?;
-                    *slot = false;
-                }
-                "ldloc" | "ldloca"
-                    if *uninitialized
-                        .get(var(instruction)?)
-                        .ok_or("local out of range")? =>
-                {
-                    return Err("local may be used before definite assignment".into());
-                }
-                _ => {}
-            }
-        }
+        check_block_reads(image, &instructions, block, &mut uninitialized)?;
     }
     Ok(())
 }

@@ -39,3 +39,14 @@ still counts as a use, so address-taking of a maybe-unassigned local stays refus
 - 488 Rust tests, `cargo fmt --check` and clippy `-D warnings` pass; the exception
   behavior driver still reports 51 comparisons and 10 recovered methods with its
   mutation control.
+
+## Address writes do not read the local
+
+Taking a local's address is not itself a read, but passing that address to code that
+reads it would be. The analysis now treats the immediately following write forms as
+initialization of the storage (`initobj`, `stobj`, `cpobj`, `stind.*`, and a `call`
+to a value-type constructor), clearing the local's unassigned bit instead of
+reporting a use. Any other consumer of the address keeps the read rule, so an
+address handed to a method that may read the old value is still refused. This
+unlocked `System.Private.CoreLib` 16,082 -> 16,335 (+253) with the same 488 tests and
+no change to the other sampled images.
