@@ -1,0 +1,23 @@
+{
+  "group": "referenced value-type fields",
+  "tests": 487,
+  "targeted": {
+    "OpenRA.Mods.Common": [
+      15980,
+      16344
+    ],
+    "OpenRA.Game": [
+      4129,
+      4130
+    ],
+    "System.Private.CoreLib": [
+      15074,
+      15074
+    ],
+    "FSharp.Core": [
+      7493,
+      7493
+    ]
+  },
+  "third_party_bodies_executed": false
+}

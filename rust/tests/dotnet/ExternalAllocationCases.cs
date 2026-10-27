@@ -93,7 +93,7 @@ public static class Ops
         return node.Value;
     }
     public static int UnsupportedStatic() => Node.Zero;
-    public static int UnsupportedStructField(Point point) => point.X;
+    public static int RecoveredStructField(Point point) => point.X;
     public static Point MakePoint(int x, int y) => new Point(x, y);
     public static int UnsupportedStruct() => new Point(1, 2).X;
 }

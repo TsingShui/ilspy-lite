@@ -264,6 +264,9 @@ pub(crate) struct ExternalField {
     pub name: String,
     pub owner_name: String,
     pub flags: u16,
+    /// Selected owner definition is a value type, so the receiver is a managed
+    /// location of that value rather than an object reference.
+    pub value_type: bool,
 }
 
 /// Outcome of asking the context about one foreign field.
@@ -733,6 +736,7 @@ impl DependencyContext {
                 name: field.name,
                 owner_name: field.owner.name,
                 flags: field.flags,
+                value_type: false,
             });
         }
         if field.flags & 0x0040 != 0 {
@@ -758,11 +762,6 @@ impl DependencyContext {
         }
         let is_value = matches!(image.has_core_base(definition, "ValueType"), Ok(true))
             || matches!(image.has_core_base(definition, "Enum"), Ok(true));
-        if is_value {
-            return ExternalFieldLookup::Refused(
-                "owner is a value type; its fields need managed-location semantics".into(),
-            );
-        }
         let owner_name = match crate::symbol_names::type_name(&image, definition, true) {
             Ok(name) if !name.is_empty() => name,
             _ => return ExternalFieldLookup::Refused("owner name is not usable".into()),
@@ -771,6 +770,7 @@ impl DependencyContext {
             name: field.name,
             owner_name,
             flags: field.flags,
+            value_type: is_value,
         })
     }
 

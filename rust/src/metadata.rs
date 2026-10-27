@@ -4328,6 +4328,17 @@ impl<'a> Image<'a> {
                             return match self.external_field(t.0) {
                                 Some(Ok(fact)) => {
                                     let blob = self.md.blobs().get(row.signature)?;
+                                    let owner = if fact.value_type {
+                                        // The selected definition proves the value
+                                        // identity; the receiver check still demands a
+                                        // managed location of exactly this value type.
+                                        crate::ir::Ty::Value(self.intern_signature_type(
+                                            &cildec::Type::ValueType(row.class),
+                                            context,
+                                        )?)
+                                    } else {
+                                        crate::ir::Ty::ExternalClass(row.class.0)
+                                    };
                                     self.field_from_parts(
                                         t.0,
                                         &fact.name,
@@ -4335,7 +4346,7 @@ impl<'a> Image<'a> {
                                         FieldParts {
                                             flags: fact.flags,
                                             signature: blob,
-                                            owner: crate::ir::Ty::ExternalClass(row.class.0),
+                                            owner,
                                             arguments: None,
                                         },
                                     )

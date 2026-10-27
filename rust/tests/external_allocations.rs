@@ -32,10 +32,6 @@ const EXPECTED_PARTIAL: &[(&str, &str)] = &[
         "UnsupportedStruct",
         "enum storage requires an exact local definition; external/value signatures need IL fallback",
     ),
-    (
-        "UnsupportedStructField",
-        "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
-    ),
 ];
 
 /// Positives must name the owner and its kind, keep the argument order, and report
@@ -124,6 +120,11 @@ fn foreign_static_reads_keep_exact_storage_without_allocating() {
 fn gated_external_owners_keep_their_own_reason() {
     for (bytes, library) in IMAGES {
         let context = context(bytes, library);
+        // A referenced value type's field is read through its managed location.
+        let promoted = context
+            .decompile(token(bytes, "RecoveredStructField"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
         for (name, reason) in EXPECTED_PARTIAL {
             let result = context
                 .decompile(token(bytes, name), OutputStyle::Readable)

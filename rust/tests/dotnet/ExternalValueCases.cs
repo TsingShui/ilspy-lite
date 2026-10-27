@@ -54,6 +54,6 @@ public static class Ops
     public static Level Level(Level level) => level;
     public static void Ignore(Measure measure) { _ = measure; }
     public static Measure RecoveredRefStruct(Cursor cursor) => default;
-    public static int UnsupportedField(Measure measure) => measure.Units;
+    public static int RecoveredField(Measure measure) => measure.Units;
 }
 #endif

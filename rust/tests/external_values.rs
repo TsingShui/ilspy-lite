@@ -14,13 +14,9 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
     ),
 ];
 
-/// A byref-like definition may never be copied, and a field read needs the
-/// instantiated field type; both stay gated with their own reasons.
-const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[(
-    "ExternalValueCases.Ops",
-    "UnsupportedField",
-    "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
-)];
+/// No owned external-value method stays partial after the byref-like copy and
+/// referenced-field admissions; promoted cases are asserted below.
+const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[];
 
 fn context(bytes: &[u8], library: &[u8]) -> DependencyContext {
     let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
@@ -111,6 +107,11 @@ fn the_negative_surface_keeps_its_stated_blocker() {
             .decompile(token(bytes, "RecoveredRefStruct"), OutputStyle::Readable)
             .unwrap();
         assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
+        // A referenced value type's field is read through its managed location.
+        let field = context
+            .decompile(token(bytes, "RecoveredField"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(field.status, Status::Decompiled, "{}", field.text);
     }
 }
 
