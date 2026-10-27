@@ -172,6 +172,8 @@ pub(crate) struct Image<'a> {
             std::result::Result<crate::dependencies::ExternalMethodInstantiation, String>,
         >,
     >,
+    external_element_kinds:
+        std::cell::RefCell<std::collections::BTreeMap<u32, crate::dependencies::ExternalTypeKind>>,
     external_type_kinds:
         std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<(), String>>>,
 }
@@ -215,6 +217,7 @@ impl<'a> Image<'a> {
             external_method_instantiations: std::cell::RefCell::new(
                 std::collections::BTreeMap::new(),
             ),
+            external_element_kinds: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_type_kinds: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
@@ -2506,6 +2509,24 @@ impl<'a> Image<'a> {
             .cloned()
     }
 
+    /// Proved kind of one external array element, if its definition resolved.
+    pub(crate) fn external_element_kind(
+        &self,
+        token: u32,
+    ) -> Option<crate::dependencies::ExternalTypeKind> {
+        self.external_element_kinds.borrow().get(&token).copied()
+    }
+
+    pub(crate) fn cache_external_element_kind(
+        &self,
+        token: u32,
+        value: crate::dependencies::ExternalTypeKind,
+    ) {
+        self.external_element_kinds
+            .borrow_mut()
+            .insert(token, value);
+    }
+
     /// Proved reference kind of one external cast target, if it was asked for.
     pub(crate) fn external_cast_kind(&self, token: u32) -> Option<std::result::Result<(), String>> {
         self.external_type_kinds.borrow().get(&token).cloned()
@@ -3268,6 +3289,17 @@ impl<'a> Image<'a> {
             // A foreign element whose value-type fact was already admitted keeps its
             // instantiation; the array shape carries no extra layout claim.
             Type::ValueType(token)
+        } else if token.table() == Some(TableId::TypeRef)
+            && let Some(kind) = self.external_element_kind(token.0)
+        {
+            // `newarr` allocates a vector of the element type whether that element
+            // is a class or a value type, so only the element's identity is needed
+            // here; element operations still prove their own copy semantics.
+            if kind.value_type {
+                return Err("array allocation needs exact external element kind facts: the element is a value type".into());
+            }
+            self.external_class_context(token.0)?;
+            Type::Class(token)
         } else if self.external_struct_type(token).is_some() {
             return Err("array allocation needs exact external element kind facts: the element definition was refused".into());
         } else {

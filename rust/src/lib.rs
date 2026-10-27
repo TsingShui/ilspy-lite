@@ -385,6 +385,36 @@ fn prime_external_allocations(
 ///
 /// Only `castclass`/`isinst` operands reaching a TypeRef are asked about; a
 /// local definition, a TypeSpec or a core intrinsic already decides locally.
+fn prime_external_array_elements(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        if instruction.opcode.canonical().name() != "newarr" {
+            continue;
+        }
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::TypeRef)
+            || !seen.insert(candidate.0)
+            || image.external_element_kind(candidate.0).is_some()
+        {
+            continue;
+        }
+        if let crate::dependencies::ExternalTypeKindLookup::Fact(kind) =
+            context.external_kind(candidate.0)
+        {
+            image.cache_external_element_kind(candidate.0, kind);
+        }
+    }
+}
+
 fn prime_external_cast_targets(
     image: &metadata::Image<'_>,
     body: &cildec::MethodBody<'_>,
@@ -546,6 +576,7 @@ fn decompile_method(
         prime_external_fields(image, &body, context);
         prime_external_method_instantiations(image, &body, context);
         prime_external_cast_targets(image, &body, context);
+        prime_external_array_elements(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
     image.reference_queries.borrow_mut().clear();

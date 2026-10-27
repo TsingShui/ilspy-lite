@@ -1,0 +1,25 @@
+{
+  "group": "referenced class array elements",
+  "tests": 478,
+  "red": "report/multidim/extarray-red.log",
+  "targeted": {
+    "System.Private.CoreLib": [
+      13630,
+      13630
+    ],
+    "FSharp.Core": [
+      7350,
+      7367
+    ],
+    "OpenRA.Game": [
+      4013,
+      4022
+    ],
+    "OpenRA.Mods.Common": [
+      15479,
+      15483
+    ]
+  },
+  "behavior_driver": "none; allocation identity only",
+  "third_party_bodies_executed": false
+}

@@ -111,6 +111,8 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static RelationLibrary.Child[] ForeignArray(int length) => new RelationLibrary.Child[length];
+        public static RelationLibrary.Bits[] ForeignValueArray(int length) => new RelationLibrary.Bits[length];
         public static uint ToUInt32(long value) => unchecked((uint)value);
         public static nuint ToNativeUnsigned(int value) => unchecked((nuint)value);
         public static double DoubleSum(double a, double b) => a + b;

@@ -361,9 +361,7 @@ fn vector_operations_do_not_treat_named_references_as_vectors() {
         let result = decompile_with_style(&wrong, method.token, OutputStyle::Readable).unwrap();
         assert_eq!(result.status, Status::Partial, "{}", result.text);
         assert!(
-            result
-                .text
-                .contains("operation needs an array reference"),
+            result.text.contains("operation needs an array reference"),
             "{}",
             result.text
         );

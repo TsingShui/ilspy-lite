@@ -193,6 +193,8 @@ generated output remain ignored and retain their original license boundaries.
   integer stack-category assignment rule.
 - `MULTIDIM_ARRAYS.md`: general `T[,]` identity, allocation and `Get`/`Set`
   element mapping.
+- `EXTERNAL_ARRAY_ELEMENTS.md`: referenced-class elements in `newarr`, admitted
+  from the selected definition's kind fact.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

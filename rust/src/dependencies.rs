@@ -466,6 +466,22 @@ impl DependencyContext {
     /// The caller keeps the original TypeRef as the identity; this only decides
     /// whether the runtime operation is a reference cast or a boxed-value test.
     pub(crate) fn external_type_kind(&self, token: u32) -> ExternalTypeKindLookup {
+        match self.external_kind(token) {
+            ExternalTypeKindLookup::Fact(kind) if kind.value_type => {
+                ExternalTypeKindLookup::Refused(
+                    "cast target is a value type; a boxed-value test is not a reference cast"
+                        .into(),
+                )
+            }
+            other => other,
+        }
+    }
+
+    /// Reference kind of a type declared outside this image, without deciding what
+    /// a caller may do with it. `ExternalTypeKind::value_type` carries the answer;
+    /// resolving the definition is the only proof, so an unresolvable token is
+    /// unavailable rather than a guess.
+    pub(crate) fn external_kind(&self, token: u32) -> ExternalTypeKindLookup {
         let token = cildec::Token(token);
         if token.table() != Some(cildec::TableId::TypeRef) || token.rid() == 0 {
             return ExternalTypeKindLookup::Unavailable;
@@ -492,11 +508,6 @@ impl DependencyContext {
         let value_type = flags & 0x0020 == 0
             && (matches!(image.has_core_base(definition, "ValueType"), Ok(true))
                 || matches!(image.has_core_base(definition, "Enum"), Ok(true)));
-        if value_type {
-            return ExternalTypeKindLookup::Refused(
-                "cast target is a value type; a boxed-value test is not a reference cast".into(),
-            );
-        }
         ExternalTypeKindLookup::Fact(ExternalTypeKind { value_type })
     }
 

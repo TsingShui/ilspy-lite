@@ -214,6 +214,46 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn referenced_class_array_elements_resolve_their_kind() {
+    for (bytes, library) in IMAGES {
+        // The element's class-versus-value distinction comes from its selected
+        // definition, so an unresolved reference keeps the allocation refused.
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        let class = token(bytes, "RelationCases.Ops", "ForeignArray");
+        let before = context.decompile(class, OutputStyle::Readable).unwrap();
+        assert_eq!(before.status, Status::Partial, "{}", before.text);
+        assert!(
+            before
+                .text
+                .contains("array allocation needs exact external element kind facts"),
+            "{}",
+            before.text
+        );
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let after = context.decompile(class, OutputStyle::Readable).unwrap();
+        assert_eq!(after.status, Status::Decompiled, "{}", after.text);
+        assert!(after.text.contains("__cil_newarr_"), "{}", after.text);
+        assert!(
+            after.text.contains("RelationLibrary.Child[]"),
+            "{}",
+            after.text
+        );
+        // A referenced value type already has an exact value identity, so its
+        // vector allocation takes the value-type branch rather than the new fact.
+        let value = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "ForeignValueArray"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(value.status, Status::Decompiled, "{}", value.text);
+        assert!(value.text.contains("__cil_newarr_"), "{}", value.text);
+    }
+}
+
+#[test]
 fn integer_conversions_keep_the_stack_category_exact() {
     for (bytes, _) in IMAGES {
         for name in ["ToUInt32", "ToNativeUnsigned"] {
