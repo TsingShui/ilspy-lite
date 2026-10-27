@@ -1255,3 +1255,32 @@ The user explicitly replied "同意" to the concrete Rust IL/CFG + lift architec
 - Separately authorized original-corpus behavior checks and final per-image closure.
 
 Ordinary test-interface approval is no longer a blocker. The user requested agile E2E iteration; relevant red/green E2E cases satisfy repository test discipline without repeated tool-detail approval.
+
+## Closure status and remaining work (not met)
+
+The weighted gate is still unmet: **52,983 / 770,748 = 6.8731%** against the 5% ceiling,
+i.e. **14,446** more recovered bodies are required (raw integers:
+5,298,300 > 3,853,740). The fixed inventory, exclusions, hashes and denominator are
+unchanged; every measurement above comes from the same 614 implementation images.
+
+Remaining first blockers, from `report/scanorder-batch/corpus-scan/baseline.json`,
+with what each needs:
+
+| Count | Reason | What is missing |
+|---|---|---|
+| 11,489 | incompatible value/receiver types | cross-image **generic ancestry with identity mapping**: constructed local/external types passed to interfaces/bases whose parent templates live in another image and have no caller TypeRef token to compare against. The reference-relations proof handles local chains and same-image facts; it stops when a foreign parent cannot be projected into the caller's token vocabulary. |
+| 2,623 | invalid user-string encoding | the corpus carries malformed user strings (terminal flag disagrees with the code-unit count). Recovering a value the runtime itself rejects would require inventing bytes, so it stays refused. |
+| 2,568 | generic variable has no owner or exceeds declared positions | remaining member/signature decodes still pass an empty type context (audited call sites reduced; the rest need per-owner contexts). |
+| 2,180 | constructed value generic method needs a local definition | referenced constructed value owners whose definition/declaration is not resolvable through the dependency facts (same mapping gap as above). |
+| 1,998 | generic virtual dispatch needs runtime lookup-order modeling | a reproduced counterexample shows a direct call changes dispatch; deliberately refused until lookup order is modelled. |
+| 1,655 | pinned/byref/modified local | `fixed` statements: pinning is a scope-level construct (the address must stay pinned while GC may run), so the emitted C# needs a `fixed` block, not an expression. |
+| 1,366 | core scalar/special value signature | core types used in positions where their dedicated stack model is required (for example a `ValueType`-encoded class); needs a per-type audit rather than a blanket rule. |
+| 1,320 | external allocation facts | `newobj` on referenced instantiations whose constructor fact cannot be resolved (same projection gap). |
+| 1,229 | RuntimeTypeHandle needs an exact core value definition | images that use runtime handles without a TypeRef row for the handle type; a synthetic identity would have to be invented, which the policy forbids. |
+| 1,094 | local may be used before definite assignment | address-taking counts as a use; admitting `ldloca`+`initobj`/out-call writes needs escape analysis. |
+
+The closure path therefore needs two substantial capabilities, not more micro-groups:
+foreign parent projection for constructed types (covers roughly the first, fourth and
+eighth rows: about 15k blocker occurrences) and pinned/fixed lowering (~1.7k). Until
+those are implemented and validated, the gate cannot pass and completion must not be
+claimed.
