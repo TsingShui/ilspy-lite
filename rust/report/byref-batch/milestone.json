@@ -1,33 +1,30 @@
 {
   "groups": [
-    "ead905fbd constructed interface dispatch",
-    "a7a5cdba4 value-type generic receivers",
-    "e447bdde2 byref-like value copies"
+    "89d266d17 byref call results"
   ],
   "summary": {
     "managed_images": 614,
     "body_images": 319,
     "bodies": 770748,
     "counts": {
-      "Partial": 73118,
-      "Decompiled": 697630
+      "Partial": 45797,
+      "Decompiled": 724951
     },
     "incomplete_images": 0,
-    "passing_body_images": 64,
-    "unrecovered": 73118,
+    "passing_body_images": 84,
+    "unrecovered": 45797,
     "aggregate_gate_pass": false,
     "aggregate_gate_applicable": true
   },
-  "gained": 7115,
-  "gained_images": 108,
+  "gained": 726,
+  "gained_images": 24,
   "regressions": 0,
-  "fallback_percent": 9.486628573801035,
+  "fallback_percent": 5.941890215738478,
   "acceptance_integer": {
-    "left": 7311800,
+    "left": 4579700,
     "right": 3853740,
     "passes": false
   },
-  "review": "report/byref-batch/review/review-source.md",
-  "tests": 486,
+  "tests": 489,
   "third_party_bodies_executed": false
 }

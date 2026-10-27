@@ -35,7 +35,18 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: value constructors on existing storage
+## Current verified state: byref call results
+
+- `report/byref-batch/corpus-scan/baseline.json`: **724,951 Decompiled / 45,797
+  Partial of 770,748**, fallback **5.942121%**. Zero incomplete images; raw gate
+  4,579,700 > 3,853,740, so <=5% is unmet (7,260 bodies to go).
+- Against `report/value-ctor-call/corpus-scan/baseline.json`: **+726 in 24 images,
+  zero regressions**.
+- `89d266d17` binds `T&` call results as ref locals; the declaring side of a byref
+  return and the pinned/`fixed` construct remain unimplemented.
+- 489 Rust tests, clippy, and the owned behavior drivers pass at this revision.
+
+## Previous verified state: value constructors on existing storage
 
 - `report/value-ctor-call/corpus-scan/baseline.json`: **724,225 Decompiled / 46,523
   Partial of 770,748**, fallback **6.035186%**. Zero incomplete images; raw gate
