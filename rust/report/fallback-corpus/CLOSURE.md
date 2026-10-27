@@ -2,8 +2,8 @@
 
 > Historical: this closure report is from the boxing baseline (33/319, 473,770
 > unrecovered). The active goal is per-sample 1%; current per-image counts are in
-> `report/foreign-hidden-batch/per-image.csv` (89/319 at the 728,704 anchor).
-> The aggregate 1% is diagnostic, not the acceptance.
+> `report/current-head/implementation-scan` (92/319 at 730,866/39,882; 89/319 at
+> the 728,704 anchor). The aggregate 1% is diagnostic, not the acceptance.
 
 Sourced from `report/boxing/corpus-scan/baseline.json` (before local-enum boxing).
 Integers only: pass iff `100 * unrecovered <= bodies`. Re-check with

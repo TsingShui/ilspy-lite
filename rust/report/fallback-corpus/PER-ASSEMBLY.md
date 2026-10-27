@@ -1,10 +1,10 @@
 # Per-assembly view and slice order
 
 > Historical analysis. The active goal requires the **per-sample** gate again:
-> every body image must satisfy `100 * unrecovered <= bodies`; currently **89/319**
-> pass at the 728,704/42,044 anchor. The 33/319 and median 60.4% below are from the
-> old boxing baseline. Current per-image counts are in
-> `report/foreign-hidden-batch/per-image.csv`; current state is in `CHECKPOINT.md`.
+> every body image must satisfy `100 * unrecovered <= bodies`; currently **92/319**
+> pass at the 730,866/39,882 scan (89/319 at the 728,704 anchor). The 33/319 and
+> median 60.4% below are from the old boxing baseline. Current per-image counts are
+> in `report/current-head/implementation-scan`; current state is in `CHECKPOINT.md`.
 > The aggregate 1% is diagnostic only.
 
 Measured from `report/boxing/corpus-scan/baseline.json` (the scan before local-enum

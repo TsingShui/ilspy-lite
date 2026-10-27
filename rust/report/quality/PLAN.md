@@ -102,10 +102,11 @@ transform pipeline, and the brief marks these low priority.
 - Each item ships with its own red/green Rust test and, where behavior could
   change, the existing owned behaviour drivers stay green. Readable output is
   regression-tested by re-harvesting a slice and comparing before/after counts.
-- The corpus admission baseline (42,044 fallback and the 89/319 per-sample gate)
-  is unrelated to this work and must not move because of a printer change; a
-  status or per-sample change is a defect here. A change that admits a body
-  belongs to the admission track, not this plan.
+- The latest complete admission scan (currently 39,882 fallback and 92/319
+  per-sample; use the scan immediately before the quality item) is unrelated to
+  this work and must not move because of a printer change; a status or per-sample
+  change is a defect here. A change that admits a body belongs to the admission
+  track, not this plan.
 
 ## Review and validation
 

@@ -1,14 +1,15 @@
 # Residual audit and continuation plan
 
-Status at commit time: latest complete fixed-scope scan is
-`report/foreign-hidden-batch/corpus-scan-fixed/baseline.json`
-(**728,704 Decompiled / 42,044 Partial of 770,748**, fallback 5.454961%).
-The acceptance gate is overall weighted **1%**, i.e. `100 * unrecovered <= bodies`:
-at most 7,707 may remain, so **34,337 more bodies** are required. The former 5%
-gate needs 3,507 and is only an intermediate milestone.
+Status at commit time: the latest complete fixed-scope scan is
+`report/current-head/implementation-scan/baseline.json`
+(**730,866 Decompiled / 39,882 Partial of 770,748**, fallback 5.174454%).
+The committed anchor is the previous complete scan
+(`728,704 / 42,044`, fallback 5.454961%). The aggregate 1% diagnostic allows
+7,707 bodies and needs 32,175 more; the active per-sample gate allows a floor
+sum of 7,585 and needs 32,297 more.
 
 > The active goal's acceptance is **per-sample**: every one of the 319 body images
-> must satisfy `100 * unrecovered <= bodies` (currently 89/319). The aggregate
+> must satisfy `100 * unrecovered <= bodies` (currently 92/319). The aggregate
 > weighted 1% above is a diagnostic intermediate, not the gate. Quality work is
 > tracked in `report/quality/PLAN.md`; printer-only quality changes must not move
 > admission or the per-sample count.
@@ -17,7 +18,12 @@ This document is the working plan for continuing on another machine. It records
 what the residual failures actually are, which shared machinery each group needs,
 and the exact commands and pitfalls for reproducing the measurements.
 
-## 1. What the 42,044 residuals consist of
+## 1. What the anchor's 42,044 residuals consist of
+
+The latest scan has 39,882 residuals after the measured constructed value generic
+prefetch (+2,162, 0 lost; `report/constructed-value-prefetch/AUDIT.md`). The table
+below is the 42,044 anchor; the prefetch reduced that bucket and the total, not
+the remaining group plan.
 
 123 distinct first-blocker strings. `reasons.json` holds the full table; the
 concentration matters more than the list:
@@ -186,13 +192,35 @@ python3 rust/acceptance/corpus/corpus.py collect \
 python3 rust/acceptance/corpus/corpus.py inventory \
   --manifest rust/report/fallback-corpus/frozen/manifest.json \
   --output rust/report/fallback-corpus/inventory-final
+# 1. Full inventory scan for the scope projection (no references needed).
 python3 rust/acceptance/corpus/corpus.py baseline \
   --inventory rust/report/fallback-corpus/inventory-final/inventory.json \
   --cli rust/target/release/ilspy-lite \
   --output rust/report/fallback-corpus/baseline --workers 4 --timeout 300
+# 2. Project the approved 614-managed / 319-body implementation scope.
+python3 rust/acceptance/corpus/implementation_scope.py \
+  --inventory rust/report/fallback-corpus/inventory-final/inventory.json \
+  --baseline rust/report/fallback-corpus/baseline/baseline.json \
+  --output rust/report/fallback-corpus/implementation-scope
+# 3. Admission scan on the implementation inventory with the anchor's reference mode.
+python3 rust/acceptance/corpus/corpus.py baseline \
+  --inventory rust/report/fallback-corpus/implementation-scope/implementation-inventory.json \
+  --cli rust/target/release/ilspy-lite \
+  --output rust/report/current-head/implementation-scan \
+  --references ilspy --workers 4 --scan-threads 2 --timeout 300
+# aggregate diagnostic
 python3 rust/acceptance/corpus/corpus.py gate \
-  --baseline rust/report/fallback-corpus/baseline/baseline.json
+  --baseline rust/report/current-head/implementation-scan/baseline.json
+# authoritative per-sample gate
+python3 rust/report/per-assembly-gate.py \
+  rust/report/current-head/implementation-scan/baseline.json
 ```
+
+The full `inventory-final` scan is only for regenerating the implementation
+scope. The admission scan uses the 614-image implementation inventory.
+`--references` defaults to `none`; a none-mode scan resolves no external facts and
+looks like a large regression. The committed anchor and every admission scan use
+`--references ilspy`. Compare scans only when their `references.mode` matches.
 
 Compare a new scan against the committed anchor (per-token statuses):
 
@@ -239,7 +267,7 @@ message, gate everything on `ILSPY_LITE_AUDIT`, and run
 
 | Group | Code | Tests | Measured corpus effect |
 |---|---|---|---|
-| Constructed value generic prefetch | committed | red/green + 720 behaviour comparisons + 6 mutants | **unmeasured** (two interrupted targeted scans) |
+| Constructed value generic prefetch | committed | red/green + 720 behaviour comparisons + 6 mutants | **measured +2,162, 66 images, 0 lost; 89 -> 92 per-sample** (`report/constructed-value-prefetch/AUDIT.md`) |
 | C | not started | - | - |
 | B | not started | - | - |
 | A / A2 | not started | - | - |
@@ -247,5 +275,6 @@ message, gate everything on `ILSPY_LITE_AUDIT`, and run
 | E | not started | - | - |
 | F | audit only | - | - |
 
-No group claims a corpus gain without a completed scan; the aggregate remains
-42,044 until the next complete scan says otherwise.
+No group claims a corpus gain without a completed scan. The latest complete scan
+is 730,866/39,882; the prefetch group is measured. The aggregate diagnostic and
+the per-sample gate are reported separately.

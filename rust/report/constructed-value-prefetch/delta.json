@@ -1,0 +1,1184 @@
+{
+ "schema": 1,
+ "before": {
+  "path": "/tmp/anchor-728704/baseline.json",
+  "summary": {
+   "managed_images": 614,
+   "body_images": 319,
+   "bodies": 770748,
+   "counts": {
+    "Decompiled": 728704,
+    "Partial": 42044
+   },
+   "incomplete_images": 0,
+   "passing_body_images": 89,
+   "unrecovered": 42044,
+   "aggregate_gate_pass": false,
+   "aggregate_gate_applicable": true
+  }
+ },
+ "after": {
+  "path": "rust/report/current-head/implementation-scan/baseline.json",
+  "summary": {
+   "managed_images": 614,
+   "body_images": 319,
+   "bodies": 770748,
+   "counts": {
+    "Decompiled": 730866,
+    "Partial": 39882
+   },
+   "incomplete_images": 0,
+   "passing_body_images": 92,
+   "unrecovered": 39882,
+   "aggregate_gate_pass": false,
+   "aggregate_gate_applicable": true,
+   "aggregate_threshold_percent": 1
+  }
+ },
+ "summary": {
+  "images": 614,
+  "before_decompiled": 728704,
+  "after_decompiled": 730866,
+  "net": 2162,
+  "gained": 2162,
+  "lost": 0,
+  "changed_status": 0,
+  "images_gained": 66,
+  "images_lost": 0,
+  "target_mismatches": 0
+ },
+ "previous_reasons": {
+  "external constructed value generic method needs dependency facts": 2162
+ },
+ "lost_reasons": {},
+ "images": [
+  {
+   "id": 2,
+   "assembly": "ICSharpCode.Decompiler.Tests",
+   "origins": [
+    "ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe"
+   ],
+   "bodies": 1257,
+   "before_decompiled": 1180,
+   "after_decompiled": 1186,
+   "gained": 6,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 6
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 4,
+   "assembly": "Microsoft.CodeAnalysis.CSharp",
+   "origins": [
+    "ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.CSharp.dll"
+   ],
+   "bodies": 27100,
+   "before_decompiled": 26540,
+   "after_decompiled": 26602,
+   "gained": 62,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 62
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 5,
+   "assembly": "Microsoft.CodeAnalysis",
+   "origins": [
+    "ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.dll"
+   ],
+   "bodies": 10136,
+   "before_decompiled": 9671,
+   "after_decompiled": 9742,
+   "gained": 71,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 71
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 7,
+   "assembly": "Newtonsoft.Json",
+   "origins": [
+    "ICSharpCode.Decompiler/Newtonsoft.Json.dll"
+   ],
+   "bodies": 3985,
+   "before_decompiled": 3812,
+   "after_decompiled": 3880,
+   "gained": 68,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 68
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 18,
+   "assembly": "bug-185",
+   "origins": [
+    "Mono.Cecil-net45/Resources/assemblies/bug-185.dll"
+   ],
+   "bodies": 8,
+   "before_decompiled": 7,
+   "after_decompiled": 8,
+   "gained": 1,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 1
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 97,
+   "assembly": "nunit.framework.tests",
+   "origins": [
+    "NUnit/net-4.0/nunit.framework.tests.dll"
+   ],
+   "bodies": 4012,
+   "before_decompiled": 3803,
+   "after_decompiled": 3835,
+   "gained": 32,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 32
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 98,
+   "assembly": "nunit.testdata",
+   "origins": [
+    "NUnit/net-4.0/nunit.testdata.dll"
+   ],
+   "bodies": 960,
+   "before_decompiled": 920,
+   "after_decompiled": 944,
+   "gained": 24,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 24
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 105,
+   "assembly": "nunit.framework.tests",
+   "origins": [
+    "NUnit/net-4.5/nunit.framework.tests.dll"
+   ],
+   "bodies": 4015,
+   "before_decompiled": 3812,
+   "after_decompiled": 3844,
+   "gained": 32,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 32
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 106,
+   "assembly": "nunit.testdata",
+   "origins": [
+    "NUnit/net-4.5/nunit.testdata.dll"
+   ],
+   "bodies": 960,
+   "before_decompiled": 921,
+   "after_decompiled": 945,
+   "gained": 24,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 24
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 119,
+   "assembly": "nunit.framework.tests",
+   "origins": [
+    "NUnit/portable/nunit.framework.tests.dll"
+   ],
+   "bodies": 3216,
+   "before_decompiled": 3076,
+   "after_decompiled": 3098,
+   "gained": 22,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 22
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 120,
+   "assembly": "nunit.testdata",
+   "origins": [
+    "NUnit/portable/nunit.testdata.dll"
+   ],
+   "bodies": 919,
+   "before_decompiled": 880,
+   "after_decompiled": 904,
+   "gained": 24,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 24
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 130,
+   "assembly": "Microsoft.CodeAnalysis.CSharp",
+   "origins": [
+    "Newtonsoft.Json-net45/Microsoft.CodeAnalysis.CSharp.dll"
+   ],
+   "bodies": 29231,
+   "before_decompiled": 28633,
+   "after_decompiled": 28699,
+   "gained": 66,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 66
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 131,
+   "assembly": "Microsoft.CodeAnalysis",
+   "origins": [
+    "Newtonsoft.Json-net45/Microsoft.CodeAnalysis.dll"
+   ],
+   "bodies": 10646,
+   "before_decompiled": 10185,
+   "after_decompiled": 10260,
+   "gained": 75,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 75
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 134,
+   "assembly": "Newtonsoft.Json.Tests",
+   "origins": [
+    "Newtonsoft.Json-net45/Newtonsoft.Json.Tests.dll"
+   ],
+   "bodies": 10569,
+   "before_decompiled": 10299,
+   "after_decompiled": 10312,
+   "gained": 13,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 13
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 135,
+   "assembly": "Newtonsoft.Json",
+   "origins": [
+    "Newtonsoft.Json-net45/Newtonsoft.Json.dll"
+   ],
+   "bodies": 3991,
+   "before_decompiled": 3785,
+   "after_decompiled": 3853,
+   "gained": 68,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 68
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 142,
+   "assembly": "System.IO.Compression",
+   "origins": [
+    "Newtonsoft.Json-net45/System.IO.Compression.dll",
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.IO.Compression.dll"
+   ],
+   "bodies": 452,
+   "before_decompiled": 427,
+   "after_decompiled": 429,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 151,
+   "assembly": "System.Threading.Tasks.Extensions",
+   "origins": [
+    "Newtonsoft.Json-net45/System.Threading.Tasks.Extensions.dll",
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Threading.Tasks.Extensions.dll"
+   ],
+   "bodies": 39,
+   "before_decompiled": 36,
+   "after_decompiled": 39,
+   "gained": 3,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 3
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 158,
+   "assembly": "Newtonsoft.Json.Tests",
+   "origins": [
+    "Newtonsoft.Json-pcl-debug/Newtonsoft.Json.Tests.dll"
+   ],
+   "bodies": 9783,
+   "before_decompiled": 8802,
+   "after_decompiled": 8806,
+   "gained": 4,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 4
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 159,
+   "assembly": "Newtonsoft.Json",
+   "origins": [
+    "Newtonsoft.Json-pcl-debug/Newtonsoft.Json.dll"
+   ],
+   "bodies": 3933,
+   "before_decompiled": 3750,
+   "after_decompiled": 3818,
+   "gained": 68,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 68
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 443,
+   "assembly": "System.IO.Compression.Brotli",
+   "origins": [
+    "dotnet/netcore-2.2/System.IO.Compression.Brotli.dll"
+   ],
+   "bodies": 110,
+   "before_decompiled": 104,
+   "after_decompiled": 106,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 446,
+   "assembly": "System.IO.Compression",
+   "origins": [
+    "dotnet/netcore-2.2/System.IO.Compression.dll"
+   ],
+   "bodies": 636,
+   "before_decompiled": 605,
+   "after_decompiled": 609,
+   "gained": 4,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 4
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 451,
+   "assembly": "System.IO.FileSystem",
+   "origins": [
+    "dotnet/netcore-2.2/System.IO.FileSystem.dll"
+   ],
+   "bodies": 487,
+   "before_decompiled": 440,
+   "after_decompiled": 444,
+   "gained": 4,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 4
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 463,
+   "assembly": "System.Net.Http",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.Http.dll"
+   ],
+   "bodies": 2364,
+   "before_decompiled": 2098,
+   "after_decompiled": 2129,
+   "gained": 31,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 31
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 464,
+   "assembly": "System.Net.HttpListener",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.HttpListener.dll"
+   ],
+   "bodies": 1098,
+   "before_decompiled": 950,
+   "after_decompiled": 956,
+   "gained": 6,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 6
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 465,
+   "assembly": "System.Net.Mail",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.Mail.dll"
+   ],
+   "bodies": 1189,
+   "before_decompiled": 1114,
+   "after_decompiled": 1116,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 468,
+   "assembly": "System.Net.Ping",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.Ping.dll"
+   ],
+   "bodies": 152,
+   "before_decompiled": 140,
+   "after_decompiled": 142,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 471,
+   "assembly": "System.Net.Security",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.Security.dll"
+   ],
+   "bodies": 1024,
+   "before_decompiled": 918,
+   "after_decompiled": 920,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 474,
+   "assembly": "System.Net.WebClient",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.WebClient.dll"
+   ],
+   "bodies": 350,
+   "before_decompiled": 319,
+   "after_decompiled": 321,
+   "gained": 2,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 2
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 478,
+   "assembly": "System.Net.WebSockets",
+   "origins": [
+    "dotnet/netcore-2.2/System.Net.WebSockets.dll"
+   ],
+   "bodies": 166,
+   "before_decompiled": 143,
+   "after_decompiled": 144,
+   "gained": 1,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 1
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 484,
+   "assembly": "System.Private.DataContractSerialization",
+   "origins": [
+    "dotnet/netcore-2.2/System.Private.DataContractSerialization.dll"
+   ],
+   "bodies": 5045,
+   "before_decompiled": 4931,
+   "after_decompiled": 4935,
+   "gained": 4,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 4
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 486,
+   "assembly": "System.Private.Xml.Linq",
+   "origins": [
+    "dotnet/netcore-2.2/System.Private.Xml.Linq.dll"
+   ],
+   "bodies": 967,
+   "before_decompiled": 932,
+   "after_decompiled": 948,
+   "gained": 16,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 16
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 487,
+   "assembly": "System.Private.Xml",
+   "origins": [
+    "dotnet/netcore-2.2/System.Private.Xml.dll"
+   ],
+   "bodies": 17176,
+   "before_decompiled": 16422,
+   "after_decompiled": 16691,
+   "gained": 269,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 269
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 501,
+   "assembly": "System.Runtime.Extensions",
+   "origins": [
+    "dotnet/netcore-2.2/System.Runtime.Extensions.dll"
+   ],
+   "bodies": 1048,
+   "before_decompiled": 999,
+   "after_decompiled": 1000,
+   "gained": 1,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 1
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 521,
+   "assembly": "System.Security.Cryptography.Primitives",
+   "origins": [
+    "dotnet/netcore-2.2/System.Security.Cryptography.Primitives.dll"
+   ],
+   "bodies": 204,
+   "before_decompiled": 197,
+   "after_decompiled": 201,
+   "gained": 4,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 4
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 625,
+   "assembly": "System.Xml",
+   "origins": [
+    "mcs/5.23/lib/mono/4.5/System.Xml.dll"
+   ],
+   "bodies": 16610,
+   "before_decompiled": 16012,
+   "after_decompiled": 16289,
+   "gained": 277,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 277
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 626,
+   "assembly": "System",
+   "origins": [
+    "mcs/5.23/lib/mono/4.5/System.dll"
+   ],
+   "bodies": 15437,
+   "before_decompiled": 14783,
+   "after_decompiled": 14831,
+   "gained": 48,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 48
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 783,
+   "assembly": "Microsoft.CodeAnalysis.Scripting",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.Scripting.dll"
+   ],
+   "bodies": 592,
+   "before_decompiled": 561,
+   "after_decompiled": 568,
+   "gained": 7,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 7
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 785,
+   "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.VisualBasic.dll"
+   ],
+   "bodies": 32181,
+   "before_decompiled": 31377,
+   "after_decompiled": 31441,
+   "gained": 64,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 64
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 791,
+   "assembly": "csc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/csc.exe"
+   ],
+   "bodies": 127,
+   "before_decompiled": 113,
+   "after_decompiled": 119,
+   "gained": 6,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 6
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 793,
+   "assembly": "vbc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/vbc.exe"
+   ],
+   "bodies": 127,
+   "before_decompiled": 113,
+   "after_decompiled": 119,
+   "gained": 6,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 6
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 794,
+   "assembly": "VBCSCompiler",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/VBCSCompiler.exe"
+   ],
+   "bodies": 263,
+   "before_decompiled": 229,
+   "after_decompiled": 250,
+   "gained": 21,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 21
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 795,
+   "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.Build.Tasks.CodeAnalysis.dll"
+   ],
+   "bodies": 461,
+   "before_decompiled": 407,
+   "after_decompiled": 413,
+   "gained": 6,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 6
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 796,
+   "assembly": "Microsoft.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.dll"
+   ],
+   "bodies": 12787,
+   "before_decompiled": 12284,
+   "after_decompiled": 12360,
+   "gained": 76,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 76
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 798,
+   "assembly": "Microsoft.CodeAnalysis.CSharp",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.CSharp.dll"
+   ],
+   "bodies": 30106,
+   "before_decompiled": 29468,
+   "after_decompiled": 29537,
+   "gained": 69,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 69
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 799,
+   "assembly": "Microsoft.CodeAnalysis.Scripting",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.Scripting.dll"
+   ],
+   "bodies": 603,
+   "before_decompiled": 568,
+   "after_decompiled": 575,
+   "gained": 7,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 7
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 801,
+   "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.VisualBasic.dll"
+   ],
+   "bodies": 32829,
+   "before_decompiled": 31997,
+   "after_decompiled": 32060,
+   "gained": 63,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 63
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 802,
+   "assembly": "csc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/csc.exe"
+   ],
+   "bodies": 132,
+   "before_decompiled": 116,
+   "after_decompiled": 124,
+   "gained": 8,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 8
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 804,
+   "assembly": "vbc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/vbc.exe"
+   ],
+   "bodies": 132,
+   "before_decompiled": 116,
+   "after_decompiled": 124,
+   "gained": 8,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 8
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 805,
+   "assembly": "VBCSCompiler",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/VBCSCompiler.exe"
+   ],
+   "bodies": 270,
+   "before_decompiled": 229,
+   "after_decompiled": 254,
+   "gained": 25,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 25
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 806,
+   "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.Build.Tasks.CodeAnalysis.dll"
+   ],
+   "bodies": 580,
+   "before_decompiled": 522,
+   "after_decompiled": 530,
+   "gained": 8,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 8
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 889,
+   "assembly": "System.Net.Http",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Net.Http.dll"
+   ],
+   "bodies": 1531,
+   "before_decompiled": 1470,
+   "after_decompiled": 1483,
+   "gained": 13,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 13
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 894,
+   "assembly": "Microsoft.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.dll"
+   ],
+   "bodies": 14608,
+   "before_decompiled": 13960,
+   "after_decompiled": 14070,
+   "gained": 110,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 110
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 895,
+   "assembly": "Microsoft.CodeAnalysis.CSharp",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.CSharp.dll"
+   ],
+   "bodies": 37159,
+   "before_decompiled": 36421,
+   "after_decompiled": 36449,
+   "gained": 28,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 28
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 896,
+   "assembly": "Microsoft.CodeAnalysis.Scripting",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.Scripting.dll"
+   ],
+   "bodies": 643,
+   "before_decompiled": 610,
+   "after_decompiled": 617,
+   "gained": 7,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 7
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 898,
+   "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.VisualBasic.dll",
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.VisualBasic.dll"
+   ],
+   "bodies": 33022,
+   "before_decompiled": 32201,
+   "after_decompiled": 32246,
+   "gained": 45,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 45
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 901,
+   "assembly": "csc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/csc.exe"
+   ],
+   "bodies": 180,
+   "before_decompiled": 161,
+   "after_decompiled": 170,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 903,
+   "assembly": "vbc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/vbc.exe"
+   ],
+   "bodies": 180,
+   "before_decompiled": 161,
+   "after_decompiled": 170,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 904,
+   "assembly": "VBCSCompiler",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/VBCSCompiler.exe"
+   ],
+   "bodies": 325,
+   "before_decompiled": 282,
+   "after_decompiled": 307,
+   "gained": 25,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 25
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 905,
+   "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.Build.Tasks.CodeAnalysis.dll"
+   ],
+   "bodies": 653,
+   "before_decompiled": 594,
+   "after_decompiled": 603,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 909,
+   "assembly": "System.Threading.Tasks.Extensions",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Threading.Tasks.Extensions.dll"
+   ],
+   "bodies": 104,
+   "before_decompiled": 101,
+   "after_decompiled": 104,
+   "gained": 3,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 3
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 992,
+   "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/Microsoft.Build.Tasks.CodeAnalysis.dll"
+   ],
+   "bodies": 640,
+   "before_decompiled": 582,
+   "after_decompiled": 591,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 993,
+   "assembly": "Microsoft.CodeAnalysis",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.dll"
+   ],
+   "bodies": 14564,
+   "before_decompiled": 13862,
+   "after_decompiled": 13972,
+   "gained": 110,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 110
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 994,
+   "assembly": "Microsoft.CodeAnalysis.CSharp",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.CSharp.dll"
+   ],
+   "bodies": 37158,
+   "before_decompiled": 36419,
+   "after_decompiled": 36447,
+   "gained": 28,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 28
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 995,
+   "assembly": "csc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/csc.dll"
+   ],
+   "bodies": 180,
+   "before_decompiled": 162,
+   "after_decompiled": 171,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 996,
+   "assembly": "vbc",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/vbc.dll"
+   ],
+   "bodies": 180,
+   "before_decompiled": 162,
+   "after_decompiled": 171,
+   "gained": 9,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 9
+   },
+   "lost_reasons": {}
+  },
+  {
+   "id": 997,
+   "assembly": "VBCSCompiler",
+   "origins": [
+    "nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/VBCSCompiler.dll"
+   ],
+   "bodies": 325,
+   "before_decompiled": 284,
+   "after_decompiled": 309,
+   "gained": 25,
+   "lost": 0,
+   "changed": 0,
+   "previous_reasons": {
+    "external constructed value generic method needs dependency facts": 25
+   },
+   "lost_reasons": {}
+  }
+ ],
+ "mismatches": []
+}

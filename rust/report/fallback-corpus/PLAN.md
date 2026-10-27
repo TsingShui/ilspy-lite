@@ -10,11 +10,14 @@ regression found in a batched scan can be attributed by rescanning those commits
 
 ## Current position (per-sample 1% goal, 2026-10-28)
 
-- **728,704 Decompiled / 42,044 Partial of 770,748 (5.454961%)**, 319 body images,
-  0 incomplete.
+- **730,866 Decompiled / 39,882 Partial of 770,748 (5.174454%)**, 319 body images,
+  0 incomplete. The committed anchor is 728,704/42,044.
+- The constructed value generic prefetch was measured at +2,162 across 66 images,
+  0 lost, moving per-sample from 89/319 to 92/319.
 - Acceptance is **per-sample**: every body image must satisfy
-  `100 * unrecovered <= bodies`; currently **89/319** pass. The aggregate 1%
-  (7,707 allowed) is a diagnostic intermediate, not the gate.
+  `100 * unrecovered <= bodies`; currently **92/319** pass. The aggregate 1%
+  (7,707 allowed) is a diagnostic intermediate, not the gate; the per-sample floor
+  sum is 7,585.
 - Fixed inputs and the per-method anchor are committed. The admission continuation
   is `report/residual-audit/PLAN.md` (Groups C -> B -> A/A2 -> D -> E -> F); the
   readability track is `report/quality/PLAN.md` (Phase 1 printer-only, Phase 2

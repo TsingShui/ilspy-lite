@@ -12,7 +12,20 @@
 
 Goal: mvqw1edf-rt8get (previous: mvouhw7y-679jgb)
 
-## Current complete state: constructed reference batch
+## Current complete state: constructed value prefetch measured (2026-10-28)
+
+`report/current-head/implementation-scan/baseline.json` is a complete scan of the
+unchanged 614 implementation images, 319 body-bearing: **730,866 Decompiled /
+39,882 Partial of 770,748**, fallback **5.174454%**, **92/319** per-sample, 0
+incomplete. Versus the committed 728,704/42,044 anchor: **+2,162 across 66
+images, 0 lost**, every gain previously `external constructed value generic
+method needs dependency facts`. Three images newly pass: `bug-185` (0/8),
+`System.Threading.Tasks.Extensions` net45 (0/39) and net472 (0/104).
+The aggregate 1% diagnostic allows 7,707 bodies (32,175 more); the per-sample
+floor sum is 7,585 (32,297 more). Evidence:
+`report/constructed-value-prefetch/AUDIT.md`, `batch-evidence.zip`, `delta.json`.
+
+## Anchor: constructed reference batch (42,044)
 
 `report/foreign-hidden-batch/corpus-scan-fixed/baseline.json` is a complete
 production scan of the unchanged 614 implementation images, 319 body-bearing:
