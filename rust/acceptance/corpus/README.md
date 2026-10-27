@@ -25,8 +25,8 @@ git submodule update --init --checkout ILSpy-tests
 python3 rust/acceptance/corpus/corpus.py collect \
   --checkout ILSpy-tests \
   --output rust/report/fallback-corpus/frozen \
-  --supplement rust/report/openra/assemblies/OpenRA.Game.dll \
-  --supplement rust/report/openra/assemblies/OpenRA.Mods.Common.dll
+  --supplement rust/acceptance/openra/assemblies/OpenRA.Game.dll \
+  --supplement rust/acceptance/openra/assemblies/OpenRA.Mods.Common.dll
 python3 rust/acceptance/corpus/corpus.py inventory \
   --manifest rust/report/fallback-corpus/frozen/manifest.json \
   --output rust/report/fallback-corpus/inventory-final

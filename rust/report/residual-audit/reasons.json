@@ -1,0 +1,620 @@
+{
+ "unrecovered": 42044,
+ "reasons": [
+  {
+   "reason": "incompatible value/receiver types",
+   "bodies": 12263,
+   "images": 193
+  },
+  {
+   "reason": "invalid user-string encoding: terminal flag differs from code units",
+   "bodies": 2739,
+   "images": 54
+  },
+  {
+   "reason": "external constructed value generic method needs dependency facts",
+   "bodies": 2269,
+   "images": 66
+  },
+  {
+   "reason": "generic virtual dispatch needs runtime lookup-order modeling",
+   "bodies": 1999,
+   "images": 49
+  },
+  {
+   "reason": "pinned/byref/modified local needs IL fallback",
+   "bodies": 1666,
+   "images": 73
+  },
+  {
+   "reason": "external allocation needs dependency facts; only local classes and local instantiations are admitted",
+   "bodies": 1325,
+   "images": 54
+  },
+  {
+   "reason": "local may be used before definite assignment",
+   "bodies": 813,
+   "images": 18
+  },
+  {
+   "reason": "EH fault handlers need exceptional-only cleanup",
+   "bodies": 640,
+   "images": 72
+  },
+  {
+   "reason": "nested/generic/unresolved external class needs IL fallback",
+   "bodies": 631,
+   "images": 34
+  },
+  {
+   "reason": "invalid/modified/open/managed-address struct field needs IL fallback",
+   "bodies": 563,
+   "images": 15
+  },
+  {
+   "reason": "byref/modified parameter needs IL fallback",
+   "bodies": 549,
+   "images": 16
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u1",
+   "bodies": 531,
+   "images": 18
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i4",
+   "bodies": 521,
+   "images": 31
+  },
+  {
+   "reason": "incompatible stack categories",
+   "bodies": 498,
+   "images": 94
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i2",
+   "bodies": 497,
+   "images": 14
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u2",
+   "bodies": 490,
+   "images": 18
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i1",
+   "bodies": 482,
+   "images": 13
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i4.un",
+   "bodies": 480,
+   "images": 13
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u2.un",
+   "bodies": 479,
+   "images": 8
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u4",
+   "bodies": 477,
+   "images": 10
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u1.un",
+   "bodies": 474,
+   "images": 7
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i2.un",
+   "bodies": 470,
+   "images": 3
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u4.un",
+   "bodies": 468,
+   "images": 5
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i1.un",
+   "bodies": 464,
+   "images": 3
+  },
+  {
+   "reason": "EH filters need filter-region lowering",
+   "bodies": 444,
+   "images": 56
+  },
+  {
+   "reason": "unreachable basic block requires IL fallback",
+   "bodies": 443,
+   "images": 9
+  },
+  {
+   "reason": "cast target is a value type; a boxed-value test is not a reference cast",
+   "bodies": 402,
+   "images": 68
+  },
+  {
+   "reason": "modified value-call parameter needs IL fallback",
+   "bodies": 363,
+   "images": 21
+  },
+  {
+   "reason": "constructor overload selection needs IL fallback",
+   "bodies": 353,
+   "images": 27
+  },
+  {
+   "reason": "method implementation flags need IL fallback",
+   "bodies": 317,
+   "images": 12
+  },
+  {
+   "reason": "base field access needs the constructed owner name",
+   "bodies": 302,
+   "images": 32
+  },
+  {
+   "reason": "unsupported opcode unbox",
+   "bodies": 297,
+   "images": 15
+  },
+  {
+   "reason": "instantiated definition is abstract",
+   "bodies": 296,
+   "images": 13
+  },
+  {
+   "reason": "conv.u source category needs IL fallback",
+   "bodies": 290,
+   "images": 43
+  },
+  {
+   "reason": "conv.i4 source category needs IL fallback",
+   "bodies": 282,
+   "images": 64
+  },
+  {
+   "reason": "expected int[] or uint[] evaluation-stack value",
+   "bodies": 275,
+   "images": 47
+  },
+  {
+   "reason": "cast TypeSpec needs a proved reference shape",
+   "bodies": 269,
+   "images": 66
+  },
+  {
+   "reason": "integer operation on non-integer value",
+   "bodies": 260,
+   "images": 31
+  },
+  {
+   "reason": "EH plain branch crosses a region boundary",
+   "bodies": 256,
+   "images": 17
+  },
+  {
+   "reason": "pointer operation needs identical pointee types",
+   "bodies": 251,
+   "images": 23
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i",
+   "bodies": 239,
+   "images": 39
+  },
+  {
+   "reason": "enum storage requires an exact local definition; external/value signatures need IL fallback",
+   "bodies": 222,
+   "images": 36
+  },
+  {
+   "reason": "EH catch type needs an admitted core exception identity",
+   "bodies": 221,
+   "images": 16
+  },
+  {
+   "reason": "unsupported opcode ldvirtftn",
+   "bodies": 208,
+   "images": 59
+  },
+  {
+   "reason": "constructed member needs a local definition; external constructed members need dependency facts",
+   "bodies": 198,
+   "images": 24
+  },
+  {
+   "reason": "volatile access needs a scalar or reference field with a Volatile overload",
+   "bodies": 163,
+   "images": 24
+  },
+  {
+   "reason": "external allocation needs dependency facts: constructor parameter is byref or modified",
+   "bodies": 162,
+   "images": 19
+  },
+  {
+   "reason": "instantiated method is declared on an interface",
+   "bodies": 152,
+   "images": 9
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i.un",
+   "bodies": 144,
+   "images": 14
+  },
+  {
+   "reason": "indirect load width/kind differs from its storage element",
+   "bodies": 137,
+   "images": 26
+  },
+  {
+   "reason": "interface declaring type needs IL fallback",
+   "bodies": 130,
+   "images": 26
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u",
+   "bodies": 128,
+   "images": 3
+  },
+  {
+   "reason": "unsupported opcode localloc",
+   "bodies": 128,
+   "images": 20
+  },
+  {
+   "reason": "unsupported opcode sizeof",
+   "bodies": 127,
+   "images": 38
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u.un",
+   "bodies": 127,
+   "images": 3
+  },
+  {
+   "reason": "cast target needs dependency facts",
+   "bodies": 123,
+   "images": 22
+  },
+  {
+   "reason": "value definition must be sealed and not an interface or abstract",
+   "bodies": 119,
+   "images": 4
+  },
+  {
+   "reason": "byref return needs escape/lifetime analysis",
+   "bodies": 118,
+   "images": 17
+  },
+  {
+   "reason": "conv.i8 source category needs IL fallback",
+   "bodies": 118,
+   "images": 27
+  },
+  {
+   "reason": "EH general catch needs an unused exception object",
+   "bodies": 116,
+   "images": 6
+  },
+  {
+   "reason": "EH leave must originate in a try or catch",
+   "bodies": 113,
+   "images": 49
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u8",
+   "bodies": 108,
+   "images": 10
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i8",
+   "bodies": 103,
+   "images": 9
+  },
+  {
+   "reason": "core scalar/special value signature requires its own stack model",
+   "bodies": 102,
+   "images": 3
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.u8.un",
+   "bodies": 100,
+   "images": 3
+  },
+  {
+   "reason": "unsupported reference relationship argument shape",
+   "bodies": 98,
+   "images": 16
+  },
+  {
+   "reason": "unsupported opcode conv.ovf.i8.un",
+   "bodies": 98,
+   "images": 3
+  },
+  {
+   "reason": "value-type receiver needs IL fallback",
+   "bodies": 98,
+   "images": 3
+  },
+  {
+   "reason": "unsupported signature type needs IL fallback",
+   "bodies": 86,
+   "images": 8
+  },
+  {
+   "reason": "constructed member parent must be a class; interface dispatch needs IL fallback",
+   "bodies": 83,
+   "images": 5
+  },
+  {
+   "reason": "unsupported opcode ldind.r8",
+   "bodies": 72,
+   "images": 10
+  },
+  {
+   "reason": "readonly field write needs IL fallback",
+   "bodies": 70,
+   "images": 16
+  },
+  {
+   "reason": "struct field access needs the exact managed location of that value type",
+   "bodies": 58,
+   "images": 12
+  },
+  {
+   "reason": "indirect store width/kind differs from its storage element",
+   "bodies": 57,
+   "images": 21
+  },
+  {
+   "reason": "conv.u1 source category needs IL fallback",
+   "bodies": 55,
+   "images": 14
+  },
+  {
+   "reason": "operation needs a core TypeRef",
+   "bodies": 54,
+   "images": 3
+  },
+  {
+   "reason": "conv.u2 source category needs IL fallback",
+   "bodies": 47,
+   "images": 14
+  },
+  {
+   "reason": "conv.i2 source category needs IL fallback",
+   "bodies": 43,
+   "images": 8
+  },
+  {
+   "reason": "external generic instance dispatch needs dependency facts",
+   "bodies": 41,
+   "images": 4
+  },
+  {
+   "reason": "conv.i1 source category needs IL fallback",
+   "bodies": 39,
+   "images": 6
+  },
+  {
+   "reason": "call argument needs a value snapshot, not a managed location",
+   "bodies": 39,
+   "images": 1
+  },
+  {
+   "reason": "array allocation needs exact external element kind facts",
+   "bodies": 36,
+   "images": 4
+  },
+  {
+   "reason": "unsupported opcode ldelem.r8",
+   "bodies": 32,
+   "images": 14
+  },
+  {
+   "reason": "unsupported opcode stelem.r8",
+   "bodies": 31,
+   "images": 20
+  },
+  {
+   "reason": "unsupported opcode unaligned.",
+   "bodies": 30,
+   "images": 4
+  },
+  {
+   "reason": "value definition has no exact core ValueType base",
+   "bodies": 29,
+   "images": 8
+  },
+  {
+   "reason": "operation needs an acquired managed location",
+   "bodies": 28,
+   "images": 14
+  },
+  {
+   "reason": "type scope is not an admitted core identity",
+   "bodies": 26,
+   "images": 12
+  },
+  {
+   "reason": "unsupported opcode readonly.",
+   "bodies": 26,
+   "images": 4
+  },
+  {
+   "reason": "managed argument/local slot reassignment needs lifetime analysis",
+   "bodies": 25,
+   "images": 5
+  },
+  {
+   "reason": "constructed value type needs a local definition; external instantiations need dependency facts",
+   "bodies": 25,
+   "images": 4
+  },
+  {
+   "reason": "conv.u4 source category needs IL fallback",
+   "bodies": 25,
+   "images": 23
+  },
+  {
+   "reason": "generic method target needs an ordinary non-vararg signature",
+   "bodies": 20,
+   "images": 2
+  },
+  {
+   "reason": "incompatible evaluation stacks at join",
+   "bodies": 18,
+   "images": 11
+  },
+  {
+   "reason": "unsupported opcode stelem.i",
+   "bodies": 16,
+   "images": 5
+  },
+  {
+   "reason": "modified field needs IL fallback",
+   "bodies": 13,
+   "images": 3
+  },
+  {
+   "reason": "explicit-this/vararg method needs IL fallback",
+   "bodies": 12,
+   "images": 5
+  },
+  {
+   "reason": "EH leave must exit to an enclosing region",
+   "bodies": 11,
+   "images": 3
+  },
+  {
+   "reason": "struct field address needs the exact managed location of that value type",
+   "bodies": 10,
+   "images": 4
+  },
+  {
+   "reason": "pointer offset needs a 32-bit or native integer",
+   "bodies": 9,
+   "images": 3
+  },
+  {
+   "reason": "unsupported opcode ldelem.i",
+   "bodies": 8,
+   "images": 5
+  },
+  {
+   "reason": "constructed member parent is not a class instantiation",
+   "bodies": 7,
+   "images": 7
+  },
+  {
+   "reason": "unsupported opcode cpblk",
+   "bodies": 7,
+   "images": 4
+  },
+  {
+   "reason": "uninitialized local handler region has no reachable block",
+   "bodies": 7,
+   "images": 2
+  },
+  {
+   "reason": "rethrow with a non-empty stack needs IL fallback",
+   "bodies": 7,
+   "images": 2
+  },
+  {
+   "reason": "struct instance call needs the exact managed location of that value type",
+   "bodies": 6,
+   "images": 3
+  },
+  {
+   "reason": "unsupported opcode initblk",
+   "bodies": 6,
+   "images": 3
+  },
+  {
+   "reason": "conv.u8 source category needs IL fallback",
+   "bodies": 6,
+   "images": 5
+  },
+  {
+   "reason": "modified pointer signature needs IL fallback",
+   "bodies": 5,
+   "images": 2
+  },
+  {
+   "reason": "EH catch type needs an admitted nominal exception identity",
+   "bodies": 4,
+   "images": 2
+  },
+  {
+   "reason": "allocation owner must be a concrete nongeneric class",
+   "bodies": 4,
+   "images": 2
+  },
+  {
+   "reason": "pointer difference needs identical pointee types",
+   "bodies": 3,
+   "images": 3
+  },
+  {
+   "reason": "generic variable has no owner or exceeds declared positions",
+   "bodies": 3,
+   "images": 1
+  },
+  {
+   "reason": "external static field needs dependency facts",
+   "bodies": 3,
+   "images": 1
+  },
+  {
+   "reason": "external member reference needs dependency facts",
+   "bodies": 3,
+   "images": 1
+  },
+  {
+   "reason": "instance/generic/vararg call needs IL fallback",
+   "bodies": 2,
+   "images": 2
+  },
+  {
+   "reason": "array allocation needs exact external element kind facts: the element is a value type",
+   "bodies": 2,
+   "images": 2
+  },
+  {
+   "reason": "float operation needs identical operand types",
+   "bodies": 2,
+   "images": 1
+  },
+  {
+   "reason": "open/modified/unsupported structural signature needs IL fallback",
+   "bodies": 1,
+   "images": 1
+  },
+  {
+   "reason": "EH clause limit exceeded",
+   "bodies": 1,
+   "images": 1
+  },
+  {
+   "reason": "managed location element identity differs",
+   "bodies": 1,
+   "images": 1
+  },
+  {
+   "reason": "throw/catch needs a proved nominal exception reference",
+   "bodies": 1,
+   "images": 1
+  },
+  {
+   "reason": "unresolved core type identity",
+   "bodies": 1,
+   "images": 1
+  }
+ ]
+}

@@ -1,0 +1,119 @@
+{
+ "assignable_first_blockers": 12263,
+ "records": 12280,
+ "families": {
+  "object -> concrete reference": 3121,
+  "signature -> signature (variance/ancestry)": 2813,
+  "integer -> native/pointer": 2799,
+  "signature -> concrete reference": 1404,
+  "integer -> value or reference": 569,
+  "integer or native -> pointer": 403,
+  "other": 327,
+  "pointer -> pointer": 300,
+  "local class -> external class": 218,
+  "managed address -> reference": 192,
+  "R4 -> F4": 134
+ },
+ "largest_pairs": [
+  {
+   "actual": "sig",
+   "expected": "sig",
+   "bodies": 2813
+  },
+  {
+   "actual": "I4",
+   "expected": "Native",
+   "bodies": 1864
+  },
+  {
+   "actual": "sig",
+   "expected": "ExternalClass",
+   "bodies": 1284
+  },
+  {
+   "actual": "Object",
+   "expected": "sig",
+   "bodies": 1117
+  },
+  {
+   "actual": "Object",
+   "expected": "Class",
+   "bodies": 1086
+  },
+  {
+   "actual": "I4",
+   "expected": "Pointer",
+   "bodies": 935
+  },
+  {
+   "actual": "Object",
+   "expected": "ExternalClass",
+   "bodies": 918
+  },
+  {
+   "actual": "I4",
+   "expected": "sig",
+   "bodies": 569
+  },
+  {
+   "actual": "UNative",
+   "expected": "Pointer",
+   "bodies": 314
+  },
+  {
+   "actual": "Pointer",
+   "expected": "Pointer",
+   "bodies": 300
+  },
+  {
+   "actual": "Class",
+   "expected": "ExternalClass",
+   "bodies": 218
+  },
+  {
+   "actual": "ManagedAddress",
+   "expected": "ExternalClass",
+   "bodies": 192
+  },
+  {
+   "actual": "ExternalClass",
+   "expected": "ExternalClass",
+   "bodies": 149
+  },
+  {
+   "actual": "R4",
+   "expected": "F4",
+   "bodies": 134
+  },
+  {
+   "actual": "sig",
+   "expected": "Class",
+   "bodies": 120
+  },
+  {
+   "actual": "U4",
+   "expected": "Native",
+   "bodies": 84
+  },
+  {
+   "actual": "Native",
+   "expected": "Pointer",
+   "bodies": 47
+  },
+  {
+   "actual": "U4",
+   "expected": "Pointer",
+   "bodies": 42
+  },
+  {
+   "actual": "I4Array",
+   "expected": "sig",
+   "bodies": 37
+  },
+  {
+   "actual": "I4Array",
+   "expected": "ExternalClass",
+   "bodies": 14
+  }
+ ]
+}

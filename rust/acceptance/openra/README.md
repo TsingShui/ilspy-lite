@@ -168,6 +168,8 @@ Run from the repository root. The existing local corpus is under
 `rust/report/openra/`. To populate a fresh copy on macOS:
 
 ```sh
+# The two inputs are committed at rust/acceptance/openra/assemblies/ so the
+# fixed corpus is reproducible without re-downloading the release.
 mkdir -p rust/report/openra/assemblies
 curl --fail --location --retry 2 \
   https://github.com/OpenRA/OpenRA/releases/download/release-20250330/OpenRA-release-20250330.dmg \
