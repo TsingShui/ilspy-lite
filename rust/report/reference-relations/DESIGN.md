@@ -27,10 +27,14 @@ The owned overload mutant removes that operand and chooses 29 instead of 11.
 ## Exact foreign projection and demand
 
 Dependency binding resolves definition origins using the unchanged explicit
-reference policy. Foreign ancestor templates are projected only through caller
-TypeRef representatives whose definitions resolved exactly. Foreign tokens
-never become caller tokens. An ancestor argument without a representable caller
-identity stays unproved; substituted or unavailable definitions are not guessed.
+reference policy. The initial implementation projected foreign ancestor templates
+only through caller TypeRef representatives. The follow-up in
+`report/foreign-hidden-relations/AUDIT.md` also represents a selected foreign
+definition without a caller TypeRef, using its image-scoped canonical identity
+and bounded dependency facts. Foreign tokens never become caller tokens; missing,
+ambiguous or unsupported definitions are not guessed. The IlSpy policy may
+select a version substitute, which remains a metadata selection rather than a
+runtime-compatibility proof.
 
 Eagerly building every foreign graph made the Roslyn sample take 38.590 seconds
 in the Debug probe. Demand-driven retry builds only nominal definitions needed

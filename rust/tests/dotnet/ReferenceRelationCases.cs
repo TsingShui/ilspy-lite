@@ -16,11 +16,22 @@
 // OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+#if !LIBRARY
+extern alias OtherRelation;
+#endif
+
 #if LIBRARY
 namespace RelationLibrary
 {
     public interface IRoot { }
     public interface ITagged { int Tag { get; } }
+    public interface IView<out T> { }
+    public class VisibleBase { }
+    public class VisibleGeneric<T> { }
+    public sealed class Hidden : VisibleBase { }
+    public sealed class HiddenBox<T> : VisibleGeneric<T> { }
+    public class HiddenChild : IView<Hidden> { }
+    public class HiddenGeneric<T> : IView<HiddenBox<T>> { }
     public sealed class Tagged : ITagged { public int Tag => 3; }
     public struct Bits { public int Value; }
     public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
@@ -140,6 +151,10 @@ namespace RelationCases
     {
         public static int Target<T>() => typeof(T) == typeof(RelationLibrary.Holder<string>) ? 37 : 29;
     }
+    public static class AlternateReference
+    {
+        public static OtherRelation::RelationLibrary.VisibleBase Identity(OtherRelation::RelationLibrary.VisibleBase value) => value;
+    }
 
     public static class Ops
     {
@@ -169,6 +184,8 @@ namespace RelationCases
         public static RelationLibrary.IItem<string> ForeignGenericInterface(RelationLibrary.Child input) => input;
         public static RelationLibrary.GenericBase<T> ForeignGeneric<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
+        public static RelationLibrary.IView<RelationLibrary.VisibleBase> ForeignHiddenToBase(RelationLibrary.HiddenChild input) => input;
+        public static RelationLibrary.IView<RelationLibrary.VisibleGeneric<A>> ForeignHiddenOpen<A, B>(RelationLibrary.HiddenGeneric<A> input) => input;
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);

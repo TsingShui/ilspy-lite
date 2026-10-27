@@ -11,12 +11,27 @@ use crate::{
 };
 use cildec::{TableId, Token, Type};
 
+/// A selected definition, including its image, assembly identity and full name.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct DefinitionId {
+    pub module: usize,
+    pub token: u32,
+    pub assembly: crate::dependencies::AssemblyIdentity,
+    pub name: String,
+    pub arity: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Term {
     Primitive(u8),
     Parameter(u32),
     Named {
         token: Token,
+        args: Vec<Term>,
+        value: bool,
+    },
+    ForeignNamed {
+        definition: DefinitionId,
         args: Vec<Term>,
         value: bool,
     },
@@ -31,7 +46,9 @@ pub(crate) enum Term {
 #[derive(Clone, Default)]
 pub(crate) struct Facts {
     pub aliases: std::collections::BTreeMap<u32, u32>,
+    pub identities: std::collections::BTreeMap<u32, DefinitionId>,
     pub definitions: std::collections::BTreeMap<u32, Definition>,
+    pub foreign_definitions: std::collections::BTreeMap<DefinitionId, Definition>,
 }
 
 #[derive(Clone)]
@@ -76,9 +93,39 @@ fn instantiate(term: &Term, args: &[Term], depth: usize) -> Result<Term> {
                 .collect::<Result<Vec<_>>>()?,
             value: *value,
         },
+        Term::ForeignNamed {
+            definition,
+            args: nested,
+            value,
+        } => Term::ForeignNamed {
+            definition: definition.clone(),
+            args: nested
+                .iter()
+                .map(|a| instantiate(a, args, depth + 1))
+                .collect::<Result<Vec<_>>>()?,
+            value: *value,
+        },
         Term::Vector(element) => Term::Vector(Box::new(instantiate(element, args, depth + 1)?)),
         _ => term.clone(),
     })
+}
+
+#[derive(Clone, Copy)]
+enum NominalRef<'a> {
+    Caller(Token),
+    Foreign(&'a DefinitionId),
+}
+
+fn named(term: &Term) -> Option<(NominalRef<'_>, &[Term], bool)> {
+    match term {
+        Term::Named { token, args, value } => Some((NominalRef::Caller(*token), args, *value)),
+        Term::ForeignNamed {
+            definition,
+            args,
+            value,
+        } => Some((NominalRef::Foreign(definition), args, *value)),
+        _ => None,
+    }
 }
 
 struct Proof<'i, 'a> {
@@ -256,7 +303,7 @@ impl Proof<'_, '_> {
 
     fn reference(&self, term: &Term) -> Result<bool> {
         Ok(match term {
-            Term::Named { value, .. } => !value,
+            Term::Named { value, .. } | Term::ForeignNamed { value, .. } => !value,
             Term::Primitive(14 | 28) | Term::Vector(_) => true,
             Term::Variable {
                 scope, position, ..
@@ -274,64 +321,93 @@ impl Proof<'_, '_> {
         })
     }
 
-    fn same_or_variant(&mut self, actual: &Term, expected: &Term, depth: usize) -> Result<bool> {
+    fn same_nominal(&self, a: NominalRef<'_>, b: NominalRef<'_>) -> bool {
+        let facts = self.image.reference_facts.borrow();
+        match (a, b) {
+            (NominalRef::Caller(a), NominalRef::Caller(b)) => {
+                a == b
+                    || facts
+                        .identities
+                        .get(&a.0)
+                        .is_some_and(|identity| facts.identities.get(&b.0) == Some(identity))
+            }
+            (NominalRef::Caller(a), NominalRef::Foreign(b))
+            | (NominalRef::Foreign(b), NominalRef::Caller(a)) => {
+                facts.identities.get(&a.0) == Some(b)
+            }
+            (NominalRef::Foreign(a), NominalRef::Foreign(b)) => a == b,
+        }
+    }
+
+    fn identical(&self, actual: &Term, expected: &Term, depth: usize) -> Result<bool> {
+        if depth >= 48 {
+            return Err("reference identity depth exceeded".into());
+        }
         if actual == expected {
+            return Ok(true);
+        }
+        if let (Some((a, aa, av)), Some((b, ba, bv))) = (named(actual), named(expected)) {
+            if av != bv || aa.len() != ba.len() || !self.same_nominal(a, b) {
+                return Ok(false);
+            }
+            for (a, b) in aa.iter().zip(ba) {
+                if !self.identical(a, b, depth + 1)? {
+                    return Ok(false);
+                }
+            }
+            return Ok(true);
+        }
+        if let (Term::Vector(a), Term::Vector(b)) = (actual, expected) {
+            return self.identical(a, b, depth + 1);
+        }
+        Ok(false)
+    }
+
+    fn same_or_variant(&mut self, actual: &Term, expected: &Term, depth: usize) -> Result<bool> {
+        if self.identical(actual, expected, depth)? {
             return Ok(true);
         }
         if *expected == Term::Primitive(0x1c) && self.reference(actual)? {
             return Ok(true);
         }
-        let (
-            Term::Named {
-                token: a,
-                args: aa,
-                value: false,
-            },
-            Term::Named {
-                token: b,
-                args: ba,
-                value: false,
-            },
-        ) = (actual, expected)
-        else {
+        let (Some((a, aa, false)), Some((b, ba, false))) = (named(actual), named(expected)) else {
             return Ok(false);
         };
-        if a != b || aa.len() != ba.len() {
+        if !self.same_nominal(a, b) || aa.len() != ba.len() {
             return Ok(false);
         }
-        let flags = if a.table() == Some(TableId::TypeDef) {
-            if self.image.md.tables().type_def(a.rid())?.flags & 0x20 == 0 {
-                return Ok(false);
+        let flags = match a {
+            NominalRef::Caller(token) if token.table() == Some(TableId::TypeDef) => {
+                if self.image.md.tables().type_def(token.rid())?.flags & 0x20 == 0 {
+                    return Ok(false);
+                }
+                self.image
+                    .md
+                    .tables()
+                    .generic_params(token)?
+                    .into_iter()
+                    .enumerate()
+                    .map(|(index, rid)| {
+                        let p = self.image.md.tables().generic_param(rid)?;
+                        if usize::from(p.number) != index {
+                            return Err("invalid reference variance parameter positions".into());
+                        }
+                        Ok(p.flags)
+                    })
+                    .collect::<Result<Vec<_>>>()?
             }
-            self.image
-                .md
-                .tables()
-                .generic_params(*a)?
-                .into_iter()
-                .enumerate()
-                .map(|(index, rid)| {
-                    let p = self.image.md.tables().generic_param(rid)?;
-                    if usize::from(p.number) != index {
-                        return Err("invalid reference variance parameter positions".into());
-                    }
-                    Ok(p.flags)
-                })
-                .collect::<Result<Vec<_>>>()?
-        } else {
-            let Some(fact) = self
-                .image
-                .reference_facts
-                .borrow()
-                .definitions
-                .get(&a.0)
-                .cloned()
-            else {
-                return Ok(false);
-            };
-            if !fact.interface {
-                return Ok(false);
+            _ => {
+                let facts = self.image.reference_facts.borrow();
+                let fact = match a {
+                    NominalRef::Caller(token) => facts.definitions.get(&token.0),
+                    NominalRef::Foreign(definition) => facts.foreign_definitions.get(definition),
+                };
+                let Some(fact) = fact else { return Ok(false) };
+                if !fact.interface {
+                    return Ok(false);
+                }
+                fact.variance.clone()
             }
-            fact.variance.clone()
         };
         if flags.len() != aa.len() {
             return Err("reference variance arity differs".into());
@@ -340,7 +416,7 @@ impl Proof<'_, '_> {
             if flags & 3 == 3 {
                 return Err("invalid reference variance parameter positions/flags".into());
             }
-            if a == b {
+            if self.identical(a, b, depth + 1)? {
                 continue;
             }
             if !self.reference(a)? || !self.reference(b)? {
@@ -365,13 +441,36 @@ impl Proof<'_, '_> {
         while let Some((candidate, mut active)) = pending.pop() {
             self.step(depth)?;
             found |= self.same_or_variant(&candidate, expected, depth)?;
-            let Term::Named {
-                token,
-                args,
-                value: false,
-            } = candidate
-            else {
-                continue;
+            let (token, args) = match candidate {
+                Term::Named {
+                    token,
+                    args,
+                    value: false,
+                } => (token, args),
+                Term::ForeignNamed {
+                    definition,
+                    args,
+                    value: false,
+                } => {
+                    if let Some(fact) = self
+                        .image
+                        .reference_facts
+                        .borrow()
+                        .foreign_definitions
+                        .get(&definition)
+                        .cloned()
+                    {
+                        if fact.variance.len() != args.len() {
+                            return Err("foreign reference arity differs".into());
+                        }
+                        for parent in &fact.parents {
+                            let parent = instantiate(parent, &args, 0)?;
+                            found |= self.prove(&parent, expected, depth + 1)?;
+                        }
+                    }
+                    continue;
+                }
+                _ => continue,
             };
             if token.table() != Some(TableId::TypeDef) {
                 if let Some(fact) = self

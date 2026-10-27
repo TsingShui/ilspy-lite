@@ -32,9 +32,11 @@ variance, and managed-address element identity stays invariant. Cycles,
 arity/position errors, unknown relationships and bounded work/depth failure
 remain refusals.
 
-Exact dependency binding projects foreign ancestors into existing caller token
-identities; no foreign token is interpreted against the main image. Demand-driven
-static lowering obtains only graphs needed by failed typed proofs. The context
+The initial dependency binding projected foreign ancestors into existing caller
+token identities; the later hidden-argument follow-up below also represents
+selected foreign definitions without fabricating caller tokens. No foreign token
+is interpreted against the main image. Demand-driven static lowering obtains
+only graphs needed by failed typed proofs. The context
 caches a registry with a candidate-count/version-policy/discovery stamp; tests
 verify that new references rebuild it and query order does not change output.
 No reference-version relaxation or extra implicit dependency discovery is added.
@@ -108,3 +110,32 @@ value-fact blocker) and no status losses in the four images tested. These are no
 a complete corpus scan. Rust fmt/clippy and 494 tests pass; see
 `report/constructed-join/{AUDIT.md,targeted-final.json,evidence.zip}` for the
 red/green tests, behavioral controls, comparison and bounded main-session review.
+
+## Follow-up: selected foreign argument identities
+
+A generic ancestor can mention a type that the caller has no TypeRef for. The
+relationship proof now represents such a selected foreign definition by its
+normalized assembly identity, full name, arity and exact image/TypeDef location,
+with its complete arguments. A bounded demand queue supplies its selected
+ancestry and interface variance flags. No foreign token is used as a caller token,
+and generic variables retain their original method or type scope. Missing or
+ambiguous definitions, invalid kind/arity, unproved relationships and unsupported
+shapes remain refusals. The unchanged ILSpy reference policy is metadata selection,
+not proof that a substituted assembly matches the target runtime.
+
+Owned closed and open generic interface cases were red and are now green in
+Debug and Release. They have no caller TypeRef for the hidden argument; they
+exercise covariance through a hidden parent, including `!!0` in a two-parameter
+method. Tests refuse missing dependencies, invariant variance, different hidden
+ancestry, value/class disagreement, changed generic position and a same-full-name
+type in a different supplied assembly. The owned reference driver executes 848
+comparisons / 80 selections per configuration, including null/reference identity,
+and rejects two added wrong-result mutants. It also passes for a selected-version
+owned library. The prior constructor/value/exception gates and 495 Rust tests pass.
+
+Four like-for-like targeted real-input scans show no gains or losses from this
+specific group. An initial 22-method Roslyn gain was measured against an older
+baseline and is withdrawn as an attribution to this group; the isolated prior
+revision scan shows those methods were already recovered. The complete scan for
+the three groups remains pending. Audit, negative tests, raw evidence and bounded
+main-session self-review are in `report/foreign-hidden-relations/`.

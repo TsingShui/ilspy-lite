@@ -6,7 +6,7 @@ exceptions, and where marked also rejects deliberate mutants.
 
 | Driver | Comparisons | Selections / methods | Mutation control |
 |---|---:|---:|---|
-| reference relations | 839 | 77 | sibling branch reversals, MethodSpec wrong result and prior mutants rejected |
+| reference relations | 848 | 80 | hidden-argument, sibling-branch, MethodSpec and prior mutants rejected |
 | typed vectors | 3,040 | 95 | reference-identity and dropped-store mutants rejected |
 | constrained calls | 720 | 40 | location joins, receiver slots, value copies |
 | value calls | 585 | 65 | receiver writes, value copies, generics |
@@ -37,9 +37,9 @@ Scope statements:
 Revision note: the external-allocation driver now accepts a constructed external
 owner (`MakeBox`) whose inlined declaration is a valid C# instantiation, so the
 matrix records 41 comparisons over 13 methods. All ten drivers were re-run at
-`5cce10dca`; subsequent constructed-join work reran the reference-relations
-driver with the expanded 839/77 selection, including the version-substituted
-owned library. No third-party body was executed.
+`5cce10dca`; subsequent constructed-join and hidden-identity work reran the
+reference-relations driver with the expanded 848/80 selection, including the
+version-substituted owned library. No third-party body was executed.
 
 The external constructed-base group additionally executes 48 owned comparisons
 across Release/Debug and call/callvirt forms, with four semantic mutants rejected

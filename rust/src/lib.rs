@@ -601,7 +601,9 @@ fn decompile_method(
             if let Ok(facts) = context.reference_assignment_facts(&pending) {
                 let mut cached = image.reference_facts.borrow_mut();
                 cached.aliases.extend(facts.aliases);
+                cached.identities.extend(facts.identities);
                 cached.definitions.extend(facts.definitions);
+                cached.foreign_definitions.extend(facts.foreign_definitions);
             }
             emitted = lift::emit(image, token, &body);
         }

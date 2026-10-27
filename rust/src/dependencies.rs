@@ -18,7 +18,7 @@ use std::collections::BTreeMap;
 use std::io::Read;
 
 /// Metadata identity, not verification of a publisher or strong-name signature.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AssemblyIdentity {
     pub name: String,
     pub version: [u16; 4],

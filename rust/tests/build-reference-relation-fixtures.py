@@ -20,14 +20,20 @@ sdk = latest(DOTNET / "sdk")
 refs = latest(DOTNET / "packs/Microsoft.NETCore.App.Ref") / "ref/net10.0"
 for config in ("release", "debug"):
     library = ROOT / f"tests/fixtures/relation-library-{config}.bin"
+    alternate = ROOT / f"tests/fixtures/relation-alternate-{config}.bin"
     consumer = ROOT / f"tests/fixtures/reference-relation-{config}.bin"
-    for output, arguments in [(library, ["-define:LIBRARY"]), (consumer, [f'-r:"{library}"'])]:
+    sources = ROOT / "tests/dotnet"
+    for output, arguments, source in [
+        (library, ["-define:LIBRARY"], sources / "ReferenceRelationCases.cs"),
+        (alternate, [], sources / "AlternateRelationBase.cs"),
+        (consumer, [f'-r:"{library}"', f'-r:OtherRelation="{alternate}"'], sources / "ReferenceRelationCases.cs"),
+    ]:
         with tempfile.TemporaryDirectory() as directory:
             response = Path(directory) / "compile.rsp"
             response.write_text("\n".join([
                 "-nologo", "-target:library", "-langversion:14", "-warnaserror+", "-deterministic+", "-unsafe+",
                 "-optimize+" if config == "release" else "-optimize-",
                 f'-out:"{output}"', *[f'-r:"{p}"' for p in sorted(refs.glob("*.dll"))],
-                *arguments, f'"{ROOT / "tests/dotnet/ReferenceRelationCases.cs"}"',
+                *arguments, f'"{source}"',
             ]))
             subprocess.run([str(DOTNET / "dotnet"), str(sdk / "Roslyn/bincore/csc.dll"), "@" + str(response)], check=True)

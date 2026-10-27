@@ -50,8 +50,8 @@ def main():
         if args.selected_version:
             source = OUT / f"SelectedLibrary-{config}.cs"
             original = (ROOT / "tests/dotnet/ReferenceRelationCases.cs").read_text()
-            support.write_changed(source, original.replace("#if LIBRARY",
-                '#define LIBRARY\n[assembly: System.Reflection.AssemblyVersion("4.0.0.0")]\n#if LIBRARY', 1))
+            support.write_changed(source, "#define LIBRARY\n" + original.replace("#if LIBRARY",
+                '[assembly: System.Reflection.AssemblyVersion("4.0.0.0")]\n#if LIBRARY', 1))
             library = OUT / f"relation-library-{config}.bin"
             support.compile_cs(library, [source])
         names = {}
@@ -145,6 +145,8 @@ def main():
         if args.mutation_control:
             for name, replacement in [("DeclaredOverload", "return input == null ? 29 : 29;"),
                                        ("Swap", "return null;"), ("Foreign", "return null;"),
+                                       ("ForeignHiddenToBase", "return null;"),
+                                       ("ForeignHiddenOpen", "return null;"),
                                        ("ReadCast", "return default;"),
                                        ("ClosedSiblingJoin", ""), ("ForeignSiblingJoin", ""),
                                        ("SiblingJoinIsNull", ""),

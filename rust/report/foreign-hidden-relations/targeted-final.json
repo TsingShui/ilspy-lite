@@ -1,0 +1,48 @@
+{
+  "scope": "four targeted production scans, compared with revision 596e59416, not an aggregate gate",
+  "images": [
+    {
+      "id": 0,
+      "assembly": "FSharp.Core",
+      "bodies": 9622,
+      "before_revision": "596e59416",
+      "before_decompiled": 9429,
+      "after_decompiled": 9429,
+      "gains": [],
+      "regressions": []
+    },
+    {
+      "id": 3,
+      "assembly": "ICSharpCode.Decompiler",
+      "bodies": 9737,
+      "before_revision": "596e59416",
+      "before_decompiled": 9498,
+      "after_decompiled": 9498,
+      "gains": [],
+      "regressions": []
+    },
+    {
+      "id": 4,
+      "assembly": "Microsoft.CodeAnalysis.CSharp",
+      "bodies": 27100,
+      "before_revision": "596e59416",
+      "before_decompiled": 26540,
+      "after_decompiled": 26540,
+      "gains": [],
+      "regressions": []
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "bodies": 18407,
+      "before_revision": "596e59416",
+      "before_decompiled": 17058,
+      "after_decompiled": 17058,
+      "gains": [],
+      "regressions": []
+    }
+  ],
+  "newly_recovered": 0,
+  "regressions": [],
+  "third_party_execution": false
+}

@@ -6,6 +6,19 @@
 
 Goal: mvouhw7y-679jgb
 
+## Post-baseline foreign hidden-argument identity (targeted only)
+
+Selected foreign types without caller TypeRefs can now participate in a
+reference proof using an assembly/name/arity identity scoped to the selected
+image and TypeDef. The proof retains generic scopes and actual variance flags;
+missing, different-assembly, wrong-position, different-base and class/value
+mutations remain Partial. The owned relation driver passes 848 comparisons /
+80 selections per configuration, and 495 Rust tests pass. Four like-for-like
+real-input targeted scans show zero gains or losses for this group. An apparent
+22-method Roslyn gain against the older baseline was withdrawn after comparison
+with `596e59416`. The three-group complete scan and gained-method self-review
+are still pending; no new aggregate rate is claimed.
+
 ## Post-baseline constructed-reference joins (targeted measurements only)
 
 Two local sibling classes can now merge to a closed constructed class base only

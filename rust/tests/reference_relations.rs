@@ -3,6 +3,11 @@
 
 use ilspy_lite::{DependencyContext, OutputStyle, Status, decompile_with_style, list_methods};
 
+const ALTERNATE_IMAGES: [&[u8]; 2] = [
+    include_bytes!("fixtures/relation-alternate-release.bin"),
+    include_bytes!("fixtures/relation-alternate-debug.bin"),
+];
+
 const IMAGES: [(&[u8], &[u8]); 2] = [
     (
         include_bytes!("fixtures/reference-relation-release.bin"),
@@ -87,6 +92,260 @@ fn local_constructed_reference_relationships_preserve_arguments_and_scope() {
                 result.text
             );
         }
+    }
+}
+
+#[test]
+fn foreign_hidden_generic_arguments_keep_exact_variance_and_ancestry() {
+    for (index, (bytes, library)) in IMAGES.into_iter().enumerate() {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        for (_, row) in md.tables().iter::<cildec::tables::TypeRefRow>() {
+            let row = row.unwrap();
+            let name = md.strings().str(row.type_name).unwrap();
+            assert_ne!(name, "Hidden");
+            assert_ne!(name, "HiddenBox`1");
+        }
+        let methods = ["ForeignHiddenToBase", "ForeignHiddenOpen"];
+        let absent = DependencyContext::new(bytes.to_vec()).unwrap();
+        for name in methods {
+            let result = absent
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+        }
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        for name in methods {
+            let result = context
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+
+        let open_method = token(bytes, "RelationCases.Ops", "ForeignHiddenOpen");
+        let row = md.tables().method_def(open_method & 0xffffff).unwrap();
+        let signature = md.blobs().get(row.signature).unwrap();
+        let variables: Vec<_> = signature
+            .windows(2)
+            .enumerate()
+            .filter_map(|(offset, value)| (value == [0x1e, 0]).then_some(offset))
+            .collect();
+        assert_eq!(variables.len(), 2);
+        let at = signature.as_ptr() as usize - bytes.as_ptr() as usize + variables[0] + 1;
+        let mut swapped_position = bytes.to_vec();
+        swapped_position[at] = 1;
+        let mut context = DependencyContext::new(swapped_position).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let result = context
+            .decompile(open_method, OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("incompatible value/receiver types"),
+            "{}",
+            result.text
+        );
+
+        let closed_method = token(bytes, "RelationCases.Ops", "ForeignHiddenToBase");
+        let row = md.tables().method_def(closed_method & 0xffffff).unwrap();
+        let signature = md.blobs().get(row.signature).unwrap();
+        let parsed = cildec::MethodSig::parse(signature).unwrap();
+        let cildec::Type::GenericInst { args, .. } = &parsed.return_type.type_ else {
+            panic!("expected a generic interface return");
+        };
+        let [cildec::Type::Class(primary)] = args.as_slice() else {
+            panic!("expected a named return argument");
+        };
+        let alternate_method = token(bytes, "RelationCases.AlternateReference", "Identity");
+        let row = md.tables().method_def(alternate_method & 0xffffff).unwrap();
+        let alternate_signature = md.blobs().get(row.signature).unwrap();
+        let alternate_signature = cildec::MethodSig::parse(alternate_signature).unwrap();
+        let cildec::Type::Class(alternate) = alternate_signature.return_type.type_ else {
+            panic!("expected an alternate named return");
+        };
+        let primary_row = md.tables().type_ref(primary.rid()).unwrap();
+        let alternate_row = md.tables().type_ref(alternate.rid()).unwrap();
+        assert_eq!(
+            md.strings().str(primary_row.type_name).unwrap(),
+            "VisibleBase"
+        );
+        assert_eq!(
+            md.strings().str(alternate_row.type_name).unwrap(),
+            "VisibleBase"
+        );
+        assert_eq!(primary_row.type_namespace, alternate_row.type_namespace);
+        assert_ne!(primary_row.resolution_scope, alternate_row.resolution_scope);
+        let coded = |token: cildec::Token| {
+            let value = (token.rid() << 2) | 1;
+            if value < 0x80 {
+                vec![value as u8]
+            } else {
+                assert!(value < 0x4000);
+                ((value as u16) | 0x8000).to_be_bytes().to_vec()
+            }
+        };
+        let mut old_type = vec![0x12];
+        old_type.extend(coded(*primary));
+        let mut new_type = vec![0x12];
+        new_type.extend(coded(alternate));
+        assert_eq!(old_type.len(), new_type.len());
+        let positions: Vec<_> = signature
+            .windows(old_type.len())
+            .enumerate()
+            .filter_map(|(offset, bytes)| (bytes == old_type).then_some(offset))
+            .collect();
+        assert_eq!(positions.len(), 1);
+        let at = signature.as_ptr() as usize - bytes.as_ptr() as usize + positions[0];
+        let mut other_assembly = bytes.to_vec();
+        other_assembly[at..at + old_type.len()].copy_from_slice(&new_type);
+        let mut context = DependencyContext::new(other_assembly).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        context
+            .add_reference(
+                "alternate relation library",
+                ALTERNATE_IMAGES[index].to_vec(),
+            )
+            .unwrap();
+        let result = context
+            .decompile(closed_method, OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("incompatible value/receiver types"),
+            "{}",
+            result.text
+        );
+
+        let foreign_pe = cildec::PeImage::parse(library).unwrap();
+        let foreign = foreign_pe.metadata().unwrap();
+        let definition = |name: &str| {
+            foreign
+                .tables()
+                .iter::<cildec::tables::TypeDefRow>()
+                .find(|(_, row)| {
+                    foreign
+                        .strings()
+                        .str(row.as_ref().unwrap().type_name)
+                        .unwrap()
+                        == name
+                })
+                .unwrap()
+                .0
+        };
+        let interface = cildec::Token(0x02000000 | definition("IView`1"));
+        let parameters = foreign.tables().generic_params(interface).unwrap();
+        assert_eq!(parameters.len(), 1);
+        let parameter = foreign.tables().generic_param(parameters[0]).unwrap();
+        assert_eq!(parameter.flags & 3, 1);
+        let row = foreign
+            .tables()
+            .row_bytes(cildec::TableId::GenericParam, parameters[0])
+            .unwrap();
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 2;
+        let mut invariant = library.to_vec();
+        invariant[at..at + 2].copy_from_slice(&(parameter.flags & !3).to_le_bytes());
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("invariant library", invariant)
+            .unwrap();
+        for name in methods {
+            let result = context
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("incompatible value/receiver types"),
+                "{name}: {}",
+                result.text
+            );
+        }
+
+        let hidden = definition("Hidden");
+        let object = foreign
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                let row = row.as_ref().unwrap();
+                foreign.strings().str(row.type_namespace).unwrap() == "System"
+                    && foreign.strings().str(row.type_name).unwrap() == "Object"
+            })
+            .unwrap()
+            .0;
+        let row = foreign
+            .tables()
+            .row_bytes(cildec::TableId::TypeDef, hidden)
+            .unwrap();
+        assert_eq!(row.len(), 14);
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 8;
+        let mut unrelated = library.to_vec();
+        unrelated[at..at + 2]
+            .copy_from_slice(&u16::try_from((object << 2) | 1).unwrap().to_le_bytes());
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("unrelated library", unrelated)
+            .unwrap();
+        let closed = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "ForeignHiddenToBase"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(closed.status, Status::Partial, "{}", closed.text);
+        assert!(
+            closed.text.contains("incompatible value/receiver types"),
+            "{}",
+            closed.text
+        );
+        let open = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "ForeignHiddenOpen"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(open.status, Status::Decompiled, "{}", open.text);
+
+        let value_type = foreign
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                let row = row.as_ref().unwrap();
+                foreign.strings().str(row.type_namespace).unwrap() == "System"
+                    && foreign.strings().str(row.type_name).unwrap() == "ValueType"
+            })
+            .unwrap()
+            .0;
+        let mut value_kind = library.to_vec();
+        value_kind[at..at + 2]
+            .copy_from_slice(&u16::try_from((value_type << 2) | 1).unwrap().to_le_bytes());
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("value-kind library", value_kind)
+            .unwrap();
+        let result = context
+            .decompile(closed_method, OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("incompatible value/receiver types"),
+            "{}",
+            result.text
+        );
     }
 }
 
