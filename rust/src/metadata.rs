@@ -20,6 +20,33 @@ pub(crate) enum ValueDefinitionKind {
     Other,
 }
 
+/// Kind of runtime handle an `ldtoken` operand yields, with the exact core
+/// struct ILSpy's `LdTypeToken`/`LdMemberToken` infer for it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum HandleKind {
+    Type,
+    Field,
+    Method,
+}
+
+impl HandleKind {
+    pub(crate) fn core_name(self) -> &'static str {
+        match self {
+            Self::Type => "RuntimeTypeHandle",
+            Self::Field => "RuntimeFieldHandle",
+            Self::Method => "RuntimeMethodHandle",
+        }
+    }
+
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            Self::Type => "type",
+            Self::Field => "field",
+            Self::Method => "method",
+        }
+    }
+}
+
 /// Value types a method names, split by how they are admitted.
 #[derive(Default)]
 pub(crate) struct SignatureValueTypes {
@@ -2537,6 +2564,50 @@ impl<'a> Image<'a> {
             storage: storage.ok_or("enum has no instance storage field")?,
             external: None,
         })
+    }
+
+    /// Which runtime handle an `ldtoken` operand produces.
+    ///
+    /// ILSpy's `LdTypeToken`/`LdMemberToken` take their result type from the
+    /// operand kind, so the handle the CLI produces is decided by the row, not by
+    /// the consumer's signature.
+    pub(crate) fn handle_type(&self, kind: HandleKind) -> Result<crate::ir::Ty> {
+        let name = kind.core_name();
+        for (rid, row) in self.md.tables().iter::<cildec::tables::TypeRefRow>() {
+            row?;
+            let token = Token(0x01000000 | rid);
+            let Ok(core) = self.core_type_name(token) else {
+                continue;
+            };
+            if core == name {
+                // A cached value-type fact keeps the proven identity; otherwise the
+                // signature identity of the same TypeRef is what a consumer's
+                // parameter interns, so the handle and the parameter stay equal.
+                if let Some(id) = self.struct_type(token)? {
+                    return Ok(crate::ir::Ty::Value(id));
+                }
+                return Ok(crate::ir::Ty::Value(self.intern_signature_type(
+                    &cildec::Type::ValueType(token),
+                    Default::default(),
+                )?));
+            }
+        }
+        Err(format!("{name} needs an exact core value definition in this image").into())
+    }
+
+    /// The metadata row an `ldtoken`/`ldftn` operand names, checked before a
+    /// token is turned into a runtime handle.
+    pub(crate) fn token_row_exists(&self, token: Token) -> Result<()> {
+        let Some(table) = token.table() else {
+            return Err("token operand has no metadata table".into());
+        };
+        if token.rid() == 0 || token.rid() > self.md.tables().row_count(table) {
+            return Err("token operand names a missing metadata row".into());
+        }
+        if table == TableId::TypeSpec {
+            self.type_spec(token)?;
+        }
+        Ok(())
     }
 
     pub(crate) fn struct_type(

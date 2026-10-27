@@ -41,7 +41,7 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
     (
         "StaticConstructorCases.Caches",
         ".cctor",
-        "unsupported opcode ldftn at IL_0001",
+        "constructed member needs a local definition",
     ),
     (
         "StaticConstructorCases.ExternalCache",

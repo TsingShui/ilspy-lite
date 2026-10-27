@@ -150,6 +150,8 @@ mod strings;
 mod struct_copies;
 #[path = "struct_receivers.rs"]
 mod struct_receivers;
+#[path = "token_values.rs"]
+mod token_values;
 mod value_calls;
 #[path = "virtual_calls.rs"]
 mod virtual_calls;
