@@ -35,7 +35,27 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: core-named box values
+## Current verified state: scan-order independent value facts
+
+- `report/scanorder-batch/corpus-scan/baseline.json`: **717,765 Decompiled / 52,983
+  Partial of 770,748**, fallback **6.873062%**. Zero incomplete images; raw gate
+  5,298,300 > 3,853,740, so <=5% is unmet (14,446 bodies to go).
+- Against `report/boxcore-batch/corpus-scan/baseline.json`: **+2 in 2 images, zero
+  regressions**. The fix is primarily a correctness/parity change: the owned
+  `RecoveredStruct` allocation now decompiles identically in a fresh run and in a
+  scan.
+- Owned behavior drivers at this revision: reference relation 695 comparisons / 73
+  selections, pointer 9 comparisons, exception 51 comparisons, external allocation
+  38 comparisons / 12 methods, typed array 3,040 comparisons - all with their
+  mutation controls where present.
+- Remaining largest first blockers: incompatible value/receiver types 11,489;
+  malformed user strings 2,623 (corpus data, not a capability); generic variable
+  ownership 2,568; constructed value generic method 2,180; generic virtual dispatch
+  1,998 (deliberate refusal); pinned/byref locals 1,655; core scalar/special 1,366;
+  external allocation facts 1,320; RuntimeTypeHandle 1,229; definite assignment
+  1,094.
+
+## Previous verified state: core-named box values
 
 - `report/boxcore-batch/corpus-scan/baseline.json`: **717,763 Decompiled / 52,985
   Partial of 770,748**, fallback **6.873323%**. Zero incomplete images; raw gate
