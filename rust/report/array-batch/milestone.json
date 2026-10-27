@@ -1,0 +1,33 @@
+{
+  "scan": "report/array-batch/corpus-scan/baseline.json",
+  "baseline": "report/int-conversions/corpus-scan/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 96770,
+      "Decompiled": 673978
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 62,
+    "unrecovered": 96770,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 1860,
+  "gained_images": 96,
+  "regressions": 0,
+  "fallback_percent": 12.555335855558496,
+  "acceptance_integer": {
+    "left": 9677000,
+    "right": 3853740,
+    "passes": false
+  },
+  "groups": [
+    "0e9f7789f general arrays",
+    "cb3fffa9c referenced class array elements"
+  ],
+  "self_review": "report/array-batch/review/review-source.md",
+  "third_party_bodies_executed": false
+}
