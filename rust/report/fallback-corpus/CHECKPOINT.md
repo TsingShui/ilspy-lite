@@ -35,7 +35,24 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: unmanaged pointers
+## Current verified state: interface, receiver and byref-like batch
+
+- `report/byref-batch/corpus-scan/baseline.json`: **697,630 Decompiled / 73,118
+  Partial of 770,748**, fallback **9.486619%**. Zero incomplete images; raw gate
+  7,311,800 > 3,853,740, so <=5% is unmet (34,581 bodies to go).
+- Against `report/constructed-field/corpus-scan/baseline.json`: **+7,115 in 108
+  images, zero regressions**. OpenRA.Game +20, OpenRA.Mods.Common +35.
+- Groups: `ead905fbd` constructed interface dispatch, `a7a5cdba4` value-type
+  generic receivers, `e447bdde2` byref-like value copies. Each has red/green,
+  explicit negative promotions and a reviewed sample.
+- Remaining largest first blockers: incompatible value/receiver types 17,503;
+  generic variable ownership 2,745; malformed user strings 2,576 (data, not
+  capability); box/unbox admission 2,266; reference-class generic owners 2,246;
+  `tail.` 2,175; generic virtual dispatch 1,954; constructor this-chaining 1,798;
+  stack joins 1,757; `volatile.` 1,700.
+- Next: volatile-prefixed field access, then constructor chaining and stack joins.
+
+## Previous verified state: unmanaged pointers
 
 - `report/pointer-batch/corpus-scan/baseline.json`: **687,105 Decompiled / 83,643
   Partial of 770,748**, fallback **10.852113%**. Zero incomplete images; raw gate
