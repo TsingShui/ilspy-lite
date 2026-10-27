@@ -1,0 +1,30 @@
+{
+  "groups": [
+    "2685b6511 enums nested in generic types"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 47487,
+      "Decompiled": 723261
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 84,
+    "unrecovered": 47487,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 299,
+  "gained_images": 27,
+  "regressions": 0,
+  "fallback_percent": 6.16115773248844,
+  "acceptance_integer": {
+    "left": 4748700,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 488,
+  "third_party_bodies_executed": false
+}

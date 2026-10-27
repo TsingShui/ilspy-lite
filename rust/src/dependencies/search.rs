@@ -422,7 +422,11 @@ pub(super) fn core_contract(identity: &super::AssemblyIdentity) -> bool {
                 identity.public_key_token == [0xb0, 0x3f, 0x5f, 0x7f, 0x11, 0xd5, 0x0a, 0x3a]
             }
             "mscorlib" => {
+                // Desktop and Silverlight/mobile core libraries use different
+                // Microsoft keys; both define the ECMA core types.
                 identity.public_key_token == [0xb7, 0x7a, 0x5c, 0x56, 0x19, 0x34, 0xe0, 0x89]
+                    || identity.public_key_token
+                        == [0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e]
             }
             "System.Private.CoreLib" => {
                 identity.public_key_token == [0x7c, 0xec, 0x85, 0xd7, 0xbe, 0xa7, 0x79, 0x8e]

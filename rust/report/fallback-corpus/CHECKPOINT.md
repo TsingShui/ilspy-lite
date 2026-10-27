@@ -35,7 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: boxed-value type tests
+## Current verified state: nested enums in generic types
+
+- `report/final-scan/corpus-scan/baseline.json`: **723,261 Decompiled / 47,487
+  Partial of 770,748**, fallback **6.161160%**. Zero incomplete images; raw gate
+  4,748,700 > 3,853,740, so <=5% is unmet (8,950 bodies to go).
+- Against `report/boxed-test-batch/corpus-scan/baseline.json`: **+299 in 27 images,
+  zero regressions** for the nested-enum admission; the surrounding groups in this
+  turn (local core scalars, exception-region definite assignment, address writes,
+  Silverlight core identity, local runtime handles, boxed-value tests) took the
+  corpus from 717,765 / 52,983 to this number.
+- 488 Rust tests and the owned behavior drivers pass; no third-party body executed.
+
+## Previous verified state: boxed-value type tests
 
 - `report/boxed-test-batch/corpus-scan/baseline.json`: **722,962 Decompiled / 47,786
   Partial of 770,748**, fallback **6.199946%**. Zero incomplete images; raw gate
