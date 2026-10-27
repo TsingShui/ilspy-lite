@@ -1,0 +1,33 @@
+{
+  "revision": "3fa4a47a3",
+  "scan": "report/int-conversions/corpus-scan/baseline.json",
+  "baseline_scan": "report/conv-run/corpus-scan/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 98630,
+      "Decompiled": 672118
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 62,
+    "unrecovered": 98630,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 1254,
+  "gained_images": 76,
+  "regressions": 0,
+  "unrecovered": 98630,
+  "bodies": 770748,
+  "fallback_percent": 12.796659868076206,
+  "acceptance_integer": {
+    "left": 9863000,
+    "right": 3853740,
+    "passes": false
+  },
+  "self_review": "report/int-conversions/review/review-source.md",
+  "rust_tests": 475,
+  "third_party_bodies_executed": false
+}
