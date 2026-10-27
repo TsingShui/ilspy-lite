@@ -24,8 +24,9 @@ Scope statements:
 - These gates cover the operations each owned fixture exercises. They are not a
   proof of whole-corpus equivalence, and they never substitute for the static
   corpus scan.
-- The static scan (`report/scanorder-batch/corpus-scan`, 717,765 / 52,983) is the
-  measurement; behavioral evidence is reported separately from static coverage.
+- The latest complete static scan (`report/modopt/corpus-scan`, 728,029 / 42,719)
+  is the measurement; behavioral evidence is reported separately from static
+  coverage. Later targeted scans are not a complete aggregate measurement.
 - Third-party inputs (ILSpy-tests images, OpenRA assemblies) are analyzed
   statically only. Executing their bodies would need separate authorization.
 - Incomplete coverage is stated rather than implied: value-type receiver dispatch
@@ -37,3 +38,9 @@ Revision note: the external-allocation driver now accepts a constructed external
 owner (`MakeBox`) whose inlined declaration is a valid C# instantiation, so the
 matrix records 41 comparisons over 13 methods. All ten drivers were re-run at
 `5cce10dca`; every count is unchanged, and no third-party body was executed.
+
+The external constructed-base group additionally executes 48 owned comparisons
+across Release/Debug and call/callvirt forms, with four semantic mutants rejected
+in each form. Its exact-constructor leaf and bounded coverage are documented in
+`report/external-base-ctor/AUDIT.md`; the reference-relations, external-allocation,
+exception and value-call drivers were also rerun for this group.

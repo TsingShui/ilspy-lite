@@ -1,0 +1,587 @@
+{
+  "baseline": "report/modopt/corpus-scan/baseline.json",
+  "scope": "five complete targeted CLI scans, not the corpus acceptance scan",
+  "images": [
+    {
+      "id": 2,
+      "assembly": "ICSharpCode.Decompiler.Tests",
+      "bodies": 1257,
+      "before_decompiled": 1179,
+      "after_decompiled": 1180,
+      "gains": [
+        {
+          "token": "0x06000305",
+          "owner": "ICSharpCode.Decompiler.Tests.Helpers.RemoveCompilerAttribute",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        }
+      ],
+      "regressions": []
+    },
+    {
+      "id": 3,
+      "assembly": "ICSharpCode.Decompiler",
+      "bodies": 9737,
+      "before_decompiled": 9494,
+      "after_decompiled": 9498,
+      "gains": [
+        {
+          "token": "0x06000507",
+          "owner": "ICSharpCode.Decompiler.TypeSystem.Implementation.BaseTypeCollector",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060013E3",
+          "owner": "ICSharpCode.Decompiler.CSharp.Resolver.MethodListWithDeclaringType",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060013E4",
+          "owner": "ICSharpCode.Decompiler.CSharp.Resolver.MethodListWithDeclaringType",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060028D0",
+          "owner": "ICSharpCode.Decompiler.CSharp.Syntax.AbstractAnnotatable/AnnotationList",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        }
+      ],
+      "regressions": []
+    },
+    {
+      "id": 7,
+      "assembly": "Newtonsoft.Json",
+      "bodies": 3985,
+      "before_decompiled": 3808,
+      "after_decompiled": 3812,
+      "gains": [
+        {
+          "token": "0x06000076",
+          "owner": "Newtonsoft.Json.JsonConverterCollection",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000720",
+          "owner": "Newtonsoft.Json.Serialization.JsonPropertyCollection",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000919",
+          "owner": "Newtonsoft.Json.Schema.JsonSchemaNodeCollection",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000A4E",
+          "owner": "Newtonsoft.Json.Linq.JPropertyKeyedCollection",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        }
+      ],
+      "regressions": []
+    },
+    {
+      "id": 1041,
+      "assembly": "OpenRA.Game",
+      "bodies": 4767,
+      "before_decompiled": 4321,
+      "after_decompiled": 4325,
+      "gains": [
+        {
+          "token": "0x0600075C",
+          "owner": "OpenRA.Widgets.WidgetArgs",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600075D",
+          "owner": "OpenRA.Widgets.WidgetArgs",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000B3B",
+          "owner": "OpenRA.Primitives.ObservableCollection`1",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000B3C",
+          "owner": "OpenRA.Primitives.ObservableCollection`1",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        }
+      ],
+      "regressions": []
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "bodies": 18407,
+      "before_decompiled": 16983,
+      "after_decompiled": 17058,
+      "gains": [
+        {
+          "token": "0x0600008B",
+          "owner": "OpenRA.Mods.Common.FacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600008C",
+          "owner": "OpenRA.Mods.Common.TerrainOrientationInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600008D",
+          "owner": "OpenRA.Mods.Common.CreationActivityDelayInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600008E",
+          "owner": "OpenRA.Mods.Common.DynamicFacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000094",
+          "owner": "OpenRA.Mods.Common.CenterPositionInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000095",
+          "owner": "OpenRA.Mods.Common.FactionInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000096",
+          "owner": "OpenRA.Mods.Common.EffectiveOwnerInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000EB1",
+          "owner": "OpenRA.Mods.Common.Commands.ChatCommandsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000EB7",
+          "owner": "OpenRA.Mods.Common.Commands.DebugVisualizationCommandsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000EC0",
+          "owner": "OpenRA.Mods.Common.Commands.DevCommandsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000ED5",
+          "owner": "OpenRA.Mods.Common.Commands.HelpCommandInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000EDA",
+          "owner": "OpenRA.Mods.Common.Commands.PlayerCommandsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06000FC0",
+          "owner": "OpenRA.Mods.Common.Traits.AppearsOnMapPreviewInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600108B",
+          "owner": "OpenRA.Mods.Common.Traits.StanceInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600114F",
+          "owner": "OpenRA.Mods.Common.Traits.BuildableInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001158",
+          "owner": "OpenRA.Mods.Common.Traits.BaseBuildingInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060011D8",
+          "owner": "OpenRA.Mods.Common.Traits.FootprintPlaceBuildingPreviewInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060011EA",
+          "owner": "OpenRA.Mods.Common.Traits.FreeActorInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060011EB",
+          "owner": "OpenRA.Mods.Common.Traits.ParentActorInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001225",
+          "owner": "OpenRA.Mods.Common.Traits.LineBuildDirectionInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001226",
+          "owner": "OpenRA.Mods.Common.Traits.LineBuildParentInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001232",
+          "owner": "OpenRA.Mods.Common.Traits.LineBuildNodeInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001235",
+          "owner": "OpenRA.Mods.Common.Traits.PlaceBuildingVariantsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001269",
+          "owner": "OpenRA.Mods.Common.Traits.RequiresBuildableAreaInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600126B",
+          "owner": "OpenRA.Mods.Common.Traits.ReservableInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001326",
+          "owner": "OpenRA.Mods.Common.Traits.RuntimeCargoInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001327",
+          "owner": "OpenRA.Mods.Common.Traits.CargoInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600139B",
+          "owner": "OpenRA.Mods.Common.Traits.CommandBarBlacklistInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001414",
+          "owner": "OpenRA.Mods.Common.Traits.DeployStateInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001523",
+          "owner": "OpenRA.Mods.Common.Traits.CustomSellValueInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060015F1",
+          "owner": "OpenRA.Mods.Common.Traits.ExperienceInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600160A",
+          "owner": "OpenRA.Mods.Common.Traits.GuardableInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001637",
+          "owner": "OpenRA.Mods.Common.Traits.HealthInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001645",
+          "owner": "OpenRA.Mods.Common.Traits.HuntableInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600166B",
+          "owner": "OpenRA.Mods.Common.Traits.HuskSpeedInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600166F",
+          "owner": "OpenRA.Mods.Common.Traits.IgnoresCloakInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001671",
+          "owner": "OpenRA.Mods.Common.Traits.IgnoresDisguiseInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060016D2",
+          "owner": "OpenRA.Mods.Common.Traits.MapEditorDataInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060016DB",
+          "owner": "OpenRA.Mods.Common.Traits.MineImmuneInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x0600175F",
+          "owner": "OpenRA.Mods.Common.Traits.AlwaysVisibleInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060017A6",
+          "owner": "OpenRA.Mods.Common.Traits.HandicapProductionTimeMultiplierInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060017B4",
+          "owner": "OpenRA.Mods.Common.Traits.ProductionCostMultiplierInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060017B7",
+          "owner": "OpenRA.Mods.Common.Traits.ProductionTimeMultiplierInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060017DA",
+          "owner": "OpenRA.Mods.Common.Traits.CloakPaletteEffectInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001882",
+          "owner": "OpenRA.Mods.Common.Traits.AllyRepairInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060019B9",
+          "owner": "OpenRA.Mods.Common.Traits.StrategicPointInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060019D2",
+          "owner": "OpenRA.Mods.Common.Traits.PlugInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060019E2",
+          "owner": "OpenRA.Mods.Common.Traits.PlugInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001A32",
+          "owner": "OpenRA.Mods.Common.Traits.RallyPointInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001A38",
+          "owner": "OpenRA.Mods.Common.Traits.ProductionSpawnLocationInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001A42",
+          "owner": "OpenRA.Mods.Common.Traits.ProximityCaptorInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001A75",
+          "owner": "OpenRA.Mods.Common.Traits.RegionInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001AE3",
+          "owner": "OpenRA.Mods.Common.Traits.ReplacementInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001AE5",
+          "owner": "OpenRA.Mods.Common.Traits.RequiresSpecificOwnersInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001B09",
+          "owner": "OpenRA.Mods.Common.Traits.ScriptTagsInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C29",
+          "owner": "OpenRA.Mods.Common.Traits.TurretFacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C2A",
+          "owner": "OpenRA.Mods.Common.Traits.TurretFacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C2B",
+          "owner": "OpenRA.Mods.Common.Traits.TurretFacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C2C",
+          "owner": "OpenRA.Mods.Common.Traits.DynamicTurretFacingInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C2D",
+          "owner": "OpenRA.Mods.Common.Traits.UpdatesDerrickCountInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C2F",
+          "owner": "OpenRA.Mods.Common.Traits.ValuedInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001C9E",
+          "owner": "OpenRA.Mods.Common.Traits.ColorPickerManagerInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001CC0",
+          "owner": "OpenRA.Mods.Common.Traits.CreateMapPlayersInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001CC5",
+          "owner": "OpenRA.Mods.Common.Traits.EditorActionManagerInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001D3D",
+          "owner": "OpenRA.Mods.Common.Traits.EditorCursorLayerInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001D72",
+          "owner": "OpenRA.Mods.Common.Traits.ElevatedBridgePlaceholderInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001DCF",
+          "owner": "OpenRA.Mods.Common.Traits.StartingUnitsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001DEA",
+          "owner": "OpenRA.Mods.Common.Traits.MissionDataInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001E37",
+          "owner": "OpenRA.Mods.Common.Traits.ResourceClaimLayerInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001EA7",
+          "owner": "OpenRA.Mods.Common.Traits.SpawnMapActorsInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001ECD",
+          "owner": "OpenRA.Mods.Common.Traits.TerrainGeometryOverlayInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001EEC",
+          "owner": "OpenRA.Mods.Common.Traits.TerrainTunnelInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06001F02",
+          "owner": "OpenRA.Mods.Common.Traits.ValidateOrderInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x06002201",
+          "owner": "OpenRA.Mods.Common.Traits.Render.WithProductionIconOverlayInfo",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        },
+        {
+          "token": "0x060022AF",
+          "owner": "OpenRA.Mods.Common.Traits.Render.RuntimeNeighbourInit",
+          "name": ".ctor",
+          "previous_reason": "constructed member needs a local definition; external constructed members need dependency facts"
+        }
+      ],
+      "regressions": []
+    }
+  ],
+  "newly_recovered": 88,
+  "regressions": [],
+  "third_party_execution": false
+}

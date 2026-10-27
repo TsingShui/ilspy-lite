@@ -4913,6 +4913,48 @@ impl<'a> Image<'a> {
                     exact_reference: false,
                 });
             }
+            // A referenced constructed class keeps its exact MemberRef target and
+            // substitutes the declaring type's arguments in the call signature.
+            if reference.class.table() == Some(TableId::TypeSpec)
+                && !self.local_constructed_parent(reference.class)?
+            {
+                let spec = self.type_spec(reference.class)?;
+                if let cildec::Type::GenericInst {
+                    is_value_type: false,
+                    args,
+                    ..
+                } = &spec.type_
+                {
+                    if !sig.has_this
+                        || crate::ir::Ty::from_param_scoped(&sig.return_type, self, context)?
+                            != crate::ir::Ty::Void
+                    {
+                        return Err(
+                            "constructed constructor needs an ordinary instance void signature"
+                                .into(),
+                        );
+                    }
+                    let owner = crate::ir::Ty::from_sig_scoped(&spec.type_, self, context)?;
+                    let args = sig
+                        .params
+                        .iter()
+                        .map(|p| self.member_parameter(p, Some(args), context))
+                        .collect::<Result<Vec<_>>>()?;
+                    return Ok(MethodRef {
+                        token: t.0,
+                        name: name.clone(),
+                        receiver: Some(owner),
+                        target: format!("__cil_ctor_call_{:08X}", t.0),
+                        args,
+                        ret: crate::ir::Ty::Void,
+                        core_object_constructor: None,
+                        tick_count: false,
+                        constructor: true,
+                        generic_virtual: false,
+                        exact_reference: true,
+                    });
+                }
+            }
             // A base constructor of a constructed base (`Base<T>`) resolves against
             // the local definition and keeps the instantiation for its signature.
             if let Some(owner) = self.constructed_member_owner(reference.class, context)? {
@@ -5553,4 +5595,83 @@ pub(crate) fn identifier(s: &str) -> Result<()> {
 }
 pub(crate) fn escape_line(s: &str) -> String {
     s.chars().flat_map(|c| c.escape_default()).collect()
+}
+
+#[cfg(test)]
+mod constructor_base_tests {
+    use super::*;
+    use crate::ir::Ty;
+
+    #[test]
+    fn declared_base_comparison_distinguishes_constructed_argument_order() {
+        for bytes in [
+            &include_bytes!("../tests/fixtures/reference-relation-release.bin")[..],
+            &include_bytes!("../tests/fixtures/reference-relation-debug.bin")[..],
+        ] {
+            let image = Image::parse(bytes).unwrap();
+            let find_constructor = |name: &str| {
+                let rid = image
+                    .md
+                    .tables()
+                    .iter::<cildec::tables::TypeDefRow>()
+                    .find(|(_, row)| {
+                        image
+                            .md
+                            .strings()
+                            .str(row.as_ref().unwrap().type_name)
+                            .unwrap()
+                            == name
+                    })
+                    .unwrap()
+                    .0;
+                let owner = Token(0x02000000 | rid);
+                let method = image
+                    .md
+                    .tables()
+                    .method_range(cildec::Rid::new(rid))
+                    .unwrap()
+                    .find(|&rid| {
+                        let row = image.md.tables().method_def(rid).unwrap();
+                        image.md.strings().str(row.name).unwrap() == ".ctor"
+                    })
+                    .unwrap();
+                let body = cildec::MethodBody::from_image(
+                    &image.pe,
+                    &image.md.tables().method_def(method).unwrap(),
+                )
+                .unwrap()
+                .unwrap();
+                let target = body
+                    .instructions()
+                    .map(|instruction| instruction.unwrap())
+                    .find(|instruction| instruction.opcode.name() == "call")
+                    .unwrap()
+                    .operand
+                    .token()
+                    .unwrap();
+                (owner, Token(0x06000000 | method), target)
+            };
+            let (owner, method, correct) = find_constructor("NestedForeign");
+            let (_, _, wrong) = find_constructor("NestedForeignIdentity");
+            let context = image
+                .method_type_context(method.0, &image.signature(method.0).unwrap())
+                .unwrap();
+            let correct = image
+                .method_ref(correct, context)
+                .unwrap()
+                .receiver
+                .unwrap();
+            let wrong = image.method_ref(wrong, context).unwrap().receiver.unwrap();
+            assert!(
+                image
+                    .immediate_constructor_base(Ty::Class(owner.0), correct)
+                    .unwrap()
+            );
+            assert!(
+                !image
+                    .immediate_constructor_base(Ty::Class(owner.0), wrong)
+                    .unwrap()
+            );
+        }
+    }
 }

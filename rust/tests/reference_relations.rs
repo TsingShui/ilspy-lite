@@ -686,6 +686,85 @@ fn callvirt_on_a_constructor_keeps_the_non_virtual_call() {
         let result = context.decompile(method, OutputStyle::Readable).unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
         assert!(!result.text.contains("__cil_callvirt_"), "{}", result.text);
+        assert!(result.text.contains("__cil_ctor_call_"), "{}", result.text);
+    }
+}
+
+#[test]
+fn foreign_constructed_base_constructor_keeps_the_declared_instantiation() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "RelationCases.ForeignOuter`2/NestedForeign", ".ctor");
+        let donor = token(
+            bytes,
+            "RelationCases.ForeignOuter`2/NestedForeignIdentity",
+            ".ctor",
+        );
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let call_for = |method| {
+            let row = md.tables().method_def(method & 0xffffff).unwrap();
+            let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
+            let call = body
+                .instructions()
+                .map(Result::unwrap)
+                .find(|instruction| instruction.opcode.name() == "call")
+                .unwrap();
+            let at =
+                body.code.as_ptr() as usize - bytes.as_ptr() as usize + call.offset as usize + 1;
+            (call.operand.token().unwrap(), at)
+        };
+        let (original, offset) = call_for(method);
+        let (replacement, _) = call_for(donor);
+        assert_ne!(original, replacement);
+        let original_owner = md.tables().member_ref(original.rid()).unwrap().class;
+        let replacement_owner = md.tables().member_ref(replacement.rid()).unwrap().class;
+        assert_eq!(original_owner.table(), Some(cildec::TableId::TypeSpec));
+        assert_eq!(replacement_owner.table(), Some(cildec::TableId::TypeSpec));
+        assert_ne!(original_owner, replacement_owner);
+        let signature = |owner: cildec::Token| {
+            md.blobs()
+                .get(md.tables().type_spec(owner.rid()).unwrap().signature)
+                .unwrap()
+        };
+        assert_ne!(signature(original_owner), signature(replacement_owner));
+
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let good = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(good.status, Status::Decompiled, "{}", good.text);
+        assert!(
+            good.text
+                .contains(&format!("__cil_ctor_call_{:08X}", original.0)),
+            "{}",
+            good.text
+        );
+        let typed = token(bytes, "RelationCases.ForeignOuter`2/NestedTyped", ".ctor");
+        let typed = context.decompile(typed, OutputStyle::Readable).unwrap();
+        assert_eq!(typed.status, Status::Decompiled, "{}", typed.text);
+        assert!(
+            typed.text.contains("(this, first, second)"),
+            "{}",
+            typed.text
+        );
+
+        let mut patched = bytes.to_vec();
+        patched[offset..offset + 4].copy_from_slice(&replacement.0.to_le_bytes());
+        let mut context = DependencyContext::new(patched).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let bad = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(bad.status, Status::Partial, "{}", bad.text);
+        assert!(
+            bad.text.contains("incompatible value/receiver types")
+                || bad
+                    .text
+                    .contains("constructor call is not the immediate base"),
+            "{}",
+            bad.text
+        );
     }
 }
 
@@ -699,21 +778,19 @@ fn nested_base_constructor_calls_compare_the_declared_instantiation() {
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
         assert!(result.text.contains("__cil_ctor_call_"), "{}", result.text);
 
-        // The same shape whose base is defined in another image still needs a
-        // dependency fact, so no answer is guessed from the local declaration.
+        // A foreign constructed base keeps the exact MemberRef operation; it
+        // does not need an inferred body or a source-language constructor lookup.
         let foreign = token(bytes, "RelationCases.ForeignOuter`2/NestedForeign", ".ctor");
         let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
         context
             .add_reference("owned relation library", library.to_vec())
             .unwrap();
-        let refused = context.decompile(foreign, OutputStyle::Readable).unwrap();
-        assert_eq!(refused.status, Status::Partial, "{}", refused.text);
+        let recovered = context.decompile(foreign, OutputStyle::Readable).unwrap();
+        assert_eq!(recovered.status, Status::Decompiled, "{}", recovered.text);
         assert!(
-            refused
-                .text
-                .contains("constructed member needs a local definition"),
+            recovered.text.contains("__cil_ctor_call_"),
             "{}",
-            refused.text
+            recovered.text
         );
     }
 }

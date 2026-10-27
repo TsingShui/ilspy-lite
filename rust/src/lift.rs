@@ -1922,6 +1922,7 @@ impl Writer<'_, '_> {
                     // receiver: C# emits callvirt, keeping the null check, dispatch
                     // and evaluation order of the original instruction.
                     if virtual_call
+                        && !method.constructor
                         && matches!(owner, Ty::StructuralRef(_))
                         && !method.exact_reference
                         && t.table() != Some(cildec::TableId::MethodSpec)
@@ -1933,7 +1934,8 @@ impl Writer<'_, '_> {
                         );
                         explicit_receiver = false;
                     }
-                    if matches!(owner, Ty::ExternalClass(_))
+                    if !method.constructor
+                        && matches!(owner, Ty::ExternalClass(_))
                         && let Some(Ok(call)) = self.image.external_call(t.0)
                     {
                         if virtual_call && let Some(property) = &call.property {

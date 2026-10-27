@@ -6,6 +6,36 @@
 
 Goal: mvouhw7y-679jgb
 
+## Post-baseline constructor group (targeted measurements only)
+
+External constructed base calls now retain the exact MemberRef and substitute
+its owner arguments. Distinct TypeSpec rows with swapped arguments are refused;
+the independent immediate-base comparison also rejects them. The previous
+`416cbc4fe` claim that reference-constructor `callvirt` always retained an exact
+non-virtual call is **withdrawn for constructed local owners**: its output could
+be `this..ctor(...)`, without the original token. That defect is fixed and has
+an owned red/green and execution comparison. See
+`report/external-base-ctor/AUDIT.md` and
+`acceptance/corpus/CONSTRUCTED_BASE_CALLS.md`.
+
+Five targeted production scans show 88 gains and zero recovered-status losses;
+they are not a complete corpus scan. The last complete weighted measurement
+remains 728,029 / 42,719, so no new overall rate or gate success is claimed.
+
+An earlier conversational note about EH fault handlers incorrectly claimed that
+fault entry places an exception object on the evaluation stack and ends with a
+separate `endfault`. That claim is **withdrawn**: ILSpy's
+`IL/ILReader.cs::PrepareBranchTargetsAndStacksForExceptionHandlers` seeds fault
+and finally handlers with an empty stack, and `Endfinally` handles their exit.
+The related suggestion that `catch { ...; throw; }` is generally equivalent
+is also **withdrawn**: exception-search/filter ordering must be proved before
+any such rewrite. Fault handlers remain Partial and need their own audit and
+behavior tests.
+
+The earlier README wording implied that the two OpenRA images were in addition
+to the 614 implementation images. It is corrected: the 614 total includes both
+OpenRA images, as does the 319 body-bearing total.
+
 ## Next-group design notes (audited, not implemented)
 
 - **double/float64 is not a one-for-one copy of float32.** `Ty` has `R4` (storage)
@@ -1424,9 +1454,9 @@ therefore not shown unsound; what is missing is a negative whose call names a
 without hand-built metadata. The admission stays uncommitted until that distinct-row
 negative exists, and no recovery is claimed from it.
 
-Latest verified numbers remain `report/substituted-ctor/corpus-scan` plus the
-four-body arity change: **727,335 / 43,413 = 5.6326%**, 4,876 bodies short of the
-5% gate.
+At the time of this audit note, `report/substituted-ctor/corpus-scan` plus the
+four-body arity change gave **727,335 / 43,413 = 5.6326%**, 4,876 bodies short
+of the 5% gate. The current verified section above supersedes those counts.
 
 ## Audit note: constructed external allocation without dependency facts
 

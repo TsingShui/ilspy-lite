@@ -27,10 +27,10 @@ written in that substitution. Arguments, receiver identity, the "original this"
 requirement, evaluation order and the exact constructor token are unchanged; the
 proof adds no cast, allocation or dispatch.
 
-Still refused: a base defined in another image (needs a dependency fact), a
-different generic instantiation, value-type receivers, same-type delegation
-outside the constructor context, and any receiver that is not the original
-`this`.
+At the time of this group, a base defined in another image was still refused;
+the follow-up below admits the exact-call case. A different generic instantiation,
+value-type receivers, same-type delegation outside the constructor context, and
+any receiver that is not the original `this` remain subject to their own checks.
 
 ## Local measurement (not a batch scan)
 
@@ -53,8 +53,50 @@ bucket, then `incompatible value/receiver types`.
   before the change ("constructor call is not the immediate base" path) and is
   Decompiled after it, with the exact `__cil_ctor_call_` token preserved. The
   paired negative, `ForeignOuter<,>.NestedForeign`, keeps a constructed base
-  from another image Partial, so no answer is guessed locally.
+  from another image Partial; that case was subsequently promoted by the
+  follow-up below after it received its own negative and behavior coverage.
 - 469 Rust tests, fmt, clippy and the release build pass. The relation behavior
   driver still executes 178 comparisons / 41 closed selections per configuration
   with eight rejected mutants, and the exception driver 51 comparisons / 6
   mutants. No third-party body was executed.
+
+## Follow-up: exact external constructed base calls
+
+The earlier broad claim from `416cbc4fe` that a reference-constructor `callvirt`
+retains the exact non-virtual operation is **withdrawn for constructed local
+owners**. A strengthened test showed `this..ctor(seed)` instead of the
+`__cil_ctor_call_TOKEN` operation. The virtual-call rendering branch now excludes
+constructors, and both ordinary and constructed reference owners keep their
+exact constructor operation. The original IL remains authoritative.
+
+An external constructed class `.ctor` MemberRef now uses the TypeSpec owner and
+substitutes its type arguments into the declared parameters. The operation carries
+the original token rather than selecting a source-language method or inventing an
+external implementation. The existing typed receiver, unchanged original `this`,
+constructor context and immediate-base checks remain required. This admission
+is not for `newobj`, value-type constructors or other constructed members.
+
+The prior swap probe edited the shared TypeSpec used by both `extends` and the
+MemberRef parent. The current owned fixture emits two distinct TypeSpec rows for
+`OpBase<!1,!0>` and `OpBase<!0,!1>`. Patching only the call operand to the other
+MemberRef stays Partial. A separate focused test calls the immediate-base
+comparison directly and confirms the correct instantiation matches while the
+swapped instantiation does not. The old shared-row probe does not demonstrate a
+comparison defect and is not counted as a negative.
+
+Owned default-output behavior runs on both Debug and Release fixtures and on
+both `call` and a patched `callvirt`: 12 original/recovered comparisons each,
+48 total. The exact base-constructor leaf is an individual operation; recovered
+constructor statements execute in a separate carrier, not as an original-method
+proxy. Tests cover two generic positions, reference identity, receiver fields,
+constructor ordering, an exception and unchecked overflow. Four compiled mutants
+(dropped base call, wrong seed, dropped derived write and swapped arguments) are
+rejected in all four configurations. Only owned code is executed.
+
+`cargo fmt --check`, clippy with warnings denied, and 492 Rust tests pass. Five
+production targeted scans retain all baseline body tokens and show +88, zero
+recovered-status losses: ILSpy.Tests +1, ILSpy core +4, Newtonsoft.Json +4,
+OpenRA.Game +4 and OpenRA.Mods.Common +75. They are not a complete corpus scan.
+Five gained production output/ILSpy/IL triples and the bounded main-session
+self-review are in `report/external-base-ctor/`; a complete batch scan remains
+pending. Reference substitutions are metadata selections, not runtime proofs.

@@ -33,10 +33,27 @@ namespace RelationLibrary
     public class Child : Middle, IRoot, IItem<string> { }
     public class ForeignException : System.Exception { }
     public class ForeignDerivedException : ForeignException { }
+    public static class ConstructorTrace { public static string Log = ""; }
     public abstract class OpBase<TFirst, TSecond>
     {
         public readonly int Seed;
-        protected OpBase(int seed) { Seed = seed; }
+        protected OpBase(int seed)
+        {
+            ConstructorTrace.Log += typeof(TFirst).Name + ":" + typeof(TSecond).Name + ":" + seed + ";";
+            if (seed == -17) throw new System.InvalidOperationException("owned constructor failure");
+            Seed = seed;
+        }
+    }
+    public class GenericCtorBase<TFirst, TSecond>
+    {
+        public readonly TFirst First;
+        public readonly TSecond Second;
+        protected GenericCtorBase(TFirst first, TSecond second)
+        {
+            ConstructorTrace.Log += typeof(TFirst).Name + ":" + typeof(TSecond).Name + ";";
+            First = first;
+            Second = second;
+        }
     }
     public class Api
     {
@@ -81,7 +98,16 @@ namespace RelationCases
     {
         public class NestedForeign : RelationLibrary.OpBase<TValue, TKey>
         {
-            public NestedForeign(int seed) : base(seed) { }
+            public int Derived;
+            public NestedForeign(int seed) : base(seed) { Derived = seed + 5; }
+        }
+        public class NestedForeignIdentity : RelationLibrary.OpBase<TKey, TValue>
+        {
+            public NestedForeignIdentity(int seed) : base(seed) { }
+        }
+        public class NestedTyped : RelationLibrary.GenericCtorBase<TValue, TKey>
+        {
+            public NestedTyped(TValue first, TKey second) : base(first, second) { }
         }
     }
     public class LocalOuter<TKey, TValue>
