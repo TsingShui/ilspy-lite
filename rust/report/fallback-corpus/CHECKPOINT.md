@@ -35,7 +35,25 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: integer conversions
+## Current verified state: native integers and identity comparison
+
+- `report/native-batch/corpus-scan/baseline.json`: **684,313 Decompiled / 86,435
+  Partial of 770,748**, fallback **11.214766%**. Zero incomplete images; raw gate
+  8,643,500 > 3,853,740, so <=5% is unmet (47,898 bodies to go).
+- Against `report/value-allocation/corpus-scan/baseline.json`: **+4,918 in 122
+  images, zero regressions**. OpenRA.Game +9, OpenRA.Mods.Common +52.
+- Groups since that scan: `8ff8b9782` reference identity comparison across static
+  types, `9b3d22082` native integer arithmetic/comparison. Both have red/green
+  evidence, owned behavior through the relation driver (624 comparisons / 58
+  selections) and a two-method self-review.
+- Remaining largest first blockers: incompatible value/receiver types 15,279;
+  unsupported signature types 7,048 (pointers and other unsafe shapes); byref-like
+  copies 3,809; constructed member facts 3,607; value-type instantiated receivers
+  3,403; box/unbox admission 3,343.
+- Next: pointer signatures and unsafe operations; then constructed/external member
+  facts with generic substitution.
+
+## Previous verified state: integer conversions
 
 - `report/int-conversions/corpus-scan/baseline.json`: **672,118 Decompiled /
   98,630 Partial of 770,748**, fallback **12.796651%**. Zero incomplete images;

@@ -1,0 +1,32 @@
+{
+  "groups": [
+    "8ff8b9782 reference identity comparison",
+    "9b3d22082 native integer operations"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 86435,
+      "Decompiled": 684313
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 64,
+    "unrecovered": 86435,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 4918,
+  "gained_images": 122,
+  "regressions": 0,
+  "fallback_percent": 11.214430656972189,
+  "acceptance_integer": {
+    "left": 8643500,
+    "right": 3853740,
+    "passes": false
+  },
+  "review": "report/native-batch/review/review-source.md",
+  "tests": 480,
+  "third_party_bodies_executed": false
+}
