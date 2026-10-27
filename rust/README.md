@@ -19,7 +19,8 @@ weighted gate (7,707 allowed). At least 34,337 additional bodies need recovery.
 The former 5% gate remains an intermediate milestone. Per-assembly counts,
 batch scans, the remaining first blockers and the
 closure audit are in
-[the fallback-corpus checkpoint](report/fallback-corpus/CHECKPOINT.md); owned
+[the fallback-corpus checkpoint](report/fallback-corpus/CHECKPOINT.md), the
+[residual audit and continuation plan](report/residual-audit/PLAN.md); owned
 behavioral gates are in
 [the behavior matrix](report/fallback-corpus/BEHAVIOR_GATES.md). Static coverage and
 executed behavior are reported separately, and no third-party body is executed.

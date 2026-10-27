@@ -1,5 +1,11 @@
 # Fixed corpus checkpoint
 
+> Moving to another machine: `report/residual-audit/PLAN.md` holds the residual
+> audit, the grouped continuation plan and the setup/reproduction commands. The
+> two OpenRA inputs are now committed at `acceptance/openra/assemblies/`, and the
+> per-method baseline anchor is `report/fallback-corpus/baseline-anchor-728704.zip`
+> (restore with `report/residual-audit/extract-anchor.py`).
+
 > The current verified section below is authoritative. `HANDOFF.md` retains
 > historical transfer notes; its older working-tree state is not the live checkpoint.
 
