@@ -81,6 +81,7 @@ internal static partial class GenericReferenceRoundtrip
         // the driver selects them from scan output, so this list cannot drift.
         MethodInfo[] selected = carrier.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
             .Select(lowered => ops.GetMethod(lowered.Name, BindingFlags.Public | BindingFlags.Static)
+                ?? fixture.GetType("VirtualCallCases.Compute")?.GetMethod(lowered.Name, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new Exception("Recovered carrier has no owned counterpart: " + lowered.Name))
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned virtual-call selection is empty.");
@@ -101,6 +102,11 @@ internal static partial class GenericReferenceRoundtrip
             {
                 if (type == typeof(int)) return new object[] { 3, 0, -2 };
                 if (type == shape) return shapes;
+                if (type.IsSZArray && type.GetElementType() == shape) {
+                    Array values = Array.CreateInstance(shape, 3);
+                    values.SetValue(shapes[0], 0); values.SetValue(shapes[1], 2);
+                    return new object[] { null, Array.CreateInstance(shape, 0), values };
+                }
                 if (type == typeof(System.Collections.Generic.IEnumerable<int>))
                     return new object[] { null, Array.Empty<int>(), new[] { 1, 2, 3 }, new System.Collections.Generic.List<int> { 7 } };
                 if (type == typeof(string)) return new object[] { "x", null };

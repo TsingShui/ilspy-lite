@@ -147,7 +147,7 @@ fn enum_scan_records_every_method_with_the_same_admission() {
 }
 
 #[test]
-fn enum_admission_does_not_infer_external_storage_boxing_allocation_or_narrowing_opcodes() {
+fn enum_admission_keeps_unknown_external_storage_and_scalar_narrowing_gated() {
     for bytes in IMAGES {
         let methods = list_methods(bytes).unwrap();
         // The frozen table is the list; a promotion removes its row instead of
@@ -180,19 +180,9 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "unsupported opcode conv.i1 at IL_0001",
     ),
     (
-        "EnumCases.S8Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
         "EnumCases.U8Ops",
         "UnsupportedNarrow",
         "unsupported opcode conv.u1 at IL_0001",
-    ),
-    (
-        "EnumCases.U8Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
     ),
     (
         "EnumCases.S16Ops",
@@ -200,39 +190,9 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "unsupported opcode conv.i2 at IL_0001",
     ),
     (
-        "EnumCases.S16Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
         "EnumCases.U16Ops",
         "UnsupportedNarrow",
         "unsupported opcode conv.u2 at IL_0001",
-    ),
-    (
-        "EnumCases.U16Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
-        "EnumCases.S32Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
-        "EnumCases.U32Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
-        "EnumCases.S64Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
-    (
-        "EnumCases.U64Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
     ),
     (
         "EnumCases.External",

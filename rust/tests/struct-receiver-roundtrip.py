@@ -14,6 +14,7 @@ def module(name, path):
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
 adapter = module("reference_roundtrip", ROOT / "tests/reference-roundtrip.py")
+array_leaves = module("exact_array_leaves", ROOT / "tests/support/exact_array_leaves.py")
 
 SOURCES = ([ROOT / "tests/dotnet/GenericReferenceRoundtrip.cs"]
            + sorted((ROOT / "tests/dotnet").glob("*Behavior.cs")))
@@ -45,7 +46,7 @@ def main():
             match = re.search(r" StructReceiverCases\.(\w+)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
             if match:
                 names[token] = match[2]
-                if not match[2].startswith("Unsupported") or match[2] in {"UnsupportedByRef", "UnsupportedLocalEscape", "UnsupportedBox"}:
+                if not match[2].startswith("Unsupported") or match[2] in {"UnsupportedByRef", "UnsupportedLocalEscape", "UnsupportedBox", "UnsupportedArray"}:
                     selected.append((token, match[2]))
         if not selected: raise ValueError("struct receiver selection is empty")
         snippets, identities = [], {}
@@ -54,7 +55,7 @@ def main():
             if details.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("struct receiver method not recovered: " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
-            for alias, signature in re.findall(r"// structural signature (__cil_value_\w+) bytes=([0-9A-F]+):", details.stdout):
+            for alias, signature in re.findall(r"// structural signature (__cil_(?:value|ref)_\w+) bytes=([0-9A-F]+):", details.stdout):
                 identities.setdefault(alias, signature)
             statements = details.stdout
             if args.readable:
@@ -75,7 +76,9 @@ def main():
         directives = OUT / f"aliases-{config}.json"
         support.write_changed(directives, json.dumps([{"alias": k, "bytes": v} for k, v in identities.items()], indent=2))
         aliases = support.run([support.DOTNET / "dotnet", harness, fixture, "--receiver-plan", directives]).stdout
-        text = aliases + "\nnamespace StructReceiverCases\n{\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n}\n"
+        array_helpers, snippets = array_leaves.plan(support, harness, fixture, OUT,
+            [(token, snippet) for (token, _), snippet in zip(selected, snippets)])
+        text = aliases + array_helpers + "\nnamespace StructReceiverCases\n{\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n}\n"
         suffix = config + ("-readable" if args.readable else "-details")
         source = OUT / f"Recovered-{suffix}.cs"
         support.write_changed(source, text)

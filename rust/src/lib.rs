@@ -1,6 +1,7 @@
 // Copyright (c) 2026 Tsingshui
 // SPDX-License-Identifier: MIT
 
+mod arrays;
 mod cfg;
 mod constrained;
 mod dependencies;

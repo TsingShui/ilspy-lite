@@ -51,9 +51,9 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             name = signature.split("::", 1)[1].split("(", 1)[0].split("<", 1)[0]
-            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall", "UnsupportedBox", "UnsupportedStatic")):
+            if name != ".ctor" and (not name.startswith("Unsupported") or name in ("UnsupportedBare", "UnsupportedCall", "UnsupportedBox", "UnsupportedStatic", "UnsupportedAllocation")):
                 selected.append((int(token, 16), name))
-        if len(selected) != 26:
+        if len(selected) != 27:
             raise ValueError("Owned scoped method selection drift")
         snippets, directives = {}, []
         for token, name in selected:
@@ -64,7 +64,7 @@ def main():
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             aliases = [{"alias": m[0], "bytes": m[1], "type_owner": int(m[2], 16), "method_owner": int(m[3], 16)}
                        for m in re.findall(r"// structural signature (\w+) bytes=([0-9A-F]+): [^\n]*?; type-owner=0x([0-9A-Fa-f]{8}) method-owner=0x([0-9A-Fa-f]{8});", details.stdout)]
-            directives.append({"token": token, "aliases": aliases, "static_fields": [int(t, 16) for t in sorted(set(re.findall(r"__cil_ldsfld_([0-9A-F]{8})", details.stdout)))]})
+            directives.append({"token": token, "aliases": aliases, "static_fields": [int(t, 16) for t in sorted(set(re.findall(r"__cil_ldsfld_([0-9A-F]{8})", details.stdout)))], "allocations": [int(t, 16) for t in sorted(set(re.findall(r"__cil_newarr_([0-9A-F]{8})", details.stdout)))]})
             statements = details.stdout
             if args.readable:
                 readable = support.run([args.cli, "decompile", fixture, "--method", f"0x{token:08X}", "--no-auto-references"])
@@ -76,7 +76,7 @@ def main():
         path = OUT / f"directives-{config}.json"
         support.write_changed(path, json.dumps(directives, indent=2) + "\n")
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--scoped-plan", path]).stdout)
-        if len(plan) != 260:
+        if len(plan) != 270:
             raise ValueError("Scoped closure coverage drift")
         (OUT / f"plan-{config}.json").write_text(json.dumps(plan, indent=2) + "\n")
         for case in plan:

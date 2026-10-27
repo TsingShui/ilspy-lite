@@ -120,11 +120,12 @@ internal static partial class GenericReferenceRoundtrip
         foreach (var entry in json.RootElement.EnumerateArray())
         {
             string alias = entry.GetProperty("alias").GetString();
-            if (!Regex.IsMatch(alias, "^__cil_ref_[0-9a-f]{40}$")) throw new Exception("Bad alias identifier.");
+            if (!Regex.IsMatch(alias, "^__cil_(ref|value)_[0-9a-f]{40}$")) throw new Exception("Bad alias identifier.");
             byte[] bytes = Convert.FromHexString(entry.GetProperty("bytes").GetString());
             int position = 0;
             Type type = Decode(bytes, ref position);
-            if (position != bytes.Length || type.IsValueType || !(type.IsConstructedGenericType || type.IsArray))
+            bool valueAlias = alias.StartsWith("__cil_value_", StringComparison.Ordinal);
+            if (position != bytes.Length || type.IsValueType != valueAlias || !valueAlias && !(type.IsConstructedGenericType || type.IsArray))
                 throw new Exception("Incomplete or nonreference alias signature.");
             Console.WriteLine("using " + alias + " = " + TypeSource(type) + ";");
         }
@@ -269,9 +270,9 @@ internal static partial class GenericReferenceRoundtrip
         object[] actualArguments = original.IsStatic ? arguments : arguments.Prepend(receiver).ToArray();
         Outcome after = Capture(() => generated.Invoke(null, actualArguments), state);
         Restore();
-        if (before.Error != expectedError || !ReferenceEquals(before.Value, expected))
+        if (before.Error != expectedError || !Same(before.Value, expected))
             throw new Exception("Owned fixture expectation differs: " + name);
-        if (before.Error != after.Error || !ReferenceEquals(before.Value, after.Value)
+        if (before.Error != after.Error || !Same(before.Value, after.Value)
             || !before.Enumeration.Zip(after.Enumeration).All(values => Same(values.First, values.Second))
             || !before.State.Zip(after.State).All(pair => pair.First.Length == pair.Second.Length
                 && pair.First.Zip(pair.Second).All(values => Same(values.First, values.Second))))
@@ -373,7 +374,36 @@ internal static partial class GenericReferenceRoundtrip
                     Check("StaticExchange", null, new[] { value }, before);
                 }
             }
-            if (Covered.Count != 21 || originals.Length != 21) throw new Exception("Owned array coverage drift.");
+            foreach (Array sample in new Array[] { null, Array.Empty<object>(), new object[] { tag, null }, new string[] { "owned", null } }) {
+                Type error = sample == null ? typeof(NullReferenceException) : sample.Length == 0 ? typeof(IndexOutOfRangeException) : null;
+                Check("UnsupportedRead", null, new object[] { sample }, error == null ? sample.GetValue(0) : null, error);
+                foreach (object next in new object[] { null, tag, "next" }) {
+                    Type storeError = error ?? (sample is string[] && next != null && next is not string ? typeof(ArrayTypeMismatchException) : null);
+                    Check("UnsupportedStore", null, new object[] { sample, next }, null, storeError);
+                }
+            }
+            foreach (Array sample in new[] { null, emptyPoints, points }) {
+                Type error = sample == null ? typeof(NullReferenceException) : sample.Length == 0 ? typeof(IndexOutOfRangeException) : null;
+                Check("UnsupportedValue", null, new object[] { sample }, error == null ? sample.GetValue(0) : null, error);
+            }
+            foreach (byte[] sample in new byte[][] { null, Array.Empty<byte>(), (byte[])first })
+                Check("UnsupportedLength", null, new object[] { sample }, sample?.Length, sample == null ? typeof(NullReferenceException) : null);
+            var allocator = originals.Single(m => m.Name == "UnsupportedAllocation");
+            var generatedAllocator = recovered.GetMethod("UnsupportedAllocation") ?? throw new Exception("Missing recovered array allocator.");
+            foreach (int length in new[] { -1, 0, 3 }) {
+                var noState = new List<State>();
+                Outcome before = Capture(() => OriginalCall(allocator)(null, new object[] { length }), noState);
+                Outcome after = Capture(() => generatedAllocator.Invoke(null, new object[] { length }), noState);
+                Type error = length < 0 ? typeof(OverflowException) : null;
+                if (before.Error != error || after.Error != error || error == null &&
+                    (before.Value is not byte[] originalArray || after.Value is not byte[] generatedArray ||
+                    originalArray.Length != length || generatedArray.Length != length || originalArray.Any(b => b != 0) ||
+                    generatedArray.Any(b => b != 0) || ReferenceEquals(originalArray, generatedArray) ||
+                    ReferenceEquals(generatedArray, generatedAllocator.Invoke(null, new object[] { length }))))
+                    throw new Exception("Recovered behavior differs: UnsupportedAllocation");
+                checks++; Covered.Add("UnsupportedAllocation");
+            }
+            if (Covered.Count != 26 || originals.Length != 26) throw new Exception("Owned array coverage drift.");
         }
         Console.WriteLine($"Array reference behavior: {checks} cases, {Covered.Count} recovered methods; exact types, identity, reachable state, bit patterns and exception types match.");
     }
@@ -382,6 +412,8 @@ internal static partial class GenericReferenceRoundtrip
     {
         if (args.Length < 2 || args.Length > 4) throw new ArgumentException("Expected owned fixture and recovered library.");
         fixture = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[0]));
+        if (args[1] == "--typed-array-plan") { TypedArrayPlan(args[2]); return; }
+        if (args[1] == "--typed-array-check") { TypedArrayCheck(args[2], args[3]); return; }
         if (args[1] == "--static-field-once") { StaticFieldOnce(args[2]); return; }
         if (args[1] == "--static-field-threads") { StaticFieldCheck(args[2], args[3], true); return; }
         if (args[1] == "--static-field-plan") { StaticFieldPlan(args[2]); return; }
@@ -574,7 +606,8 @@ internal static partial class GenericReferenceRoundtrip
         }
         originals = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
             | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal)
-                || root == "GenericReferenceCases" && m.Name == "UnsupportedDispatch").ToArray();
+                || root == "GenericReferenceCases" && m.Name == "UnsupportedDispatch"
+                || root == "ArrayReferenceCases" && new[] { "UnsupportedRead", "UnsupportedStore", "UnsupportedAllocation", "UnsupportedValue", "UnsupportedLength" }.Contains(m.Name)).ToArray();
         recovered = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[1])).GetType("Recovered")
             ?? throw new Exception("Recovered carrier missing.");
         if (root == "ArrayReferenceCases") { ArrayCases(args); return; }

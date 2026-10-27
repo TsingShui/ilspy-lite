@@ -51,7 +51,7 @@ def main():
         selected = [(record["token"], names[record["token"]])
                     for record in map(json.loads, support.run([args.cli, "scan", fixture]).stdout.splitlines())
                     if record["status"] == "Decompiled"
-                    and owners.get(record["token"]) == "VirtualCallCases.Ops"]
+                    and owners.get(record["token"]) in {"VirtualCallCases.Ops", "VirtualCallCases.Compute"}]
         if not selected: raise ValueError("virtual-call selection is empty")
         snippets = []
         for token, name in selected:
@@ -66,6 +66,10 @@ def main():
                 (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
                 statements = adapter.adapt_readable_body(readable.stdout, details.stdout)
 
+            if name == "Sum":
+                array_aliases = re.findall(r"// structural signature (__cil_ref_\w+) bytes=1D12[0-9A-F]+: class VirtualCallCases.Shape\[\];", details.stdout)
+                if len(array_aliases) != 1: raise ValueError("Owned Shape vector alias missing")
+                statements = statements.replace(array_aliases[0], "global::VirtualCallCases.Shape[]")
             if name == "UnsupportedConstrained":
                 statements = generic.inline_structural_types(statements)
                 for alias in re.findall(r"structural signature (__cil_value_\w+) bytes=\\S+: valuetype VirtualCallCases.Value;", details.stdout):

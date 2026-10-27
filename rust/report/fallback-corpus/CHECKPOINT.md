@@ -6,7 +6,60 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: generic and foreign static storage
+## Current verified state: typed SZArray operations
+
+- Baseline: `report/typed-arrays/corpus-scan/baseline.json`. **554,169
+  Decompiled / 216,579 Partial of 770,748**, fallback **28.099845864017812%**.
+  **+22,677 in 221 images**, zero losses/incomplete; decrease
+  **2.942206791324788 points**. Game **2,885/1,882 (+128)**; Common
+  **12,103/6,304 (+233)**. Fixed 614 images / 319 body images, input hashes,
+  reference policy and denominator; delta.regressions is empty.
+- **443 Rust tests**, fmt/clippy, **34 owned driver invocations** pass.
+  New gate **3,040 comparisons / 95 closed selections/config**, plus recovered
+  private argument helper; **13 compiled semantic mutants**. Both declaring
+  and method variables execute independently in T[], U[] and Mixed<T,U>[].
+- arrays.rs separates shape, element evaluation and exact operand/width proof.
+  ldlen needs only SZArray shape; allocation retains exact token/context.
+  Reference loads/stores preserve identity/covariance checks; exact tokenized
+  whole-value/generic ldelem/stelem preserve copies. Exact ldelema preserves
+  acquired cell, invariant runtime type checks and timing before argument effects.
+  Scalar I1/U1/Bool, I2/U2/Char, I8/U8 and R4 retain widths/bits/rounding.
+- Canonical allocation supports checked core primitive identity, local nominal
+  kind/arity and original caller-scoped TypeSpecs, without requiring element
+  evaluation/layout. Unknown foreign element kind and open generic definition
+  allocation remain gated. int[]/uint[] representation stays unchanged.
+- Owned default-output execution includes byte 2 Boolean arrays, float -0/payload
+  NaN, null/bounds/type precedence, covariance versus invariant addresses,
+  value snapshots, aliases, argument effects, zero initialization and repeated
+  allocation freshness. Helpers emit individual original array operations;
+  no selected body delegates to its original implementation.
+- First full regression retained 6 frozen-promotion failures (434/440). All
+  promoted cases executed before removal:
+  vector references 128/26; enum arrays 32/8; scoped 1,480/270 closures/27 methods;
+  receiver 41/20; virtual 64/13 plus prior 9/2 value-receiver cases, per config.
+  Prior mutants remain; enum allocation length mutant also fails semantically.
+- Audit: nine triples in `report/typed-arrays/{AUDIT.md,audit/manifest.json}`.
+  Fourteen gained production triples self-reviewed CRUDE-BUT-EQUIVALENT, no
+  changed-semantic SUSPECT in bounded sample; no explicit ILSpy unknown-result
+  diagnostics. `review/review-source.md` records obligations. Original IL is
+  authority. CecilLoader.HasDynamicAttribute and Util.RandomDistance remain
+  Partial for unrelated cast/category gates; not claimed gains.
+- Evidence: `acceptance/corpus/TYPED_ARRAYS.md`,
+  `report/typed-arrays/{behavior-manifest.json,milestone.json,review/}`.
+  Raw scans/triples/logs are ignored local evidence; selected manifests/docs
+  travel with the local commit. No push or third-party execution.
+- Deferred independently: native dimensions/indices/scalar elements, additional
+  enum/wider primitive array aliases, covariance assignment proofs, R8 scalar
+  math, multidimensional/modified/pinned/readonly-prefix/lifetime extensions.
+  Generic opaque double closures are not R8 scalar math admission.
+- Next: audit the largest remaining nominal/value/signature proof buckets and
+  exact delegate/function-pointer/token operations; do not infer gains from
+  first blockers or loosen reference policy. Preserve GVM lookup-order refusal.
+  Continue grouped public red/green, owned behavior/mutations, milestone scan,
+  main-session source/IL self-review and local commit. No agents/push.
+  **Aggregate <=5% remains unmet**; next baseline is the typed-arrays scan.
+
+## Previous verified state: generic and foreign static storage
 
 - `report/static-fields/corpus-scan/baseline.json`: **531,492 Decompiled /
   239,256 Partial** of 770,748; fallback **31.0420526553426%**.

@@ -61,11 +61,6 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "UnsupportedRefReturn",
         "byref return needs escape/lifetime analysis",
     ),
-    (
-        "StructReceiverCases.Ops",
-        "UnsupportedArray",
-        "operation needs a core TypeRef",
-    ),
 ];
 
 #[test]

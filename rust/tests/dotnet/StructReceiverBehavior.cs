@@ -31,6 +31,12 @@ internal static partial class GenericReferenceRoundtrip
 {
     static object ReceiverSample(Type type, int variant)
     {
+        if (type.IsSZArray) {
+            if (variant == 0) return null;
+            Array array = Array.CreateInstance(type.GetElementType(), variant == 1 ? 0 : 2);
+            for (int i = 0; i < array.Length; i++) array.SetValue(ReceiverSample(type.GetElementType(), i), i);
+            return array;
+        }
         object result = RuntimeHelpers.GetUninitializedObject(type);
         foreach (FieldInfo member in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -107,12 +113,14 @@ internal static partial class GenericReferenceRoundtrip
             foreach (var item in json.RootElement.EnumerateArray())
             {
                 string alias = item.GetProperty("alias").GetString();
-                if (!Regex.IsMatch(alias, "^__cil_value_[0-9a-f]{40}$")) throw new Exception("Invalid value alias.");
+                if (!Regex.IsMatch(alias, "^__cil_(value|ref)_[0-9a-f]{40}$")) throw new Exception("Invalid value alias.");
                 byte[] bytes = Convert.FromHexString(item.GetProperty("bytes").GetString());
                 int offset = 0;
                 Type type = Decode(bytes, ref offset);
-                if (offset != bytes.Length || !type.IsValueType || type.IsEnum || type.IsByRefLike
-                    || type.Assembly != fixture || (type != point && type != line))
+                Type valueType = type.IsSZArray ? type.GetElementType() : type;
+                if (offset != bytes.Length || !valueType.IsValueType || valueType.IsEnum || valueType.IsByRefLike
+                    || valueType.Assembly != fixture || (valueType != point && valueType != line)
+                    || type.IsSZArray != alias.StartsWith("__cil_ref_", StringComparison.Ordinal))
                     throw new Exception("Owned receiver type alias disagrees with runtime metadata.");
                 Console.WriteLine("using " + alias + " = " + TypeSource(type) + ";");
             }
@@ -124,7 +132,7 @@ internal static partial class GenericReferenceRoundtrip
             .Where(f => !f.IsLiteral && !f.IsInitOnly).ToArray();
         MethodInfo[] selected = new[] { point, line, ops }.SelectMany(t => t.GetMethods(
                 BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedByRef" || m.Name == "UnsupportedLocalEscape" || m.Name == "UnsupportedBox")
+            .Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedByRef" || m.Name == "UnsupportedLocalEscape" || m.Name == "UnsupportedBox" || m.Name == "UnsupportedArray")
             .OrderBy(m => m.MetadataToken).ToArray();
         if (selected.Length == 0) throw new Exception("Owned receiver selection is empty.");
         Type carrier = generated.GetType("StructReceiverCases.Recovered")
@@ -145,11 +153,11 @@ internal static partial class GenericReferenceRoundtrip
                     + " lowered=(" + lowered.ReturnType + " " + string.Join(",", lowered.GetParameters().Select(p => p.ParameterType.ToString())) + ")"
                     + " expected=(" + original.ReturnType + " " + string.Join(",", expected.Select(t => t.ToString())) + ")");
 
-            for (int variant = 0; variant < 2; variant++)
+            for (int variant = 0; variant < (original.Name == "UnsupportedArray" ? 3 : 2); variant++)
             {
                 object receiver = original.IsStatic ? null
                     : Box(original.DeclaringType, ReceiverSample(original.DeclaringType, variant));
-                object[] arguments = parameters.Select((p, i) => ReceiverArgument(p.ParameterType, (variant + i) % 2)).ToArray();
+                object[] arguments = parameters.Select((p, i) => ReceiverArgument(p.ParameterType, original.Name == "UnsupportedArray" ? variant : (variant + i) % 2)).ToArray();
                 object[] initialStatics = statics.Select(f => ReadState(f, null)).ToArray();
                 var graph = CaptureGraph(arguments.Prepend(receiver).Concat(initialStatics));
                 void Restore()
@@ -172,7 +180,9 @@ internal static partial class GenericReferenceRoundtrip
                         || !before.Enumeration.Zip(after.Enumeration).All(v => Same(v.First, v.Second)))
                         throw new Exception("Recovered struct receiver behavior differs: " + original.Name + " (" + kind + ")");
                 }
-                if (before.Error != null && before.Error != typeof(NullReferenceException))
+                if (original.Name == "UnsupportedArray" && before.Error != (variant == 0 ? typeof(NullReferenceException) : variant == 1 ? typeof(IndexOutOfRangeException) : null))
+                    throw new Exception("Owned array receiver expectation differs.");
+                if (original.Name != "UnsupportedArray" && before.Error != null && before.Error != typeof(NullReferenceException))
                     throw new Exception("Owned receiver case faulted: " + original.Name);
                 EqualOrThrow("variant " + variant);
                 checks++;

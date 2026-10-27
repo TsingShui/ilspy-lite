@@ -36,9 +36,9 @@ internal static partial class GenericReferenceRoundtrip
     static List<Specialization> Specializations()
     {
         MethodInfo[] methods = fixture.GetTypes().SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Static
-            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall" || m.Name == "UnsupportedBox" || m.Name == "UnsupportedStatic")
+            | BindingFlags.Instance | BindingFlags.DeclaredOnly)).Where(m => !m.Name.StartsWith("Unsupported", StringComparison.Ordinal) || m.Name == "UnsupportedBare" || m.Name == "UnsupportedCall" || m.Name == "UnsupportedBox" || m.Name == "UnsupportedStatic" || m.Name == "UnsupportedAllocation")
             .OrderBy(m => m.MetadataToken).ToArray();
-        if (methods.Length != 26) throw new Exception("Scoped owned method selection drift.");
+        if (methods.Length != 27) throw new Exception("Scoped owned method selection drift.");
         var result = new List<Specialization>();
         foreach (MethodInfo definition in methods)
         {
@@ -65,7 +65,7 @@ internal static partial class GenericReferenceRoundtrip
     {
         using var json = JsonDocument.Parse(File.ReadAllText(directivesPath));
         var directives = json.RootElement.EnumerateArray().ToDictionary(row => row.GetProperty("token").GetInt32());
-        if (directives.Count != 26) throw new Exception("Scoped signature directive coverage drift.");
+        if (directives.Count != 27) throw new Exception("Scoped signature directive coverage drift.");
         var result = new List<object>();
         foreach (Specialization test in cases)
         {
@@ -98,6 +98,13 @@ internal static partial class GenericReferenceRoundtrip
                     throw new Exception("Unexpected owned scoped static field.");
                 helpers.Add("private static " + TypeSource(target.FieldType) + " __cil_ldsfld_" + fieldToken.GetInt32().ToString("X8") + "() => "
                     + TypeSource(target.DeclaringType) + ".Cache;");
+            }
+            foreach (var allocation in directives[test.Token].GetProperty("allocations").EnumerateArray()) {
+                Type element = fixture.ManifestModule.ResolveType(allocation.GetInt32(), test.Types, test.Methods);
+                if (!original.ReturnType.IsSZArray || original.ReturnType.GetElementType() != element)
+                    throw new Exception("Owned scoped allocation operand differs.");
+                helpers.Add("private static " + TypeSource(element.MakeArrayType()) + " __cil_newarr_" + allocation.GetInt32().ToString("X8")
+                    + "(int length) => new " + TypeSource(element) + "[length];");
             }
             result.Add(new { carrier = test.Carrier, token = test.Token, name = original.Name, aliases, helpers });
         }
@@ -187,7 +194,24 @@ internal static partial class GenericReferenceRoundtrip
         }
 
         string name = original.Name;
-        if (name == "UnsupportedStatic") {
+        if (name == "UnsupportedAllocation") {
+            Type element = original.ReturnType.GetElementType();
+            foreach (int length in new[] { -1, 0, 1, 5 }) {
+                var noState = new List<State>();
+                Outcome before = Capture(() => OriginalCall(original)(null, new object[] { length }), noState);
+                Outcome after = Capture(() => generated.Invoke(null, new object[] { length }), noState);
+                Type error = length < 0 ? typeof(OverflowException) : null;
+                bool Zero(Array array) => array.GetType() == original.ReturnType && array.Length == length
+                    && array.Cast<object>().All(value => element.IsValueType ? Same(value, Activator.CreateInstance(element)) : value == null);
+                if (before.Error != error || after.Error != error || error == null
+                    && (before.Value is not Array source || after.Value is not Array target
+                        || !Zero(source) || !Zero(target) || ReferenceEquals(source, target)
+                        || ReferenceEquals(target, generated.Invoke(null, new object[] { length }))))
+                    throw new Exception("Recovered scoped behavior differs: UnsupportedAllocation");
+                checks++;
+            }
+        }
+        else if (name == "UnsupportedStatic") {
             foreach (object value in new[] { null, Sample(original.ReturnType, 0), Sample(original.ReturnType, 1) }) {
                 staticCache.SetValue(null, value);
                 Compare(null, Array.Empty<object>(), value);
@@ -234,7 +258,7 @@ internal static partial class GenericReferenceRoundtrip
         {
             Assembly generated = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.GetFullPath(args[2]));
             foreach (Specialization test in cases) ScopedCheck(test, generated);
-            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 26 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
+            Console.WriteLine($"Scoped value/reference behavior: {checks} comparisons, {cases.Count} closed contexts, 27 recovered methods; exact runtime signatures, value bits, reference identity, state and exceptions match.");
         }
     }
 }

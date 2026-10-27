@@ -2999,6 +2999,58 @@ impl<'a> Image<'a> {
         ))
     }
 
+    pub(crate) fn array_allocation_type(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        use cildec::Type;
+        let core = match token.table() {
+            Some(TableId::TypeDef) => self.local_core_type_name(token)?,
+            Some(TableId::TypeRef) => self.core_type_name(token).ok(),
+            _ => None,
+        };
+        let primitive = match core {
+            Some("Boolean") => Some(Type::Boolean),
+            Some("Char") => Some(Type::Char),
+            Some("SByte") => Some(Type::I1),
+            Some("Byte") => Some(Type::U1),
+            Some("Int16") => Some(Type::I2),
+            Some("UInt16") => Some(Type::U2),
+            Some("Int32") => Some(Type::I4),
+            Some("UInt32") => Some(Type::U4),
+            Some("Int64") => Some(Type::I8),
+            Some("UInt64") => Some(Type::U8),
+            Some("IntPtr") => Some(Type::IntPtr),
+            Some("UIntPtr") => Some(Type::UIntPtr),
+            Some("Single") => Some(Type::R4),
+            Some("Double") => Some(Type::R8),
+            Some("String") => Some(Type::String),
+            Some("Object") => Some(Type::Object),
+            _ => None,
+        };
+        let element = if let Some(primitive) = primitive {
+            primitive
+        } else if token.table() == Some(TableId::TypeSpec) {
+            self.type_spec(token)?.type_
+        } else if let Some(definition) = self.local_type_definition(token)? {
+            if !self.md.tables().generic_params(definition)?.is_empty() {
+                return Err("array allocation needs an instantiated generic element".into());
+            }
+            if matches!(self.has_core_base(definition, "ValueType"), Ok(true))
+                || matches!(self.has_core_base(definition, "Enum"), Ok(true))
+            {
+                Type::ValueType(token)
+            } else {
+                Type::Class(token)
+            }
+        } else {
+            return Err("array allocation needs exact external element kind facts".into());
+        };
+        let vector = Type::SzArray(Vec::new(), Box::new(element));
+        crate::ir::Ty::from_sig_scoped(&vector, self, context)
+    }
+
     pub fn array_element_type(&self, token: Token) -> Result<crate::ir::Ty> {
         use crate::ir::Ty;
         match self.core_type_name(token)? {

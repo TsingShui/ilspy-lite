@@ -3,7 +3,28 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (static storage; aggregate 5% target)
+## Current position (typed vectors; aggregate 5% target)
+
+- **554,169 Decompiled / 216,579 Partial; fallback 28.09985%**.
+- +22,677 in 221 images, zero losses/incomplete; fixed scope/references.
+  Decrease 2.94221 points. Game +128 / Common +233.
+- Exact SZArray allocation/whole-value operations and acquired element cells,
+  reference checks and scalar widths preserve copies, timing and identities.
+  Shape/length proof does not infer element layout or scalar R8 support.
+- 443 tests, fmt/clippy and 34 owned invocations pass. New gate per config:
+  3,040 comparisons / 95 closed selections plus recovered argument helper;
+  thirteen semantic mutants. Frozen promotions execute before row removal.
+- Fourteen gained source/IL triples self-reviewed crude but equivalent; no
+  changed-semantic suspect in bounded sample. No third-party execution or
+  independent/formal verification claim.
+- Native dimensions/indices, new covariance assignment proofs, further scalar
+  alias categories, multidimensional/prefix/lifetime extensions remain separate.
+- Next: audit nominal/value/signature proof blockers and exact ldftn/ldtoken
+  operations. Prioritize grouped foundations, not forecasts from bucket totals.
+  Preserve GVM/ref-policy/unknown-fact gates. Continue autonomously, no agents
+  or unrequested push; aggregate <=5% remains unmet.
+
+## Previous position (static storage; aggregate 5% target)
 
 - **531,492 Decompiled / 239,256 Partial; fallback 31.04205%**.
 - +9,808 in 112 images, zero losses/incomplete; fixed scope/references.

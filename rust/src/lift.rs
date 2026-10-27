@@ -924,7 +924,7 @@ impl Writer<'_, '_> {
             }
             "newarr" => {
                 let token = i.operand.token().ok_or("missing element type token")?;
-                let element = self.image.array_element_type(token)?;
+                let array = self.image.array_allocation_type(token, self.type_context)?;
                 let length = self.pop()?;
                 expect(length.ty, Ty::I4)?;
                 self.lines.push(format!(
@@ -935,19 +935,17 @@ impl Writer<'_, '_> {
                     )
                 ));
                 self.lines.push("// Allocate a fresh zero-initialized array here; runtime length/allocation failures remain at this instruction.".into());
-                let array = if element == Ty::I4 {
-                    Ty::I4Array
-                } else {
-                    Ty::U4Array
+                self.track_type(array)?;
+                let expression = match array {
+                    Ty::I4Array => format!("new int[{}]", length.name),
+                    Ty::U4Array => format!("new uint[{}]", length.name),
+                    _ => format!("__cil_newarr_{:08X}({})", token.0, length.name),
                 };
-                self.push(
-                    array,
-                    format!("new {}[{}]", element.cs(self.image)?, length.name),
-                )?;
+                self.push(array, expression)?;
             }
             "ldlen" => {
                 let array = self.pop()?;
-                array_element(array.ty)?;
+                crate::arrays::vector(self.image, array.ty)?;
                 // Read now: null checking and length evaluation must not be delayed.
                 // The signed native temporary retains the native-unsigned bit pattern.
                 self.push(
@@ -957,13 +955,19 @@ impl Writer<'_, '_> {
             }
             "ldelema" => {
                 let token = i.operand.token().ok_or("missing element type token")?;
-                let element = self.image.array_element_type(token)?;
                 let index = self.pop()?;
                 expect(index.ty, Ty::I4)?;
                 let array = self.pop()?;
-                if array_element(array.ty)? != element {
-                    return Err("ldelema token does not match the array element type".into());
-                }
+                let legacy = matches!(array.ty, Ty::I4Array | Ty::U4Array);
+                let element = if legacy {
+                    let element = self.image.array_element_type(token)?;
+                    if array_element(array.ty)? != element {
+                        return Err("ldelema token does not match the array element type".into());
+                    }
+                    element
+                } else {
+                    crate::arrays::operand(self.image, array.ty, token, self.type_context)?
+                };
                 self.lines.push(format!(
                     "// element type token 0x{:08X}: {}",
                     token.0,
@@ -972,12 +976,16 @@ impl Writer<'_, '_> {
                     )
                 ));
                 self.lines.push("// Stable managed element address; null/bounds checks occur here, without reading its value.".into());
-                let address = if element == Ty::I4 {
-                    Ty::I4Address
+                let address = self.image.address_of(element)?;
+                let expression = if legacy {
+                    format!("{}[{}]", array.name, index.name)
                 } else {
-                    Ty::U4Address
+                    format!(
+                        "__cil_ldelema_{:08X}({}, {})",
+                        token.0, array.name, index.name
+                    )
                 };
-                self.push(address, format!("{}[{}]", array.name, index.name))?;
+                self.push(address, expression)?;
             }
             "ldind.i1" | "ldind.u1" | "ldind.i2" | "ldind.u2" | "ldind.i4" | "ldind.u4"
             | "ldind.i8" | "ldind.u8" | "ldind.i" | "ldind.r4" | "ldind.ref" => {
@@ -1047,6 +1055,100 @@ impl Writer<'_, '_> {
                     address.name,
                     element.store(&value.name, self.image)?
                 ));
+            }
+            "ldelem.i1" | "ldelem.u1" | "ldelem.i2" | "ldelem.u2" | "ldelem.i8" | "ldelem.r4"
+            | "stelem.i1" | "stelem.i2" | "stelem.i8" | "stelem.r4" => {
+                let value = if op.starts_with("stelem") {
+                    Some(self.pop()?)
+                } else {
+                    None
+                };
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let (element, requested) = crate::arrays::scalar(self.image, array.ty, op)?;
+                self.track_type(element)?;
+                let target = format!("{}[{}]", array.name, index.name);
+                if let Some(value) = value {
+                    self.image.assignable(value.ty, requested.stack())?;
+                    self.lines.push(format!(
+                        "{target} = {};",
+                        element.store(&value.name, self.image)?
+                    ));
+                } else {
+                    let loaded = element.load(&target, self.image)?;
+                    let expression = if requested == Ty::R4 {
+                        loaded
+                    } else {
+                        requested.load(
+                            &format!("unchecked(({})({loaded}))", requested.cs(self.image)?),
+                            self.image,
+                        )?
+                    };
+                    self.push(requested.stack(), expression)?;
+                }
+            }
+            "ldelem" | "stelem" => {
+                let token = i.operand.token().ok_or("missing element token")?;
+                let value = if op == "stelem" {
+                    Some(self.pop()?)
+                } else {
+                    None
+                };
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let element =
+                    crate::arrays::operand(self.image, array.ty, token, self.type_context)?;
+                self.track_type(element)?;
+                if let Some(value) = value {
+                    self.image.assignable(value.ty, element.stack())?;
+                    self.lines.push(format!(
+                        "__cil_stelem_{:08X}({}, {}, {});",
+                        token.0,
+                        array.name,
+                        index.name,
+                        element.store(&value.name, self.image)?
+                    ));
+                } else {
+                    self.push(
+                        element.stack(),
+                        element.load(
+                            &format!(
+                                "__cil_ldelem_{:08X}({}, {})",
+                                token.0, array.name, index.name
+                            ),
+                            self.image,
+                        )?,
+                    )?;
+                }
+            }
+            "stelem.ref" => {
+                let value = self.pop()?;
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let element = crate::arrays::element(self.image, array.ty)?;
+                if element.kind() != StackKind::Ref {
+                    return Err("reference element store needs a reference vector element".into());
+                }
+                self.image.assignable(value.ty, element)?;
+                self.lines.push(format!(
+                    "{}[{}] = {};",
+                    array.name,
+                    index.name,
+                    element.store(&value.name, self.image)?
+                ));
+            }
+            "ldelem.ref" => {
+                let index = self.pop()?;
+                expect(index.ty, Ty::I4)?;
+                let array = self.pop()?;
+                let element = crate::arrays::element(self.image, array.ty)?;
+                if element.kind() != StackKind::Ref {
+                    return Err("reference element load needs a reference vector element".into());
+                }
+                self.push(element, format!("{}[{}]", array.name, index.name))?;
             }
             "ldelem.i4" | "ldelem.u4" => {
                 let index = self.pop()?;

@@ -97,6 +97,7 @@ mod managed_locations;
 mod reference_calls;
 mod reference_relations;
 mod static_fields;
+mod typed_arrays;
 
 #[path = "abstract_members.rs"]
 mod abstract_members;

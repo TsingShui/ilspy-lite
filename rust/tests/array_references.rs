@@ -64,38 +64,11 @@ mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring). There
 // are no counts; a promotion must drop its row and a regression must add one.
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedCovariance",
-        "incompatible value/receiver types",
-    ),
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedRead",
-        "unsupported opcode ldelem.ref",
-    ),
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedStore",
-        "unsupported opcode stelem.ref",
-    ),
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedAllocation",
-        "array element type needs IL fallback",
-    ),
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedValue",
-        "unsupported opcode ldelem",
-    ),
-    (
-        "ArrayReferenceCases.Ops",
-        "UnsupportedLength",
-        "expected int[] or uint[] evaluation-stack value",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "ArrayReferenceCases.Ops",
+    "UnsupportedCovariance",
+    "incompatible value/receiver types",
+)];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

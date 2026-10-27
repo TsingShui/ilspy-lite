@@ -432,6 +432,16 @@ For admitted zero-based one-dimensional int[]/uint[] array operations:
   byref locals/returns and unsupported prefixes remain gated; admitted byref
   parameters retain their true locations.
 
+Additional typed SZArray operations are described in
+[typed vector acceptance](acceptance/corpus/TYPED_ARRAYS.md). Shape/length proof
+is independent from element layout. Exact newarr/ldelem/stelem/ldelema leaves
+retain original tokens and caller-scoped variables. Reference indexing retains
+runtime covariance checks; acquired element refs keep acquisition/check timing.
+Scalar I1/U1, I2/U2/Char, I8/U8 and R4 operations retain width, raw Boolean bytes
+and storage rounding. Generic opaque operations do not admit scalar R8 math.
+I4 dimensions/indices remain the subset; native dimensions/indices, new covariance
+assignment proofs, multidimensional and lifetime/prefix extensions stay gated.
+
 ## Local enum storage
 
 An exact local enum definition must have an admitted core Enum base and one

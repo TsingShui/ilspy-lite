@@ -1,0 +1,40 @@
+{
+  "group": "typed-arrays",
+  "prior_commit": "79eddb28c",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 239256,
+      "Decompiled": 531492
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 37
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 216579,
+      "Decompiled": 554169
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "fallback_percent": 28.099845864017812,
+  "newly_recovered": 22677,
+  "gained_images": 221,
+  "regressions": [],
+  "scope_and_reference_stamps_equal": true,
+  "rust_tests": 443,
+  "owned_driver_invocations": 34,
+  "typed_array_comparisons_per_config": 3040,
+  "typed_array_closed_selections_per_config": 95,
+  "typed_array_semantic_mutants_per_config": 13,
+  "reviewed_production_methods": 14,
+  "review_kind": "bounded main-session source/IL self-review",
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false
+}
