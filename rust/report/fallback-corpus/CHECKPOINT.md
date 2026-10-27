@@ -35,7 +35,25 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: constructed-owner parameter substitution
+## Current verified state: optional modifiers and constructor callvirt
+
+- `report/modopt/corpus-scan/baseline.json`: **728,029 Decompiled / 42,719 Partial
+  of 770,748**, fallback **5.541282%**. Zero incomplete images; raw gate
+  4,271,900 > 3,853,740, so <=5% is unmet (4,182 bodies to go).
+- Since `report/substituted-ctor/corpus-scan`: `416cbc4fe` treats `callvirt` on a
+  reference constructor as the non-virtual call (+659 in 6 images) and `dc72a2389`
+  accepts optional `modopt` modifiers on parameters/returns (+39 in 2 images). Both
+  scanned with zero regressions.
+- Owned behavior matrix re-run at `c1e690b26` (all ten drivers pass; external
+  allocation now 41 comparisons / 13 methods).
+- Remaining first blockers: incompatible value/receiver types 12,370; malformed user
+  strings 2,739 (corpus data); external constructed value generic method 2,269;
+  generic virtual dispatch 1,999 (deliberate refusal); pinned/`fixed` locals 1,655;
+  external allocation facts 1,325; definite assignment 808; external constructed
+  members 743; modified parameters 658 (now largely optional-only); EH fault
+  handlers 640.
+
+## Previous verified state: constructed-owner parameter substitution
 
 - `report/substituted-ctor/corpus-scan/baseline.json`: **727,331 Decompiled / 43,417
   Partial of 770,748**, fallback **5.633105%**. Zero incomplete images; raw gate
