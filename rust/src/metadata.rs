@@ -2058,12 +2058,7 @@ impl<'a> Image<'a> {
         for unit in units {
             special |=
                 unit > 0xff || matches!(unit, 0x01..=0x08 | 0x0e..=0x1f | 0x27 | 0x2d | 0x7f);
-            match unit {
-                0x22 => literal.push_str("\\\""),
-                0x5c => literal.push_str("\\\\"),
-                0x20..=0x7e => literal.push(char::from(unit as u8)),
-                _ => literal.push_str(&format!("\\u{unit:04X}")),
-            }
+            literal.push_str(&escape_unit(unit));
         }
         if flag != u8::from(special) {
             return Err(
@@ -5683,4 +5678,23 @@ mod constructor_base_tests {
             );
         }
     }
+}
+
+/// Render one UTF-16 code unit for a C#-like literal.
+///
+/// Printable ASCII stays literal, `"` and `\\` are escaped, and every other unit
+/// (control characters, lone surrogates, non-ASCII) becomes `\\uXXXX`, so the
+/// output stays ASCII while remaining readable.
+pub(crate) fn escape_unit(unit: u16) -> String {
+    match unit {
+        0x22 => "\\\"".into(),
+        0x5c => "\\\\".into(),
+        0x20..=0x7e => char::from(unit as u8).to_string(),
+        _ => format!("\\u{unit:04X}"),
+    }
+}
+
+/// Render a UTF-16 sequence as the body of a quoted literal.
+pub(crate) fn escape_units(units: impl Iterator<Item = u16>) -> String {
+    units.map(escape_unit).collect()
 }

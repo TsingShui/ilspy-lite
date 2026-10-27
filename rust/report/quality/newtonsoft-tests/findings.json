@@ -1,0 +1,389 @@
+{
+  "slice": "newtonsoft-tests",
+  "image": "ILSpy-tests/Newtonsoft.Json-pcl-debug/Newtonsoft.Json.Tests.dll",
+  "types": [
+    "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+    "Newtonsoft.Json.Tests.Linq.JObjectTests",
+    "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+    "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests"
+  ],
+  "totals": {
+    "ours_lines": 26356,
+    "ilspy_lines": 8250,
+    "ratio": 3.19,
+    "ours_comment_only_lines": 7691,
+    "ours_comment_share": 0.292,
+    "methods_ours": 613,
+    "methods_ilspy": 613,
+    "fallback_methods": 122,
+    "fallback_share": 0.199,
+    "per_type": [
+      {"type": "JsonSerializerTest", "ours_lines": 14612, "ilspy_lines": 5238, "ratio": 2.79, "methods": 365, "fallback": 45, "nested_synthetic_types": 30},
+      {"type": "JObjectTests", "ours_lines": 4105, "ilspy_lines": 1254, "ratio": 3.27, "methods": 94, "fallback": 3, "nested_synthetic_types": 4},
+      {"type": "JPathParseTests", "ours_lines": 2362, "ilspy_lines": 735, "ratio": 3.21, "methods": 77, "fallback": 0, "nested_synthetic_types": 1},
+      {"type": "ExceptionHandlingTests", "ours_lines": 5277, "ilspy_lines": 1023, "ratio": 5.16, "methods": 77, "fallback": 74, "nested_synthetic_types": 77}
+    ],
+    "by_category": {
+      "identifier_naming": 18754,
+      "semantic_compression": 5965,
+      "type_and_member_spelling": 6840,
+      "structure_and_layout": 736,
+      "comments_and_diagnostics": 7691,
+      "missing_source_constructs": 213
+    },
+    "missing_source_constructs_note": "213 = 208 lambdas/closures + 5 foreach loops, the constructs with a definite site count in our output. Additional lower-priority sites: 197 array initializers, 57 using declarations, 11 object/anonymous initializers, 1 dynamic site.",
+    "identifier_naming_breakdown": {
+      "opaque_token_named_calls": 2978,
+      "opaque_callvirt": 1601,
+      "opaque_newobj": 962,
+      "opaque_methodspec_call": 415,
+      "vN_local_declarations": 8203,
+      "vN_local_references": 18326,
+      "lN_sN_eN_locals": 890,
+      "cil_type_annotations": 2615,
+      "cil_ref_and_value_hash_aliases": 2819,
+      "name_hex_type_references": 755,
+      "name_hex_type_declarations": 112,
+      "il_field_hex_fields": 494
+    },
+    "semantic_compression_breakdown": {
+      "tail_return": 806,
+      "box_wrappers": 2323,
+      "unchecked_cast": 434,
+      "enum_integer_literals": 666,
+      "bool_store_load_roundtrip": 329,
+      "goto_and_empty_labels": 682,
+      "goto": 315,
+      "empty_label_statement": 367,
+      "spill_phi_locals": 707,
+      "string_concat": 18
+    },
+    "type_spelling_breakdown": {
+      "global_prefix": 857,
+      "crlf_unicode_escapes": 2008,
+      "fully_qualified_references_no_using": 3970,
+      "using_directives_ours": 0,
+      "using_directives_ilspy": 53,
+      "at_escaped_identifiers": 5
+    },
+    "structure_breakdown": {
+      "missing_attributes": 610,
+      "missing_test_attribute": 605,
+      "missing_testfixture_attribute": 4,
+      "missing_category_attribute": 1,
+      "synthetic_base_constructors": 117,
+      "nested_types_placed_after_methods": 4,
+      "accessors_not_properties": 5
+    },
+    "comment_breakdown": {
+      "raw_il_dump_lines": 5046,
+      "structural_signature": 750,
+      "code_bytes": 679,
+      "local_table": 345,
+      "enum_storage": 226,
+      "fallback_banners": 130,
+      "metadata_name_keep": 209,
+      "dependency_banners": 25
+    }
+  },
+  "categories": [
+    {
+      "name": "identifier_naming",
+      "occurrences": 18754,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "SingleProperty",
+          "ours": "__cil_type_01000158 v1 = __cil_newobj_0A000929(v0);\nint v6 = __cil_callvirt_0A00092B(v5);\nNUnit.Framework.Assert.AreEqual(v3, v7);",
+          "ilspy": "JPath jPath = new JPath(\"Blah\");\nAssert.AreEqual(1, jPath.Filters.Count);",
+          "why": "constructor, property getter and Assert.AreEqual all lose their member name and become numeric tokens; the reader cannot tell which call is which. The same token-to-name resolution is already used for type casts and for v1.Add / v15.TryGetValue in the same slice, so the information is available.",
+          "fix": "Print resolved member names for call/callvirt/newobj/methodspec tokens through the existing token-to-name path: recv.Name(args) and new Type(args).",
+          "risk": "none - same call, same operands, same order; only the printed name changes."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "RootWithBadWhitespace",
+          "ours": "__cil_type_010001A4 v8 = __cil_methodspec_call_2B00001F(s2_0, v5);",
+          "ilspy": "ExceptionAssert.Throws<JsonException>(() => { new JPath(\"$ .Blah\"); },\n\tnew string[1] { \"Unexpected character while parsing path:  \" });",
+          "why": "generic method instantiations carry no name at all, so the fixture's 17 identical assertion shapes are indistinguishable from each other.",
+          "fix": "Render methodspec tokens as Name<TypeArgs>(args) using the MethodSpec generic arguments.",
+          "risk": "none."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "BooleanQuery_TwoPaths",
+          "ours": "__cil_ref_20577db61ee5e5fab706b97ef9c04b2f6070d475 v17 = ((__cil_ref_20577db61ee5e5fab706b97ef9c04b2f6070d475)(object)v16);\n__cil_type_0100015A v24 = __cil_callvirt_0A00092C(v17, 0);\nstring v26 = ((Newtonsoft.Json.Linq.JsonPath.FieldFilter)v25).Name;",
+          "ilspy": "List<PathFilter> list = (List<PathFilter>)booleanQueryExpression.Left;\nAssert.AreEqual(\"price\", ((FieldFilter)list[0]).Name);",
+          "why": "the type is spelled as a structural alias in the declaration but by its real name three lines later; the source had 2 locals, we print 6 temporaries.",
+          "fix": "Substitute the type name that the // structural signature comment already carries into the declaration, and fold load-bound temporaries into the consuming expression.",
+          "risk": "low - folding must not move a load across a store."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests",
+          "method": "ReadAsBytes_MissingComma (synthetic display class)",
+          "ours": "private sealed class __name_3C3E635F5F446973706C6179436C617373305F30\n{\n    // Metadata name: <ReadAsBytes_MissingComma>b__0\n    internal void ReadAsBytes_MissingCommaLambda0()",
+          "ilspy": "(no nested type; the lambda body is inlined into ReadAsBytes_MissingComma)",
+          "why": "the method already gets a readable name from the // Metadata name: comment, but the enclosing type keeps a hex-escaped spelling of <>c__DisplayClass0_0. <>c becomes __name_3C3E63.",
+          "fix": "Apply the same readable-name rule to generated type names: <>c__DisplayClass0_0 -> DisplayClass0_0, <>c -> LambdaCache, keeping // Metadata name: as evidence.",
+          "risk": "none - naming only; retaining the display class is a deliberate lowering choice."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "AlmostImmutableStruct..ctor / get_Value",
+          "ours": "private readonly string __il_field_04000766;\nprivate int __il_field_04000767;",
+          "ilspy": "public string Value { get; } = value;\npublic int Value2 { get; set; } = value2;",
+          "why": "fields whose metadata names are Value/Value2 (via the accessor pair) are printed as token placeholders.",
+          "fix": "Name fields from metadata; where a get_/set_ accessor pair binds them, prefer the property name.",
+          "risk": "low - needs the property reconstruction (structure category) to land first or the field names should be plain metadata names."
+        }
+      ]
+    },
+    {
+      "name": "semantic_compression",
+      "occurrences": 5965,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "RootWithBadWhitespace",
+          "ours": "__cil_type_0100005D v0 = ...JPathParseTests.__name_3C3E63.__il_field_04000E0E;\nif (v0 is not null) {\n    __cil_type_0100005D e0_2_0 = v0;\n    s2_0 = e0_2_0;\n    goto IL_0020;\n} else {\n    __cil_type_0100005D e0_1_0 = v0;\n    s1_0 = e0_1_0;\n    goto IL_0009;\n}\nIL_0009: ;",
+          "ilspy": "ExceptionAssert.Throws<JsonException>(() => { new JPath(\"$ .Blah\"); }, new string[1] { \"...\" });",
+          "why": "a diamond whose arms perform the same assignment and differ only in the target label, plus an empty labelled statement, plus duplicated spill slots - all for the lambda cache if (cache == null) cache = ...; idiom. 315 gotos and 367 empty label statements slice-wide.",
+          "fix": "Fold goto-ended diamonds into nested if/tail-jump form, delete statements that contain only a label, and drop spill slots used once.",
+          "risk": "low for the empty label and spill slots; medium for diamond folding - the taken arm must be preserved."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "BooleanQuery_TwoValues",
+          "ours": "object v30 = ((object)((Newtonsoft.Json.Linq.JsonPath.QueryOperator)(6)));\nint v32 = unchecked((int)(((Newtonsoft.Json.Linq.JsonPath.QueryExpression)v14).Operator));\nobject v33 = ((object)((Newtonsoft.Json.Linq.JsonPath.QueryOperator)(v32)));\nNUnit.Framework.Assert.AreEqual(v30, v33);",
+          "ilspy": "Assert.AreEqual(QueryOperator.GreaterThan, booleanQueryExpression.Operator);",
+          "why": "enum constants print as integers (666 sites) and an int-underlying enum round-trips through unchecked for no reason.",
+          "fix": "Resolve enum constants from metadata (the enum type is already identified by // enum storage), and omit unchecked when source and target share an underlying width.",
+          "risk": "none for enum names; low for unchecked omission (only for same-width or widening conversions)."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "TryGetValue",
+          "ours": "object v14 = ((object)(__cil_bool_store(v13)));\nint v18 = __cil_bool_load(v15.TryGetValue(v16, ref v17));\nobject v19 = ((object)(__cil_bool_store(v18)));\nNUnit.Framework.Assert.AreEqual(v14, v19);",
+          "ilspy": "Assert.AreEqual(false, jObject.TryGetValue(\"sdf\", out var value));",
+          "why": "2,323 boxing wrappers, 329 bool_store/bool_load round trips. Every NUnit assertion needs the object wrapper because the parameter is object, so this pattern occupies most lines of the slice.",
+          "fix": "Fold box T into a call whose parameter type is object (the implicit boxing conversion), and collapse bool_store/bool_load back to the comparison.",
+          "risk": "none for the implicit box; low for bool collapse."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "KeyValuePairIterate",
+          "ours": "int v3 = 1;\nlong v4 = unchecked((long)(v3));\n__cil_type_010000B6 v5 = __cil_newobj_0A000730(v4);\nstring v19 = System.String.Concat(((object)(v16)), v18);",
+          "ilspy": "jObject.Add(\"PropertyNameValue1\", new JValue(1L));\nAssert.AreEqual(\"PropertyNameValue\" + num, item.Name);",
+          "why": "an integer literal plus a widening unchecked cast instead of the numeric literal form 1L; String.Concat instead of the + operator (18 sites).",
+          "fix": "Print widening-converted integer constants as the target-typed literal; render String.Concat with 2..n string operands as concatenation.",
+          "risk": "none - only literal spelling and an operator with identical operand order."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "ListSourceSerialize",
+          "ours": "NUnit.Framework.Assert.AreEqual(((object)(v5)), ((object)(v4)));\nreturn;\n}",
+          "ilspy": "Assert.AreEqual(\"{\\\"strprop\\\":\\\"test\\\"}\", text);\n}",
+          "why": "a trailing return; is printed in every void body (806 sites, one line each).",
+          "fix": "Omit a return; that is the final statement of a void body.",
+          "risk": "none."
+        }
+      ]
+    },
+    {
+      "name": "type_and_member_spelling",
+      "occurrences": 6840,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "ListSourceSerialize",
+          "ours": "global::Newtonsoft.Json.Tests.TestObjects.ListSourceTest v0 = __cil_newobj_06000555();\nNUnit.Framework.Assert.AreEqual(((object)(v5)), ((object)(v4)));",
+          "ilspy": "ListSourceTest listSourceTest = new ListSourceTest();\nAssert.AreEqual(\"{\\\"strprop\\\":\\\"test\\\"}\", text);",
+          "why": "0 using directives versus 53 in ILSpy, so all 3,970 type references are fully qualified; plus 857 unnecessary global:: prefixes (735 in this type alone).",
+          "fix": "Emit the using set for the referenced namespaces, prefer the shortest unambiguous name (System.Int32 -> int, System.Type -> Type), and drop global:: when there is no ambiguity. When substituting the __cil_ref_/__cil_type_ aliases, also map CLI element types (uint8[] -> byte[]); those names currently appear only inside the alias comments, never in code.",
+          "risk": "none - the only work is the ambiguity check when two namespaces hold the same simple name."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "ManyTests (message content literals)",
+          "ours": "string v0 = __cil_ldstr_7001CF9F(\"{\\u000D\\u000A  \\\"String\\\": \\\"string\\\",\\u000D\\u000A  \\\"Int32\\\": 2147483647, ...\");",
+          "ilspy": "text2 = \"{\\r\\n  \\\"String\\\": \\\"string\\\",\\r\\n  \\\"Int32\\\": 2147483647, ...\";",
+          "why": "CR and LF are printed as \\u000D/\\u000A: 1,004 pairs over 139 lines (1,730 escapes in this type, 258 in JObjectTests, 20 in ExceptionHandlingTests, 0 in JPathParseTests). The printer is otherwise correct - the only other escapes are \\u0000 (1, a genuine NUL) and \\\\u003c (1, matching ILSpy). Because this is a serializer test suite, expected-JSON literals are the core payload and they are unreadable.",
+          "fix": "Use the short escapes \\r \\n \\t \\0 \\\" \\\\ and fall back to \\uXXXX only for other control characters.",
+          "risk": "none - purely lexical, provable with a printer round-trip test."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "FooJsonConverter.ReadJson",
+          "ours": "public override object ReadJson(Newtonsoft.Json.JsonReader reader, System.Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)",
+          "ilspy": "public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)",
+          "why": "System.Type is spelled fully although int/object are keyworded on the same line, which makes the signature inconsistent as well as longer.",
+          "fix": "Map System.* primitives to their keywords (Type is not a keyword, but the using-directive fix of 3a covers it), including array element types (uint8 -> byte).",
+          "risk": "none."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "FooJsonConverter.CanRead",
+          "ours": "public override bool get_CanRead()\n{\n    bool l0 = default;\n    l0 = __cil_bool_store(0);\n    return l0;\n}",
+          "ilspy": "public override bool CanRead => false;",
+          "why": "accessors stay as methods, so a property is spelled as get_CanRead: a member-name spelling problem (the structural half is in the structure category).",
+          "fix": "Reconstruct the property from the accessor pair (the // property ... comment proves the pairing is already computed).",
+          "risk": "low - needs same-type, same-name get_/set_ pairing."
+        }
+      ]
+    },
+    {
+      "name": "structure_and_layout",
+      "occurrences": 736,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JsonPath.JPathParseTests",
+          "method": "(type header)",
+          "ours": "public class JPathParseTests : Newtonsoft.Json.Tests.TestFixtureBase\n{\n    public void BooleanQuery_TwoValues()",
+          "ilspy": "[TestFixture]\npublic class JPathParseTests : TestFixtureBase\n{\n\t[Test]\n\tpublic void BooleanQuery_TwoValues()",
+          "why": "no attributes are emitted anywhere in the slice: 605 [Test], 4 [TestFixture] and 1 [Category(\"JsonTextReaderTests\")] are missing, so the output does not describe a test class and 605 methods read as ordinary helpers.",
+          "fix": "Emit custom attributes on types and members; attribute-type-only attributes ([Test], [TestFixture]) cover 609 of 610 and need no argument rendering.",
+          "risk": "none - decoration only."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests",
+          "method": "ExceptionHandlingTests..ctor",
+          "ours": "public ExceptionHandlingTests() : base()\n{\n    return;\n}",
+          "ilspy": "(implicit; no ctor emitted)",
+          "why": "117 synthetic : base() constructors exist (112 of them belong to the __name_* closure classes), each costing 4 lines.",
+          "fix": "Omit a constructor whose body is only return; and whose only work is the base call.",
+          "risk": "none."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "(member ordering)",
+          "ours": "365 methods ... then at line 13354: public struct AlmostImmutableStruct { ... } ... then 30 __name_* classes",
+          "ilspy": "public struct AlmostImmutableStruct(string value, int value2) at line 42, before all test methods",
+          "why": "nested types follow every method, so the type's own helper types are 13k lines away from their use; the same happens in the other three types (first nested type at lines 3651 / 3602 / 2182).",
+          "fix": "Emit nested type declarations before methods, as ILSpy does.",
+          "risk": "none - ordering only."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "FooJsonConverter",
+          "ours": "// property bool CanRead { get: get_CanRead; }",
+          "ilspy": "public override bool CanRead => false;",
+          "why": "property shape (and its initializer/expression body) is deferred to a trailing comment instead of being emitted as a property.",
+          "fix": "Promote the // property ... comment to a real property declaration; emit = value style initializers where the ctor field store allows it.",
+          "risk": "low - needs both accessors and a matching field."
+        }
+      ]
+    },
+    {
+      "name": "comments_and_diagnostics",
+      "occurrences": 7691,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests",
+          "method": "ReadAsBytes_MissingComma",
+          "ours": "// IL fallback: external allocation needs dependency facts; only local classes and local instantiations are admitted\n// .maxstack 5\n// .initlocals true\n// .code-bytes IL_0000: [73, 79, 1E, 00, 06, 0A, 00, 28, 51, 01, 00, 0A, 72, BB, B1, 00, 70, 6F, 1F, 02, 00, 0A, 0B, 1B]\n// .local [0] class ..../<>c__DisplayClass0_0\n// IL_0000: newobj 0x06001E79 .../<>c__DisplayClass0_0::.ctor\n...",
+          "ilspy": "byte[] bytes = Encoding.UTF8.GetBytes(\"Hello world\");\nstring s = \"['\" + Convert.ToBase64String(bytes) + \"' '\" + Convert.ToBase64String(bytes) + \"']\";",
+          "why": "(a) necessary evidence, should move to --details. 66.4% of this type's lines are comment-only because 74 of 77 methods are fallback bodies.",
+          "fix": "Keep the evidence in the details channel; in the readable view print one short marker per fallback method.",
+          "risk": "none to semantics; the evidence must remain reachable."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Serialization.JsonSerializerTest",
+          "method": "(every method with an alias in its signature)",
+          "ours": "// structural signature __cil_ref_20577db61ee5e5fab706b97ef9c04b2f6070d475 bytes=1512814901128569: class [mscorlib]System.Collections.Generic.List`1<class [Newtonsoft.Json]Newtonsoft.Json.Linq.JsonPath.PathFilter>; ... exact reference identity, no member/layout inference.",
+          "ilspy": "(no equivalent; the type is simply spelled List<PathFilter>)",
+          "why": "(a) evidence that is only load-bearing because the code spelling depends on it (identifier naming 1d). 750 lines across the slice, 197 enum-storage comment lines in this type alone.",
+          "fix": "Move behind --details after the alias substitution lands, so the comment is no longer the only place the type name appears.",
+          "risk": "none."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "(file trailer)",
+          "ours": "// Dependency identity substituted: System.Data.DataSetExtensions, Version=4.0.0.0, ...\n// Dependency unresolved: System.Data.Entity, Version=4.0.0.0, ...",
+          "ilspy": "(none)",
+          "why": "(a) 25 lines of pure boilerplate (5 per type) that say nothing about the code; keep but move to --details.",
+          "fix": "Emit dependency diagnostics to the details channel only.",
+          "risk": "none."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests",
+          "method": "(synthetic lambda methods)",
+          "ours": "// Metadata name: <ReadAsBytes_MissingComma>b__0\ninternal void ReadAsBytes_MissingCommaLambda0()",
+          "ilspy": "(n/a)",
+          "why": "(b) keep - this is what makes the generated method readable and it costs one line.",
+          "fix": "Keep; complement it with the same naming rule for types (identifier naming 1d).",
+          "risk": "none."
+        }
+      ]
+    },
+    {
+      "name": "missing_source_constructs",
+      "occurrences": 213,
+      "examples": [
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "Iterate",
+          "ours": "l2 = v13;\ntry {\n    IL_0037: ;\n    goto IL_0080;\n    IL_0039: ;\n    __cil_ref_7739c498e4eaf6fa7eb92671b8da6e08ad4a1986 v14 = l2;\n    __cil_value_013834f3a221925d0ff71ca8cd2252114c8c7207 v15 = __cil_callvirt_0A0005D4(v14);",
+          "ilspy": "foreach (KeyValuePair<string, JToken> item in jObject) { Assert.AreEqual(\"PropertyNameValue\" + num, item.Key); ... }",
+          "why": "0 foreach emitted versus 5 in ILSpy; the GetEnumerator/try/MoveNext/finally/Dispose loop is printed literally. IL shape: call GetEnumerator, try { br loop; loop: call get_Current + stloc; body; call MoveNext + brtrue loop } finally { call Dispose }.",
+          "fix": "Reconstruct foreach after proving the GetEnumerator/get_Current/MoveNext/Dispose shape or an IEnumerable<T> target.",
+          "risk": "medium - needs the enumerator-shape proof; 5 sites in this slice, so low priority."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.JsonTextReaderTests.ExceptionHandlingTests",
+          "method": "ReadAsBytes_MissingComma and 44 JsonSerializerTest methods",
+          "ours": "(entire method is an // IL fallback dump; the lambda body lives in a __name_3C3E635F5F4469... nested class)",
+          "ilspy": "ExceptionAssert.Throws<JsonReaderException>(() => { reader.ReadAsBytes(); }, new string[1] { \"...\" });",
+          "why": "lambdas and closures are never reconstructed: 0 => versus 208 in ILSpy, plus 112 synthetic nested types. IL shape: ldsfld <>c::<>9__N_M, brtrue, newobj <>c::.ctor, ldftn b__N_M, newobj Action::.ctor, stsfld; or newobj <>c__DisplayClassN_0::.ctor + stfld for captures.",
+          "fix": "Deliberate, low priority: leave the lowering. Only the cache-boilerplate diamond and the hex type names should be cleaned up without any closure analysis.",
+          "risk": "high if attempted - whole-method closure analysis."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "FooJsonConverter.WriteJson",
+          "ours": "__cil_type_01000026 v1 = __cil_newobj_0A000112();\n__cil_type_010000FC v2 = __cil_newobj_0A0003F3();\n((Newtonsoft.Json.JsonSerializer)v1).ContractResolver = ((__cil_type_01000103)(v2));",
+          "ilspy": "JToken jToken = JToken.FromObject(value, new JsonSerializer\n{\n    ContractResolver = new CamelCasePropertyNamesContractResolver()\n});",
+          "why": "object initializers are not reconstructed; array initializers likewise (0 emitted versus 213 new T[n] { ... } in ILSpy) - e.g. __cil_newarr_010001DC(1); v22[0] = v25 versus new string[1] { \"...\" }.",
+          "fix": "Array initializer: fold newarr/dup/ldc.i4.i/load/stelem with no intervening control flow. Object initializer: fold newobj followed by property stores on the same temporary.",
+          "risk": "low for array initializers; low-medium for object initializers (needs statements-between analysis)."
+        },
+        {
+          "type": "Newtonsoft.Json.Tests.Linq.JObjectTests",
+          "method": "EmbedJValueStringInNewJObject",
+          "ours": "if (v5 is null) { goto IL_001F; } else { goto IL_001D; }\n...\n__cil_type_010001DF v11 = Microsoft.CSharp.RuntimeBinder.Binder.Convert(unchecked((Microsoft.CSharp.RuntimeBinder.CSharpBinderFlags)(0)), v8, v10);",
+          "ilspy": "dynamic val = JObject.FromObject(new { title = jValue });\nstring actual = val.ToString();",
+          "why": "dynamic binder sites are printed literally (~90 lines for 2 source lines), and the anonymous type becomes __name_3C3E6F5F5F30 + <>f__AnonymousType8..ctor.",
+          "fix": "Deliberate, low priority: dynamic reconstruction is a separate analysis. Renaming __name_3C3E6F5F5F30 and moving the binder chatter behind --details is still worth doing.",
+          "risk": "high if attempted; none for the naming/comment part."
+        }
+      ]
+    }
+  ],
+  "partial_blocks": {
+    "total_fallback_methods": 122,
+    "total_methods": 613,
+    "share": 0.199,
+    "note": "Admission gaps, not quality gaps. Reported separately per the brief; their raw-IL comment volume is counted under comments_and_diagnostics.",
+    "per_type": [
+      {"type": "ExceptionHandlingTests", "fallback": 74, "methods": 77, "cause": "newobj <>c__DisplayClassN_0 - external allocation needs dependency facts"},
+      {"type": "JsonSerializerTest", "fallback": 45, "methods": 365, "cause": "lambda display classes plus FileStream/StreamReader allocation"},
+      {"type": "JObjectTests", "fallback": 3, "methods": 94, "cause": "ReadWithSupportMultipleContent, GenericValueCast, LoadFromNestedObject"},
+      {"type": "JPathParseTests", "fallback": 0, "methods": 77, "cause": "none"}
+    ]
+  },
+  "notes": [
+    "Line ratios: JsonSerializerTest 2.79, JObjectTests 3.27, JPathParseTests 3.21, ExceptionHandlingTests 5.16 (slice 3.19). The slice is NUnit test code with heavy compiler machinery, which is why it is far worse than a plain business-logic type would be.",
+    "Two root causes explain most of the excess: opaque token-named calls (2,978 sites, which forces 8,203 vN temporaries) and compiler machinery printed literally (112 synthetic nested types, plus 74 of the 122 fallbacks caused by display-class allocation).",
+    "The string printer is NOT escaping every character: the whole slice contains 1,004 \\u000D, 1,004 \\u000A, one \\u0000 (a genuine NUL in JSON) and one \\\\u003c (which matches ILSpy). The defect is exactly the CR/LF short escapes, on 139 lines.",
+    "The same token is sometimes resolved (v1.Add, v15.TryGetValue, Newtonsoft.Json.Linq.JsonPath.QueryFilter in a cast) and sometimes not (__cil_callvirt_0A00092A). JPathParseTests resolves 0 member calls against 496 helper calls, so its output has no named statement at all.",
+    "Deliberately kept lowered and NOT counted as defects: lambdas/closures (208 sites), dynamic (1 site), foreach (5 sites). Their identifier and comment cost is still reported because renaming and moving comments behind --details requires none of the missing analysis.",
+    "No occurrence of ??, ?. or switch in either output, so those categories have no instances in this slice.",
+    "Every claim was read from the paired files and index.json in this directory; no decompiler was re-run and no input code was executed."
+  ],
+  "ranked_shortlist": [
+    {"rank": 1, "change": "Resolve call/callvirt/newobj/methodspec tokens to member names", "sites": 2978, "risk": "none", "gain": "largest - also removes most of the 8,203 needless temporaries because a named call can nest into its consumer"},
+    {"rank": 2, "change": "Emit using directives, short type names, no global::, real names for __cil_type_/__cil_ref_ aliases", "sites": 4827, "risk": "none", "gain": "long type expressions collapse to keywords and simple names"},
+    {"rank": 3, "change": "Move IR evidence comments behind --details", "sites": 7046, "risk": "none", "gain": "removes 26.7% of output lines from the readable view without losing evidence; must land after 1 and 2"},
+    {"rank": 4, "change": "Printer/compression cleanups: \\r\\n escapes, tail return;, implicit box, enum member names, same-width unchecked, empty label deletion", "sites": 6604, "risk": "none-to-low", "gain": "mechanical, corpus-verifiable"},
+    {"rank": 5, "change": "Emit attributes, drop synthetic : base() bodies, promote // property comments to properties", "sites": 732, "risk": "none-to-low", "gain": "makes the output look like the test class it is"}
+  ]
+}

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use cildec::{TableId, Token};
-use ilspy_lite::decompile_type;
+use ilspy_lite::{OutputStyle, decompile_type, decompile_type_with_style};
 
 const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/class-release.bin"),
@@ -105,5 +105,21 @@ fn broken_method_mapping_keeps_record_and_all_peer_bodies() {
                 .count(),
             6
         );
+    }
+}
+
+#[test]
+fn constant_strings_render_printable_ascii_and_escape_only_the_rest() {
+    for bytes in IMAGES {
+        let fields =
+            decompile_type_with_style(bytes, "ClassCases.Fields", OutputStyle::Readable).unwrap();
+        assert!(
+            fields
+                .text
+                .contains(r#"public const string Text = "A\u0000\uD800";"#),
+            "{}",
+            fields.text
+        );
+        assert!(fields.text.is_ascii(), "{}", fields.text);
     }
 }

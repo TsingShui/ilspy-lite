@@ -1282,9 +1282,9 @@ fn default_value(image: &Image<'_>, parent: u32) -> Result<Option<String>> {
         0x0b if b.len() == 8 => format!("{}UL", u64::from_le_bytes(b.try_into()?)),
         0x0e if b.len() % 2 == 0 => format!(
             "\"{}\"",
-            b.chunks_exact(2)
-                .map(|c| format!("\\u{:04X}", u16::from_le_bytes([c[0], c[1]])))
-                .collect::<String>()
+            crate::metadata::escape_units(
+                b.chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]]))
+            )
         ),
         0x12 if b == [0, 0, 0, 0] => "null".into(),
         _ => return Err("constant requires detailed notation".into()),

@@ -176,9 +176,7 @@ fn friendly_lambda_names_avoid_members_and_share_exact_static_call_names() {
             actual.text
         );
         assert!(
-            actual.text.contains(
-                r#"Literal = "\u003C\u002E\u0063\u0074\u006F\u0072\u003E\u0062\u005F\u005F\u0031";"#
-            ),
+            actual.text.contains(r#"Literal = "<.ctor>b__1";"#),
             "{}",
             actual.text
         );

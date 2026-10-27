@@ -1,0 +1,650 @@
+{
+ "slice": "openra-common",
+ "image": "rust/acceptance/openra/assemblies/OpenRA.Mods.Common.dll",
+ "types_compared": [
+  "OpenRA.Mods.Common.Traits.Aircraft",
+  "OpenRA.Mods.Common.Traits.Mobile",
+  "OpenRA.Mods.Common.Traits.ProductionQueue",
+  "OpenRA.Mods.Common.Server.LobbyCommands",
+  "OpenRA.Mods.Common.Scripting.Global.ColorGlobal"
+ ],
+ "totals": {
+  "ours_lines": 21264,
+  "ilspy_lines": 4523,
+  "ours_code_lines": 11610,
+  "ilspy_code_lines": 4066,
+  "raw_ratio": 4.7,
+  "code_line_ratio": 2.86,
+  "ours_comment_lines": 8897,
+  "fallback_dump_lines": 7904,
+  "methods_admitted": 467,
+  "methods_fallback": 118,
+  "per_type": [
+   {
+    "type": "OpenRA.Mods.Common.Traits.Aircraft",
+    "ours_lines": 6242,
+    "ilspy_lines": 1351,
+    "ours_code_lines": 4522,
+    "ilspy_code_lines": 1211,
+    "raw_ratio": 4.62,
+    "code_line_ratio": 3.73,
+    "methods": 177,
+    "fallbacks": 21
+   },
+   {
+    "type": "OpenRA.Mods.Common.Traits.Mobile",
+    "ours_lines": 4716,
+    "ilspy_lines": 1034,
+    "ours_code_lines": 3391,
+    "ilspy_code_lines": 901,
+    "raw_ratio": 4.56,
+    "code_line_ratio": 3.76,
+    "methods": 158,
+    "fallbacks": 20
+   },
+   {
+    "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+    "ours_lines": 3045,
+    "ilspy_lines": 616,
+    "ours_code_lines": 2654,
+    "ilspy_code_lines": 561,
+    "raw_ratio": 4.94,
+    "code_line_ratio": 4.73,
+    "methods": 90,
+    "fallbacks": 1
+   },
+   {
+    "type": "OpenRA.Mods.Common.Server.LobbyCommands",
+    "ours_lines": 6860,
+    "ilspy_lines": 1374,
+    "ours_code_lines": 814,
+    "ilspy_code_lines": 1287,
+    "raw_ratio": 4.99,
+    "code_line_ratio": 0.63,
+    "methods": 120,
+    "fallbacks": 75
+   },
+   {
+    "type": "OpenRA.Mods.Common.Scripting.Global.ColorGlobal",
+    "ours_lines": 401,
+    "ilspy_lines": 148,
+    "ours_code_lines": 229,
+    "ilspy_code_lines": 106,
+    "raw_ratio": 2.7,
+    "code_line_ratio": 2.16,
+    "methods": 40,
+    "fallbacks": 1
+   }
+  ]
+ },
+ "categories": [
+  {
+   "name": "identifier_naming",
+   "occurrences": 5712,
+   "breakdown": {
+    "token_named_call_sites": 952,
+    "structural_alias_type_names": 2938,
+    "stack_temp_locals": 821,
+    "hex_encoded_name_identifiers": 580,
+    "synthetic_backing_fields": 421,
+    "per_type": {
+     "Aircraft": {
+      "token_calls": 657,
+      "alias_types": 1292,
+      "stack_temps": 320,
+      "name_hex": 165,
+      "il_fields": 139
+     },
+     "Mobile": {
+      "token_calls": 535,
+      "alias_types": 983,
+      "stack_temps": 276,
+      "name_hex": 159,
+      "il_fields": 120
+     },
+     "ProductionQueue": {
+      "token_calls": 421,
+      "alias_types": 507,
+      "stack_temps": 225,
+      "name_hex": 194,
+      "il_fields": 125
+     },
+     "LobbyCommands": {
+      "token_calls": 139,
+      "alias_types": 80,
+      "stack_temps": 0,
+      "name_hex": 62,
+      "il_fields": 37
+     },
+     "ColorGlobal": {
+      "token_calls": 3,
+      "alias_types": 76,
+      "stack_temps": 0,
+      "name_hex": 0,
+      "il_fields": 0
+     }
+    }
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+     "method": "ClearQueue",
+     "ours": "int v6 = __cil_callvirt_06001994(v5);\nint v7 = 0;\nif (v6 <= v7) { goto IL_0043; } else { goto IL_001F; }\nIL_001F: ;\nglobal::OpenRA.Mods.Common.Traits.ProductionQueue v8 = this;\nglobal::OpenRA.Mods.Common.Traits.PlayerResources v9 = v8.playerResources;\nglobal::OpenRA.Mods.Common.Traits.ProductionItem v10 = l1;\nint v11 = __cil_callvirt_06001994(v10);\n__cil_callvirt_0600193B(v9, v11);",
+     "ilspy": "if (item.ResourcesPaid > 0)\n{\n\tplayerResources.GiveResources(item.ResourcesPaid);\n\titem.RemainingCost += item.ResourcesPaid;\n}",
+     "why": "Invoked members are printed as an opaque token helper even though the field-access path already resolves names (v0.Queue, v1.Yaw). 952 call sites lose the member name; the reader sees ResourcesPaid/GiveResources nowhere.",
+     "fix": "Resolve the member name at the call token and print receiver.Member(args). Keep the token only for the deliberate call-vs-callvirt precision cases and for generic method instantiations that still need their instantiation rendered.",
+     "risk": "low; presentation only. The exception is __cil_direct_ (199 sites) which encodes 'call not callvirt' on virtual this-accessors - keep that precision, add the name next to it."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "GetTurnSpeed",
+     "ours": "global::OpenRA.Mods.Common.Traits.Aircraft v7 = this;\n__cil_value_4dc9b0074cc3358fbbb6a841eafae67a8806e8ae v8 = __cil_direct_06000F31(v7);\n__cil_value_4dc9b0074cc3358fbbb6a841eafae67a8806e8ae e5_9_0 = v8;\ns9_0 = e5_9_0;\ngoto IL_0043;\nIL_003C: ;\nref __cil_value_877f2d9f1d5ae9ff8420452e071399208150ae77 v15 = ref l1;\n__cil_value_4dc9b0074cc3358fbbb6a841eafae67a8806e8ae v16 = __cil_value_call_0A001112(ref v15);\n__cil_value_4dc9b0074cc3358fbbb6a841eafae67a8806e8ae e8_9_0 = v16;\ns9_0 = e8_9_0;\ngoto IL_0043;\nIL_0043: ;\nl0 = s9_0;",
+     "ilspy": "return new WAngle(Util.ApplyPercentageModifiers(((!isIdleTurn) ? TurnSpeed : (IdleTurnSpeed ?? TurnSpeed)).Angle, speedModifiers).Clamp(1, 1024));",
+     "why": "Lifter slot locals (e<slot>_<depth>_<n> and s<slot>_<depth>) leak into the output as if they were source variables. 821 of them across the slice; s9_0 is the ternary merge slot and e5_9_0/e7_9_0/e8_9_0 are its arms.",
+     "fix": "Rename slot temporaries to a scheme that cannot collide with source locals, then fold single-use merge slots back into ?: / ?? once each arm is proven side-effect free.",
+     "risk": "none for the rename; medium for the fold (needs a purity + single-use proof on the slot)."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "INotifyAddedToWorld.AddedToWorld",
+     "ours": "private virtual void __name_4F70656E52412E5472616974732E494E6F746966794164646564546F576F726C642E4164646564546F576F726C64(OpenRA.Actor self)\n{\n    __cil_callvirt_06000F43(this, self);\n    return;\n}",
+     "ilspy": "void INotifyAddedToWorld.AddedToWorld(Actor self)\n{\n\tAddedToWorld(self);\n}",
+     "why": "__name_4F70656E... decodes to OpenRA.Traits.INotifyAddedToWorld.AddedToWorld; every explicit interface implementation gets a hex name (52 in the slice) plus 'private', and the delegated call loses its member name.",
+     "fix": "Print the interface-qualified member name for explicit implementations and drop the synthetic 'private'; for generated types print the demangled form (<>c__DisplayClass49_0 -> DisplayClass49_0) instead of the hex.",
+     "risk": "none - naming only. Inlining the closures themselves is the separate deliberate gap."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+     "method": "field declarations",
+     "ours": "private readonly OpenRA.Actor __il_field_04001542;\nprivate bool __il_field_04001543;\nprivate string __il_field_04001544;\nprivate bool __il_field_04001545;",
+     "ilspy": "public Actor Actor { get; }\n\n[Sync]\npublic bool Enabled { get; protected set; }\n\npublic string Faction { get; private set; }\n\n[Sync]\npublic bool IsValidFaction { get; private set; }",
+     "why": "Auto-property backing fields are emitted as fields named after their metadata token (421 in the slice) and the property itself becomes get_/set_ methods, so the type's API surface is invisible.",
+     "fix": "Detect the auto-property pair (backing field + get_/set_ accessors with matching visibility) and print one property declaration; use { get; set; } instead of the __il_field_* field.",
+     "risk": "low - same accessors and accessibility, only the member shape changes."
+    }
+   ]
+  },
+  {
+   "name": "semantic_compression",
+   "occurrences": 3604,
+   "breakdown": {
+    "else_goto_fallthrough": 406,
+    "other_goto_to_labels": 548,
+    "stray_il_labels": 870,
+    "dead_default_declarations": 475,
+    "trailing_void_return": 229,
+    "assign_then_return": 169,
+    "unchecked_wrappers": 462,
+    "bool_shuttle_helpers": 422,
+    "self_increment_forms": 11,
+    "float_bit_helpers": 12,
+    "per_type": {
+     "Aircraft": {
+      "else_goto": 181,
+      "gotos": 431,
+      "stray_labels": 388,
+      "defaults": 174,
+      "trailing_return": 79,
+      "unchecked": 121,
+      "bool_load": 130,
+      "bool_store": 60
+     },
+     "Mobile": {
+      "else_goto": 118,
+      "gotos": 289,
+      "stray_labels": 263,
+      "defaults": 120,
+      "trailing_return": 64,
+      "unchecked": 273,
+      "bool_load": 75,
+      "bool_store": 30
+     },
+     "ProductionQueue": {
+      "else_goto": 100,
+      "gotos": 222,
+      "stray_labels": 206,
+      "defaults": 76,
+      "trailing_return": 57,
+      "unchecked": 44,
+      "bool_load": 79,
+      "bool_store": 39
+     },
+     "LobbyCommands": {
+      "else_goto": 7,
+      "gotos": 12,
+      "stray_labels": 13,
+      "defaults": 1,
+      "trailing_return": 28,
+      "unchecked": 2,
+      "bool_load": 6,
+      "bool_store": 3
+     },
+     "ColorGlobal": {
+      "else_goto": 0,
+      "gotos": 0,
+      "stray_labels": 0,
+      "defaults": 3,
+      "trailing_return": 1,
+      "unchecked": 12,
+      "bool_load": 0,
+      "bool_store": 0
+     }
+    }
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "AddedToWorld",
+     "ours": "int v11 = v10.Length;\nglobal::OpenRA.Mods.Common.Traits.AircraftInfo v13 = ((__cil_ref_656e6dffaba1c09d791add19616ed55de0dae54d)this).Info;\nint v14 = v13.MinAirborneAltitude;\nif (v11 < v14) {\n    goto IL_003D;\n} else {\n    goto IL_0037;\n}\nIL_0037: ;\n__cil_direct_06000F83(this);\nIL_003D: ;",
+     "ilspy": "if (wDist.Length >= Info.MinAirborneAltitude)\n{\n\tOnAirborneAltitudeReached();\n}",
+     "why": "The false branch is a goto to the label that is already the next line, so the else block is dead text; the condition is also inverted. 406 such pairs in the slice (Aircraft 181, Mobile 118, ProductionQueue 100, LobbyCommands 7).",
+     "fix": "Drop an else/goto pair whose target is the immediately following label; drop IL_xxxx: ; labels that no remaining goto references; negate the condition instead of branching around a single statement when the CFG already guarantees a two-way split.",
+     "risk": "none for the two deletions (they remove text the CFG already implies); low for the negation, which reorders the same two edges and should be checked by the existing structural validation."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Scripting.Global.ColorGlobal",
+     "method": "New",
+     "ours": "byte l0 = default;\nbyte l1 = default;\nbyte l2 = default;\nint v3 = __cil_methodspec_call_2B0000FC(hue, 0, 255);\nint v4 = unchecked((int)(unchecked((byte)(v3))));\nl0 = unchecked((byte)(v4));\n...\n__cil_value_625aea2dd1a31ad130bf96e01b5f7559f7a115a6 v28 = OpenRA.Primitives.Color.FromAhsl(255, __cil_call_arg_r4(v19), __cil_call_arg_r4(v23), __cil_call_arg_r4(v27));\nreturn v28;",
+     "ilspy": "byte b = (byte)hue.Clamp(0, 255);\nbyte b2 = (byte)saturation.Clamp(0, 255);\nbyte b3 = (byte)luminosity.Clamp(0, 255);\nreturn Color.FromAhsl(255, (float)(int)b / 255f, (float)(int)b2 / 255f, (float)(int)b3 / 255f);",
+     "why": "Locals are declared at the top and initialized to default, then reassigned before first read (475 sites); unchecked is nested twice on the same conversion (462 sites); the float math is printed as raw CLI ops (__cil_conv_r4, __cil_ldc_r4_bits(0x437F0000u), __cil_div_F, __cil_call_arg_r4) instead of (float)x / 255f.",
+     "fix": "Suppress '= default' when a definite-assignment pass shows the local is written before every read, drop the final 'return;' in void bodies, fold 'v = expr; return v;' for single-use temps, collapse nested unchecked((T)(unchecked((U)x))) to one conversion, and print float math from the ldc.r4 constant value.",
+     "risk": "none for the first three; low for the unchecked collapse; removing unchecked entirely would change behavior under /checked+ so that stays a separate decision."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "get_MovementSpeed",
+     "ours": "int v1 = __cil_bool_load(__cil_direct_0A0010FD(this));\nif (v1 != 0) {\n    return 0;\n} else {\n    goto IL_0008;\n}\nIL_0008: ;\nint v3 = __cil_bool_load(__cil_direct_0A0010FE(this));\nif (!(v3 == 0)) {\n    return 0;\n}",
+     "ilspy": "if (IsTraitDisabled || IsTraitPaused)\n{\n\treturn 0;\n}",
+     "why": "Every bool is loaded to an int and compared against 0 (290 __cil_bool_load + 132 __cil_bool_store), and the negated comparison is printed as !(x == 0) rather than x != 0.",
+     "fix": "Keep the bool type through the lift (print bool locals and conditions as bool), print != instead of !(x == 0), and fold 'if (c) return X; if (d) return X;' where the two returns are identical.",
+     "risk": "low - same predicates and same returns."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "get_IdleTurnSpeed",
+     "ours": "IL_001C: ;\nref __cil_value_877f2d9f1d5ae9ff8420452e071399208150ae77 v7 = ref l0;\nv7 = default;\n__cil_value_877f2d9f1d5ae9ff8420452e071399208150ae77 v8 = l0;\nreturn v8;",
+     "ilspy": "return null;",
+     "why": "Returning default(T) goes through a ref alias to the hoisted local, producing three statements and a live ref local where the source had 'return null'.",
+     "fix": "When the returned value is the default of a nullable/value type and the local has no other reader, return the literal (null for Nullable<T>) directly and drop the ref alias.",
+     "risk": "low - requires only a single-use check on the local."
+    }
+   ]
+  },
+  {
+   "name": "type_and_member_spelling",
+   "occurrences": 3467,
+   "breakdown": {
+    "system_fully_qualified_prefixes": 2141,
+    "global_prefix": 1026,
+    "at_escaped_identifiers": 188,
+    "operator_methods": 75,
+    "over_escaped_string_literals": 37,
+    "escaped_characters_in_literals": 1321,
+    "using_directives_ours": 0,
+    "using_directives_ilspy": 35,
+    "per_type": {
+     "Aircraft": {
+      "system": 417,
+      "global": 371,
+      "at": 80
+     },
+     "Mobile": {
+      "system": 351,
+      "global": 288,
+      "at": 106
+     },
+     "ProductionQueue": {
+      "system": 303,
+      "global": 359,
+      "at": 0
+     },
+     "LobbyCommands": {
+      "system": 1042,
+      "global": 8,
+      "at": 2
+     },
+     "ColorGlobal": {
+      "system": 28,
+      "global": 0,
+      "at": 0
+     }
+    }
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Server.LobbyCommands",
+     "method": "const fields",
+     "ours": "private const string CustomRules = \"\\u006E\\u006F\\u0074\\u0069\\u0066\\u0069\\u0063\\u0061\\u0074\\u0069\\u006F\\u006E\\u002D\\u0063\\u0075\\u0073\\u0074\\u006F\\u006D\\u002D\\u0072\\u0075\\u006C\\u0065\\u0073\";",
+     "ilspy": "[FluentReference]\nprivate const string CustomRules = \"notification-custom-rules\";",
+     "why": "Every character of every const string is escaped: 37 literals, 1321 \\uXXXX escapes. The same printer renders ordinary literals readably elsewhere (__cil_ldstr_70000931(\"state\")), so the defect is confined to the const-initializer path.",
+     "fix": "Escape only \\\" , backslash and control characters; print everything else literally (line 4841's \\u000A must stay escaped).",
+     "risk": "none - round-trip is preserved because non-printable characters still escape."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Mobile",
+     "method": "set_CurrentMovementTypes",
+     "ours": "// enum storage token=0x02000695 alias=__cil_enum_02000695 underlying=int: global::@OpenRA.@Mods.@Common.@Traits.@MovementType; ...\n__cil_type_01000025 v7 = this.self;\n__cil_type_0100002D v8 = v7.World;\n__cil_type_01000130 v9 = v8.ActorMap;\nint v22 = unchecked((int)(value));\n__cil_callvirt_06001FE5(v18, v21, unchecked((__cil_enum_02000695)(v22)));",
+     "ilspy": "MovementType movementType = movementTypes;\nmovementTypes = value;\nif (value != movementType)\n{\n\tself.World.ActorMap.UpdateOccupiedCells(self.OccupiesSpace);",
+     "why": "Types are spelled three ways at once: fully qualified with global:: (1026 sites), with @ escapes on OpenRA's own namespace segments (188 sites), and as a structural alias (2938 sites). ILSpy uses short names through a using block (0 using directives on our side, 35 on ILSpy's).",
+     "fix": "Emit a using block for resolved namespaces and print short names; strip @ on non-keyword identifiers; map __cil_* aliases to the resolved type name; keep global:: only for names that genuinely conflict.",
+     "risk": "low, with one caveat: global::/@ were presumably added to guarantee unambiguity, so gate the short-name path on 'no shadowing in scope' instead of deleting the escape unconditionally."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Mobile",
+     "method": "get_IsMovingBetweenCells",
+     "ours": "__cil_value_13b48834ea748f1ea38d02def38ca26e6d26c625 v1 = this.FromCell;\n__cil_value_13b48834ea748f1ea38d02def38ca26e6d26c625 v3 = this.ToCell;\nreturn OpenRA.CPos.op_Inequality(v1, v3);",
+     "ilspy": "public bool IsMovingBetweenCells => FromCell != ToCell;",
+     "why": "Operator overloads are printed by their metadata name (75 sites: op_Inequality, op_Equality) instead of the operator token, and the expression-bodied property is expanded into a body.",
+     "fix": "Map op_Equality/op_Inequality/op_Addition/... to the operator token; collapse to an expression body when the body is a single return with no locals.",
+     "risk": "low - same operator, same operands."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "get_IdleTurnSpeed",
+     "ours": "public System.Nullable<OpenRA.WAngle> get_IdleTurnSpeed()",
+     "ilspy": "public WAngle? IdleTurnSpeed",
+     "why": "Nullable<T> and ValueTuple<A,B> are printed by their metadata spelling rather than the C# shorthand; combined with the FQN prefix this makes the signature unreadable at a glance.",
+     "fix": "Print T? for System.Nullable<T> and (A, B) for System.ValueTuple<A, B>.",
+     "risk": "none - same types."
+    }
+   ]
+  },
+  {
+   "name": "structure_and_layout",
+   "occurrences": 706,
+   "breakdown": {
+    "attributes_dropped": 93,
+    "accessor_methods_instead_of_properties": 102,
+    "property_trailer_comments": 90,
+    "ilspy_property_declarations": 77,
+    "ilspy_auto_properties": 20,
+    "synthetic_backing_fields_hoisted": 421,
+    "nested_types_moved_to_end": "all 5 types (e.g. Aircraft nested classes start at line 4625 of 6242; ILSpy puts them at line 14)",
+    "attributes_in_ilspy": {
+     "ColorGlobal": 40,
+     "LobbyCommands": 45,
+     "Mobile": 4,
+     "ProductionQueue": 2,
+     "Aircraft": 2
+    }
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Scripting.Global.ColorGlobal",
+     "method": "type declaration",
+     "ours": "namespace OpenRA.Mods.Common.Scripting.Global;\n\npublic class ColorGlobal : OpenRA.Scripting.ScriptGlobal\n{\n    public ColorGlobal(OpenRA.Scripting.ScriptContext context) : base(context)\n    {\n        return;\n    }",
+     "ilspy": "[ScriptGlobal(\"HSLColor\")]\npublic class ColorGlobal : ScriptGlobal\n{\n\t[Desc(new string[] { \"FromHex(\\\"00FFFF\\\")\" })]\n\tpublic Color Aqua => Color.Aqua;",
+     "why": "No attribute line is emitted anywhere in the slice: 0 vs 93 in ILSpy (ColorGlobal 40, LobbyCommands 45, Mobile 4, ProductionQueue 2, Aircraft 2). [Sync] and [FluentReference] are read at runtime and the [Desc] payloads are the only documentation of the scripting API, so this is more than cosmetic.",
+     "fix": "Emit type and member attributes with reconstructed arguments (ctor args, new string[]{...} arrays, named args) from the same metadata tokens the resolver already reads.",
+     "risk": "low semantically - nothing is removed from the output - but rendering attribute arguments is new surface, so it needs an explicit go-ahead rather than riding along with a formatting change."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+     "method": "properties",
+     "ours": "public OpenRA.Actor get_Actor()\n{\n    __cil_type_01000025 v1 = this.__il_field_04001542;\n    return v1;\n}\n\npublic bool get_Enabled()\n{\n    return this.__il_field_04001543;\n}\n\nprotected void set_Enabled(bool value)\n{\n    int v1 = __cil_bool_load(value);\n    this.__il_field_04001543 = __cil_bool_store(v1);\n    return;\n}",
+     "ilspy": "public Actor Actor { get; }\n\n[Sync]\npublic bool Enabled { get; protected set; }",
+     "why": "All 77 properties in the slice are emitted as 102 get_/set_ methods plus 90 trailing '// property X { get: get_X; }' comments. The member shape and the setter accessibility are invisible until you read the pair.",
+     "fix": "Pair get_X/set_X into a property declaration, keep the printed accessibility on the accessor, and stop emitting the property trailer once the property is printed.",
+     "risk": "low - same accessors, same accessibility, only the member shape changes."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "member ordering",
+     "ours": "line 3:    public class Aircraft : ...\nlines 5-31: all fields, ending with the __il_field_* backing fields\nlines 33+:  accessor methods\nline 4625:  private sealed class AssociateWithAirfieldActivity : OpenRA.Activities.Activity",
+     "ilspy": "line 12:   public class Aircraft : ...\nline 14:   private sealed class AssociateWithAirfieldActivity : Activity\nline 131:  public class AircraftMoveOrderTargeter : IOrderTargeter\n... fields and members",
+     "why": "Nested types are emitted after every method instead of first, and auto-property backing fields are appended to the field block instead of living next to their property.",
+     "fix": "Keep metadata member order (nested types come first because metadata emits them first) and place an auto-property's backing field with the property.",
+     "risk": "none - ordering only."
+    }
+   ]
+  },
+  {
+   "name": "comments_and_diagnostics",
+   "occurrences": 8897,
+   "breakdown": {
+    "structural_signature": 598,
+    "enum_storage_token": 51,
+    "exact_call_kept": 21,
+    "property_trailer": 90,
+    "dependency_footer": 110,
+    "fallback_dump_lines": 7904,
+    "total_comment_lines": 8897,
+    "share_of_output_percent": 41.8,
+    "per_type_comment_lines": {
+     "LobbyCommands": 5881,
+     "Aircraft": 1507,
+     "Mobile": 1132,
+     "ColorGlobal": 110,
+     "ProductionQueue": 267
+    },
+    "per_type_share_percent": {
+     "LobbyCommands": 85.7,
+     "Aircraft": 24.1,
+     "Mobile": 24.0,
+     "ColorGlobal": 27.4,
+     "ProductionQueue": 8.8
+    }
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Scripting.Global.ColorGlobal",
+     "method": "get_Aqua",
+     "ours": "public OpenRA.Primitives.Color get_Aqua()\n{\n    // structural signature __cil_value_625aea2dd1a31ad130bf96e01b5f7559f7a115a6 bytes=118085: valuetype [OpenRA.Game]OpenRA.Primitives.Color; type-owner=0x00000000 method-owner=0x00000000; tokens scoped to this input image; whole struct value snapshot/copy, preserving embedded references; no boxing, construction, host layout or address inference.\n    __cil_value_625aea2dd1a31ad130bf96e01b5f7559f7a115a6 v0 = OpenRA.Primitives.Color.get_Aqua();\n    return v0;\n}",
+     "ilspy": "[Desc(new string[] { \"FromHex(\\\"00FFFF\\\")\" })]\npublic Color Aqua => Color.Aqua;",
+     "why": "The same 230-character sentence is repeated for every method that touches the same type (38 times in ColorGlobal for the single type Color; 32 times for WRot in Aircraft). It is real evidence but it is class-level noise at this density.",
+     "fix": "Keep one line per distinct signature, emit it once, or route the family to --details. Delete the '// property X { get: get_X; }' trailer by emitting the property itself.",
+     "risk": "none - comments."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "get_MovementSpeed",
+     "ours": "// Exact call 0x0A0010FD kept: property syntax needs a nongeneric class owner.\nint v1 = __cil_bool_load(__cil_direct_0A0010FD(this));",
+     "ilspy": "if (IsTraitDisabled || IsTraitPaused)",
+     "why": "21 'Exact call ... kept' notes document a deliberate precision decision. The note is necessary evidence but it currently sits in the middle of the body.",
+     "fix": "Keep the note, move it to --details, and print the member name (IsTraitDisabled) in the body.",
+     "risk": "none."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Mobile",
+     "method": "file footer",
+     "ours": "// Dependency identity substituted: System.Runtime, Version=6.0.0.0, ... -> System.Runtime, Version=10.0.0.0, ...; IlSpy, metadata only, not original-runtime behavior proof.\n[... 20 more identical lines in every file ...]\n// Dependencies unresolved: 11; exact references retained; see --details for identities and provenance.",
+     "ilspy": "(no footer)",
+     "why": "21 lines of dependency-substitution text are appended to each of the 5 files (105 lines total, 22 with the summary line). Only the final 'Dependencies unresolved: N' line is actionable at class scope.",
+     "fix": "Move the substitution list to --details; keep the one-line unresolved summary.",
+     "risk": "none - comments."
+    }
+   ]
+  },
+  {
+   "name": "missing_source_level_constructs",
+   "occurrences": 309,
+   "breakdown": {
+    "foreach_ilspy": 40,
+    "lock_ilspy": 32,
+    "yield_return_ilspy": 11,
+    "null_conditional_ilspy": 5,
+    "null_coalescing_ilspy": 4,
+    "self_increment_ilspy": 6,
+    "compound_assignment_ilspy": 8,
+    "collection_initializers_ilspy": 1,
+    "newobj_helpers_instead_of_new": 202,
+    "foreach_provable_in_admitted_bodies": 15,
+    "ours_all_zero": true,
+    "note": "All 32 lock statements sit inside LobbyCommands methods that are fallback on our side, so lock is currently an admission gap, not a quality gap. 15 try/finally enumerator blocks in admitted bodies (Aircraft 8, Mobile 5, ProductionQueue 2) prove at least 15 foreach sites are reconstructable today."
+   },
+   "examples": [
+    {
+     "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+     "method": "ClearQueue",
+     "ours": "__cil_value_bf76482d0d9dd3fdbd4330e5362ee113342a6a90 l0 = default;\nOpenRA.Mods.Common.Traits.ProductionItem l1 = default;\nIL_0000: ;\nglobal::OpenRA.Mods.Common.Traits.ProductionQueue v0 = this;\n__cil_ref_363f0ff04a5b9e386ee41c3d2a45ee5f4aaf5f64 v1 = v0.Queue;\n__cil_value_bf76482d0d9dd3fdbd4330e5362ee113342a6a90 v2 = __cil_callvirt_0A001561(v1);\nl0 = v2;\ntry {\n    IL_000C: ;\n    goto IL_005B;\n    IL_000E: ;\n    ref __cil_value_bf76482d0d9dd3fdbd4330e5362ee113342a6a90 v3 = ref l0;\n    global::OpenRA.Mods.Common.Traits.ProductionItem v4 = __cil_value_call_0A001562(ref v3);\n    l1 = v4;\n    ...\n}\nfinally {\n    IL_0066: ;\n    ref __cil_value_bf76482d0d9dd3fdbd4330e5362ee113342a6a90 v26 = ref l0;\n    __cil_constrained_1B0007C6_0A00001A(ref v26);\n    goto __cil_finally_end_0;\n    __cil_finally_end_0: ;\n}",
+     "ilspy": "protected void ClearQueue()\n{\n\tforeach (ProductionItem item in Queue)\n\t{\n\t\tif (item.ResourcesPaid > 0)\n\t\t{\n\t\t\tplayerResources.GiveResources(item.ResourcesPaid);\n\t\t\titem.RemainingCost += item.ResourcesPaid;\n\t\t}\n\t\tplayerResources.GiveCash(item.TotalCost - item.RemainingCost);\n\t}\n\tQueue.Clear();\n}",
+     "why": "The enumerator shape is fully present (GetEnumerator, MoveNext, get_Current, constrained Dispose in a finally), so this is a recognizer gap worth ~55 lines to 12 in this method alone. 0 foreach vs 40 in ILSpy across the slice.",
+     "fix": "Recognize GetEnumerator -> get_Current/MoveNext loop with a Dispose-only finally and print foreach, keeping the Dispose in the same position.",
+     "risk": "medium - must prove the finally only disposes the enumerator and that the loop bound is the enumerator, not a parallel array."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Mobile",
+     "method": "set_CurrentMovementTypes",
+     "ours": "__cil_ref_f61687ff1f2a60dadf9f80e4e9fbc58fbbc1bcec v14 = this.notifyMoving;\nl1 = v14;\nl2 = 0;\ngoto IL_0052;\nIL_003D: ;\n__cil_ref_f61687ff1f2a60dadf9f80e4e9fbc58fbbc1bcec v16 = l1;\nint v17 = l2;\nglobal::OpenRA.Mods.Common.Traits.INotifyMoving v18 = v16[v17];\n__cil_type_01000025 v21 = this.self;\nint v22 = unchecked((int)(value));\n__cil_callvirt_06001FE5(v18, v21, unchecked((__cil_enum_02000695)(v22)));\nint v23 = l2;\nl2 = unchecked(v23 + 1);\nIL_0052: ;\nint v26 = l2;\n__cil_ref_f61687ff1f2a60dadf9f80e4e9fbc58fbbc1bcec v27 = l1;\nnint v28 = unchecked((nint)(v27.LongLength));\nint v29 = unchecked((int)(v28));\nif (v26 < v29) { goto IL_003D; } else { goto IL_0058; }",
+     "ilspy": "INotifyMoving[] array = this.notifyMoving;\nforeach (INotifyMoving notifyMoving in array)\n{\n\tnotifyMoving.MovementTypeChanged(self, value);\n}",
+     "why": "An array loop over notifyMoving with a manual index is printed with goto-based control flow, no ++ (0 vs 6 in ILSpy), and nint/LongLength glue that must be folded back to Length.",
+     "fix": "Recognize 'int i = 0; while (i < a.Length) { use a[i]; i = i + 1; }' as foreach (or at minimum a for loop) and print i++ / Length.",
+     "risk": "medium for the foreach fold (index-typed bodies and early exit need care); low for the ++/Length peepholes."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Server.LobbyCommands",
+     "method": ".ctor",
+     "ours": "__cil_ref_60dc616c6864b639d0a2c165b44892c02f22fe64 v1 = __cil_newobj_0A000618();\nstring v3 = __cil_ldstr_70000931(\"state\");\nnint v4 = __cil_ldftn_06000325;\n__cil_ref_affef7f2d4008f057ef6d2e0bfffc711118b199f v5 = __cil_newobj_0A000619(null, v4);\n__cil_callvirt_0A00061A(v1, v3, v5);\nstring v7 = __cil_ldstr_7000D2AD(\"startgame\");\nnint v8 = __cil_ldftn_06000326;\n[24 entries x 5 statements]",
+     "ilspy": "private readonly IDictionary<string, Func<OpenRA.Server.Server, Connection, Session.Client, string, bool>> commandHandlers = new Dictionary<string, Func<...>>\n{\n\t{ \"state\", State },\n\t{ \"startgame\", StartGame },\n\t...\n};",
+     "why": "The constructor is admitted on our side, so this is pure quality loss: 5 statements per dictionary entry instead of one initializer line, __cil_newobj_ instead of new T(...) (202 sites), and method groups reduced to __cil_ldftn_ tokens.",
+     "fix": "Print new T(args) for __cil_newobj_, fold new Func<...>(target, __cil_ldftn_) to the method group, and fold a run of dict.Add(k, v) on a freshly-constructed local into an initializer.",
+     "risk": "low for the new/method-group naming; medium for the initializer fold (must confirm the local is fresh and never aliased)."
+    },
+    {
+     "type": "OpenRA.Mods.Common.Traits.Aircraft",
+     "method": "GetTurnSpeed",
+     "ours": "int v6 = __cil_bool_load(isIdleTurn);\nif (v6 != 0) { goto IL_0024; } else { goto IL_001C; }\n...\nref __cil_value_877f2d9f1d5ae9ff8420452e071399208150ae77 v11 = ref l1;\nint v12 = __cil_bool_load(__cil_value_call_0A001111(ref v11));\nif (v12 != 0) { goto IL_003C; } else { goto IL_0034; }",
+     "ilspy": "return new WAngle(Util.ApplyPercentageModifiers(((!isIdleTurn) ? TurnSpeed : (IdleTurnSpeed ?? TurnSpeed)).Angle, speedModifiers).Clamp(1, 1024));",
+     "why": "The HasValue/GetValue pattern of Nullable<WAngle> is printed as a ref local plus a bool helper call, so neither ?: nor ?? is ever reconstructed (0 vs 14 ternaries and 0 vs 4 ?? in the slice).",
+     "fix": "Recognize 'Nullable<T>.get_HasValue -> get_Value / fallback' as ?? and the two-arm merge slot as ?:; print T? in the signature.",
+     "risk": "low for ??: both arms are pure value reads. Medium for the general merge-slot fold."
+    }
+   ]
+  }
+ ],
+ "partial_blocks": {
+  "total_fallbacks": 118,
+  "total_methods": 585,
+  "per_type": [
+   {
+    "type": "OpenRA.Mods.Common.Server.LobbyCommands",
+    "fallbacks": 75,
+    "methods": 120,
+    "reasons": {
+     "nested/generic/unresolved external class": 73,
+     "incompatible value/receiver types": 2
+    },
+    "note": "ValidateSlotCommand, ValidateCommand and the 24 command handlers are pure IL dumps; 85.7% of the file is comment text."
+   },
+   {
+    "type": "OpenRA.Mods.Common.Traits.Aircraft",
+    "fallbacks": 21,
+    "methods": 177,
+    "reasons": {
+     "byref/modified parameter": 12,
+     "unsupported opcode ldvirtftn": 2,
+     "incompatible value/receiver types": 2,
+     "EH fault handlers": 2,
+     "incompatible stack categories": 1,
+     "generic virtual dispatch": 1,
+     "external allocation (byref ctor parameter)": 1
+    }
+   },
+   {
+    "type": "OpenRA.Mods.Common.Traits.Mobile",
+    "fallbacks": 20,
+    "methods": 158,
+    "reasons": {
+     "byref/modified parameter": 12,
+     "incompatible value/receiver types": 3,
+     "unsupported opcode ldvirtftn": 2,
+     "EH fault handlers": 2,
+     "generic virtual dispatch": 1
+    }
+   },
+   {
+    "type": "OpenRA.Mods.Common.Scripting.Global.ColorGlobal",
+    "fallbacks": 1,
+    "methods": 40,
+    "reasons": {
+     "external allocation needs dependency facts": 1
+    },
+    "note": "FromHex: Color.TryParse + new LuaException."
+   },
+   {
+    "type": "OpenRA.Mods.Common.Traits.ProductionQueue",
+    "fallbacks": 1,
+    "methods": 90,
+    "reasons": {
+     "generic virtual dispatch": 1
+    },
+    "note": "The constructor: LINQ query expressions over Producible compiled to cached delegates."
+   }
+  ],
+  "reason_totals": {
+   "nested/generic/unresolved external class": 73,
+   "byref/modified parameter": 24,
+   "incompatible value/receiver types": 7,
+   "unsupported opcode ldvirtftn": 4,
+   "EH fault handlers": 4,
+   "generic virtual dispatch": 3,
+   "incompatible stack categories": 1,
+   "external allocation": 1
+  },
+  "line_cost": "7904 of 21264 output lines (37.2%) are dumped IL inside these blocks; 5739 of them in LobbyCommands."
+ },
+ "deliberate_low_priority": [
+  {
+   "gap": "closures not inlined",
+   "evidence": "__name_3C3E635F5F446973706C6179436C61737334395F30 = <>c__DisplayClass49_0 and __name_3C3E63 = <>c emitted as members with their own __cil_ldftn_/__cil_ldsfld_ bodies; 22 generated types in LobbyCommands, 11 in Aircraft, 11 in ProductionQueue, 9 in Mobile",
+   "why": "lambda/closure reconstruction of a compiler feature we deliberately keep lowered; only the naming of these types is in scope (identifier_naming)"
+  },
+  {
+   "gap": "iterators not reconstructed",
+   "evidence": "private sealed class __name_3C4765745661726961626C654F62736572766572733E645F5F313231 : IEnumerable<T>, IEnumerator<T>, IDisposable with a full state machine; 11 yield return sites in ILSpy",
+   "why": "iterator shape reconstruction, same category"
+  },
+  {
+   "gap": "LobbyCommands bodies are fallbacks",
+   "evidence": "75/120 methods",
+   "why": "admission gap, reported in partial_blocks, not a quality finding"
+  },
+  {
+   "gap": "__cil_direct_ for virtual this-accessors",
+   "evidence": "__cil_direct_06000F2E(this) plus the 'Exact call ... kept' comment",
+   "why": "deliberate call-vs-callvirt precision; keep the precision and add the name"
+  }
+ ],
+ "shortlist": [
+  {
+   "rank": 1,
+   "change": "delete fall-through else { goto L; } and unreferenced IL_xxxx: ; labels",
+   "sites": 1276,
+   "risk": "none",
+   "why": "two lines removed per branch, both deletes only remove text the CFG already implies"
+  },
+  {
+   "rank": 2,
+   "change": "dead declaration noise: '= default' when written-before-read, trailing 'return;', 'v = expr; return v;'",
+   "sites": 873,
+   "risk": "none for the first two, low for the third (single-assignment temporaries only)"
+  },
+  {
+   "rank": 3,
+   "change": "emit properties from get_/set_ pairs, drop __il_field_* for auto-property backing fields",
+   "sites": 102,
+   "risk": "low",
+   "why": "same accessors and accessibility; makes the type API visible"
+  },
+  {
+   "rank": 4,
+   "change": "type and identifier spelling: using + short names, T?, (A, B), operator tokens, @ removal",
+   "sites": 3467,
+   "risk": "low",
+   "why": "largest count in the slice; gate short names on no-shadowing rather than deleting global:: blindly"
+  },
+  {
+   "rank": 5,
+   "change": "resolve call-site member names for __cil_callvirt_/direct_/newobj_/ldftn_/ldsfld_/ldstr_",
+   "sites": 952,
+   "risk": "low-medium",
+   "why": "biggest naming gain but needs a decision on how to retain the deliberate call/callvirt precision; do it after ranks 1-4"
+  }
+ ],
+ "notes": [
+  "Raw line ratio (4.99 for LobbyCommands) is misleading: 85.7% of that file is comment text and its code-line ratio is 0.63. ProductionQueue (4.73 code-line ratio, 89/90 methods admitted) is the cleanest place to measure a fix from.",
+  "Ours indents with 4 spaces, ILSpy with tabs; not counted as a finding.",
+  "All counts came from regex over the harvested pairs; the counting shape for each category is recorded in the breakdown fields so it can be re-run.",
+  "No input code was executed and no other assembly was read. Every quote is verbatim from the paired .ours.cs/.ilspy.cs files in this directory."
+ ]
+}

@@ -1,0 +1,387 @@
+{
+  "slice": "openra-game",
+  "image": "rust/acceptance/openra/assemblies/OpenRA.Game.dll",
+  "types": [
+    "OpenRA.Map",
+    "OpenRA.World",
+    "OpenRA.Exts",
+    "OpenRA.Actor",
+    "OpenRA.Game"
+  ],
+  "totals": {
+    "ours_lines": 20380,
+    "ilspy_lines": 4260,
+    "ratio": 4.78,
+    "per_type_ratio": {
+      "OpenRA.Map": 5.747,
+      "OpenRA.World": 4.824,
+      "OpenRA.Game": 4.412,
+      "OpenRA.Actor": 4.182,
+      "OpenRA.Exts": 4.062
+    },
+    "ours_comment_lines": 4089,
+    "ours_comment_share": 0.2,
+    "ilspy_comment_lines": 2,
+    "ours_generated_nested_type_lines": 1777,
+    "ours_fallback_dump_lines": 2919,
+    "ours_using_directives": 0,
+    "ilspy_using_directives": 62,
+    "generated_nested_type_share": 0.087,
+    "comment_lines_movable_to_details": 3899
+  },
+  "categories": [
+    {
+      "name": "identifier naming",
+      "occurrences": 16463,
+      "breakdown": {
+        "synthetic_locals": 10929,
+        "hash_type_aliases_cil_ref_generic_value": 3000,
+        "opaque_bcl_type_aliases_cil_type": 403,
+        "anonymous_field_names_il_field": 378,
+        "hex_encoded_type_names": 351,
+        "token_numbered_call_sites": 1390,
+        "arg0_parameters": 12,
+        "this_prefix": 297
+      },
+      "examples": [
+        {
+          "type": "OpenRA.Exts",
+          "method": "FormatInvariant",
+          "ours": "__cil_type_01000113 v0 = System.Globalization.CultureInfo.get_InvariantCulture();\nstring v3 = System.String.Format(((__cil_type_010000FF)(v0)), format, args);\nreturn v3;",
+          "ilspy": "return string.Format(CultureInfo.InvariantCulture, format, args);",
+          "why": "Standard BCL types are printed as opaque __cil_type_<token> aliases: 403 occurrences over 21 distinct aliases in this slice (System.Action 219, System.Delegate 72, System.Type 21, System.IO.Stream 18). The token is already printed, so the identity is known but not resolved for display.",
+          "fix": "Resolve the TypeRef to a printable name and emit a using directive; drop the redundant result temporary.",
+          "risk": "low - printing only, no IL analysis"
+        },
+        {
+          "type": "OpenRA.Map",
+          "method": "ProjectCellInner",
+          "ours": "private OpenRA.PPos[] ProjectCellInner(OpenRA.MPos uv)\n{ ... OpenRA.Map.__name_3C3E635F5F446973706C6179436C6173733131375F30 l0 = default; ... }",
+          "ilspy": "private PPos[] ProjectCellInner(MPos uv)\n{ ... list.Where((PPos c) => mapHeight.Contains((MPos)c)).ToArray(); }",
+          "why": "__name_3C3E635F5F446973706C6179436C6173733131375F30 is the hex-encoded metadata name <>c__DisplayClass117_0. 351 occurrences over 44 distinct hex names across the slice, including explicit interface implementations such as __name_53797374656D2E49446973706F7361626C652E446973706F7365 (System.IDisposable.Dispose).",
+          "fix": "Print the decoded metadata name (escape the angle brackets), e.g. <>c__DisplayClass117_0.",
+          "risk": "low - printer change; decoding is deterministic"
+        },
+        {
+          "type": "OpenRA.World",
+          "method": "EndGame",
+          "ours": "global::OpenRA.Traits.IGameOver v11 = __cil_callvirt_0A0005A6(v10);\nl1 = v11;\n__cil_callvirt_0600097E(v12, v13);",
+          "ilspy": "foreach (IGameOver item in WorldActor.TraitsImplementing<IGameOver>())\n{\n\titem.GameOver(this);\n}",
+          "why": "Token-numbered call sites (__cil_callvirt_/__cil_direct_/__cil_methodspec_call_/__cil_newobj_/__cil_ldstr_) appear 1390 times, so receivers and callees are unnamed even where a member name is available.",
+          "fix": "Emit the resolved callee/member name at token-numbered call sites (the member ref is what produced the token).",
+          "risk": "low - name resolution already happens for a subset of call sites"
+        },
+        {
+          "type": "OpenRA.World",
+          "method": "get_LocalPlayer",
+          "ours": "public OpenRA.Player get_LocalPlayer()\n{\n    global::OpenRA.Player v1 = this.__il_field_040004C0;\n    return v1;\n}",
+          "ilspy": "public Player LocalPlayer { get; private set; }",
+          "why": "Auto-property backing fields surface as __il_field_<token> field declarations (378 occurrences, 115 distinct) plus get_/set_ accessor methods, instead of a property.",
+          "fix": "Fold backing-field + accessor pairs into an auto-property (see structure category); suppress this. on member access.",
+          "risk": "low - the accessor bodies are empty assignment/read pairs in 0 of the cases that matter; verify each pair before folding"
+        }
+      ]
+    },
+    {
+      "name": "semantic compression",
+      "occurrences": 4623,
+      "breakdown": {
+        "goto_statements": 1566,
+        "stray_IL_labels": 1400,
+        "unchecked_wrappers": 690,
+        "lambda_cache_slot_stores": 377,
+        "bool_load_store_wrappers": 304,
+        "assign_then_return": 182,
+        "indexer_get_set_item": 52,
+        "longlength_to_int": 29,
+        "string_concat_calls": 20,
+        "reference_equals_null": 3
+      },
+      "examples": [
+        {
+          "type": "OpenRA.World",
+          "method": "ShroudObscures(WPos)",
+          "ours": "global::OpenRA.Player v1 = this.RenderPlayer;\nif (v1 is null) {\n    return false;\n} else {\n    goto IL_0008;\n}\nIL_0008: ;\nglobal::OpenRA.Player v3 = this.RenderPlayer;\nglobal::OpenRA.Traits.Shroud v4 = v3.Shroud;\nint v6 = __cil_bool_load(__cil_callvirt_0600089D(v4, pos));\nreturn (v6 == 0);",
+          "ilspy": "if (RenderPlayer != null)\n{\n\treturn !RenderPlayer.Shroud.IsExplored(pos);\n}\nreturn false;",
+          "why": "CFG is printed as goto + bare IL_xxxx labels (1,566 gotos, 1,400 labels, 524 else-blocks whose only content is a goto) instead of nested if/else.",
+          "fix": "Structure the CFG into plain nesting and drop labels/goto; re-test the receiver temp (v1 vs v3 both load RenderPlayer).",
+          "risk": "medium - needs a proven single-entry/single-exit structuring; the labels come from that pass, so it is a printing/structuring decision, not new IL analysis"
+        },
+        {
+          "type": "OpenRA.Exts",
+          "method": "NextPowerOf2",
+          "ours": "int v0 = v;\nv = unchecked(v0 - 1);\nint v3 = v;\nint v4 = v;\nint v6 = (v4 >> 1);\nv = unchecked(v3 | v6);",
+          "ilspy": "v--;\nv |= v >> 1;",
+          "why": "unchecked(...) is applied to every integer operation (690 occurrences) although C# is unchecked by default and the image is not compiled with /checked. Missing ++ and compound assignment (0 in ours, 53 ++ and 21 += in ILSpy) forces extra temps.",
+          "fix": "Drop unchecked around operations that provably originate from an unchecked context; recover x = x op y as compound assignment and x = x +- 1 as ++/--.",
+          "risk": "low for dropping unchecked and compound assignment (same operation, same order); the image-wide checked context must be confirmed once"
+        },
+        {
+          "type": "OpenRA.Exts",
+          "method": "GetNamespaces",
+          "ours": "__cil_ref_0d9e... s1_0 = default;\n__cil_ref_5e37... s1_1 = default;\n...\n__cil_ref_5e37... v2 = OpenRA.Exts.__name_3C3E63.__il_field_04000958;\nif (v2 is not null) {\n    ... s2_0 = e0_2_0; s2_1 = e0_2_1; goto IL_0025;\n} else {\n    ... s1_0 = e0_1_0; s1_1 = e0_1_1; goto IL_000E;\n}\nIL_000E: ;\n... nint v4 = __cil_ldftn_06000F73;",
+          "ilspy": "return from n in (from t in a.GetTypes()\n\t\tselect t.Namespace).Distinct()\n\twhere n != null\n\tselect n;",
+          "why": "The compiler's non-capturing lambda cache (if (cache != null) ... else cache = new <>c().<M>b__x) is reproduced literally: 377 cache stores and 263 s<N>_<M> slots. The lambda bodies themselves are emitted readably (GetNamespacesLambda4_0 etc.).",
+          "fix": "Collapse the cache pattern to the lambda expression and drop the s/e slot temporaries; optionally rewrite the LINQ method chain as a query expression.",
+          "risk": "low - cache fields are static and side-effect free; the delegate identity must be preserved (same static instance) which collapsing does"
+        },
+        {
+          "type": "OpenRA.World",
+          "method": "get_LobbyInfo / IsLoadingGameSave",
+          "ours": "public OpenRA.Network.Session get_LobbyInfo()\n{\n    global::OpenRA.Network.OrderManager v1 = this.OrderManager;\n    global::OpenRA.Network.Session v2 = v1.LobbyInfo;\n    return v2;\n}",
+          "ilspy": "public Session LobbyInfo => OrderManager.LobbyInfo;",
+          "why": "Every value is threaded through a fresh temp and returned by name (222 'return v<N>;' after an immediately preceding assignment; index assign_then_return 182 in ours vs 0 in ILSpy).",
+          "fix": "Inline single-use temporaries into the consuming expression when the first use is the only use and no side-effect reordering occurs.",
+          "risk": "low - single-use, same statement"
+        }
+      ]
+    },
+    {
+      "name": "type and member spelling",
+      "occurrences": 8323,
+      "breakdown": {
+        "fully_qualified_type_tokens": 6618,
+        "global_prefix": 1594,
+        "cil_enum_uses": 83,
+        "float_bit_pattern_literals": 13,
+        "at_escaped_identifiers": 6,
+        "system_primitive_names": 5,
+        "numeric_char_literals": 3,
+        "unicode_escaped_const_string": 1
+      },
+      "examples": [
+        {
+          "type": "OpenRA.World",
+          "method": "field declarations",
+          "ours": "private readonly System.Collections.Generic.List<OpenRA.Effects.IEffect> effects;\ninternal readonly OpenRA.Network.OrderManager OrderManager;\nprivate readonly System.Collections.Generic.Queue<System.Action<OpenRA.World>> frameEndActions;",
+          "ilspy": "private readonly List<IEffect> effects;\ninternal readonly OrderManager OrderManager;\nprivate readonly Queue<Action<World>> frameEndActions;",
+          "why": "Zero using directives in all five files (ILSpy emits 10-15 per file), so every type reference is fully qualified: 6,618 FQN tokens and 1,594 global:: prefixes.",
+          "fix": "Collect required namespaces, emit using directives, and print short type names; suppress global:: where no ambiguity exists.",
+          "risk": "low - purely presentational; conflicts must collapse to an alias or FQN"
+        },
+        {
+          "type": "OpenRA.Game",
+          "method": "static Game()",
+          "ours": "OpenRA.Game.lastConnectionState = unchecked((__cil_enum_020001CE)(0));\nOpenRA.Game.state = unchecked((__cil_enum_020000BC)(2147483647));",
+          "ilspy": "private static ConnectionState lastConnectionState = ConnectionState.PreConnecting;\nprivate static RunStatus state = RunStatus.Running;",
+          "why": "Enums are printed through __cil_enum_<token> aliases and raw integers (83 uses), losing the enum member name. RunStatus.Running has value int.MaxValue and is printed only as 2147483647 - a real information loss, not just noise.",
+          "fix": "Print the enum type name and the named member when the constant matches a declared field (fall back to the cast for undefined values).",
+          "risk": "low - the enum's fields are in metadata; only the lookup is missing"
+        },
+        {
+          "type": "OpenRA.World",
+          "method": "constructor",
+          "ours": "__cil_F v160 = __cil_ldc_r4_bits(0x3F800000u);\n__cil_callvirt_06000574(v159, __cil_call_arg_r4(v160));",
+          "ilspy": "Game.Sound.SoundVolumeModifier = 1f;",
+          "why": "Floating-point literals are printed as their bit patterns (13 occurrences); char literals as numeric casts: Map.Open prints filename.Contains(unchecked((char)(124))) for filename.Contains('|') (3 occurrences).",
+          "fix": "Format float literals with R/G round-trip formatting; print char literals from their code point when printable.",
+          "risk": "low - formatter change; bit patterns are already unambiguous"
+        },
+        {
+          "type": "OpenRA.Game",
+          "method": "SavedScreenshot field",
+          "ours": "private const string SavedScreenshot = \"\\u006E\\u006F\\u0074\\u0069\\u0066...\";",
+          "ilspy": "[FluentReference(new string[] { \"filename\" })]\nprivate const string SavedScreenshot = \"notification-saved-screenshot\";",
+          "why": "The \\uXXXX escaping path applies only to metadata constants (const string fields, default parameter values) - 1 instance in this slice. ldstr literals print literally inside __cil_ldstr_<token>(\"...\") (146 instances). The attribute is also dropped.",
+          "fix": "Emit printable characters directly in constant values; print custom attributes on declarations.",
+          "risk": "low - escaping must still apply to non-printable and quote/backslash characters"
+        }
+      ]
+    },
+    {
+      "name": "structure and layout",
+      "occurrences": 1107,
+      "breakdown": {
+        "accessors_emitted_as_methods": 122,
+        "property_event_footer_comments": 80,
+        "top_of_method_default_declarations": 761,
+        "anonymous_field_declarations": 115,
+        "generated_nested_types": 24,
+        "static_ctors_holding_field_initializers": 2,
+        "enum_as_sealed_class": 1,
+        "lost_volatile_modifier": 1,
+        "dropped_attributes": 1
+      },
+      "examples": [
+        {
+          "type": "OpenRA.World",
+          "method": "RenderPlayer / RenderPlayerChanged",
+          "ours": "public void add_RenderPlayerChanged(System.Action<OpenRA.Player> value) { ... }\npublic void remove_RenderPlayerChanged(System.Action<OpenRA.Player> value) { ... }\npublic OpenRA.Network.Session get_LobbyInfo() { ... }\n... 3,300 lines later, at the end of the class ...\n    // property OpenRA.Network.Session LobbyInfo { get: get_LobbyInfo; }\n    // event System.Action<OpenRA.Player> RenderPlayerChanged { add: add_RenderPlayerChanged; remove: remove_RenderPlayerChanged; }",
+          "ilspy": "public Session LobbyInfo => OrderManager.LobbyInfo;\n\npublic Player RenderPlayer\n{\n\tget { return renderPlayer; }\n\tset { ... RenderPlayerChanged?.Invoke(value); }\n}\n\npublic event Action<Player> RenderPlayerChanged;",
+          "why": "68 properties and 12 events are emitted as get_/set_/add_/remove_ methods with a header comment block at the end of the type body, so the class reads as 100+ methods with no visible properties. The synthesis data already exists (the footer comment is generated from it).",
+          "fix": "Fold accessor method pairs back into property/event declarations at their metadata position and delete the footer comment block.",
+          "risk": "low - the property/event classification is already decided; only rendering changes"
+        },
+        {
+          "type": "OpenRA.Map",
+          "method": "static Map()",
+          "ours": "__cil_ref_cde7... v1 = __cil_newarr_02000066(20);\nstring v3 = __cil_ldstr_70004906(\"MapFormat\");\nglobal::OpenRA.MapField v5 = __cil_newobj_060002E6(v3, null, 1, null);\nv1[0] = v5;\n... x20, 46 lines total ...\nOpenRA.Map.YamlFields = v1;",
+          "ilspy": "private static readonly MapField[] YamlFields = new MapField[20]\n{\n\tnew MapField(\"MapFormat\"),\n\t...\n\tnew MapField(\"LockPreview\", null, required: false, \"False\"),\n\t...\n};",
+          "why": "All field initializers are hoisted into static constructors (Map 20 initializers, Game 15), so the declaration reads without its value and the type gains a 46-line .cctor. Omitted optional arguments are also filled in as raw null/1 instead of being elided.",
+          "fix": "When a static constructor consists only of field stores, move each initializer to its field declaration and recover array/object initializers.",
+          "risk": "medium - the store order in the .cctor must be preserved for fields with side-effectful initializers; verify per field"
+        },
+        {
+          "type": "OpenRA.Exts",
+          "method": "ISqrtRoundMode",
+          "ours": "public sealed class ISqrtRoundMode : System.Enum\n{\n    public int value__;\n    public const OpenRA.Exts.ISqrtRoundMode Floor = 0;\n    public const OpenRA.Exts.ISqrtRoundMode Nearest = 1;\n    public const OpenRA.Exts.ISqrtRoundMode Ceiling = 2;\n}\n...\npublic static int ISqrt(int number, OpenRA.Exts.ISqrtRoundMode round = 0)",
+          "ilspy": "public enum ISqrtRoundMode\n{\n\tFloor,\n\tNearest,\n\tCeiling\n}\n...\npublic static int ISqrt(int number, ISqrtRoundMode round = ISqrtRoundMode.Floor)",
+          "why": "The one enum in this slice is printed as a sealed class deriving System.Enum with an explicit value__ field, so call sites show numeric default parameter values. 4 ISqrt overloads affected.",
+          "fix": "Print enum types as enum declarations and default parameter values as the named member.",
+          "risk": "low - the underlying type and constants are in metadata"
+        },
+        {
+          "type": "OpenRA.Game",
+          "method": "delayedActions field",
+          "ours": "private static OpenRA.Primitives.ActionQueue delayedActions;\n... System.Threading.Volatile.Write(ref OpenRA.Game.delayedActions, v27);",
+          "ilspy": "private static volatile ActionQueue delayedActions = new ActionQueue();",
+          "why": "The volatile modifier is dropped from the declaration (1 occurrence) and replaced by a Volatile.Write call in the static constructor, which hides the modifier's intent.",
+          "fix": "Print the volatile modifier when the field carries it.",
+          "risk": "low - field flags are in metadata"
+        }
+      ]
+    },
+    {
+      "name": "comments and diagnostics",
+      "occurrences": 4089,
+      "breakdown": {
+        "structural_signature": 687,
+        "generic_body_context": 59,
+        "enum_storage": 51,
+        "metadata_name": 63,
+        "exact_call": 8,
+        "dependency_identity_substituted": 170,
+        "dependencies_unresolved": 5,
+        "property_event_footer": 80,
+        "il_fallback_dumps": 2919
+      },
+      "examples": [
+        {
+          "type": "OpenRA.Exts",
+          "method": "GetNamespaces",
+          "ours": "// structural signature __cil_ref_bc4d36fe1c82f28064fcc35653d69d1d30dd7cbd bytes=15128085010E: class [System.Runtime]System.Collections.Generic.IEnumerable`1<string>; type-owner=0x00000000 method-owner=0x00000000; tokens scoped to this input image; exact reference identity, no member/layout inference.\n// structural signature __cil_ref_0d9ea9ccc9577fdcf9d45ebcd6bcd8da4c46cad9 bytes=1D128099: ...\n// structural signature __cil_ref_5e37bdce4d288e3f78a8365d2ccbefdc9ac4cd58 ...\n// structural signature __cil_ref_680b36952fa42a45596042d94398ccdfd5b77b9a ...\n// structural signature __cil_ref_06d8b2dfd0af645cf33f552bd9a7579591d5b62b ...\n__cil_ref_0d9e... s1_0 = default;",
+          "ilspy": "return from n in (from t in a.GetTypes()\n\t\tselect t.Namespace).Distinct()\n\twhere n != null\n\tselect n;",
+          "why": "687 structural-signature lines (each 200-350 characters) precede method bodies and name nothing the reader can use; the aliases they describe are hash-based, so the reader cannot connect the comment to the declaration. Necessary evidence, but not in the readable view.",
+          "fix": "Route structural signature / generic body context / enum storage / Exact call to --details; keep one short line only when the body actually falls back.",
+          "risk": "low - the text moves, nothing is deleted"
+        },
+        {
+          "type": "OpenRA.Map",
+          "method": "file trailer",
+          "ours": "// Dependency identity substituted: System.Runtime, Version=6.0.0.0, ... -> System.Runtime, Version=10.0.0.0, ...; IlSpy, metadata only, not original-runtime behavior proof.  (x34)\n// Dependencies unresolved: 7; exact references retained; see --details for identities and provenance.",
+          "ilspy": "(no trailer)",
+          "why": "34 multi-line dependency-substitution notices plus one unresolved-dependency line are appended to every file (170 + 5 lines total) and are read as if they were part of the last type.",
+          "fix": "Emit one summary line, or move the whole block behind --details.",
+          "risk": "low - diagnostic text only"
+        },
+        {
+          "type": "OpenRA.Actor",
+          "method": "generated closure methods",
+          "ours": "// Metadata name: <GetNamespaces>b__4_0\ninternal string GetNamespacesLambda4_0(System.Type t)",
+          "ilspy": "(the closure is not printed; the lambda appears inline at the call site)",
+          "why": "63 Metadata name comments are the only link between the readable synthetic method name (GetNamespacesLambda4_0) and the real name. This is the one comment kind worth keeping - or better, redundant once the decoded name is printed directly.",
+          "fix": "Keep (category a) until decoded metadata names are printed; then delete.",
+          "risk": "low"
+        }
+      ]
+    },
+    {
+      "name": "missing source-level constructs",
+      "occurrences": 199,
+      "breakdown": {
+        "foreach": 79,
+        "for": 27,
+        "while": 12,
+        "using": 21,
+        "null_conditional_access": 30,
+        "null_coalescing": 6,
+        "yield_return": 4,
+        "is_type_pattern": 3,
+        "object_initializers": 8,
+        "array_initializers": 9
+      },
+      "examples": [
+        {
+          "type": "OpenRA.World",
+          "method": "EndGame",
+          "ours": "__cil_ref_84ce... v8 = __cil_callvirt_2B00014D(v7);\n__cil_ref_ac0f... v9 = __cil_callvirt_0A0005A5(v8);\nl0 = v9;\ntry {\n    IL_0027: ; goto IL_0037;\n    IL_0029: ;\n    __cil_ref_ac0f... v10 = l0;\n    global::OpenRA.Traits.IGameOver v11 = __cil_callvirt_0A0005A6(v10);\n    l1 = v11;\n    __cil_callvirt_0600097E(v12, v13);\n    IL_0037: ;\n    int v15 = __cil_bool_load(__cil_callvirt_0A000018(v14));\n    if (v15 != 0) { goto IL_0029; } else { goto IL_003F; }\n} finally { ... __cil_callvirt_0A000017(v17); ... }",
+          "ilspy": "foreach (IGameOver item in WorldActor.TraitsImplementing<IGameOver>())\n{\n\titem.GameOver(this);\n}",
+          "why": "79 foreach constructs (0 in ours) are emitted as GetEnumerator/MoveNext/get_Current/Dispose plus try/finally; 37 of the slice's 69 try/finally blocks are enumeration.",
+          "fix": "Pattern-match IEnumerable<T>.GetEnumerator on the receiver, an IEnumerator<T>/IEnumerator local, MoveNext in the loop test, get_Current at the loop head and a finally whose only content is a null-guarded Dispose.",
+          "risk": "medium - requires proving the enumerator shape and that the finally guard contains only Dispose; needs its own regression fixtures before enabling by default"
+        },
+        {
+          "type": "OpenRA.Game",
+          "method": "get_IsHost",
+          "ours": "OpenRA.Network.Session.Client l1 = default;\nglobal::OpenRA.Network.OrderManager v0 = OpenRA.Game.OrderManager;\nglobal::OpenRA.Network.IConnection v1 = __cil_callvirt_06000C99(v0);\nint v2 = __cil_callvirt_06000C2B(v1);\n... global::OpenRA.Network.Session.Client v6 = __cil_callvirt_06000CC2(v4, v2);\nl1 = v6;\nglobal::OpenRA.Network.Session.Client v7 = l1;\nif (v7 is null) { return false; } else { goto IL_0024; }\nIL_0024: ;\nglobal::OpenRA.Network.Session.Client v8 = l1;\nreturn v8.IsAdmin;",
+          "ilspy": "int localClientId = OrderManager.Connection.LocalClientId;\nreturn OrderManager.LobbyInfo.ClientWithIndex(localClientId)?.IsAdmin ?? false;",
+          "why": "30 null-conditional and 6 null-coalescing constructs are lowered to null tests with a coalesced default; the ?? false becomes an early return false.",
+          "fix": "Recover ?. and ?? from the repeated receiver load plus single null test shape.",
+          "risk": "medium - the null test must dominate exactly the continuation and the fallback value must be a pure constant"
+        },
+        {
+          "type": "OpenRA.Actor",
+          "method": "get_Crushables",
+          "ours": "__cil_ref_ad5e... s1_0 = default;\n__cil_ref_ad5e... s2_0 = default;\n__cil_ref_ad5e... v1 = this.crushables;\nif (v1 is not null) { ... s2_0 = e0_2_0; goto IL_002A; }\nelse { ... s1_0 = e0_1_0; goto IL_0009; }\nIL_0009: ;\nstring v7 = System.String.Concat(v2, v5, v6);\nthrow __cil_newobj_0A00006E(v7);\nIL_002A: ;\nreturn s2_0;",
+          "ilspy": "public ICrushable[] Crushables => crushables ?? throw new InvalidOperationException(\"Crushables for \" + Info.Name + \" are not initialized.\");",
+          "why": "A throw expression after ?? is not reconstructed (also Orientation => facing?.Orientation ?? WRot.None); string concatenation is emitted as System.String.Concat (20) instead of +.",
+          "fix": "Recognize the coalesce-or-throw shape; print string concatenation as + when operands are string.",
+          "risk": "low for + concatenation (same evaluation order); medium for ?? throw since a throw expression must not change exception timing"
+        },
+        {
+          "type": "OpenRA.Exts",
+          "method": "Iterate",
+          "ours": "public static System.Collections.Generic.IEnumerable<T> Iterate<T>(T t, System.Func<T, T> f)\n{ ... __cil_ref_ac09... v1 = __cil_newobj_0A000156(-2); v1.__il_field_04000964 = t; v1.__il_field_04000966 = f; return v1; }\n... plus a full <Iterate>d__26 state machine with MoveNext/Dispose/IEnumerator bridge methods ...",
+          "ilspy": "public static IEnumerable<T> Iterate<T>(T t, Func<T, T> f)\n{\n\twhile (true)\n\t{\n\t\tyield return t;\n\t\tt = f(t);\n\t}\n}",
+          "why": "Iterator state machines are kept lowered (4 yield returns: Exts.Iterate, Actor.Bounds, Actor.Renderables). Deliberate - the same family as async/closure reconstruction.",
+          "fix": "Deliberate, low priority. The no-analysis win is suppressing the generated type (see structure category) and letting the method read as returning the enumerable.",
+          "risk": "high if attempted - iterator reconstruction is excluded from this phase"
+        }
+      ]
+    }
+  ],
+  "partial_blocks": {
+    "count": 23,
+    "lines": 2919,
+    "per_type": {
+      "OpenRA.Map": 7,
+      "OpenRA.Actor": 6,
+      "OpenRA.Exts": 5,
+      "OpenRA.Game": 4,
+      "OpenRA.World": 1
+    },
+    "reasons": {
+      "incompatible value/receiver types": 14,
+      "EH fault handlers need exceptional-only cleanup": 2,
+      "conv.i4 source category needs IL fallback": 2,
+      "EH leave must originate in a try or catch": 1,
+      "unsupported reference relationship argument shape": 1,
+      "generic virtual dispatch needs runtime lookup-order modeling": 1,
+      "cast TypeSpec needs a proved reference shape": 1,
+      "invalid/modified/open/managed-address struct field needs IL fallback": 1
+    },
+    "affected_methods": [
+      "OpenRA.Exts.ISqrt(int)",
+      "OpenRA.Exts.ISqrt(long)",
+      "OpenRA.Exts.ColorLerp",
+      "OpenRA.Exts.ResizeArray",
+      "OpenRA.Exts.SplitLines",
+      "OpenRA.World.ToggleInputMode<T>",
+      "OpenRA.Actor (6 methods)",
+      "OpenRA.Map (7 methods, incl. local functions in PostInit/Save)",
+      "OpenRA.Game (4 methods, incl. <ChooseShellmap>b__82_0)"
+    ],
+    "note": "Admission gaps, not quality gaps. Every method has a body, so they are excluded from the line ratio and category counts; but their 2,919 lines of inline // IL_... dumps are 14% of the printed output and should collapse to one banner line in the readable view."
+  },
+  "notes": [
+    "Ours 20,380 lines vs ILSpy 4,260 (4.78x); per type Map 5.75x, World 4.82x, Game 4.41x, Actor 4.18x, Exts 4.06x.",
+    "1,777 of our 20,380 lines (8.7%) are compiler-generated closure/display/iterator types that ILSpy does not print at all; that portion of the ratio is a display decision, not decompilation quality.",
+    "Correction to the brief's string-printer hypothesis: \\uXXXX escaping appears only on metadata constants (const string fields, default parameter values) - 1 instance here (Game.SavedScreenshot). ldstr literals print literally inside __cil_ldstr_<token>(\"...\") - 146 instances, all readable text.",
+    "All five files emit zero using directives; ILSpy emits 62 across the five types.",
+    "No switch statements and no lock statements exist in either output for this slice, so neither is a gap here.",
+    "Semantics are preserved in every quality finding above. The only findings that need new analysis (rather than a printing/structuring pass) are foreach reconstruction, ?./?? recovery and for/while reconstruction.",
+    "Deliberate, low priority: iterator state machines (4), closure classes and using/try-finally lowering - the brief excludes this family.",
+    "Do not propose anything that drops an operation, reorders side effects, weakens an exception or hides a method; the recommended fixes are a comment-routing change, a printer/using change, accessor folding, CFG structuring and (last, with fixtures) foreach recovery.",
+    "FINDINGS.md carries 23 side-by-side examples: the brief's 8-15 guideline conflicts with its own 'at least three real examples per category' rule, and the latter forces 18+ for six categories."
+  ]
+}

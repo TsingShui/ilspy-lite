@@ -1,0 +1,346 @@
+{
+  "slice": "system-xml",
+  "image": "ILSpy-tests/dotnet/netcore-2.2/System.Private.Xml.dll",
+  "types": [
+    "System.Xml.XmlReader",
+    "System.Xml.XmlSqlBinaryReader",
+    "System.Xml.DtdParser"
+  ],
+  "totals": {
+    "our_lines": 52663,
+    "ilspy_lines": 11462,
+    "line_ratio": 4.6,
+    "our_statements": 37954,
+    "ilspy_statements": 3897,
+    "statement_ratio": 9.74,
+    "our_bytes": 2674784,
+    "ilspy_bytes": 289266,
+    "byte_ratio": 9.25,
+    "per_type": {
+      "System.Xml.DtdParser": {"our_lines": 32270, "ilspy_lines": 5504, "line_ratio": 5.86, "our_statements": 24525, "ilspy_statements": 1990, "statement_ratio": 12.3},
+      "System.Xml.XmlReader": {"our_lines": 7732, "ilspy_lines": 1866, "line_ratio": 4.14, "our_statements": 5350, "ilspy_statements": 545, "statement_ratio": 9.8},
+      "System.Xml.XmlSqlBinaryReader": {"our_lines": 12661, "ilspy_lines": 4092, "line_ratio": 3.09, "our_statements": 8079, "ilspy_statements": 1362, "statement_ratio": 5.9}
+    },
+    "async_state_machine_structs": 61,
+    "async_state_machine_lines": 23387,
+    "async_state_machine_line_share": 0.44,
+    "non_async_line_ratio": 2.55,
+    "il_labels": 4336,
+    "gotos": 6003,
+    "if_statements": 1834,
+    "if_statements_with_goto_in_both_arms": 1739,
+    "if_goto_dispatch_share": 0.948,
+    "loops_ilspy": 108,
+    "loops_ours": 0,
+    "comment_lines_structural_signature_plus_enum_storage_plus_property": 1404,
+    "comment_chars_same": 441297,
+    "comment_byte_share": 0.165,
+    "fallback_methods": 18,
+    "fallback_nested_in_state_machines": 5,
+    "methods_total": 463,
+    "fallback_share": 0.039
+  },
+  "categories": [
+    {
+      "name": "Identifier naming",
+      "occurrences": 53125,
+      "per_type": {"System.Xml.DtdParser": 35563, "System.Xml.XmlReader": 7397, "System.Xml.XmlSqlBinaryReader": 10165},
+      "breakdown": {
+        "vN_synthetic_locals_and_temporaries": 38227,
+        "lN_slot_locals": 7479,
+        "sN_M_exception_and_branch_locals": 863,
+        "anonymous_call_targets_dunder_cil_token": 3007,
+        "il_field_token_compiler_fields": 2141,
+        "hex_name_declarations": 67,
+        "get_set_accessor_methods_for_157_properties": 367,
+        "enum_member_names_lost_at_use_sites": 974
+      },
+      "examples": [
+        {
+          "type": "System.Xml.XmlReader",
+          "method": "ReadContentAsObject",
+          "ours": "string v3 = __cil_ldstr_7000D079(\"ReadContentAsObject\");\nglobal::System.Exception v4 = __cil_direct_06000F29(this, v3);\nthrow v4;",
+          "ilspy": "throw CreateReadContentAsException(\"ReadContentAsObject\");",
+          "why": "The callee is internal static Exception CreateReadContentAsException(string, XmlNodeType, IXmlLineInfo) in the same class. The receiver and the string literal are present; only the member name is replaced by its metadata token. 3007 call sites in the slice do this (__cil_direct_ 1139, __cil_callvirt_ 1098, __cil_newobj_ 189, __cil_value_call_ 570, others 11), while cross-image targets do resolve to names (System.SR.get_Xml_ReadContentAsFormatException(), System.String.op_Equality(...)).",
+          "fix": "Resolve same-image member names the same way cross-image ones are resolved; keep the token as a trailing comment or --details evidence.",
+          "risk": "low - the token already identifies the member uniquely, so this is display only"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader.QName",
+          "method": "Clear / Set / MatchNs / GetHashCode",
+          "ours": "ref __cil_value_432c10019b924dafd8c4ad80009d2e1c6a150d01 v0 = ref this;\nstring v1 = v0.prefix;",
+          "ilspy": "prefix = (localname = (namespaceUri = string.Empty));",
+          "why": "The struct's own type is spelled with a 40-hex SHA alias that appears 42 times inside QName alone, so every local declaration and cast in the struct is unreadable. 6321 such alias sites in the slice.",
+          "fix": "Print the alias with the metadata name already recorded in its structural-signature comment (QName, ElemInfo, string[], ...).",
+          "risk": "low - the mapping is already resolved and printed verbatim in the adjacent comment"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader",
+          "method": "IXmlNamespaceResolver.GetNamespacesInScope",
+          "ours": "private virtual System.Collections.Generic.IDictionary<string, string> __name_53797374656D2E586D6C2E49586D6C4E616D6573706163655265736F6C7665722E4765744E616D65737061636573496E53636F7065(System.Xml.XmlNamespaceScope scope)",
+          "ilspy": "IDictionary<string, string> IXmlNamespaceResolver.GetNamespacesInScope(XmlNamespaceScope scope)",
+          "why": "__name_<hex> is the UTF-8 bytes of System.Xml.IXmlNamespaceResolver.GetNamespacesInScope. The readable name is already known; only the decoder is missing. 67 such declarations in the slice (61 state-machine types, 6 explicit interface implementations), plus private virtual modifiers that C# does not spell on an explicit implementation.",
+          "fix": "Decode __name_<hex> to its metadata name, print <Interface>.<Member>, and drop private/virtual on explicit implementations.",
+          "risk": "none - pure printing"
+        },
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "async state machine <ParseInternalDtdAsync>d__153",
+          "ours": "public int __il_field_04000E7F;\npublic System.Runtime.CompilerServices.AsyncTaskMethodBuilder<System.Xml.IDtdInfo> __il_field_04000E80;\npublic System.Xml.DtdParser __il_field_04000E81;",
+          "ilspy": "async Task<IDtdInfo> IDtdParser.ParseInternalDtdAsync(IDtdParserAdapter adapter, bool saveInternalSubset)",
+          "why": "Compiler field names (<>1__state, <>t__builder, <>4__this, <>u__1) are replaced by __il_field_<token> even though some sibling fields keep their names (adapter, saveInternalSubset). 2141 sites. This is independent of whether async is reconstructed.",
+          "fix": "Print the metadata field name (escaped as needed) instead of __il_field_<token>; decode __name_<hex> to DtdParser.<ParseInternalDtdAsync>d__153.",
+          "risk": "low - naming only; does not require reconstructing async"
+        }
+      ]
+    },
+    {
+      "name": "Semantic compression",
+      "occurrences": 20457,
+      "per_type": {"System.Xml.DtdParser": 13113, "System.Xml.XmlReader": 2541, "System.Xml.XmlSqlBinaryReader": 4803},
+      "breakdown": {
+        "goto_IL": 6003,
+        "empty_IL_label_statements": 4336,
+        "unchecked_wrappers": 4949,
+        "this_reexpansion_temporaries": 3413,
+        "cil_bool_load_store": 1336,
+        "assign_then_return": 236,
+        "redundant_trailing_return": 156,
+        "array_initializer_expansion": 23,
+        "explicit_base_constructor_call": 5
+      },
+      "examples": [
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "ParseSubset",
+          "ours": "int v7 = unchecked(v5 - 11);\nswitch (v7) {\n    case 0: { goto IL_0049; }\n    case 1: { goto IL_0054; }\n    default: { goto IL_003C; } }\nIL_003C: ;\nint v8 = unchecked((int)(l1));\nif (v8 == 32) { goto IL_0126; } else { goto IL_0044; }\nIL_0044: ;\ngoto IL_01E4;\nIL_0049: ;\n__cil_direct_06001BF8(this);\ngoto IL_01E4;",
+          "ilspy": "while (true)\n{\n\tToken token = GetToken(needWhiteSpace: false);\n\tint currentEntityId = _currentEntityId;\n\tswitch (token)\n\t{\n\tcase Token.AttlistDecl:\n\t\tParseAttlistDecl();\n\t\tbreak;",
+          "why": "One while(true)+switch becomes a flat label soup: the loop head is IL_01E4, every break is goto IL_01E4, every case is a numeric dispatch. 1739 of 1834 if statements (94.8%) have goto in both arms and there are zero while/for/do statements in the whole slice, so a reader must simulate the stack machine to recover any conditional or loop.",
+          "fix": "Order blocks so a goto to the immediately following block becomes fall-through, fold if (c) goto A; else goto B; into if (c) { A } else { B }, then fold Label: if (c) goto Exit; ... goto Label; into a loop.",
+          "risk": "low for fall-through and if/else folding (pure presentation); medium for the loop fold, which needs the back-edge and exit to be the only edges into the head"
+        },
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "GetToken",
+          "ours": "int v6 = unchecked((int)(unchecked((ushort)(unchecked((int)(v3[v5]))))));\nl0 = unchecked((char)(v6));\nint v7 = unchecked((int)(l0));\nint v8 = 13;\nif (unchecked((uint)v7) > unchecked((uint)v8)) { goto IL_003F; } else { goto IL_001A; }",
+          "ilspy": "switch (_chars[_curPos])\n{\ncase '\\0':",
+          "why": "4949 unchecked(...) occurrences, 381 of them the triple-nested conv chain for reading a char element, and every comparison goes through unsigned-with-unchecked because the printer does not know the C# promotion rules. Char literals never appear: the slice has 0 char literals against ILSpy's 273 (e.g. unchecked((char)(34)) for '\"' in XmlReader.get_QuoteChar).",
+          "fix": "Collapse conv chains that are only widening into one (char)/(int) spell; print printable char constants as char literals; print == / > directly when both operands are non-negative int/char.",
+          "risk": "low - each collapsing step is a value-preserving CLI conversion on a known-width operand"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader.QName",
+          "method": "MatchNs",
+          "ours": "int v3 = __cil_bool_load(System.String.op_Equality(v0, v2));\nif (v3 == 0) { goto IL_001B; } else { goto IL_000E; }\nIL_000E: ;\n... return __cil_bool_store(v7);\nIL_001B: ;\nint v8 = 0;\nreturn __cil_bool_store(v8);",
+          "ilspy": "if (lname == localname)\n{\n\treturn nsUri == namespaceUri;\n}\nreturn false;",
+          "why": "__cil_bool_load (774) and __cil_bool_store (562) wrap every bool, String.op_Equality (51 sites) is a static call rather than ==, and int v8 = 0; return __cil_bool_store(v8); is return false;. No condition reads as a condition and no bool return reads as one.",
+          "fix": "Erase the bool load/store helpers (they are CLI stack normalisations with no C# meaning) and print op_Equality/op_Inequality on string, Uri and same-type operands as ==/!=.",
+          "risk": "low - exact identity mappings"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader.QName",
+          "method": "CheckPrefixNS",
+          "ours": "int v9 = 3;\n__cil_ref_7bdb48770b79a01877dba09fc617d959d2ebf4a4 v10 = __cil_newarr_01000003(v9);\nint v11 = 0;\nstring v12 = prefix;\nv10[v11] = v12;\nint v13 = 1;\nref __cil_value_432c10019b924dafd8c4ad80009d2e1c6a150d01 v14 = ref this;\nstring v15 = v14.namespaceUri;\nv10[v13] = v15;\n...\nglobal::System.Xml.XmlException v18 = __cil_newobj_06000A0A(v8, v10);\nthrow v18;",
+          "ilspy": "throw new XmlException(SR.XmlBinary_NoRemapPrefix, new string[3] { prefix, this.namespaceUri, namespaceUri });",
+          "why": "15 statements for 1. newarr plus consecutive ldc/stelem pairs is exactly the array-initialiser shape (23 sites), and newobj plus throw is always split into a temp plus a separate throw (189 newobj sites).",
+          "fix": "Fold newarr n; stelem at literal indices 0..n-1 into new T[n] { ... }; fold newobj into the consuming expression, in particular throw new T(...).",
+          "risk": "low - the index sequence and the single-use temp are structurally guaranteed"
+        }
+      ]
+    },
+    {
+      "name": "Type and member spelling",
+      "occurrences": 11154,
+      "per_type": {"System.Xml.DtdParser": 7635, "System.Xml.XmlReader": 1669, "System.Xml.XmlSqlBinaryReader": 1850},
+      "breakdown": {
+        "global_prefix": 4293,
+        "opaque_alias_as_declared_type": 6321,
+        "fully_qualified_bcl_spelling": 540,
+        "u_escape_literals": 5
+      },
+      "examples": [
+        {
+          "type": "System.Xml.XmlSqlBinaryReader",
+          "method": "..ctor",
+          "ours": "global::System.Xml.XmlSqlBinaryReader v33 = this;\nint v34 = 5;\nv33._state = unchecked((__cil_enum_0200006C)(v34));",
+          "ilspy": "_state = ScanState.Init;",
+          "why": "4293 global:: prefixes on names that are already in scope, and every enum-typed store or compare goes through the __cil_enum_<token> alias (974 sites), so enum member names never appear. The enum's constant table is recovered correctly in its declaration, so the information exists.",
+          "fix": "Drop global:: when the name resolves without it; print enum uses as EnumType.Member using the recovered constant table.",
+          "risk": "low - both are lookups against data already resolved"
+        },
+        {
+          "type": "System.Xml.XmlReader",
+          "method": "get_Name",
+          "ours": "string v1 = __cil_callvirt_06000EBC(this);\nint v2 = ((System.String)v1).Length;",
+          "ilspy": "if (Prefix.Length == 0)",
+          "why": "System.String/System.Exception/System.Object/System.Type/System.Int32 are qualified where the keyword or short name applies (540 sites), and ((System.String)x).Length adds a cast that exists only because the receiver was spelled by its full metadata name.",
+          "fix": "Map System.String->string, System.Object->object, System.Int32->int, System.Boolean->bool, System.Exception stays short under the namespace's using set; suppress a cast whose source and target type are already identical.",
+          "risk": "low - spelling only"
+        },
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "Initialize",
+          "ours": "int v86 = __cil_bool_load(System.Uri.op_Inequality(v85, ((__cil_type_0100006E)(null))));",
+          "ilspy": "if (_readerAdapter.BaseURI != null)",
+          "why": "__cil_type_<token> aliases (488 sites) spell types that are known (System.Uri here, System.Object[] elsewhere), and the null comparison is a static op_Inequality call with a cast on the null literal.",
+          "fix": "Print the alias with its metadata name and fold op_Inequality(x, (T)null) into x != null.",
+          "risk": "low - spelling and an exact null-comparison identity"
+        }
+      ]
+    },
+    {
+      "name": "Structure and layout",
+      "occurrences": 1612,
+      "per_type": {"System.Xml.DtdParser": 1029, "System.Xml.XmlReader": 290, "System.Xml.XmlSqlBinaryReader": 293},
+      "breakdown": {
+        "locals_hoisted_with_default": 1598,
+        "enum_emitted_as_class_of_System_Enum": 4,
+        "explicit_interface_impl_with_private_virtual": 6,
+        "operator_emitted_as_op_Equality": 1,
+        "nested_types_emitted_after_all_members": 3
+      },
+      "examples": [
+        {
+          "type": "System.Xml.XmlReader",
+          "method": "ReadContentAsBoolean",
+          "ours": "bool l0 = default;\nSystem.FormatException l1 = default;\nSystem.FormatException s4_0 = default;\nIL_0000: ;",
+          "ilspy": "try\n{\n\treturn XmlConvert.ToBoolean(InternalReadContentAsString());\n}\ncatch (FormatException innerException)\n{\n\tthrow new XmlException(SR.Xml_ReadContentAsFormatException, \"Boolean\", innerException, this as IXmlLineInfo);\n}",
+          "why": "1598 locals are hoisted to the method top as = default; and named by IL slot. l0 is the try result, l1 and s4_0 are two names for the same catch variable, and the catch variable's role (innerException) is recoverable from the rethrow shape.",
+          "fix": "Declare at first store and name the catch variable from the XmlException constructor position it is passed to; collapse duplicate names for the same slot.",
+          "risk": "medium - first-store placement needs a dominance check"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader",
+          "method": "nested type ScanState",
+          "ours": "private sealed class ScanState : System.Enum\n{\n    public int value__;\n    public const System.Xml.XmlSqlBinaryReader.ScanState Doc = 0;",
+          "ilspy": "private enum ScanState\n{\n\tDoc,\n\tXmlText,",
+          "why": "All 4 enums in the slice are emitted as sealed classes deriving System.Enum with a public value__ field, so they do not read as enums and the constants carry an explicit = N with the type repeated. Nested types are also emitted after all members (DtdParser's nested types start at line 12048 of 32270) instead of in source order.",
+          "fix": "Emit enum for System.Enum subclasses, omit = N when the sequence is implicit, and emit nested types before fields as ILSpy does.",
+          "risk": "low - declaration shape only"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader.QName",
+          "method": "op_Equality",
+          "ours": "public static bool op_Equality(System.Xml.XmlSqlBinaryReader.QName a, System.Xml.XmlSqlBinaryReader.QName b)",
+          "ilspy": "public static bool operator ==(QName a, QName b)",
+          "why": "Metadata operator names (op_Equality, op_Inequality, op_Implicit, op_Explicit, op_Addition, ...) are printed as ordinary method names.",
+          "fix": "Map the op_* metadata names to the operator token and require the operator spelling.",
+          "risk": "none - a fixed name table"
+        }
+      ]
+    },
+    {
+      "name": "Comments and diagnostics",
+      "occurrences": 1404,
+      "per_type": {"System.Xml.DtdParser": 789, "System.Xml.XmlReader": 271, "System.Xml.XmlSqlBinaryReader": 344},
+      "breakdown": {
+        "structural_signature_lines": 982,
+        "structural_signature_distinct": 150,
+        "structural_signature_chars": 353661,
+        "enum_storage_lines": 364,
+        "enum_storage_distinct": 27,
+        "enum_storage_chars": 87636,
+        "property_index_lines": 58,
+        "verdict_necessary_but_move_to_details": 1346,
+        "verdict_noise": 58
+      },
+      "examples": [
+        {
+          "type": "System.Xml.XmlSqlBinaryReader",
+          "method": "IXmlNamespaceResolver.GetNamespacesInScope",
+          "ours": "// structural signature __cil_ref_b758b12e7d24d465b924587007d48b63b400c590 bytes=1D1181B8: valuetype System.Xml.XmlSqlBinaryReader/ElemInfo[]; type-owner=0x00000000 method-owner=0x00000000; tokens scoped to this input image; exact reference identity, no member/layout inference.\n// structural signature __cil_ref_73775db26a5f38ea473b02c84831bde5dbb186af bytes=151280D1020E1281C0: class [System.Collections]System.Collections.Generic.Dictionary`2<string, class System.Xml.XmlSqlBinaryReader/NamespaceDecl>; ...\n// enum storage token=0x0200006C alias=__cil_enum_0200006C underlying=int: global::@System.@Xml.@XmlSqlBinaryReader.@ScanState; ...\nSystem.Xml.IXmlNamespaceResolver l0 = default;",
+          "ilspy": "IDictionary<string, string> IXmlNamespaceResolver.GetNamespacesInScope(XmlNamespaceScope scope)\n{\n\tif (ScanState.XmlText == _state)",
+          "why": "9 comment lines, about 3400 characters, precede the first statement. Across the slice 1346 such lines carry 441297 characters but only 177 distinct facts: 85% of the structural-signature lines and 93% of the enum-storage lines are verbatim repeats (one QName signature 42 times, one DtdParser signature 64 times). They are legitimate resolution evidence but they are duplicated per method and duplicate what the declared aliases will show once the aliases print readable names.",
+          "fix": "Move both banners behind --details; emit at most one line per distinct alias per type (or a single alias table per type) and never inside a method body.",
+          "risk": "none - comments only; removing them drops 441 KB, 16.5% of our output bytes"
+        },
+        {
+          "type": "System.Xml.XmlReader",
+          "method": "type-level property index",
+          "ours": "// property System.Xml.XmlReaderSettings Settings { get: get_Settings; }\n// property System.Xml.XmlNodeType NodeType { get: get_NodeType; }",
+          "ilspy": "public virtual XmlReaderSettings Settings => null;\npublic abstract XmlNodeType NodeType { get; }",
+          "why": "58 lines describe properties that are otherwise emitted as get_/set_ methods. Unlike the alias banners this information is noise: it states something that a real property declaration would say, and it cannot be acted on without cross-referencing 367 accessor methods.",
+          "fix": "Reconstruct the property declarations (the accessor grouping is metadata-durable via the Property table) and delete the index comment.",
+          "risk": "low - property grouping comes from metadata, not from body analysis"
+        }
+      ]
+    },
+    {
+      "name": "Missing source-level constructs",
+      "occurrences": 975,
+      "per_type": {"System.Xml.DtdParser": 597, "System.Xml.XmlReader": 144, "System.Xml.XmlSqlBinaryReader": 234},
+      "breakdown": {
+        "async_state_machines": 61,
+        "accessor_methods_instead_of_properties": 367,
+        "loops_lowered": 108,
+        "foreach_lowered": 4,
+        "self_and_compound_updates_lowered": 264,
+        "conditional_access_lowered": 41,
+        "null_coalescing_lowered": 1,
+        "switch_with_numeric_cases": 78,
+        "is_pattern_expanded": 1,
+        "array_and_collection_initializers_expanded": 23,
+        "checked_block_form": 6
+      },
+      "examples": [
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "IDtdParser.ParseInternalDtdAsync",
+          "ours": "private struct __name_3C53797374656D2D586D6C2D494474645061727365722D5061727365496E7465726E616C4474644173796E633E645F5F313533 : System.Runtime.CompilerServices.IAsyncStateMachine\n{\n    private virtual void MoveNext() { ... 132 lines ... }",
+          "ilspy": "async Task<IDtdInfo> IDtdParser.ParseInternalDtdAsync(IDtdParserAdapter adapter, bool saveInternalSubset)\n{\n\tInitialize(adapter);\n\tawait ParseAsync(saveInternalSubset).ConfigureAwait(continueOnCapturedContext: false);\n\treturn _schemaInfo;\n}",
+          "why": "61 state-machine structs (49 DtdParser, 12 XmlReader, 0 XmlSqlBinaryReader) occupy 23387 lines, 44% of our whole output, and explain why DtdParser is 5.86x while the async-free XmlSqlBinaryReader is 3.09x. Reconstructing async/await is a compiler-feature reconstruction we keep lowered on purpose.",
+          "fix": "Deliberate, low priority. Do not attempt without the full state-machine contract (MoveNext dispatch, SetResult/SetException, awaiter IsCompleted, hoisted-local liveness). The independent part - readable __name_/__il_field_ spelling - is listed under Identifier naming.",
+          "risk": "high for reconstruction; the naming part is free"
+        },
+        {
+          "type": "System.Xml.DtdParser",
+          "method": "Parse",
+          "ours": "while (0 occurrences), for (0), do (0), foreach (0)",
+          "ilspy": "foreach (UndeclaredNotation value in _undeclaredNotations.Values)\n{\n\tfor (UndeclaredNotation undeclaredNotation = value; undeclaredNotation != null; undeclaredNotation = undeclaredNotation.next)",
+          "why": "Zero loop statements in the slice against ILSpy's 108 (78 while, 21 for, 9 do) plus 4 foreach. Every loop is a labeled block plus gotos, which is the same defect as the goto dispatch in Semantic compression but counted here because the loop or enumerator shape has to be proven before it can be printed.",
+          "fix": "Loops: canonical head/back-edge/exit fold. foreach additionally needs the GetEnumerator/MoveNext/get_Current/Dispose proof; only 4 sites here, so lower priority than the loop fold.",
+          "risk": "medium for loops; high for foreach (needs the enumerator contract proof)"
+        },
+        {
+          "type": "System.Xml.XmlSqlBinaryReader.QName",
+          "method": "Equals",
+          "ours": "object v1 = ((object)(v0 is __cil_value_432c10019b924dafd8c4ad80009d2e1c6a150d01 ? v0 : null));\nif (v1 is null) { goto IL_001C; } else { goto IL_0008; }\n...\n__cil_value_432c10019b924dafd8c4ad80009d2e1c6a150d01 v3 = ((__cil_value_432c10019b924dafd8c4ad80009d2e1c6a150d01)(object)(v2));",
+          "ilspy": "if (other is QName qName)\n{\n\treturn this == qName;\n}",
+          "why": "isinst + brfalse + unbox.any plus the isinst/castclass/null dance is the is-pattern shape but is kept fully lowered, including a redundant isinst-then-castclass pair. Only 1 site in this slice.",
+          "fix": "Fold isinst T; brfalse; unbox.any T into is T x; fold the isinst/castclass pair when the result is immediately tested for non-null.",
+          "risk": "medium - the fold needs the value to be tested for non-null before the unbox, which is what the pattern guarantees"
+        }
+      ]
+    }
+  ],
+  "partial_blocks": {
+    "total_methods_with_fallback": 18,
+    "nested_fallbacks_inside_state_machines": 5,
+    "methods_in_slice": 463,
+    "share": 0.039,
+    "per_type": {
+      "System.Xml.DtdParser": {"methods_with_fallback": 5, "nested_fallbacks": 4, "methods": 158, "affected": ["ParseComment", "ParseExternalId", "ScanAttlist7", "ScanSystemId", "ScanPublicId1"]},
+      "System.Xml.XmlReader": {"methods_with_fallback": 4, "nested_fallbacks": 1, "methods": 166, "affected": ["CreateReadContentAsException", "CreateReadElementContentAsException", "AddLineInfo", "CalcBufferSize"]},
+      "System.Xml.XmlSqlBinaryReader": {"methods_with_fallback": 9, "nested_fallbacks": 0, "methods": 139, "affected": ["get_ReadState", "ReadContentAsInt", "GetStringAligned", "CheckText", "ValueAsLong", "ValueAsString", "ValueAsObject", "GetSingle", "GetDouble"]}
+    },
+    "reasons": {
+      "invalid user-string encoding: terminal flag differs from code units": 10,
+      "incompatible value/receiver types": 5,
+      "pinned/byref/modified local needs IL fallback": 2,
+      "conv.u source category needs IL fallback": 2,
+      "unsupported opcode conv.ovf.i4": 2,
+      "conv.i8 source category needs IL fallback": 1,
+      "expected int[] or uint[] evaluation-stack value": 1
+    },
+    "note": "Admission gaps, not quality gaps. ILSpy decompiles all of them. The evidence format (.maxstack, .code-bytes, .local, per-instruction IL) is correct to keep and is already gated behind a banner."
+  },
+  "notes": [
+    "Statement ratio (9.74x) is the honest headline; the 4.60x line ratio understates the gap because our K&R braces cost one line per if while ILSpy's Allman braces cost three.",
+    "Async state machines account for 23387 lines (44%) of our output; excluding them the line ratio is 2.55x. The remaining 2.55x is the lifting/printing overhead measured under categories 1-3.",
+    "Measured and not a problem in this slice: \\uXXXX escaping appears 5 times in 177 ldstr payloads and only for genuine control characters (\"\\u000A\", \"\\u000D\\u000A\"). The brief's 'every character' concern does not reproduce here.",
+    "Char literals are the opposite problem: our output has 0 char literals against ILSpy's 273, because every char constant is unchecked((char)(N)) and every char comparison is unchecked((uint)x) vs unchecked((uint)y).",
+    "Deliberate differences not counted as defects: async/await (61 methods); checked { } block form (ILSpy 6 blocks + 7 expression-level, ours 24 per-operation in XmlSqlBinaryReader, semantically identical); this. qualification of fields.",
+    "No using, lock, fixed, nameof, yield or deconstruction appears in either side for these three types, so those categories are not applicable to this slice.",
+    "Occurrence counts are per site on code lines only (comment lines excluded) and each site is assigned to exactly one category."
+  ]
+}

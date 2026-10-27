@@ -1,0 +1,287 @@
+{
+  "slice": "decompiler-lib",
+  "image": "ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+  "totals": {
+    "types": 4,
+    "ours_lines": 13682,
+    "ilspy_lines": 4788,
+    "ratio": 2.86,
+    "per_type_lines": {
+      "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpFormattingOptions": {
+        "ours": 2483,
+        "ilspy": 369,
+        "ratio": 6.71
+      },
+      "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor": {
+        "ours": 6846,
+        "ilspy": 2525,
+        "ratio": 2.71
+      },
+      "ICSharpCode.Decompiler.CSharp.Syntax.DepthFirstAstVisitor": {
+        "ours": 745,
+        "ilspy": 611,
+        "ratio": 1.22
+      },
+      "ICSharpCode.Decompiler.IL.ILInstruction": {
+        "ours": 3608,
+        "ilspy": 1283,
+        "ratio": 2.81
+      }
+    },
+    "opaque_helper_calls": 3193,
+    "opaque_helper_distinct_names": 658,
+    "structural_alias_types": 888,
+    "unnamed_il_fields": 219,
+    "hex_encoded_names": 46,
+    "slot_locals_v": 1413,
+    "il_mirror_locals_l": 204,
+    "goto_labels": 994,
+    "stray_label_lines": 952,
+    "bool_normalize_wrappers": 818,
+    "unchecked_cast_noise": 524,
+    "else_after_jump": 359,
+    "trailing_void_return": 496,
+    "ref_locals_for_out_params": 171,
+    "as_is_null_tests": 114,
+    "qualified_type_refs": 4045,
+    "using_directives_ours": 0,
+    "using_directives_ilspy": 15,
+    "accessor_method_shells": 498,
+    "diagnostic_comment_lines": 600,
+    "foreach_statements_ours": 0,
+    "foreach_statements_ilspy": 30,
+    "is_patterns_ours": 0,
+    "is_patterns_ilspy": 73,
+    "fallback_blocks": 3,
+    "qualified_type_refs_is_global_subset": 2011,
+    "category_counts": {
+      "identifier naming": 5963,
+      "semantic compression": 4733,
+      "type and member spelling": 4045,
+      "structure and layout": 938,
+      "comments and diagnostics": 600,
+      "missing source-level constructs": 158
+    }
+  },
+  "categories": [
+    {
+      "name": "identifier naming",
+      "occurrences": 5963,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.Syntax.DepthFirstAstVisitor",
+          "method": "VisitSyntaxTree",
+          "ours": "public virtual void VisitSyntaxTree(ICSharpCode.Decompiler.CSharp.Syntax.SyntaxTree syntaxTree)\n{\n    __cil_callvirt_060017AD(this, ((ICSharpCode.Decompiler.CSharp.Syntax.AstNode)(syntaxTree)));\n    return;\n}",
+          "ilspy": "public virtual void VisitSyntaxTree(SyntaxTree syntaxTree)\n{\n\tVisitChildren(syntaxTree);\n}",
+          "why": "The callee is printed as a metadata token helper even though the receiver type is known; 121 such calls in this file, 110 of them to VisitChildren on this.",
+          "fix": "Resolve callvirt/direct/newobj/ldstr/box tokens through the member-name path already used for fields, and drop the up-cast when the argument type is already assignable.",
+          "risk": "none (printing only); keep the token form when the member is out of scope"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor",
+          "method": "CSharpOutputVisitor(TextWriter, CSharpFormattingOptions)",
+          "ours": "// structural signature __cil_ref_25a85dcf25a90ee17c389ecb4157a25ef2a57d30 bytes=151280CD011287F4: class [System]System.Collections.Generic.Stack`1<class ICSharpCode.Decompiler.CSharp.Syntax.AstNode>; ...\n__cil_ref_25a85dcf25a90ee17c389ecb4157a25ef2a57d30 v1 = __cil_newobj_0A0000D8();\nthis.containerStack = v1;",
+          "ilspy": "protected readonly Stack<AstNode> containerStack = new Stack<AstNode>();",
+          "why": "A 40-hex local type name and a token helper replace a readable field initializer; 575 __cil_ref_<hash> aliases in this file, 888 slice-wide including __cil_value_/__cil_enum_.",
+          "fix": "Print the structural type behind the alias and emit field initializers at the field rather than in the constructor.",
+          "risk": "none for the alias; low for the initializer (no observable code precedes the assignment)"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "get_Descendants",
+          "ours": "global::ICSharpCode.Decompiler.IL.ILInstruction.__name_3C6765745F44657363656E64616E74733E645F5F3839 v1 = __cil_newobj_060024B5(-2);\nv1.__il_field_04000C98 = this;\nreturn v1;",
+          "ilspy": "public IEnumerable<ILInstruction> Descendants\n{\n\tget\n\t{\n\t\t... yield return this;\n\t}\n}",
+          "why": "Hex-encoded metadata names (46 sites, 14 distinct) and unnamed capture fields stand where the readable property and an iterator would be; iterator lowering itself is deliberate.",
+          "fix": "Decode __name_<hex> when it is a legal explicit-interface name (e.g. IAstVisitor.VisitNullNode) and name iterator capture fields; keep the state machine as a deliberate lowering.",
+          "risk": "none for the decoded names; iterator reconstruction is out of scope"
+        }
+      ]
+    },
+    {
+      "name": "semantic compression",
+      "occurrences": 4733,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "MatchLdThis",
+          "ours": "global::ICSharpCode.Decompiler.IL.LdLoc v1 = ((object)this as ICSharpCode.Decompiler.IL.LdLoc);\nl0 = v1;\nif (v2 is null) {\n    return false;\n} else {\n    goto IL_000A;\n}\nIL_000A: ;\nint v5 = unchecked((int)(__cil_callvirt_06000F31(v4)));\nif (unchecked((uint)v5) != unchecked((uint)4)) {",
+          "ilspy": "if (this is LdLoc ldLoc && ldLoc.Variable.Kind == VariableKind.Parameter)\n{\n\treturn ldLoc.Variable.Index < 0;\n}\nreturn false;",
+          "why": "as + null test plus a single-predecessor label block is exactly the is T x shape, and the following compare is the && operand; 80 such pairs in ILInstruction, 75 Match* methods.",
+          "fix": "Lift as/is + null branch to is T x, chain the successor block with &&, delete the redundant copy and the byte->int round trip.",
+          "risk": "medium; evaluation order must be preserved (as and the null test are side-effect free, so short-circuiting matches the original branch targets)"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor",
+          "method": "WriteCommaSeparatedList",
+          "ours": "__cil_ref_9f837d23389b205546fa6d930e797839b9bbe063 v1 = list;\n__cil_ref_2471f4a20a3ecbb626e86f8e66193f5985d6f6a5 v2 = __cil_callvirt_0A00008A(v1);\nl1 = v2;\ntry {\n    IL_0009: ;\n    goto IL_0028;\n    ...\n}\nfinally {\n    IL_0032: ;\n    if (v14 is null) {\n        goto IL_003B;\n    } else {\n        goto IL_0035;\n    }",
+          "ilspy": "bool flag = true;\nforeach (AstNode item in list)\n{\n\tif (flag)\n\t{\n\t\tflag = false;\n\t}\n\telse\n\t{\n\t\tComma(item);\n\t}\n\titem.AcceptVisitor(this);\n}",
+          "why": "GetEnumerator/MoveNext/get_Current plus a finally with an is-null guard around Dispose is the structurally guaranteed foreach shape; 40 lines against 12, 30 occurrences in the slice.",
+          "fix": "Add one foreach reconstructor over that shape; keep the try/finally when any part differs.",
+          "risk": "medium; the matcher is narrow and a rejected fixture keeps today's output"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor",
+          "method": "OpenBrace",
+          "ours": "int v0 = unchecked((int)(style));\nswitch (v0) {\n    case 0: {\n        goto IL_0027;\n    }\n    case 1: {\n        goto IL_0027;\n    }\n    default: {\n        goto IL_0022;\n    } }",
+          "ilspy": "switch (style)\n{\ncase BraceStyle.DoNotChange:\ncase BraceStyle.EndOfLine:\ncase BraceStyle.BannerStyle:\n\tif (!isAtStartOfLine)\n\t{\n\t\twriter.Space();\n\t}\n\twriter.WriteToken(Roles.LBrace, \"{\");\n\tbreak;",
+          "why": "Every arm of all 7 switches is a bare goto to an out-of-line block, and the enum is converted to int so the labels carry no meaning.",
+          "fix": "Print switch (style) with enum case labels and inline a case body when its label block has a single predecessor.",
+          "risk": "low for the enum labels; medium for inlining (single-predecessor proof required)"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "HasFlag",
+          "ours": "int v1 = unchecked((int)(this.Flags));\nreturn (unchecked((uint)unchecked(v1 & unchecked((int)(flags)))) > unchecked((uint)0));",
+          "ilspy": "return (Flags & flags) != 0;",
+          "why": "Masked unsigned compare is != 0 and the unchecked pairs only bridge our enum-storage model; 524 unchecked(...) and 818 __cil_bool_load/store slice-wide.",
+          "fix": "Print (Flags & flags) != 0 for the masked-unsigned-compare shape, write return true/false for int vN = 1/0 + __cil_bool_store(vN), keep unchecked only where overflow is real.",
+          "risk": "none (x != 0 and (uint)x > 0 are equivalent for all bit patterns)"
+        }
+      ]
+    },
+    {
+      "name": "type and member spelling",
+      "occurrences": 4045,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor",
+          "method": "VisitIdentifierExpression",
+          "ours": "public virtual void VisitIdentifierExpression(ICSharpCode.Decompiler.CSharp.Syntax.IdentifierExpression identifierExpression)\n{\n    __cil_callvirt_060015DB(this, ((ICSharpCode.Decompiler.CSharp.Syntax.AstNode)(identifierExpression)));\n    global::ICSharpCode.Decompiler.CSharp.Syntax.Identifier v4 = __cil_callvirt_060019FD(identifierExpression);",
+          "ilspy": "public virtual void VisitIdentifierExpression(IdentifierExpression identifierExpression)\n{\n\tStartNode(identifierExpression);\n\tWriteIdentifier(identifierExpression.IdentifierToken);\n\tWriteTypeArguments(identifierExpression.TypeArguments);\n\tEndNode(identifierExpression);\n}",
+          "why": "4045 namespace-qualified references and 2011 global:: qualifiers in a slice with zero using directives; ILSpy's four files use 15.",
+          "fix": "Emit a using block from the referenced namespaces and print short names, qualifying only on collision.",
+          "risk": "none; collisions are detectable at print time"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "SetChildInstruction",
+          "ours": "if (!System.Object.ReferenceEquals(v2, v3)) {",
+          "ilspy": "if (iLInstruction != newValue)",
+          "why": "Reference equality through a fully qualified System.Object instead of the C# != operator on references (29 sites), with a negated condition that then needs an else.",
+          "fix": "Print ==/!= for ceq/cgt on reference types and spell System.Object as object.",
+          "risk": "none"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "MatchBinaryNumericInstruction",
+          "ours": "public bool MatchBinaryNumericInstruction(ICSharpCode.Decompiler.IL.BinaryNumericOperator @operator, out ICSharpCode.Decompiler.IL.ILInstruction left, out ICSharpCode.Decompiler.IL.ILInstruction right)\nref __cil_enum_02000146 v3 = ref @operator;",
+          "ilspy": "public bool MatchBinaryNumericInstruction(BinaryNumericOperator @operator, out ILInstruction left, out ILInstruction right)",
+          "why": "@-escaping of the identifier is correct and identical to ILSpy (7 sites) - a positive - but the enum alias still appears as a declared type in ref locals.",
+          "fix": "Keep @-escaping; resolve __cil_enum_<token> to the enum name everywhere, including declared local types.",
+          "risk": "none"
+        }
+      ]
+    },
+    {
+      "name": "structure and layout",
+      "occurrences": 938,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpFormattingOptions",
+          "method": "IndentNamespaceBody accessors",
+          "ours": "private bool __il_field_04000745;\n\npublic bool get_IndentNamespaceBody()\n{\n    return this.__il_field_04000745;\n}\n\npublic void set_IndentNamespaceBody(bool value)\n{\n    int v1 = __cil_bool_load(value);\n    this.__il_field_04000745 = __cil_bool_store(v1);\n    return;\n}",
+          "ilspy": "public bool IndentNamespaceBody { get; set; }",
+          "why": "166 properties are 498 accessor shells plus a 166-line // property ... trailer; the backing field is unnamed (164 __il_field_ declarations).",
+          "fix": "Pair get_X/set_X by name and signature, emit a property whose accessors nest the existing bodies, and name the backing field after the property.",
+          "risk": "low; members are moved, never merged or dropped"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor",
+          "method": "static constructor (unconditionalKeywords, queryKeywords)",
+          "ours": "string v147 = __cil_ldstr_70003ACF(\"virtual\");\nint v148 = __cil_bool_load(__cil_callvirt_0A0003C7(v0, v147));\n...\nICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpOutputVisitor.unconditionalKeywords = v0;",
+          "ilspy": "private static readonly HashSet<string> unconditionalKeywords = new HashSet<string>\n{\n\t\"abstract\", \"as\", \"base\", \"bool\", \"break\", ...\n};",
+          "why": "newobj + a chain of Add(constant) calls with dead return values is a collection initializer; the assignment sits in the static constructor.",
+          "fix": "Recognize newobj+Add-chain in a constructor and hoist to a field initializer with an initializer block.",
+          "risk": "low; only when the field is assigned once and Add is side-effect free"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "nested types",
+          "ours": "public struct ChildrenCollection : ... { }  // starts at line 3056 of 3608, after all methods",
+          "ilspy": "public struct ChildrenCollection : ...  // declared before the members that use it",
+          "why": "Nested types are appended after the entire method list, so readers meet ChildrenCollection 3000 lines after its first use, and the property trailer sits in between.",
+          "fix": "Order members as fields, nested types, constructors, properties, methods (or first-use order), instead of appending nested types last.",
+          "risk": "none"
+        }
+      ]
+    },
+    {
+      "name": "comments and diagnostics",
+      "occurrences": 600,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "HasFlag / CommonResultType / ResetDirty",
+          "ours": "// enum storage token=0x02000160 alias=__cil_enum_02000160 underlying=int: global::@ICSharpCode.@Decompiler.@IL.@InstructionFlags; exact input-scoped value type; loads normalize to CLI integer stack bits and stores truncate to the declared width.",
+          "ilspy": "// (no comments at all in these four ILSpy types)",
+          "why": "164 enum-storage and 248 structural-signature lines repeat once per member and hide the code; they are model evidence, not reader information.",
+          "fix": "Move both kinds behind --details (still available for auditing the lowering) and keep the banner only where a body is not source-equivalent.",
+          "risk": "none (flag, not a transformation)"
+        },
+        {
+          "type": "ICSharpCode.Decompiler.CSharp.OutputVisitor.CSharpFormattingOptions",
+          "method": "all properties",
+          "ours": "// property bool SpaceBeforeForParentheses { get: get_SpaceBeforeForParentheses; set: set_SpaceBeforeForParentheses; }",
+          "ilspy": "public bool SpaceBeforeForParentheses { get; set; }",
+          "why": "185 // property ... lines substitute for real declarations (166 here, 19 in ILInstruction).",
+          "fix": "Delete these lines once properties are emitted as declarations (see structure category).",
+          "risk": "none"
+        }
+      ]
+    },
+    {
+      "name": "missing source-level constructs",
+      "occurrences": 158,
+      "examples": [
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "ResetDirty",
+          "ours": "try {\n    IL_000C: ;\n    goto IL_001C;\n    IL_000E: ;\n    ...\n}\nfinally {\n    IL_0026: ;\n    if (v9 is null) {\n        goto IL_002F;\n    }",
+          "ilspy": "foreach (ILInstruction descendant in Descendants)\n{\n\tdescendant.IsDirty = false;\n}",
+          "why": "foreach lowered to enumerator + try/finally (30 occurrences); ?. and ?? also missing (ILSpy: newValue?.AddRef(), 1 each), ++ missing (3), for missing (6).",
+          "fix": "Reconstruct foreach from the enumerator shape; reconstruct ?. from the is-null guard + single member access; keep the lowered form when the shape does not match.",
+          "risk": "medium for foreach (Dispose must stay on every path); low for ?."
+        },
+        {
+          "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+          "method": "MakeDirty",
+          "ours": "IL_0004: ;\n...\nIL_0012: ;\nglobal::ICSharpCode.Decompiler.IL.ILInstruction v5 = l0;\nif (v5 is null) {\n    goto IL_001D;\n} else {\n    goto IL_0015;\n}\nIL_0015: ;\nint v7 = __cil_bool_load(__cil_callvirt_06000E71(v6));\nif (v7 == 0) {\n    goto IL_0004;\n}",
+          "ilspy": "ILInstruction iLInstruction = this;\nwhile (iLInstruction != null && !iLInstruction.IsDirty)\n{\n\tiLInstruction.IsDirty = true;\n\tiLInstruction = iLInstruction.parent;\n}",
+          "why": "A back edge to a condition-only block is while with && (0 while/for statements in our slice, 994 gotos); the IsDirty property also never got named.",
+          "fix": "Fold back edges into while and combine the two condition blocks with &&; name the getter call (see identifier naming).",
+          "risk": "high (needs dominator reasoning); gate on structural proof"
+        }
+      ]
+    }
+  ],
+  "partial_blocks": [
+    {
+      "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+      "nested_type": "ILInstruction/ChildrenCollection",
+      "method": "System.Collections.Generic.IEnumerable<ICSharpCode.Decompiler.IL.ILInstruction>.GetEnumerator",
+      "reason": "IL fallback: incompatible value/receiver types",
+      "kind": "admission gap, not quality"
+    },
+    {
+      "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+      "nested_type": "ILInstruction/ChildrenCollection",
+      "method": "System.Collections.IEnumerable.GetEnumerator",
+      "reason": "IL fallback: incompatible value/receiver types",
+      "kind": "admission gap, not quality"
+    },
+    {
+      "type": "ICSharpCode.Decompiler.IL.ILInstruction",
+      "nested_type": "ILInstruction/ChildrenEnumerator",
+      "method": "MoveNext",
+      "reason": "IL fallback: EH fault handlers need exceptional-only cleanup",
+      "kind": "admission gap, not quality"
+    }
+  ],
+  "notes": [
+    "Fallback blocks: 3, all in ICSharpCode.Decompiler.IL.ILInstruction (index.json status 2). CSharpFormattingOptions, CSharpOutputVisitor and DepthFirstAstVisitor have none; no // Dependency unresolved or generic-body-context comments appear in this slice.",
+    "Positive findings: @-escaping is identical to ILSpy (@operator, 7 sites); const -1 is cleaner than ILSpy's (InstructionFlags)(-1); the blanket \\uXXXX string escapes are not present here (1 occurrence, the legitimate \"\\u0009\" tab); field/property/constructor modifiers (private, protected, readonly, internal, const) are all preserved.",
+    "Deliberate lowerings that are not defects: yield iterators (Descendants, Ancestors) emitted as ~290-line state machines; enum backing-field store/load normalization; foreach/using kept lowered. These preserve semantics and should be marked low priority except for the readability of the generated names.",
+    "Semantics preserved, presentation only: items 1-4 of the ranked shortlist. Presentation needs new analysis: foreach reconstruction, goto folding into while/switch, iterator reconstruction.",
+    "No file outside rust/report/quality/decompiler-lib was modified; no decompiler was run over other assemblies; no input code was executed."
+  ]
+}
