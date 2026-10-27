@@ -159,6 +159,9 @@ impl SignatureTypes {
             Some(0x13 | 0x1e) => {
                 "generic value copy in the original target type; no boxing, reference/integer category or layout inference"
             }
+            Some(0x14) => {
+                "general array reference identity (element and rank); no element, layout or bounds inference"
+            }
             Some(0x11) => {
                 "whole struct value snapshot/copy, preserving embedded references; no boxing, construction, host layout or address inference"
             }
@@ -198,6 +201,7 @@ pub(crate) fn encode_type(
     if !matches!(
         ty,
         Type::GenericInst { .. }
+            | Type::Array(..)
             | Type::SzArray(..)
             | Type::Var(_)
             | Type::MVar(_)
@@ -335,6 +339,20 @@ impl Encoder<'_, '_> {
             Type::SzArray(modifiers, inner) if modifiers.is_empty() => {
                 self.bytes.push(0x1d);
                 self.ty(inner, depth + 1)?;
+            }
+            // ELEMENT_TYPE_ARRAY with no declared sizes and zero-based dimensions:
+            // C# spells exactly these shapes as `T[,]`.
+            Type::Array(element, shape)
+                if shape.sizes.is_empty() && shape.lo_bounds.iter().all(|bound| *bound == 0) =>
+            {
+                self.bytes.push(0x14);
+                self.ty(element, depth + 1)?;
+                self.unsigned(shape.rank)?;
+                self.unsigned(0)?;
+                self.unsigned(u32::try_from(shape.lo_bounds.len())?)?;
+                for _ in &shape.lo_bounds {
+                    self.unsigned(0)?;
+                }
             }
             _ => {
                 return Err(

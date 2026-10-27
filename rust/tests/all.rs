@@ -118,6 +118,8 @@ mod generic_values;
 mod interface_references;
 #[path = "method_instantiations.rs"]
 mod method_instantiations;
+#[path = "multidim_arrays.rs"]
+mod multidim_arrays;
 #[path = "naming.rs"]
 mod naming;
 #[path = "native.rs"]

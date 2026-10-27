@@ -208,6 +208,13 @@ impl Ty {
             }
             return Ok(Self::StructuralRef(id));
         }
+        // A general array is an ordinary reference type; the element and rank stay
+        // in the structural signature that serves as its identity.
+        if matches!(t, cildec::Type::Array(..)) {
+            return Ok(Self::StructuralRef(
+                image.intern_signature_type(t, context)?,
+            ));
+        }
         match Self::from_sig(t) {
             Ok(ty) => Ok(ty),
             Err(error) => {

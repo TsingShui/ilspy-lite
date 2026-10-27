@@ -53,19 +53,63 @@ pub(crate) fn element(image: &Image<'_>, ty: Ty) -> Result<Ty> {
     }
 }
 
-pub(crate) fn vector(image: &Image<'_>, ty: Ty) -> Result<()> {
+/// What an array intrinsic does with the element it names.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Access {
+    Get,
+    Set,
+}
+
+/// A resolved array intrinsic: the element kind, the rank that fixes its argument
+/// count, and the operation.
+pub(crate) struct Intrinsic {
+    pub element: Ty,
+    pub rank: usize,
+    pub access: Access,
+}
+
+/// Element and rank of a non-vector array reference. C# can only spell shapes with
+/// zero lower bounds and no declared sizes, so any other shape is refused.
+pub(crate) fn general_shape(image: &Image<'_>, ty: Ty) -> Result<(Ty, usize)> {
+    let Ty::StructuralRef(id) = ty else {
+        return Err("operation needs a general array reference".into());
+    };
+    let (bytes, context) = image.signature_types.borrow().signature(id)?;
+    let signature = crate::signature_guard::type_spec(&bytes)?;
+    match signature.type_ {
+        cildec::Type::Array(element, shape) => {
+            if !shape.sizes.is_empty()
+                || shape.lo_bounds.iter().any(|bound| *bound != 0)
+                || shape.lo_bounds.len() > shape.rank as usize
+            {
+                return Err("array shape needs zero lower bounds and no declared sizes".into());
+            }
+            Ok((
+                Ty::from_sig_scoped(&element, image, context)?,
+                shape.rank as usize,
+            ))
+        }
+        _ => Err("operation needs a general array reference".into()),
+    }
+}
+
+/// Any array reference, vector or general, for operations that only need length.
+pub(crate) fn reference(image: &Image<'_>, ty: Ty) -> Result<()> {
     match ty {
         Ty::I4Array | Ty::U4Array => Ok(()),
         Ty::StructuralRef(id) => {
             let (bytes, _) = image.signature_types.borrow().signature(id)?;
             let signature = crate::signature_guard::type_spec(&bytes)?;
-            if matches!(signature.type_, cildec::Type::SzArray(modifiers, _) if modifiers.is_empty())
+            if matches!(
+                &signature.type_,
+                cildec::Type::SzArray(modifiers, _) if modifiers.is_empty()
+            ) || matches!(&signature.type_, cildec::Type::Array(..))
             {
                 Ok(())
             } else {
-                Err("operation needs an ordinary vector reference".into())
+                Err("operation needs an array reference".into())
             }
         }
-        _ => Err("operation needs an ordinary vector reference".into()),
+        _ => Err("operation needs an array reference".into()),
     }
 }

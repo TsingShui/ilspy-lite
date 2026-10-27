@@ -1,0 +1,32 @@
+{
+  "group": "general arrays",
+  "tests": 477,
+  "behavior": {
+    "comparisons": 23,
+    "configurations": 2,
+    "mutants_rejected": [
+      "DroppedStore",
+      "SwappedDimensions"
+    ]
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      13611,
+      13630
+    ],
+    "FSharp.Core": [
+      7276,
+      7350
+    ],
+    "OpenRA.Game": [
+      4013,
+      4013
+    ],
+    "OpenRA.Mods.Common": [
+      15478,
+      15479
+    ]
+  },
+  "full_scan": "pending next batch",
+  "third_party_bodies_executed": false
+}

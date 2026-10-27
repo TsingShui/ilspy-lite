@@ -498,6 +498,49 @@ impl Writer<'_, '_> {
         self.stack.push(Value { name, ty });
         Ok(())
     }
+    /// Element access on a general array: `Get`, `Set` and `Address` name element
+    /// slots, so this keeps the operand order and the runtime's null/bounds checks
+    /// instead of dispatching to a method.
+    fn array_intrinsic(&mut self, intrinsic: crate::arrays::Intrinsic) -> Result<()> {
+        use crate::arrays::Access;
+        let value = if intrinsic.access == Access::Set {
+            Some(self.pop()?)
+        } else {
+            None
+        };
+        let mut indices = Vec::with_capacity(intrinsic.rank);
+        for _ in 0..intrinsic.rank {
+            let index = self.pop()?;
+            if index.ty != Ty::I4 {
+                return Err("array index needs a 32-bit integer value".into());
+            }
+            indices.push(index.name);
+        }
+        indices.reverse();
+        let target = self.pop()?;
+        let (element, rank) = crate::arrays::general_shape(self.image, target.ty)?;
+        if element != intrinsic.element || rank != intrinsic.rank {
+            return Err("array intrinsic does not match the array reference".into());
+        }
+        let name = format!("{}[{}]", target.name, indices.join(", "));
+        match intrinsic.access {
+            Access::Get => self.push(element, name),
+            Access::Set => {
+                let value = value.ok_or("array Set needs a value")?;
+                if value.ty.kind() == StackKind::Address {
+                    return Err("array Set needs a value snapshot, not a managed location".into());
+                }
+                self.image.assignable(value.ty, element.stack())?;
+                self.lines.push(format!(
+                    "{} = {};",
+                    name,
+                    element.store(&value.name, self.image)?
+                ));
+                Ok(())
+            }
+        }
+    }
+
     fn constrained_call(
         &mut self,
         token: cildec::Token,
@@ -988,6 +1031,29 @@ impl Writer<'_, '_> {
             }
             "newobj" => {
                 let token = i.operand.token().ok_or("missing constructor token")?;
+                if let Some((array, rank, lengths)) =
+                    self.image.array_allocation(token, self.type_context)?
+                {
+                    if rank < 2 {
+                        return Err(
+                            "general rank-1 array allocation is not a vector; C# has no equivalent"
+                                .into(),
+                        );
+                    }
+                    self.track_type(array)?;
+                    let element = crate::arrays::general_shape(self.image, array)?.0;
+                    let element_name = element.cs(self.image)?;
+                    let mut values = Vec::with_capacity(lengths.len());
+                    for ty in lengths.iter().rev() {
+                        let value = self.pop()?;
+                        self.image.assignable(value.ty, ty.stack())?;
+                        values.push(value.name);
+                    }
+                    values.reverse();
+                    self.lines.push("// Array allocation with one length per dimension; the runtime zero-initialises every element.".into());
+                    self.push(array, format!("new {element_name}[{}]", values.join(", ")))?;
+                    return Ok(());
+                }
                 if let Some((value, parameters)) =
                     self.image.value_constructor(token, self.type_context)?
                 {
@@ -1086,7 +1152,7 @@ impl Writer<'_, '_> {
             }
             "ldlen" => {
                 let array = self.pop()?;
-                crate::arrays::vector(self.image, array.ty)?;
+                crate::arrays::reference(self.image, array.ty)?;
                 // Read now: null checking and length evaluation must not be delayed.
                 // The signed native temporary retains the native-unsigned bit pattern.
                 self.push(
@@ -1494,6 +1560,9 @@ impl Writer<'_, '_> {
             }
             "call" | "callvirt" => {
                 let t = i.operand.token().ok_or("missing call token")?;
+                if let Some(intrinsic) = self.image.array_access(t, self.type_context)? {
+                    return self.array_intrinsic(intrinsic);
+                }
                 let mut method = self.image.method_ref(t, self.type_context)?;
                 if method.ret.kind() == StackKind::Address {
                     return Err("byref call result needs escape/lifetime analysis".into());

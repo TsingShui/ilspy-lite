@@ -3286,6 +3286,136 @@ impl<'a> Image<'a> {
         }
     }
 
+    /// Element, rank and reference type of a general array TypeSpec. Only shapes C#
+    /// can spell (no declared sizes, zero lower bounds) qualify.
+    pub(crate) fn array_shape(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<(crate::ir::Ty, usize, crate::ir::Ty)>> {
+        use crate::ir::{StackKind, Ty};
+        if token.table() != Some(TableId::TypeSpec) || token.rid() == 0 {
+            return Ok(None);
+        }
+        let row = self.md.tables().type_spec(token.rid())?;
+        let signature = crate::signature_guard::type_spec(self.md.blobs().get(row.signature)?)?;
+        if !matches!(signature.type_, cildec::Type::Array(..)) {
+            return Ok(None);
+        }
+        let array = Ty::from_sig_scoped(&signature.type_, self, context)?;
+        let (element, rank) = crate::arrays::general_shape(self, array)?;
+        if element.kind() == StackKind::Address {
+            return Err("array element needs an ordinary stored type".into());
+        }
+        Ok(Some((element, rank, array)))
+    }
+
+    /// `newobj` on a general array type takes one 32-bit length per dimension and
+    /// allocates a single runtime array.
+    pub(crate) fn array_allocation(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<(crate::ir::Ty, usize, Vec<crate::ir::Ty>)>> {
+        use crate::ir::Ty;
+        if token.table() != Some(TableId::MemberRef) {
+            return Ok(None);
+        }
+        let row = self.md.tables().member_ref(token.rid())?;
+        let Some((_, rank, array)) = self.array_shape(row.class, context)? else {
+            return Ok(None);
+        };
+        if self.md.strings().str(row.name)? != ".ctor" {
+            return Ok(None);
+        }
+        let signature = crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+        if !signature.has_this
+            || signature.calling_convention != cildec::CallConv::Default
+            || signature.explicit_this
+            || !signature.vararg_params.is_empty()
+            || signature.params.len() != rank
+            || Ty::from_param_scoped(&signature.return_type, self, context)? != Ty::Void
+        {
+            return Err("array constructor needs one length per dimension".into());
+        }
+        let mut lengths = Vec::with_capacity(rank);
+        for parameter in &signature.params {
+            let ty = Ty::from_param_scoped(parameter, self, context)?;
+            if ty != Ty::I4 {
+                return Err("array length needs a 32-bit integer argument".into());
+            }
+            lengths.push(ty);
+        }
+        Ok(Some((array, rank, lengths)))
+    }
+
+    /// `Get`, `Set` and `Address` on a general array are element operations, not
+    /// dispatch: the runtime performs the null check and every dimension's bounds
+    /// check at the same point.
+    pub(crate) fn array_access(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<Option<crate::arrays::Intrinsic>> {
+        use crate::arrays::{Access, Intrinsic};
+        use crate::ir::Ty;
+        if token.table() != Some(TableId::MemberRef) {
+            return Ok(None);
+        }
+        let row = self.md.tables().member_ref(token.rid())?;
+        let Some((element, rank, _)) = self.array_shape(row.class, context)? else {
+            return Ok(None);
+        };
+        // `Address` returns a managed reference, which needs byref-return support
+        // before its lifetime can be stated; it stays an unresolved method for now.
+        let access = match self.md.strings().str(row.name)? {
+            "Get" => Access::Get,
+            "Set" => Access::Set,
+            _ => return Ok(None),
+        };
+        let signature = crate::signature_guard::method(self.md.blobs().get(row.signature)?)?;
+        if !signature.has_this
+            || signature.calling_convention != cildec::CallConv::Default
+            || signature.explicit_this
+            || !signature.vararg_params.is_empty()
+        {
+            return Err("array intrinsic needs an ordinary instance signature".into());
+        }
+        let indices = if access == Access::Set {
+            signature.params.len().checked_sub(1)
+        } else {
+            Some(signature.params.len())
+        };
+        if indices != Some(rank) {
+            return Err("array intrinsic needs one index per dimension".into());
+        }
+        for parameter in &signature.params[..rank] {
+            if Ty::from_param_scoped(parameter, self, context)? != Ty::I4 {
+                return Err("array index needs a 32-bit integer parameter".into());
+            }
+        }
+        match access {
+            Access::Set => {
+                if Ty::from_param_scoped(&signature.params[rank], self, context)? != element {
+                    return Err("array Set value differs from the element type".into());
+                }
+                if Ty::from_param_scoped(&signature.return_type, self, context)? != Ty::Void {
+                    return Err("array Set needs a void result".into());
+                }
+            }
+            Access::Get => {
+                if Ty::from_param_scoped(&signature.return_type, self, context)? != element {
+                    return Err("array Get result differs from the element type".into());
+                }
+            }
+        }
+        Ok(Some(Intrinsic {
+            element,
+            rank,
+            access,
+        }))
+    }
+
     pub fn external_class_context(&self, token: u32) -> Result<String> {
         let t = Token(token);
         if t.table() != Some(TableId::TypeRef) || t.rid() == 0 {

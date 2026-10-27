@@ -363,7 +363,7 @@ fn vector_operations_do_not_treat_named_references_as_vectors() {
         assert!(
             result
                 .text
-                .contains("operation needs an ordinary vector reference"),
+                .contains("operation needs an array reference"),
             "{}",
             result.text
         );
