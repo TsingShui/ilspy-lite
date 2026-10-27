@@ -4266,25 +4266,88 @@ impl<'a> Image<'a> {
 
     /// The local definition a type's `extends` column names, following a
     /// constructed base to its definition.
-    pub(crate) fn base_definition(&self, base: Token) -> Result<Option<u32>> {
-        if base.rid() == 0 {
-            return Ok(None);
-        }
-        if base.table() != Some(TableId::TypeSpec) {
-            return Ok(Some(base.0));
-        }
-        let spec = self.type_spec(base)?;
-        let cildec::Type::GenericInst {
-            is_value_type: false,
-            def,
-            ..
-        } = &spec.type_
-        else {
-            return Err("constructed base needs member binding".into());
+    /// Prove that `current`'s declared base is exactly the constructed or nominal
+    /// owner `base` of a base constructor call.
+    ///
+    /// A nested instantiation keeps the parameters of its enclosing type, so the
+    /// scope used to normalize the declared base comes from the receiver itself:
+    /// both operands then describe the same substitution, and identity is decided
+    /// by the normalized bytes rather than by either operand's spelling.
+    pub(crate) fn immediate_constructor_base(
+        &self,
+        current: crate::ir::Ty,
+        base: crate::ir::Ty,
+    ) -> Result<bool> {
+        use crate::ir::Ty;
+        let definition = match current {
+            Ty::Class(token) => token,
+            Ty::StructuralRef(id) => match self.open_self_definition(id) {
+                Some(definition) => definition,
+                None => return Ok(false),
+            },
+            _ => return Ok(false),
         };
-        Ok(self
-            .local_type_definition(*def)?
-            .map(|definition| definition.0))
+        let declared = self.metadata_coded_token(
+            cildec::CodedIndex::TypeDefOrRef,
+            self.md
+                .tables()
+                .raw_column(TableId::TypeDef, definition & 0xffffff, 3)?,
+        )?;
+        match base {
+            Ty::Class(token) | Ty::ExternalClass(token) => {
+                if declared.0 == token {
+                    return Ok(true);
+                }
+                // A nominal reference to a base whose declaration is constructed
+                // (`Base<T>` written without arguments) still denotes that base
+                // definition; the instantiation itself is not compared here.
+                if declared.table() != Some(TableId::TypeSpec) {
+                    return Ok(false);
+                }
+                let spec = self.type_spec(declared)?;
+                let cildec::Type::GenericInst {
+                    is_value_type: false,
+                    def,
+                    ..
+                } = &spec.type_
+                else {
+                    return Ok(false);
+                };
+                Ok(self
+                    .local_type_definition(*def)?
+                    .map(|definition| definition.0)
+                    .unwrap_or(def.0)
+                    == token)
+            }
+            Ty::StructuralRef(base_id) => {
+                if declared.table() != Some(TableId::TypeSpec) {
+                    return Ok(false);
+                }
+                let spec = self.type_spec(declared)?;
+                if !matches!(
+                    spec.type_,
+                    cildec::Type::GenericInst {
+                        is_value_type: false,
+                        ..
+                    }
+                ) {
+                    return Ok(false);
+                }
+                // The declared base and the call's owner are written in the same
+                // generic scope; normalizing with the owner's scope keeps nested
+                // types that inherit their enclosing parameters comparable.
+                let (base_bytes, base_scope) = self.signature_types.borrow().signature(base_id)?;
+                let Ok((declared_bytes, declared_type, declared_method)) =
+                    crate::signature_types::encoded_type(self, &spec.type_, base_scope)
+                else {
+                    return Ok(false);
+                };
+                Ok(declared_type == base_scope.type_scope
+                    && declared_method == base_scope.method_scope
+                    && declared_bytes == base_bytes)
+            }
+            _ => Ok(false),
+        }
     }
 
     pub(crate) fn type_spec(&self, token: Token) -> Result<cildec::TypeSpecSig<'a>> {

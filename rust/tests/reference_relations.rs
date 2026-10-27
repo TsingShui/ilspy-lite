@@ -214,6 +214,35 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn nested_base_constructor_calls_compare_the_declared_instantiation() {
+    for (bytes, library) in IMAGES {
+        // A nested class that inherits its enclosing type's parameters names its
+        // base through the same substitution the call site uses.
+        let method = token(bytes, "RelationCases.LocalOuter`2/NestedLocal", ".ctor");
+        let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_ctor_call_"), "{}", result.text);
+
+        // The same shape whose base is defined in another image still needs a
+        // dependency fact, so no answer is guessed from the local declaration.
+        let foreign = token(bytes, "RelationCases.ForeignOuter`2/NestedForeign", ".ctor");
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let refused = context.decompile(foreign, OutputStyle::Readable).unwrap();
+        assert_eq!(refused.status, Status::Partial, "{}", refused.text);
+        assert!(
+            refused
+                .text
+                .contains("constructed member needs a local definition"),
+            "{}",
+            refused.text
+        );
+    }
+}
+
+#[test]
 fn external_generic_instance_calls_need_the_selected_definition_flags() {
     for (bytes, library) in IMAGES {
         let method = token(bytes, "RelationCases.Ops", "ExternalGeneric");

@@ -26,6 +26,11 @@ namespace RelationLibrary
     public class Child : Middle, IRoot, IItem<string> { }
     public class ForeignException : System.Exception { }
     public class ForeignDerivedException : ForeignException { }
+    public abstract class OpBase<TFirst, TSecond>
+    {
+        public readonly int Seed;
+        protected OpBase(int seed) { Seed = seed; }
+    }
     public class Api
     {
         public int Calls;
@@ -50,6 +55,25 @@ namespace RelationCases
     public sealed class Consumer : IConsumer<object> { }
     public class LocalForeign : RelationLibrary.Child { }
     public class ClosedForeign : RelationLibrary.GenericBase<string> { }
+    public abstract class LocalBase<TFirst, TSecond>
+    {
+        public readonly int Seed;
+        protected LocalBase(int seed) { Seed = seed; }
+    }
+    public class ForeignOuter<TKey, TValue>
+    {
+        public class NestedForeign : RelationLibrary.OpBase<TValue, TKey>
+        {
+            public NestedForeign(int seed) : base(seed) { }
+        }
+    }
+    public class LocalOuter<TKey, TValue>
+    {
+        public class NestedLocal : LocalBase<TValue, TKey>
+        {
+            public NestedLocal(int seed) : base(seed) { }
+        }
+    }
     public class Cell<T>
     {
         public T Value;

@@ -1527,14 +1527,10 @@ impl Writer<'_, '_> {
                         if current == owner {
                             self.lines.push("// Exact same-type constructor delegation on the same original receiver; no allocation or added null check.".into());
                         } else {
-                            let (Ty::Class(current), Ty::Class(base) | Ty::ExternalClass(base)) =
-                                (current, owner)
-                            else {
+                            if !matches!(current, Ty::Class(_) | Ty::StructuralRef(_)) {
                                 return Err("constructor call needs a reference-class owner".into());
-                            };
-                            let extends =
-                                self.image.md.tables().type_def(current & 0xffffff)?.extends;
-                            if self.image.base_definition(extends)? != Some(base) {
+                            }
+                            if !self.image.immediate_constructor_base(current, owner)? {
                                 return Err("constructor call is not the immediate base".into());
                             }
                             self.lines.push("// Initialize the existing original receiver via an exact direct-base constructor; no allocation, no virtual dispatch, no added null check.".into());

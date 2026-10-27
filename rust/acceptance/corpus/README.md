@@ -183,6 +183,8 @@ generated output remain ignored and retain their original license boundaries.
   with loop, branch, address and exception-region boundaries.
 - `EXTERNAL_GENERIC_INSTANTIATION.md`: nonvirtual instantiated instance calls on
   referenced classes, with the generic-virtual and value-type boundaries.
+- `CONSTRUCTED_BASE_CALLS.md`: nested/constructed base constructor identity, with
+  the cross-image and different-instantiation boundaries.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

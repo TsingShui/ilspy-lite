@@ -75,3 +75,31 @@ group. No third-party method was executed.
   fixtures.
 - Full Rust suite (468 tests), fmt and clippy pass; see `validation.json`. Leaf
   planning and execution remain owned-fixture only.
+
+## Follow-up group: nested and constructed base calls
+
+The same fixed-corpus investigation showed that the largest remaining F# blocker
+(`constructor call needs a reference-class owner`, 1,868 bodies) was a *base*
+constructor call whose declared base is a constructed generic type, reached from
+a nested class. `MetadataModule.ResolveMethodReference` resolves such a base
+through the selected definition and specializes it, so the call is an ordinary
+direct call; only the receiver's declared base identity has to be compared.
+
+`Image::immediate_constructor_base` compares the declared `Extends` operand with
+the call's owner: nominal owners keep the previous token/definition rule, and a
+constructed owner must be a constructed TypeSpec whose normalized bytes and
+generic scope match the declared base. `signature_types::encoded_type` exposes
+the normalized bytes and scopes for that comparison. Normalizing with the owner's
+scope is what makes a nested class inheriting its enclosing parameters
+comparable.
+
+Owned red/green: `RelationCases.LocalOuter<,>.NestedLocal..ctor` (identity through
+an enclosing generic scope) went from Partial to Decompiled; the negative
+`ForeignOuter<,>.NestedForeign` keeps a cross-image constructed base Partial. The
+first attempt regressed three existing open-generic/base-delegation tests because
+it required exact token equality for nominal owners; the definition-based rule
+was restored and 469 tests pass.
+
+Targeted scan effect: FSharp.Core 5,308 -> 7,177 (+1,869), System.Private.CoreLib
+13,408 -> 13,425 (+17), OpenRA.Mods.Common 15,261 -> 15,413 (+152). These are not a
+batch total; a full scan and self-review remain due.

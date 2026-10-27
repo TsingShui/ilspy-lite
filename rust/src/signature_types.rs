@@ -179,6 +179,17 @@ impl SignatureTypes {
     }
 }
 
+/// Encode a structural type and expose its normalized bytes with the generic
+/// scopes it depends on, for identity comparisons between metadata operands.
+pub(crate) fn encoded_type(
+    image: &Image<'_>,
+    ty: &Type<'_>,
+    context: TypeContext,
+) -> Result<(Vec<u8>, GenericScope, GenericScope)> {
+    let (key, _) = encode_type(image, ty, context)?;
+    Ok((key.bytes, key.type_scope, key.method_scope))
+}
+
 pub(crate) fn encode_type(
     image: &Image<'_>,
     ty: &Type<'_>,
