@@ -88,4 +88,5 @@ and zero recovered-status losses. An initial comparison of Roslyn against the
 older `modopt` baseline appeared to gain 22 methods; an isolated build and scan
 of `596e59416` showed those 22 were already recovered by the earlier groups.
 That attribution is withdrawn; `targeted-final.json` records the like-for-like
-comparison. The complete three-group corpus scan is still pending.
+comparison. The subsequent complete three-group scan and its initially failed
+then repaired regression delta are in `report/foreign-hidden-batch/`.

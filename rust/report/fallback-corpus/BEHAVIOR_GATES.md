@@ -24,9 +24,9 @@ Scope statements:
 - These gates cover the operations each owned fixture exercises. They are not a
   proof of whole-corpus equivalence, and they never substitute for the static
   corpus scan.
-- The latest complete static scan (`report/modopt/corpus-scan`, 728,029 / 42,719)
-  is the measurement; behavioral evidence is reported separately from static
-  coverage. Later targeted scans are not a complete aggregate measurement.
+- The latest complete static scan (`report/foreign-hidden-batch/corpus-scan-fixed`,
+  728,704 / 42,044) is the measurement; behavioral evidence is reported separately
+  from static coverage.
 - Third-party inputs (ILSpy-tests images, OpenRA assemblies) are analyzed
   statically only. Executing their bodies would need separate authorization.
 - Incomplete coverage is stated rather than implied: value-type receiver dispatch

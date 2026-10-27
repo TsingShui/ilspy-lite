@@ -1,0 +1,615 @@
+id,assembly,origins,bodies,decompiled,partial,failed,scan_complete,fallback_percent
+0,FSharp.Core,FSharp/FSharp.Core.dll,9622,9429,193,0,True,2.005820
+1,DiffLib,ICSharpCode.Decompiler/DiffLib.dll,85,79,6,0,True,7.058824
+2,ICSharpCode.Decompiler.Tests,ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe,1257,1180,77,0,True,6.125696
+3,ICSharpCode.Decompiler,ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll,9737,9499,238,0,True,2.444285
+4,Microsoft.CodeAnalysis.CSharp,ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll | nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.CSharp.dll,27100,26540,560,0,True,2.066421
+5,Microsoft.CodeAnalysis,ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll | nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.dll,10136,9671,465,0,True,4.587609
+6,Mono.Cecil,ICSharpCode.Decompiler/Mono.Cecil.dll,2915,2867,48,0,True,1.646655
+7,Newtonsoft.Json,ICSharpCode.Decompiler/Newtonsoft.Json.dll,3985,3812,173,0,True,4.341280
+8,System.Collections.Immutable,ICSharpCode.Decompiler/System.Collections.Immutable.dll,1499,1390,109,0,True,7.271514
+9,System.Reflection.Metadata,ICSharpCode.Decompiler/System.Reflection.Metadata.dll,3212,3046,166,0,True,5.168120
+10,System.ValueTuple,ICSharpCode.Decompiler/System.ValueTuple.dll | Newtonsoft.Json-net45/System.ValueTuple.dll | Newtonsoft.Json-pcl-debug/System.ValueTuple.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.ValueTuple.dll,217,216,1,0,True,0.460829
+11,nunit.framework,ICSharpCode.Decompiler/nunit.framework.dll,1449,1423,26,0,True,1.794341
+12,Mono.Cecil.Tests,Mono.Cecil-net45/Mono.Cecil.Tests.dll,579,576,3,0,True,0.518135
+13,Mono.Cecil,Mono.Cecil-net45/Mono.Cecil.dll,2453,2396,57,0,True,2.323685
+14,PortableClassLibrary,Mono.Cecil-net45/Resources/assemblies/PortableClassLibrary.dll,3,3,0,0,True,0.000000
+15,RetargetableExample,Mono.Cecil-net45/Resources/assemblies/RetargetableExample.dll,3,2,1,0,True,33.333333
+16,System.Runtime,Mono.Cecil-net45/Resources/assemblies/System.Runtime.dll,9,9,0,0,True,0.000000
+17,boxedoptarg,Mono.Cecil-net45/Resources/assemblies/boxedoptarg.dll,2,2,0,0,True,0.000000
+18,bug-185,Mono.Cecil-net45/Resources/assemblies/bug-185.dll,8,7,1,0,True,12.500000
+19,catch,Mono.Cecil-net45/Resources/assemblies/catch.exe,5,5,0,0,True,0.000000
+20,OutlookKolabMAPIHelper,Mono.Cecil-net45/Resources/assemblies/cppcli.dll,73,26,47,0,True,64.383562
+21,test,Mono.Cecil-net45/Resources/assemblies/cscgpbug.dll,8,5,3,0,True,37.500000
+22,decsec-att,Mono.Cecil-net45/Resources/assemblies/decsec-att.dll,4,4,0,0,True,0.000000
+23,decsec-xml,Mono.Cecil-net45/Resources/assemblies/decsec-xml.dll,4,4,0,0,True,0.000000
+24,decsec1-xml,Mono.Cecil-net45/Resources/assemblies/decsec1-xml.dll,4,4,0,0,True,0.000000
+25,delay-signed,Mono.Cecil-net45/Resources/assemblies/delay-signed.dll,2,2,0,0,True,0.000000
+26,cs20-SecurityAction,Mono.Cecil-net45/Resources/assemblies/empty-decsec-att.dll,2,1,1,0,True,50.000000
+27,Test,Mono.Cecil-net45/Resources/assemblies/fptr.exe,4,2,2,0,True,50.000000
+28,test,Mono.Cecil-net45/Resources/assemblies/gifaceref.exe,10,10,0,0,True,0.000000
+29,hello.anycpu,Mono.Cecil-net45/Resources/assemblies/hello.anycpu.exe,2,2,0,0,True,0.000000
+30,hello,Mono.Cecil-net45/Resources/assemblies/hello.exe,2,2,0,0,True,0.000000
+31,hello.Itanium,Mono.Cecil-net45/Resources/assemblies/hello.ia64.exe,2,2,0,0,True,0.000000
+32,hello.x64,Mono.Cecil-net45/Resources/assemblies/hello.textonly.x64.exe,2,2,0,0,True,0.000000
+33,hello.x64,Mono.Cecil-net45/Resources/assemblies/hello.x64.exe,2,2,0,0,True,0.000000
+34,hello.x86,Mono.Cecil-net45/Resources/assemblies/hello.x86.exe,2,2,0,0,True,0.000000
+35,hello1,Mono.Cecil-net45/Resources/assemblies/hello1.exe,2,2,0,0,True,0.000000
+36,hellow,Mono.Cecil-net45/Resources/assemblies/hellow.exe,2,2,0,0,True,0.000000
+37,iterator,Mono.Cecil-net45/Resources/assemblies/iterator.exe,11,11,0,0,True,0.000000
+38,libhello,Mono.Cecil-net45/Resources/assemblies/libhello.dll,2,2,0,0,True,0.000000
+39,libres,Mono.Cecil-net45/Resources/assemblies/libres.dll,1,1,0,0,True,0.000000
+40,marshal,Mono.Cecil-net45/Resources/assemblies/marshal.dll,1,1,0,0,True,0.000000
+41,RegularAppWithoutNotify,Mono.Cecil-net45/Resources/assemblies/metro.exe,89,80,9,0,True,10.112360
+42,mma,Mono.Cecil-net45/Resources/assemblies/mma.exe,2,2,0,0,True,0.000000
+43,moda.netmodule,Mono.Cecil-net45/Resources/assemblies/moda.netmodule,2,2,0,0,True,0.000000
+44,modb.netmodule,Mono.Cecil-net45/Resources/assemblies/modb.netmodule,2,2,0,0,True,0.000000
+45,noblob,Mono.Cecil-net45/Resources/assemblies/noblob.dll,0,0,0,0,True,not applicable
+46,test,Mono.Cecil-net45/Resources/assemblies/nullable-constant.exe,3,3,0,0,True,0.000000
+47,nullable-parameter,Mono.Cecil-net45/Resources/assemblies/nullable-parameter.dll,2,2,0,0,True,0.000000
+48,pinvoke,Mono.Cecil-net45/Resources/assemblies/pinvoke.exe,2,2,0,0,True,0.000000
+49,switch,Mono.Cecil-net45/Resources/assemblies/switch.exe,2,2,0,0,True,0.000000
+50,varargs,Mono.Cecil-net45/Resources/assemblies/varargs.exe,3,0,3,0,True,100.000000
+51,winrtcomp,Mono.Cecil-net45/Resources/assemblies/winrtcomp.winmd,3,3,0,0,True,0.000000
+52,PhoneApp2,Mono.Cecil-net45/Resources/assemblies/wp7.dll,14,10,4,0,True,28.571429
+53,nunit.framework,Mono.Cecil-net45/nunit.framework.dll | NRefactory/nunit.framework.dll,1413,1391,22,0,True,1.556971
+54,ICSharpCode.NRefactory.CSharp.Refactoring,NRefactory/ICSharpCode.NRefactory.CSharp.Refactoring.dll,4307,4223,84,0,True,1.950313
+55,ICSharpCode.NRefactory.CSharp,NRefactory/ICSharpCode.NRefactory.CSharp.dll,14596,14208,388,0,True,2.658263
+56,ICSharpCode.NRefactory.Cecil,NRefactory/ICSharpCode.NRefactory.Cecil.dll,110,99,11,0,True,10.000000
+57,ICSharpCode.NRefactory.IKVM,NRefactory/ICSharpCode.NRefactory.IKVM.dll,108,96,12,0,True,11.111111
+58,ICSharpCode.NRefactory.Tests,NRefactory/ICSharpCode.NRefactory.Tests.dll,7234,7165,69,0,True,0.953829
+59,ICSharpCode.NRefactory.Xml,NRefactory/ICSharpCode.NRefactory.Xml.dll,318,314,4,0,True,1.257862
+60,ICSharpCode.NRefactory,NRefactory/ICSharpCode.NRefactory.dll,2820,2735,85,0,True,3.014184
+61,IKVM.Reflection,NRefactory/IKVM.Reflection.dll,3490,3439,51,0,True,1.461318
+62,Mono.Cecil,NRefactory/Mono.Cecil.dll,2481,2439,42,0,True,1.692866
+63,Mono.Cecil,NUnit/Mono.Cecil.dll,2413,2356,57,0,True,2.362205
+64,nunit-project-loader,NUnit/addins/nunit-project-loader.dll | NUnit/addins/tests/nunit-project-loader.dll,57,53,4,0,True,7.017544
+65,nunit-v2-result-writer,NUnit/addins/nunit-v2-result-writer.dll,49,48,1,0,True,2.040816
+66,nunit.core,NUnit/addins/nunit.core.dll,818,786,32,0,True,3.911980
+67,nunit.core.interfaces,NUnit/addins/nunit.core.interfaces.dll,329,326,3,0,True,0.911854
+68,nunit.v2.driver,NUnit/addins/nunit.v2.driver.dll,42,40,2,0,True,4.761905
+69,addin-tests,NUnit/addins/tests/addin-tests.dll,44,44,0,0,True,0.000000
+70,nunit.engine.api,NUnit/addins/tests/nunit.engine.api.dll | NUnit/nunit.engine.api.dll,62,62,0,0,True,0.000000
+71,nunit.framework,NUnit/addins/tests/nunit.framework.dll | NUnit/net-2.0/nunit.framework.dll | NUnit/nunit.framework.dll,2592,2504,88,0,True,3.395062
+72,vs-project-loader,NUnit/addins/tests/vs-project-loader.dll | NUnit/addins/vs-project-loader.dll,44,44,0,0,True,0.000000
+73,nunit.framework,NUnit/addins/v2-tests/nunit.framework.dll,1451,1423,28,0,True,1.929704
+74,nunit.v2.driver.tests,NUnit/addins/v2-tests/nunit.v2.driver.tests.dll,64,62,2,0,True,3.125000
+75,mock-assembly,NUnit/mock-assembly.exe | NUnit/net-2.0/mock-assembly.exe,44,44,0,0,True,0.000000
+76,nunit.framework.tests,NUnit/net-2.0/nunit.framework.tests.dll,3681,3525,156,0,True,4.237979
+77,nunit.testdata,NUnit/net-2.0/nunit.testdata.dll,814,802,12,0,True,1.474201
+78,nunitlite-runner,NUnit/net-2.0/nunitlite-runner.exe | NUnit/net-3.5/nunitlite-runner.exe,2,2,0,0,True,0.000000
+79,nunitlite,NUnit/net-2.0/nunitlite.dll | NUnit/nunitlite.dll,413,403,10,0,True,2.421308
+80,nunitlite.tests,NUnit/net-2.0/nunitlite.tests.exe,204,203,1,0,True,0.490196
+81,slow-nunit-tests,NUnit/net-2.0/slow-nunit-tests.dll,14,14,0,0,True,0.000000
+82,mock-assembly,NUnit/net-3.5/mock-assembly.exe,44,44,0,0,True,0.000000
+83,nunit.framework,NUnit/net-3.5/nunit.framework.dll,2600,2512,88,0,True,3.384615
+84,nunit.framework.tests,NUnit/net-3.5/nunit.framework.tests.dll,3737,3581,156,0,True,4.174472
+85,nunit.testdata,NUnit/net-3.5/nunit.testdata.dll,814,802,12,0,True,1.474201
+86,nunitlite,NUnit/net-3.5/nunitlite.dll,413,403,10,0,True,2.421308
+87,nunitlite.tests,NUnit/net-3.5/nunitlite.tests.exe,204,203,1,0,True,0.490196
+88,slow-nunit-tests,NUnit/net-3.5/slow-nunit-tests.dll,14,14,0,0,True,0.000000
+89,Microsoft.Threading.Tasks.Extensions.Desktop,NUnit/net-4.0/Microsoft.Threading.Tasks.Extensions.Desktop.dll,162,136,26,0,True,16.049383
+90,Microsoft.Threading.Tasks.Extensions,NUnit/net-4.0/Microsoft.Threading.Tasks.Extensions.dll,64,43,21,0,True,32.812500
+91,Microsoft.Threading.Tasks,NUnit/net-4.0/Microsoft.Threading.Tasks.dll,115,100,15,0,True,13.043478
+92,System.IO,NUnit/net-4.0/System.IO.dll,1,1,0,0,True,0.000000
+93,System.Runtime,NUnit/net-4.0/System.Runtime.dll,9,9,0,0,True,0.000000
+94,System.Threading.Tasks,NUnit/net-4.0/System.Threading.Tasks.dll,99,97,2,0,True,2.020202
+95,mock-assembly,NUnit/net-4.0/mock-assembly.exe,44,44,0,0,True,0.000000
+96,nunit.framework,NUnit/net-4.0/nunit.framework.dll,2625,2528,97,0,True,3.695238
+97,nunit.framework.tests,NUnit/net-4.0/nunit.framework.tests.dll,4012,3803,209,0,True,5.209372
+98,nunit.testdata,NUnit/net-4.0/nunit.testdata.dll,960,920,40,0,True,4.166667
+99,nunitlite-runner,NUnit/net-4.0/nunitlite-runner.exe,2,2,0,0,True,0.000000
+100,nunitlite,NUnit/net-4.0/nunitlite.dll,413,393,20,0,True,4.842615
+101,nunitlite.tests,NUnit/net-4.0/nunitlite.tests.exe,204,203,1,0,True,0.490196
+102,slow-nunit-tests,NUnit/net-4.0/slow-nunit-tests.dll,14,14,0,0,True,0.000000
+103,mock-assembly,NUnit/net-4.5/mock-assembly.exe,44,44,0,0,True,0.000000
+104,nunit.framework,NUnit/net-4.5/nunit.framework.dll,2619,2530,89,0,True,3.398244
+105,nunit.framework.tests,NUnit/net-4.5/nunit.framework.tests.dll,4015,3812,203,0,True,5.056040
+106,nunit.testdata,NUnit/net-4.5/nunit.testdata.dll,960,921,39,0,True,4.062500
+107,nunitlite-runner,NUnit/net-4.5/nunitlite-runner.exe,2,2,0,0,True,0.000000
+108,nunitlite,NUnit/net-4.5/nunitlite.dll,413,403,10,0,True,2.421308
+109,nunitlite.tests,NUnit/net-4.5/nunitlite.tests.exe,204,203,1,0,True,0.490196
+110,slow-nunit-tests,NUnit/net-4.5/slow-nunit-tests.dll,14,14,0,0,True,0.000000
+111,nunit-agent-x86,NUnit/nunit-agent-x86.exe,3,3,0,0,True,0.000000
+112,nunit-agent,NUnit/nunit-agent.exe,3,3,0,0,True,0.000000
+113,nunit.engine,NUnit/nunit.engine.dll,593,555,38,0,True,6.408094
+114,nunit.engine.tests,NUnit/nunit.engine.tests.dll,404,397,7,0,True,1.732673
+115,nunit3-console,NUnit/nunit3-console.exe,385,378,7,0,True,1.818182
+116,nunit3-console.tests,NUnit/nunit3-console.tests.dll,139,139,0,0,True,0.000000
+117,mock-assembly,NUnit/portable/mock-assembly.dll,42,42,0,0,True,0.000000
+118,nunit.framework,NUnit/portable/nunit.framework.dll,2408,2333,75,0,True,3.114618
+119,nunit.framework.tests,NUnit/portable/nunit.framework.tests.dll,3216,3076,140,0,True,4.353234
+120,nunit.testdata,NUnit/portable/nunit.testdata.dll,919,880,39,0,True,4.243743
+121,nunitlite-runner,NUnit/portable/nunitlite-runner.exe,14,10,4,0,True,28.571429
+122,nunitlite,NUnit/portable/nunitlite.dll,330,324,6,0,True,1.818182
+123,nunitlite.tests,NUnit/portable/nunitlite.tests.exe,94,88,6,0,True,6.382979
+124,slow-nunit-tests,NUnit/portable/slow-nunit-tests.dll,14,14,0,0,True,0.000000
+125,Autofac,Newtonsoft.Json-net45/Autofac.dll | Newtonsoft.Json-pcl-debug/Autofac.dll,1516,1466,50,0,True,3.298153
+126,BenchmarkDotNet.Core,Newtonsoft.Json-net45/BenchmarkDotNet.Core.dll,3002,2912,90,0,True,2.998001
+127,BenchmarkDotNet.Toolchains.Roslyn,Newtonsoft.Json-net45/BenchmarkDotNet.Toolchains.Roslyn.dll,22,22,0,0,True,0.000000
+128,BenchmarkDotNet,Newtonsoft.Json-net45/BenchmarkDotNet.dll,26,23,3,0,True,11.538462
+129,FSharp.Core,Newtonsoft.Json-net45/FSharp.Core.dll | Newtonsoft.Json-pcl-debug/FSharp.Core.dll,9429,9246,183,0,True,1.940821
+130,Microsoft.CodeAnalysis.CSharp,Newtonsoft.Json-net45/Microsoft.CodeAnalysis.CSharp.dll,29231,28633,598,0,True,2.045773
+131,Microsoft.CodeAnalysis,Newtonsoft.Json-net45/Microsoft.CodeAnalysis.dll,10646,10185,461,0,True,4.330265
+132,Microsoft.DotNet.InternalAbstractions,Newtonsoft.Json-net45/Microsoft.DotNet.InternalAbstractions.dll,54,52,2,0,True,3.703704
+133,Microsoft.DotNet.PlatformAbstractions,Newtonsoft.Json-net45/Microsoft.DotNet.PlatformAbstractions.dll,34,32,2,0,True,5.882353
+134,Newtonsoft.Json.Tests,Newtonsoft.Json-net45/Newtonsoft.Json.Tests.dll,10569,10299,270,0,True,2.554641
+135,Newtonsoft.Json,Newtonsoft.Json-net45/Newtonsoft.Json.dll,3991,3785,206,0,True,5.161614
+136,System.AppContext,Newtonsoft.Json-net45/System.AppContext.dll | nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.AppContext.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.AppContext.dll,0,0,0,0,True,not applicable
+137,System.Buffers,Newtonsoft.Json-net45/System.Buffers.dll | Newtonsoft.Json-pcl-debug/System.Buffers.dll,31,26,5,0,True,16.129032
+138,System.Collections.Immutable,Newtonsoft.Json-net45/System.Collections.Immutable.dll | Newtonsoft.Json-pcl-debug/System.Collections.Immutable.dll,1499,1390,109,0,True,7.271514
+139,System.Console,Newtonsoft.Json-net45/System.Console.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Console.dll,47,47,0,0,True,0.000000
+140,System.Diagnostics.FileVersionInfo,Newtonsoft.Json-net45/System.Diagnostics.FileVersionInfo.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Diagnostics.FileVersionInfo.dll,0,0,0,0,True,not applicable
+141,System.Diagnostics.StackTrace,Newtonsoft.Json-net45/System.Diagnostics.StackTrace.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Diagnostics.StackTrace.dll,6,6,0,0,True,0.000000
+142,System.IO.Compression,Newtonsoft.Json-net45/System.IO.Compression.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.IO.Compression.dll,452,427,25,0,True,5.530973
+143,System.IO.FileSystem.Primitives,Newtonsoft.Json-net45/System.IO.FileSystem.Primitives.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.IO.FileSystem.Primitives.dll,0,0,0,0,True,not applicable
+144,System.IO.FileSystem,Newtonsoft.Json-net45/System.IO.FileSystem.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.IO.FileSystem.dll,0,0,0,0,True,not applicable
+145,System.Reflection.Metadata,Newtonsoft.Json-net45/System.Reflection.Metadata.dll,3331,3155,176,0,True,5.283699
+146,System.Security.Cryptography.Algorithms,Newtonsoft.Json-net45/System.Security.Cryptography.Algorithms.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Security.Cryptography.Algorithms.dll,61,61,0,0,True,0.000000
+147,System.Security.Cryptography.Encoding,Newtonsoft.Json-net45/System.Security.Cryptography.Encoding.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Security.Cryptography.Encoding.dll,0,0,0,0,True,not applicable
+148,System.Security.Cryptography.Primitives,Newtonsoft.Json-net45/System.Security.Cryptography.Primitives.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Security.Cryptography.Primitives.dll,0,0,0,0,True,not applicable
+149,System.Security.Cryptography.X509Certificates,Newtonsoft.Json-net45/System.Security.Cryptography.X509Certificates.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Security.Cryptography.X509Certificates.dll,56,56,0,0,True,0.000000
+150,System.Text.Encoding.CodePages,Newtonsoft.Json-net45/System.Text.Encoding.CodePages.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Text.Encoding.CodePages.dll,417,366,51,0,True,12.230216
+151,System.Threading.Tasks.Extensions,Newtonsoft.Json-net45/System.Threading.Tasks.Extensions.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Threading.Tasks.Extensions.dll,39,36,3,0,True,7.692308
+152,System.Threading.Thread,Newtonsoft.Json-net45/System.Threading.Thread.dll,0,0,0,0,True,not applicable
+153,System.Xml.ReaderWriter,Newtonsoft.Json-net45/System.Xml.ReaderWriter.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Xml.ReaderWriter.dll,0,0,0,0,True,not applicable
+154,System.Xml.XPath.XDocument,Newtonsoft.Json-net45/System.Xml.XPath.XDocument.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Xml.XPath.XDocument.dll,15,15,0,0,True,0.000000
+155,System.Xml.XPath,Newtonsoft.Json-net45/System.Xml.XPath.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Xml.XPath.dll,0,0,0,0,True,not applicable
+156,System.Xml.XmlDocument,Newtonsoft.Json-net45/System.Xml.XmlDocument.dll | nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Xml.XmlDocument.dll,0,0,0,0,True,not applicable
+157,nunit.framework,Newtonsoft.Json-net45/nunit.framework.dll | Newtonsoft.Json-pcl-debug/nunit.framework.dll,2883,2782,101,0,True,3.503295
+158,Newtonsoft.Json.Tests,Newtonsoft.Json-pcl-debug/Newtonsoft.Json.Tests.dll,9783,8802,981,0,True,10.027599
+159,Newtonsoft.Json,Newtonsoft.Json-pcl-debug/Newtonsoft.Json.dll,3933,3750,183,0,True,4.652937
+160,ExplicitConversions,Random Tests/TestCases/ExplicitConversions.exe,14617,8225,6392,0,True,43.729904
+161,ExplicitConversions_32,Random Tests/TestCases/ExplicitConversions_32.exe,4681,1601,3080,0,True,65.797906
+162,ImplicitConversions,Random Tests/TestCases/ImplicitConversions.exe,527,472,55,0,True,10.436433
+163,ImplicitConversions_32,Random Tests/TestCases/ImplicitConversions_32.exe,103,48,55,0,True,53.398058
+164,TestCase-1,Random Tests/TestCases/TestCase-1.exe,101,33,68,0,True,67.326733
+180,Microsoft.VisualC.STLCLR,dotnet/legacy/Microsoft.VisualC.STLCLR.dll,365,157,208,0,True,56.986301
+181,Microsoft.VisualC,dotnet/legacy/Microsoft.VisualC.dll,11,11,0,0,True,0.000000
+248,System.EnterpriseServices.Wrapper.dll,dotnet/legacy/System.EnterpriseServices.Wrapper.dll,237,79,158,0,True,66.666667
+304,System.Runtime.CompilerServices.Unsafe,dotnet/legacy/System.Runtime.CompilerServices.Unsafe.dll | dotnet/netcore-2.2/System.Runtime.CompilerServices.Unsafe.dll,36,1,35,0,True,97.222222
+403,Microsoft.CSharp,dotnet/netcore-2.2/Microsoft.CSharp.dll,1665,1640,25,0,True,1.501502
+405,Microsoft.VisualBasic,dotnet/netcore-2.2/Microsoft.VisualBasic.dll,678,616,62,0,True,9.144543
+406,Microsoft.Win32.Primitives,dotnet/netcore-2.2/Microsoft.Win32.Primitives.dll,13,10,3,0,True,23.076923
+407,Microsoft.Win32.Registry,dotnet/netcore-2.2/Microsoft.Win32.Registry.dll,174,148,26,0,True,14.942529
+408,SOS.NETCore,dotnet/netcore-2.2/SOS.NETCore.dll,33,28,5,0,True,15.151515
+409,System.AppContext,dotnet/netcore-2.2/System.AppContext.dll,0,0,0,0,True,not applicable
+410,System.Buffers,dotnet/netcore-2.2/System.Buffers.dll,0,0,0,0,True,not applicable
+411,System.Collections.Concurrent,dotnet/netcore-2.2/System.Collections.Concurrent.dll,454,430,24,0,True,5.286344
+412,System.Collections.Immutable,dotnet/netcore-2.2/System.Collections.Immutable.dll,1527,1398,129,0,True,8.447937
+413,System.Collections.NonGeneric,dotnet/netcore-2.2/System.Collections.NonGeneric.dll,300,298,2,0,True,0.666667
+414,System.Collections.Specialized,dotnet/netcore-2.2/System.Collections.Specialized.dll,281,278,3,0,True,1.067616
+415,System.Collections,dotnet/netcore-2.2/System.Collections.dll,670,623,47,0,True,7.014925
+416,System.ComponentModel.Annotations,dotnet/netcore-2.2/System.ComponentModel.Annotations.dll,427,421,6,0,True,1.405152
+417,System.ComponentModel.DataAnnotations,dotnet/netcore-2.2/System.ComponentModel.DataAnnotations.dll,0,0,0,0,True,not applicable
+418,System.ComponentModel.EventBasedAsync,dotnet/netcore-2.2/System.ComponentModel.EventBasedAsync.dll,67,67,0,0,True,0.000000
+419,System.ComponentModel.Primitives,dotnet/netcore-2.2/System.ComponentModel.Primitives.dll,152,151,1,0,True,0.657895
+420,System.ComponentModel.TypeConverter,dotnet/netcore-2.2/System.ComponentModel.TypeConverter.dll,1784,1726,58,0,True,3.251121
+421,System.ComponentModel,dotnet/netcore-2.2/System.ComponentModel.dll,4,4,0,0,True,0.000000
+422,System.Configuration,dotnet/netcore-2.2/System.Configuration.dll,0,0,0,0,True,not applicable
+423,System.Console,dotnet/netcore-2.2/System.Console.dll,411,380,31,0,True,7.542579
+424,System.Core,dotnet/netcore-2.2/System.Core.dll,0,0,0,0,True,not applicable
+425,System.Data.Common,dotnet/netcore-2.2/System.Data.Common.dll,6099,5808,291,0,True,4.771274
+426,System.Data,dotnet/netcore-2.2/System.Data.dll,0,0,0,0,True,not applicable
+427,System.Diagnostics.Contracts,dotnet/netcore-2.2/System.Diagnostics.Contracts.dll,0,0,0,0,True,not applicable
+428,System.Diagnostics.Debug,dotnet/netcore-2.2/System.Diagnostics.Debug.dll,0,0,0,0,True,not applicable
+429,System.Diagnostics.DiagnosticSource,dotnet/netcore-2.2/System.Diagnostics.DiagnosticSource.dll,121,116,5,0,True,4.132231
+430,System.Diagnostics.FileVersionInfo,dotnet/netcore-2.2/System.Diagnostics.FileVersionInfo.dll,39,38,1,0,True,2.564103
+431,System.Diagnostics.Process,dotnet/netcore-2.2/System.Diagnostics.Process.dll,568,535,33,0,True,5.809859
+432,System.Diagnostics.StackTrace,dotnet/netcore-2.2/System.Diagnostics.StackTrace.dll,27,25,2,0,True,7.407407
+433,System.Diagnostics.TextWriterTraceListener,dotnet/netcore-2.2/System.Diagnostics.TextWriterTraceListener.dll,40,40,0,0,True,0.000000
+434,System.Diagnostics.Tools,dotnet/netcore-2.2/System.Diagnostics.Tools.dll,4,4,0,0,True,0.000000
+435,System.Diagnostics.TraceSource,dotnet/netcore-2.2/System.Diagnostics.TraceSource.dll,315,313,2,0,True,0.634921
+436,System.Diagnostics.Tracing,dotnet/netcore-2.2/System.Diagnostics.Tracing.dll,54,52,2,0,True,3.703704
+437,System.Drawing.Primitives,dotnet/netcore-2.2/System.Drawing.Primitives.dll,386,377,9,0,True,2.331606
+438,System.Drawing,dotnet/netcore-2.2/System.Drawing.dll,0,0,0,0,True,not applicable
+439,System.Dynamic.Runtime,dotnet/netcore-2.2/System.Dynamic.Runtime.dll,0,0,0,0,True,not applicable
+440,System.Globalization.Calendars,dotnet/netcore-2.2/System.Globalization.Calendars.dll,0,0,0,0,True,not applicable
+441,System.Globalization.Extensions,dotnet/netcore-2.2/System.Globalization.Extensions.dll,0,0,0,0,True,not applicable
+442,System.Globalization,dotnet/netcore-2.2/System.Globalization.dll,0,0,0,0,True,not applicable
+443,System.IO.Compression.Brotli,dotnet/netcore-2.2/System.IO.Compression.Brotli.dll,110,104,6,0,True,5.454545
+444,System.IO.Compression.FileSystem,dotnet/netcore-2.2/System.IO.Compression.FileSystem.dll,0,0,0,0,True,not applicable
+445,System.IO.Compression.ZipFile,dotnet/netcore-2.2/System.IO.Compression.ZipFile.dll,30,29,1,0,True,3.333333
+446,System.IO.Compression,dotnet/netcore-2.2/System.IO.Compression.dll,636,605,31,0,True,4.874214
+447,System.IO.FileSystem.AccessControl,dotnet/netcore-2.2/System.IO.FileSystem.AccessControl.dll,90,86,4,0,True,4.444444
+448,System.IO.FileSystem.DriveInfo,dotnet/netcore-2.2/System.IO.FileSystem.DriveInfo.dll,51,48,3,0,True,5.882353
+449,System.IO.FileSystem.Primitives,dotnet/netcore-2.2/System.IO.FileSystem.Primitives.dll,0,0,0,0,True,not applicable
+450,System.IO.FileSystem.Watcher,dotnet/netcore-2.2/System.IO.FileSystem.Watcher.dll,121,118,3,0,True,2.479339
+451,System.IO.FileSystem,dotnet/netcore-2.2/System.IO.FileSystem.dll,487,440,47,0,True,9.650924
+452,System.IO.IsolatedStorage,dotnet/netcore-2.2/System.IO.IsolatedStorage.dll,170,170,0,0,True,0.000000
+453,System.IO.MemoryMappedFiles,dotnet/netcore-2.2/System.IO.MemoryMappedFiles.dll,116,108,8,0,True,6.896552
+454,System.IO.Pipes.AccessControl,dotnet/netcore-2.2/System.IO.Pipes.AccessControl.dll,0,0,0,0,True,not applicable
+455,System.IO.Pipes,dotnet/netcore-2.2/System.IO.Pipes.dll,271,246,25,0,True,9.225092
+456,System.IO.UnmanagedMemoryStream,dotnet/netcore-2.2/System.IO.UnmanagedMemoryStream.dll,0,0,0,0,True,not applicable
+457,System.IO,dotnet/netcore-2.2/System.IO.dll,0,0,0,0,True,not applicable
+458,System.Linq.Expressions,dotnet/netcore-2.2/System.Linq.Expressions.dll,4599,4503,96,0,True,2.087410
+459,System.Linq.Parallel,dotnet/netcore-2.2/System.Linq.Parallel.dll,1336,1230,106,0,True,7.934132
+460,System.Linq.Queryable,dotnet/netcore-2.2/System.Linq.Queryable.dll,340,213,127,0,True,37.352941
+461,System.Linq,dotnet/netcore-2.2/System.Linq.dll,912,831,81,0,True,8.881579
+462,System.Memory,dotnet/netcore-2.2/System.Memory.dll,363,299,64,0,True,17.630854
+463,System.Net.Http,dotnet/netcore-2.2/System.Net.Http.dll,2364,2098,266,0,True,11.252115
+464,System.Net.HttpListener,dotnet/netcore-2.2/System.Net.HttpListener.dll,1098,950,148,0,True,13.479053
+465,System.Net.Mail,dotnet/netcore-2.2/System.Net.Mail.dll,1189,1114,75,0,True,6.307822
+466,System.Net.NameResolution,dotnet/netcore-2.2/System.Net.NameResolution.dll,153,128,25,0,True,16.339869
+467,System.Net.NetworkInformation,dotnet/netcore-2.2/System.Net.NetworkInformation.dll,520,469,51,0,True,9.807692
+468,System.Net.Ping,dotnet/netcore-2.2/System.Net.Ping.dll,152,140,12,0,True,7.894737
+469,System.Net.Primitives,dotnet/netcore-2.2/System.Net.Primitives.dll,415,380,35,0,True,8.433735
+470,System.Net.Requests,dotnet/netcore-2.2/System.Net.Requests.dll,837,790,47,0,True,5.615293
+471,System.Net.Security,dotnet/netcore-2.2/System.Net.Security.dll,1024,918,106,0,True,10.351562
+472,System.Net.ServicePoint,dotnet/netcore-2.2/System.Net.ServicePoint.dll,66,66,0,0,True,0.000000
+473,System.Net.Sockets,dotnet/netcore-2.2/System.Net.Sockets.dll,1045,872,173,0,True,16.555024
+474,System.Net.WebClient,dotnet/netcore-2.2/System.Net.WebClient.dll,350,319,31,0,True,8.857143
+475,System.Net.WebHeaderCollection,dotnet/netcore-2.2/System.Net.WebHeaderCollection.dll,90,83,7,0,True,7.777778
+476,System.Net.WebProxy,dotnet/netcore-2.2/System.Net.WebProxy.dll,32,30,2,0,True,6.250000
+477,System.Net.WebSockets.Client,dotnet/netcore-2.2/System.Net.WebSockets.Client.dll,107,99,8,0,True,7.476636
+478,System.Net.WebSockets,dotnet/netcore-2.2/System.Net.WebSockets.dll,166,143,23,0,True,13.855422
+479,System.Net,dotnet/netcore-2.2/System.Net.dll,0,0,0,0,True,not applicable
+480,System.Numerics.Vectors,dotnet/netcore-2.2/System.Numerics.Vectors.dll,311,309,2,0,True,0.643087
+481,System.Numerics,dotnet/netcore-2.2/System.Numerics.dll,0,0,0,0,True,not applicable
+482,System.ObjectModel,dotnet/netcore-2.2/System.ObjectModel.dll,206,204,2,0,True,0.970874
+483,System.Private.CoreLib,dotnet/netcore-2.2/System.Private.CoreLib.dll,18904,17023,1881,0,True,9.950275
+484,System.Private.DataContractSerialization,dotnet/netcore-2.2/System.Private.DataContractSerialization.dll,5045,4931,114,0,True,2.259663
+485,System.Private.Uri,dotnet/netcore-2.2/System.Private.Uri.dll,327,275,52,0,True,15.902141
+486,System.Private.Xml.Linq,dotnet/netcore-2.2/System.Private.Xml.Linq.dll,967,932,35,0,True,3.619442
+487,System.Private.Xml,dotnet/netcore-2.2/System.Private.Xml.dll,17176,16422,754,0,True,4.389846
+488,System.Reflection.DispatchProxy,dotnet/netcore-2.2/System.Reflection.DispatchProxy.dll,83,81,2,0,True,2.409639
+489,System.Reflection.Emit.ILGeneration,dotnet/netcore-2.2/System.Reflection.Emit.ILGeneration.dll,0,0,0,0,True,not applicable
+490,System.Reflection.Emit.Lightweight,dotnet/netcore-2.2/System.Reflection.Emit.Lightweight.dll,0,0,0,0,True,not applicable
+491,System.Reflection.Emit,dotnet/netcore-2.2/System.Reflection.Emit.dll,0,0,0,0,True,not applicable
+492,System.Reflection.Extensions,dotnet/netcore-2.2/System.Reflection.Extensions.dll,0,0,0,0,True,not applicable
+493,System.Reflection.Metadata,dotnet/netcore-2.2/System.Reflection.Metadata.dll,3346,3180,166,0,True,4.961148
+494,System.Reflection.Primitives,dotnet/netcore-2.2/System.Reflection.Primitives.dll,0,0,0,0,True,not applicable
+495,System.Reflection.TypeExtensions,dotnet/netcore-2.2/System.Reflection.TypeExtensions.dll,60,60,0,0,True,0.000000
+496,System.Reflection,dotnet/netcore-2.2/System.Reflection.dll,0,0,0,0,True,not applicable
+497,System.Resources.Reader,dotnet/netcore-2.2/System.Resources.Reader.dll,0,0,0,0,True,not applicable
+498,System.Resources.ResourceManager,dotnet/netcore-2.2/System.Resources.ResourceManager.dll,0,0,0,0,True,not applicable
+499,System.Resources.Writer,dotnet/netcore-2.2/System.Resources.Writer.dll,38,37,1,0,True,2.631579
+500,System.Runtime.CompilerServices.VisualC,dotnet/netcore-2.2/System.Runtime.CompilerServices.VisualC.dll,9,9,0,0,True,0.000000
+501,System.Runtime.Extensions,dotnet/netcore-2.2/System.Runtime.Extensions.dll,1048,999,49,0,True,4.675573
+502,System.Runtime.Handles,dotnet/netcore-2.2/System.Runtime.Handles.dll,0,0,0,0,True,not applicable
+503,System.Runtime.InteropServices.RuntimeInformation,dotnet/netcore-2.2/System.Runtime.InteropServices.RuntimeInformation.dll,25,25,0,0,True,0.000000
+504,System.Runtime.InteropServices.WindowsRuntime,dotnet/netcore-2.2/System.Runtime.InteropServices.WindowsRuntime.dll,0,0,0,0,True,not applicable
+505,System.Runtime.InteropServices,dotnet/netcore-2.2/System.Runtime.InteropServices.dll,91,91,0,0,True,0.000000
+506,System.Runtime.Loader,dotnet/netcore-2.2/System.Runtime.Loader.dll,0,0,0,0,True,not applicable
+507,System.Runtime.Numerics,dotnet/netcore-2.2/System.Runtime.Numerics.dll,359,305,54,0,True,15.041783
+508,System.Runtime.Serialization.Formatters,dotnet/netcore-2.2/System.Runtime.Serialization.Formatters.dll,646,630,16,0,True,2.476780
+509,System.Runtime.Serialization.Json,dotnet/netcore-2.2/System.Runtime.Serialization.Json.dll,0,0,0,0,True,not applicable
+510,System.Runtime.Serialization.Primitives,dotnet/netcore-2.2/System.Runtime.Serialization.Primitives.dll,61,61,0,0,True,0.000000
+511,System.Runtime.Serialization.Xml,dotnet/netcore-2.2/System.Runtime.Serialization.Xml.dll,0,0,0,0,True,not applicable
+512,System.Runtime.Serialization,dotnet/netcore-2.2/System.Runtime.Serialization.dll,0,0,0,0,True,not applicable
+513,System.Runtime,dotnet/netcore-2.2/System.Runtime.dll,25,21,4,0,True,16.000000
+514,System.Security.AccessControl,dotnet/netcore-2.2/System.Security.AccessControl.dll,461,452,9,0,True,1.952278
+515,System.Security.Claims,dotnet/netcore-2.2/System.Security.Claims.dll,179,173,6,0,True,3.351955
+516,System.Security.Cryptography.Algorithms,dotnet/netcore-2.2/System.Security.Cryptography.Algorithms.dll,971,926,45,0,True,4.634398
+517,System.Security.Cryptography.Cng,dotnet/netcore-2.2/System.Security.Cryptography.Cng.dll,634,581,53,0,True,8.359621
+518,System.Security.Cryptography.Csp,dotnet/netcore-2.2/System.Security.Cryptography.Csp.dll,444,424,20,0,True,4.504505
+519,System.Security.Cryptography.Encoding,dotnet/netcore-2.2/System.Security.Cryptography.Encoding.dll,123,122,1,0,True,0.813008
+520,System.Security.Cryptography.OpenSsl,dotnet/netcore-2.2/System.Security.Cryptography.OpenSsl.dll,74,74,0,0,True,0.000000
+521,System.Security.Cryptography.Primitives,dotnet/netcore-2.2/System.Security.Cryptography.Primitives.dll,204,197,7,0,True,3.431373
+522,System.Security.Cryptography.X509Certificates,dotnet/netcore-2.2/System.Security.Cryptography.X509Certificates.dll,822,729,93,0,True,11.313869
+523,System.Security.Principal.Windows,dotnet/netcore-2.2/System.Security.Principal.Windows.dll,246,231,15,0,True,6.097561
+524,System.Security.Principal,dotnet/netcore-2.2/System.Security.Principal.dll,0,0,0,0,True,not applicable
+525,System.Security.SecureString,dotnet/netcore-2.2/System.Security.SecureString.dll,0,0,0,0,True,not applicable
+526,System.Security,dotnet/netcore-2.2/System.Security.dll,0,0,0,0,True,not applicable
+527,System.ServiceModel.Web,dotnet/netcore-2.2/System.ServiceModel.Web.dll,0,0,0,0,True,not applicable
+528,System.ServiceProcess,dotnet/netcore-2.2/System.ServiceProcess.dll,0,0,0,0,True,not applicable
+529,System.Text.Encoding.Extensions,dotnet/netcore-2.2/System.Text.Encoding.Extensions.dll,0,0,0,0,True,not applicable
+530,System.Text.Encoding,dotnet/netcore-2.2/System.Text.Encoding.dll,0,0,0,0,True,not applicable
+531,System.Text.RegularExpressions,dotnet/netcore-2.2/System.Text.RegularExpressions.dll,697,684,13,0,True,1.865136
+532,System.Threading.Overlapped,dotnet/netcore-2.2/System.Threading.Overlapped.dll,0,0,0,0,True,not applicable
+533,System.Threading.Tasks.Dataflow,dotnet/netcore-2.2/System.Threading.Tasks.Dataflow.dll,1138,1105,33,0,True,2.899824
+534,System.Threading.Tasks.Extensions,dotnet/netcore-2.2/System.Threading.Tasks.Extensions.dll,0,0,0,0,True,not applicable
+535,System.Threading.Tasks.Parallel,dotnet/netcore-2.2/System.Threading.Tasks.Parallel.dll,167,158,9,0,True,5.389222
+536,System.Threading.Tasks,dotnet/netcore-2.2/System.Threading.Tasks.dll,0,0,0,0,True,not applicable
+537,System.Threading.Thread,dotnet/netcore-2.2/System.Threading.Thread.dll,125,124,1,0,True,0.800000
+538,System.Threading.ThreadPool,dotnet/netcore-2.2/System.Threading.ThreadPool.dll,0,0,0,0,True,not applicable
+539,System.Threading.Timer,dotnet/netcore-2.2/System.Threading.Timer.dll,0,0,0,0,True,not applicable
+540,System.Threading,dotnet/netcore-2.2/System.Threading.dll,141,136,5,0,True,3.546099
+541,System.Transactions.Local,dotnet/netcore-2.2/System.Transactions.Local.dll,1054,1047,7,0,True,0.664137
+542,System.Transactions,dotnet/netcore-2.2/System.Transactions.dll,0,0,0,0,True,not applicable
+543,System.ValueTuple,dotnet/netcore-2.2/System.ValueTuple.dll,0,0,0,0,True,not applicable
+544,System.Web.HttpUtility,dotnet/netcore-2.2/System.Web.HttpUtility.dll,69,67,2,0,True,2.898551
+545,System.Web,dotnet/netcore-2.2/System.Web.dll,0,0,0,0,True,not applicable
+546,System.Windows,dotnet/netcore-2.2/System.Windows.dll,0,0,0,0,True,not applicable
+547,System.Xml.Linq,dotnet/netcore-2.2/System.Xml.Linq.dll,0,0,0,0,True,not applicable
+548,System.Xml.ReaderWriter,dotnet/netcore-2.2/System.Xml.ReaderWriter.dll,0,0,0,0,True,not applicable
+549,System.Xml.Serialization,dotnet/netcore-2.2/System.Xml.Serialization.dll,0,0,0,0,True,not applicable
+550,System.Xml.XDocument,dotnet/netcore-2.2/System.Xml.XDocument.dll,0,0,0,0,True,not applicable
+551,System.Xml.XPath.XDocument,dotnet/netcore-2.2/System.Xml.XPath.XDocument.dll,3,3,0,0,True,0.000000
+552,System.Xml.XPath,dotnet/netcore-2.2/System.Xml.XPath.dll,0,0,0,0,True,not applicable
+553,System.Xml.XmlDocument,dotnet/netcore-2.2/System.Xml.XmlDocument.dll,0,0,0,0,True,not applicable
+554,System.Xml.XmlSerializer,dotnet/netcore-2.2/System.Xml.XmlSerializer.dll,0,0,0,0,True,not applicable
+555,System.Xml,dotnet/netcore-2.2/System.Xml.dll,0,0,0,0,True,not applicable
+556,System,dotnet/netcore-2.2/System.dll,0,0,0,0,True,not applicable
+557,WindowsBase,dotnet/netcore-2.2/WindowsBase.dll,0,0,0,0,True,not applicable
+606,mscorlib,dotnet/netcore-2.2/mscorlib.dll,0,0,0,0,True,not applicable
+609,netstandard,dotnet/netcore-2.2/netstandard.dll,0,0,0,0,True,not applicable
+616,System.Core,mcs/2.6.4/lib/mono/2.0/System.Core.dll,1895,1642,253,0,True,13.350923
+617,System.Xml,mcs/2.6.4/lib/mono/2.0/System.Xml.dll,7625,7071,554,0,True,7.265574
+618,System,mcs/2.6.4/lib/mono/2.0/System.dll,10325,9513,812,0,True,7.864407
+619,gmcs,mcs/2.6.4/lib/mono/2.0/gmcs.exe,4539,4012,527,0,True,11.610487
+620,mscorlib,mcs/2.6.4/lib/mono/2.0/mscorlib.dll,14993,13755,1238,0,True,8.257187
+624,System.Core,mcs/5.23/lib/mono/4.5/System.Core.dll,6442,6047,395,0,True,6.131636
+625,System.Xml,mcs/5.23/lib/mono/4.5/System.Xml.dll,16610,16012,598,0,True,3.600241
+626,System,mcs/5.23/lib/mono/4.5/System.dll,15437,14783,654,0,True,4.236574
+627,mcs,mcs/5.23/lib/mono/4.5/mcs.exe,10372,10243,129,0,True,1.243733
+628,mscorlib,mcs/5.23/lib/mono/4.5/mscorlib.dll,23889,21474,2415,0,True,10.109255
+631,Microsoft.VisualBasic,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/Microsoft.VisualBasic.dll,0,0,0,0,True,not applicable
+633,mscorlib,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/mscorlib.dll,0,0,0,0,True,not applicable
+634,netstandard,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/netstandard.dll,0,0,0,0,True,not applicable
+643,System.ComponentModel.DataAnnotations,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.ComponentModel.DataAnnotations.dll,0,0,0,0,True,not applicable
+648,System.Configuration,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Configuration.dll,0,0,0,0,True,not applicable
+650,System.Core,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Core.dll,0,0,0,0,True,not applicable
+653,System.Data,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Data.dll,0,0,0,0,True,not applicable
+664,System,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.dll,0,0,0,0,True,not applicable
+665,System.Drawing,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Drawing.dll,0,0,0,0,True,not applicable
+674,System.IO.Compression.FileSystem,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.IO.Compression.FileSystem.dll,0,0,0,0,True,not applicable
+690,System.Net,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Net.dll,0,0,0,0,True,not applicable
+708,System.Numerics,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Numerics.dll,0,0,0,0,True,not applicable
+733,System.Runtime.Serialization,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Runtime.Serialization.dll,0,0,0,0,True,not applicable
+744,System.Security,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Security.dll,0,0,0,0,True,not applicable
+747,System.ServiceModel.Web,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.ServiceModel.Web.dll,0,0,0,0,True,not applicable
+748,System.ServiceProcess,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.ServiceProcess.dll,0,0,0,0,True,not applicable
+765,System.Transactions,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Transactions.dll,0,0,0,0,True,not applicable
+768,System.Web,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Web.dll,0,0,0,0,True,not applicable
+770,System.Windows,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Windows.dll,0,0,0,0,True,not applicable
+771,System.Xml,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Xml.dll,0,0,0,0,True,not applicable
+772,System.Xml.Linq,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Xml.Linq.dll,0,0,0,0,True,not applicable
+774,System.Xml.Serialization,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/System.Xml.Serialization.dll,0,0,0,0,True,not applicable
+780,WindowsBase,nuget/Microsoft.NETCore.App.Ref-5.0.0.nupkg!ref/net5.0/WindowsBase.dll,0,0,0,0,True,not applicable
+783,Microsoft.CodeAnalysis.Scripting,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.Scripting.dll,592,561,31,0,True,5.236486
+784,Microsoft.CodeAnalysis.CSharp.Scripting,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.CSharp.Scripting.dll,63,62,1,0,True,1.587302
+785,Microsoft.CodeAnalysis.VisualBasic,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.CodeAnalysis.VisualBasic.dll,32181,31377,804,0,True,2.498369
+786,System.Collections.Immutable,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.Collections.Immutable.dll,1495,1387,108,0,True,7.224080
+787,System.Diagnostics.StackTrace,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.Diagnostics.StackTrace.dll,6,6,0,0,True,0.000000
+788,System.IO.FileSystem,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.IO.FileSystem.dll,0,0,0,0,True,not applicable
+789,System.IO.FileSystem.Primitives,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.IO.FileSystem.Primitives.dll,0,0,0,0,True,not applicable
+790,System.Reflection.Metadata,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/System.Reflection.Metadata.dll,3152,2989,163,0,True,5.171320
+791,csc,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/csc.exe,127,113,14,0,True,11.023622
+792,csi,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/csi.exe,1,0,1,0,True,100.000000
+793,vbc,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/vbc.exe,127,113,14,0,True,11.023622
+794,VBCSCompiler,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/VBCSCompiler.exe,263,229,34,0,True,12.927757
+795,Microsoft.Build.Tasks.CodeAnalysis,nuget/Microsoft.Net.Compilers-1.3.2.nupkg!tools/Microsoft.Build.Tasks.CodeAnalysis.dll,461,407,54,0,True,11.713666
+796,Microsoft.CodeAnalysis,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.dll,12787,12284,503,0,True,3.933683
+798,Microsoft.CodeAnalysis.CSharp,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.CSharp.dll,30106,29468,638,0,True,2.119179
+799,Microsoft.CodeAnalysis.Scripting,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.Scripting.dll,603,568,35,0,True,5.804312
+800,Microsoft.CodeAnalysis.CSharp.Scripting,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.CSharp.Scripting.dll,65,64,1,0,True,1.538462
+801,Microsoft.CodeAnalysis.VisualBasic,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.CodeAnalysis.VisualBasic.dll,32829,31997,832,0,True,2.534345
+802,csc,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/csc.exe,132,116,16,0,True,12.121212
+803,csi,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/csi.exe,1,0,1,0,True,100.000000
+804,vbc,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/vbc.exe,132,116,16,0,True,12.121212
+805,VBCSCompiler,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/VBCSCompiler.exe,270,229,41,0,True,15.185185
+806,Microsoft.Build.Tasks.CodeAnalysis,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.Build.Tasks.CodeAnalysis.dll,580,522,58,0,True,10.000000
+807,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+808,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+809,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+810,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+811,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+812,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+813,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+814,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+815,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+816,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+817,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+818,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+819,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+820,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+821,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+822,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+823,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+824,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+825,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+826,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+827,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+828,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+829,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+830,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+831,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+832,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+833,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+834,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+835,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+836,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+837,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+838,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+839,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+840,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+841,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+842,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+843,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+844,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+845,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+846,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+847,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+848,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+849,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+850,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+851,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+852,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+853,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+854,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+855,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+856,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+857,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+858,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+859,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+860,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+861,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+862,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+863,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+864,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+865,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+866,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+867,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+868,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+869,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+870,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+871,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+872,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/cs/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+873,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/de/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+874,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/es/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+875,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/fr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+876,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/it/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+877,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ja/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+878,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ko/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+879,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pl/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+880,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/pt-BR/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+881,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/ru/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+882,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/tr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+883,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hans/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+884,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/zh-Hant/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+885,System.Collections.Immutable,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Collections.Immutable.dll,1532,1403,129,0,True,8.420366
+886,System.Diagnostics.DiagnosticSource,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Diagnostics.DiagnosticSource.dll,62,61,1,0,True,1.612903
+887,System.Globalization.Calendars,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Globalization.Calendars.dll,0,0,0,0,True,not applicable
+888,System.IO.Compression.ZipFile,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.IO.Compression.ZipFile.dll,10,10,0,0,True,0.000000
+889,System.Net.Http,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Net.Http.dll,1531,1470,61,0,True,3.984324
+890,System.Net.Sockets,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Net.Sockets.dll,105,70,35,0,True,33.333333
+891,System.Reflection.Metadata,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Reflection.Metadata.dll,3371,3207,164,0,True,4.865025
+892,System.Runtime.InteropServices.RuntimeInformation,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/System.Runtime.InteropServices.RuntimeInformation.dll,31,31,0,0,True,0.000000
+893,Microsoft.Win32.Primitives,nuget/Microsoft.Net.Compilers-2.10.0.nupkg!tools/Microsoft.Win32.Primitives.dll,0,0,0,0,True,not applicable
+894,Microsoft.CodeAnalysis,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.dll,14608,13960,648,0,True,4.435926
+895,Microsoft.CodeAnalysis.CSharp,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.CSharp.dll,37159,36421,738,0,True,1.986060
+896,Microsoft.CodeAnalysis.Scripting,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.Scripting.dll,643,610,33,0,True,5.132193
+897,Microsoft.CodeAnalysis.CSharp.Scripting,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.CSharp.Scripting.dll,72,71,1,0,True,1.388889
+898,Microsoft.CodeAnalysis.VisualBasic,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.CodeAnalysis.VisualBasic.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.VisualBasic.dll,33022,32201,821,0,True,2.486221
+901,csc,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/csc.exe,180,161,19,0,True,10.555556
+902,csi,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/csi.exe,1,0,1,0,True,100.000000
+903,vbc,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/vbc.exe,180,161,19,0,True,10.555556
+904,VBCSCompiler,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/VBCSCompiler.exe,325,282,43,0,True,13.230769
+905,Microsoft.Build.Tasks.CodeAnalysis,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/Microsoft.Build.Tasks.CodeAnalysis.dll,653,594,59,0,True,9.035222
+906,System.Collections.Immutable,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Collections.Immutable.dll,1569,1439,130,0,True,8.285532
+907,System.Reflection.Metadata,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Reflection.Metadata.dll,3393,3232,161,0,True,4.745063
+908,System.Runtime.CompilerServices.Unsafe,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Runtime.CompilerServices.Unsafe.dll,40,3,37,0,True,92.500000
+909,System.Threading.Tasks.Extensions,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Threading.Tasks.Extensions.dll,104,101,3,0,True,2.884615
+910,System.Buffers,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Buffers.dll,32,27,5,0,True,15.625000
+911,System.Memory,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Memory.dll,690,594,96,0,True,13.913043
+912,System.Text.Encoding.CodePages,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Text.Encoding.CodePages.dll,421,370,51,0,True,12.114014
+913,System.Numerics.Vectors,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/System.Numerics.Vectors.dll,188,133,55,0,True,29.255319
+914,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+915,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+916,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+917,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+918,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/cs/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+919,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/cs/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+920,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+921,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+922,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+923,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+924,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/de/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+925,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/de/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+926,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+927,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+928,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+929,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+930,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/es/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+931,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/es/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+932,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+933,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+934,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+935,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+936,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/fr/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+937,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/fr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+938,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+939,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+940,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+941,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+942,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/it/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+943,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/it/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+944,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+945,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+946,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+947,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+948,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ja/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+949,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ja/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+950,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+951,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+952,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+953,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+954,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ko/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+955,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ko/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+956,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+957,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+958,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+959,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+960,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pl/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+961,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pl/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+962,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+963,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+964,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+965,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+966,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pt-BR/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+967,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/pt-BR/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+968,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+969,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+970,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+971,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+972,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ru/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+973,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/ru/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+974,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+975,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+976,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+977,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+978,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/tr/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+979,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/tr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+980,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+981,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+982,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+983,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+984,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hans/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+985,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hans/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+986,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+987,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+988,Microsoft.CodeAnalysis.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.CodeAnalysis.Scripting.resources.dll,0,0,0,0,True,not applicable
+989,Microsoft.CodeAnalysis.CSharp.Scripting.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.CodeAnalysis.CSharp.Scripting.resources.dll,0,0,0,0,True,not applicable
+990,Microsoft.CodeAnalysis.VisualBasic.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.resources.dll | nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hant/Microsoft.CodeAnalysis.VisualBasic.resources.dll,0,0,0,0,True,not applicable
+991,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/net472/zh-Hant/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+992,Microsoft.Build.Tasks.CodeAnalysis,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/Microsoft.Build.Tasks.CodeAnalysis.dll,640,582,58,0,True,9.062500
+993,Microsoft.CodeAnalysis,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.dll,14564,13862,702,0,True,4.820104
+994,Microsoft.CodeAnalysis.CSharp,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.CSharp.dll,37158,36419,739,0,True,1.988805
+995,csc,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/csc.dll,180,162,18,0,True,10.000000
+996,vbc,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/vbc.dll,180,162,18,0,True,10.000000
+997,VBCSCompiler,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/VBCSCompiler.dll,325,284,41,0,True,12.615385
+998,System.Collections.Immutable,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/System.Collections.Immutable.dll,1569,1438,131,0,True,8.349267
+999,System.Reflection.Metadata,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/System.Reflection.Metadata.dll,3393,3232,161,0,True,4.745063
+1000,System.Runtime.CompilerServices.Unsafe,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/System.Runtime.CompilerServices.Unsafe.dll,39,2,37,0,True,94.871795
+1001,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/cs/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1002,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/cs/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1003,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/cs/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1004,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/de/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1005,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/de/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1006,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/de/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1007,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/es/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1008,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/es/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1009,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/es/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1010,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/fr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1011,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/fr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1012,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/fr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1013,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/it/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1014,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/it/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1015,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/it/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1016,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/ja/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1017,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ja/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1018,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ja/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1019,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/ko/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1020,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ko/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1021,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ko/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1022,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/pl/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1023,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pl/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1024,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pl/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1025,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/pt-BR/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1026,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pt-BR/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1027,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/pt-BR/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1028,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/ru/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1029,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ru/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1030,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/ru/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1031,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/tr/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1032,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/tr/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1033,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/tr/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1034,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/zh-Hans/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1035,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hans/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1036,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hans/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1037,Microsoft.Build.Tasks.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/zh-Hant/Microsoft.Build.Tasks.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1038,Microsoft.CodeAnalysis.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hant/Microsoft.CodeAnalysis.resources.dll,0,0,0,0,True,not applicable
+1039,Microsoft.CodeAnalysis.CSharp.resources,nuget/Microsoft.Net.Compilers.Toolset-3.11.0.nupkg!tasks/netcoreapp3.1/bincore/zh-Hant/Microsoft.CodeAnalysis.CSharp.resources.dll,0,0,0,0,True,not applicable
+1041,OpenRA.Game,supplement:OpenRA.Game.dll,4767,4325,442,0,True,9.272079
+1042,OpenRA.Mods.Common,supplement:OpenRA.Mods.Common.dll,18407,17058,1349,0,True,7.328734

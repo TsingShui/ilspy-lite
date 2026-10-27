@@ -42,9 +42,9 @@ Targeted static scans with the production CLI, ILSpy reference policy:
 | System.Private.CoreLib | 13,408 | 13,425 | +17 |
 | OpenRA.Mods.Common | 15,261 | 15,413 | +152 |
 
-These three images account for +2,038. A complete fixed-corpus scan and gained
-method self-review are still required before any batch total is reported. The
-first F# blocker after this group is a bounded enum/external-value signature
+These three images accounted for +2,038 in the original local measurement; the
+subsequent full scans and gained-method reviews are recorded in the checkpoint.
+The first F# blocker after this group was a bounded enum/external-value signature
 bucket, then `incompatible value/receiver types`.
 
 ## Validation
@@ -98,5 +98,6 @@ production targeted scans retain all baseline body tokens and show +88, zero
 recovered-status losses: ILSpy.Tests +1, ILSpy core +4, Newtonsoft.Json +4,
 OpenRA.Game +4 and OpenRA.Mods.Common +75. They are not a complete corpus scan.
 Five gained production output/ILSpy/IL triples and the bounded main-session
-self-review are in `report/external-base-ctor/`; a complete batch scan remains
-pending. Reference substitutions are metadata selections, not runtime proofs.
+self-review are in `report/external-base-ctor/`; the later complete batch scan
+and its regression repair are in `report/foreign-hidden-batch/`. Reference
+substitutions are metadata selections, not runtime proofs.

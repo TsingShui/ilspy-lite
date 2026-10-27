@@ -6,18 +6,25 @@
 
 Goal: mvouhw7y-679jgb
 
-## Three-group batch: regressions under repair
+## Current complete state: constructed reference batch
 
-The complete `report/foreign-hidden-batch/corpus-scan` contains 728,579
-Decompiled and 42,169 Partial of 770,748, but its delta has **122 regressions**
-(all reference-proof work-limit failures), so the net +550 is not an acceptable
-milestone. All 122 affected tokens have since recovered in five targeted image
-scans after eliminating repeated expansion of already-validated transitive
-foreign parent facts. The repair preserves cycle checks, generic substitutions
-and the proof work bound. Its owned deep-chain red/green, cyclic/missing-reference
-negatives, 851/81 behavior comparisons and 496-test regression are recorded in
-`report/foreign-hidden-batch/REGRESSIONS.md`. A complete follow-up scan is still
-required; do not report zero regressions or a new validated aggregate yet.
+`report/foreign-hidden-batch/corpus-scan-fixed/baseline.json` is a complete
+production scan of the unchanged 614 implementation images, 319 body-bearing:
+**728,704 Decompiled / 42,044 Partial out of 770,748**, fallback **5.454961%**.
+The raw gate is 4,204,400 > 3,853,740, so <=5% remains unmet; 3,507 more bodies
+must be recovered. Against `report/modopt/corpus-scan`, the delta records **675
+newly recovered in 76 images, zero regressions and zero incomplete images**.
+OpenRA.Game is 4,325 / 442; OpenRA.Mods.Common is 17,058 / 1,349.
+
+The first complete batch scan had **122 regressions** from repeated foreign
+ancestry expansion; that result is retained, not hidden by its net gain. The
+repair compares the already-validated transitive parent facts once and retains
+cycle checks, substitutions and the work bound. A complete rescan confirms all
+122 restored and no other status regression against `modopt`. The owned
+red/green, negatives, 851/81 relation behavior and 496-test regression are in
+`report/foreign-hidden-batch/REGRESSIONS.md`; 11 gained default/ILSpy/IL triples
+and the bounded main-session self-review are under its `review/` directory.
+Third-party bodies were not executed.
 
 ## Post-baseline foreign hidden-argument identity (targeted only)
 
@@ -27,10 +34,10 @@ image and TypeDef. The proof retains generic scopes and actual variance flags;
 missing, different-assembly, wrong-position, different-base and class/value
 mutations remain Partial. The owned relation driver passes 848 comparisons /
 80 selections per configuration, and 495 Rust tests pass. Four like-for-like
-real-input targeted scans show zero gains or losses for this group. An apparent
+real-input targeted scans showed zero gains or losses for this group. An apparent
 22-method Roslyn gain against the older baseline was withdrawn after comparison
-with `596e59416`. The three-group complete scan and gained-method self-review
-are still pending; no new aggregate rate is claimed.
+with `596e59416`. The subsequent complete batch scan and gained-method self-review
+are recorded in the current section above.
 
 ## Post-baseline constructed-reference joins (targeted measurements only)
 
@@ -115,7 +122,7 @@ OpenRA images, as does the 319 body-bearing total.
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: optional modifiers and constructor callvirt
+## Previous complete state: optional modifiers and constructor callvirt
 
 - `report/modopt/corpus-scan/baseline.json`: **728,029 Decompiled / 42,719 Partial
   of 770,748**, fallback **5.541282%**. Zero incomplete images; raw gate

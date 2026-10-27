@@ -58,6 +58,9 @@ call and exception drivers pass. Rust fmt/clippy and 496 tests pass.
 All 122 recorded loss tokens were rechecked with the production CLI in five
 complete targeted image scans: 122 Decompiled and 0 still Partial. The single
 NUnit example also returns to Decompiled in isolation. `regressions/targeted-fixed.json`
-records each token; this targeted result is not a complete regression scan.
-A new complete scan and delta against `modopt` remain required before treating
-the batch as regression-free or updating the weighted aggregate.
+records each token; this targeted result was not a complete regression scan.
+The subsequent complete `corpus-scan-fixed` and `delta-fixed.json` confirm all
+122 restored and **zero regressions** against `modopt`: 675 gained, 728,704
+Decompiled / 42,044 Partial of 770,748, zero incomplete images. The weighted
+fallback is 5.454961%, so the overall 5% gate remains unmet. The original failed
+scan and its 122 losses remain retained in `regression-evidence.zip`.

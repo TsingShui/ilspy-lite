@@ -146,5 +146,6 @@ repeated traversal; the repair compares all validated transitive parents once,
 without bypassing cycle/arity checks or increasing the work limit. An owned
 13-level class chain was red and is green, while cyclic and missing-reference
 mutations remain Partial. All 122 loss tokens are restored in five targeted
-image scans; a new complete scan and delta are still required. See
+image scans. The subsequent complete scan and delta against `modopt` confirm all
+122 restored and zero other status regressions; see
 `report/foreign-hidden-batch/REGRESSIONS.md`.

@@ -1,0 +1,43 @@
+{
+  "revision": "578a9a3a5",
+  "baseline": "report/modopt/corpus-scan/baseline.json",
+  "scan": "report/foreign-hidden-batch/corpus-scan-fixed/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Decompiled": 728704,
+      "Partial": 42044
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 89,
+    "unrecovered": 42044,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "newly_recovered": 675,
+  "regressions": 0,
+  "gained_images": 76,
+  "unrecovered": 42044,
+  "raw_gate_left": 4204400,
+  "raw_gate_right": 3853740,
+  "bodies_short": 3507,
+  "fallback_percent": 5.4549606356422595,
+  "openra": {
+    "OpenRA.Game": {
+      "Decompiled": 4325,
+      "Partial": 442
+    },
+    "OpenRA.Mods.Common": {
+      "Decompiled": 17058,
+      "Partial": 1349
+    }
+  },
+  "owned_tests": 496,
+  "relation_comparisons_per_configuration": 851,
+  "relation_selections_per_configuration": 81,
+  "self_review_samples": 11,
+  "third_party_execution": false,
+  "earlier_scan_regressions": 122
+}

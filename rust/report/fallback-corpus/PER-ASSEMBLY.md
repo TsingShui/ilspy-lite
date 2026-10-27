@@ -1,5 +1,10 @@
 # Per-assembly view and slice order
 
+> Historical analysis only: the former per-image 1% gate described below has
+> been replaced by the overall weighted 5% gate. Current per-image counts are
+> in `report/foreign-hidden-batch/per-image.csv`; the current overall state is
+> in `CHECKPOINT.md`.
+
 Measured from `report/boxing/corpus-scan/baseline.json` (the scan before local-enum
 boxing; enum boxing only removes methods, it does not change which shapes block).
 
