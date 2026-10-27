@@ -6,6 +6,35 @@
 
 Goal: mvouhw7y-679jgb
 
+## Next-group design notes (audited, not implemented)
+
+- **double/float64 is not a one-for-one copy of float32.** `Ty` has `R4` (storage)
+  and `F4` (evaluation) but no `R8`; `from_sig` lacks `T::R8` entirely, so any
+  `double` parameter, return, local or field currently fails at
+  `unsupported signature type`. Before adding `R8`, note that
+  `lift.rs::comparison` handles float `.un` comparisons by casting to `uint`,
+  which is wrong for `cgt.un`/`clt.un` on floats (unordered/NaN semantics). That
+  latent float32 issue must be fixed (or explicitly refused) as part of the same
+  group, with NaN behavior tests, or the new `R8` path inherits it. `conv.r4`
+  from an `R8` value also needs a binary32 rounding helper, and `div` has a
+  float-specific helper that must gain an `R8` counterpart.
+- **Multidimensional arrays need the array-call mapping, not only a type name.**
+  `IL/ILReader.cs::DecodeCall` rewrites `newobj T[,]::.ctor(int,int)` to `NewArr`,
+  `Get` to `LdObj(LdElema)`, `Set` to `StObj(LdElema)` and `Address` to `LdElema`.
+  Emitting a `StructuralRef` name for `T[,]` alone recovers only bodies that pass
+  arrays around; the element access path, `ldlen` (total length) and bounds
+  behavior must be modeled together, so this group is larger than its 76-body
+  F# first-blocker count suggests.
+- **Pointer signatures** are the largest single `unsupported signature type`
+  slice in `System.Private.CoreLib` (794). They need an unsafe-pointer type
+  category, `ldind/stind` widths, pointer arithmetic and `localloc` semantics;
+  none of that exists in the current typed model, so this stays a separate,
+  larger group rather than a signature-only addition.
+- Cross-image enum/struct signature failures (`enum storage requires an exact
+  local definition`, F# 596) are missing *reference discovery*, not a lowering
+  gap: the legacy `mscorlib` those images reference is not in the host framework
+  and is not next to the input. Do not widen discovery policy to force them.
+
 ## Current verified state: external reference casts
 
 - `report/external-casts/corpus-scan/baseline.json`: **668,334 Decompiled /
