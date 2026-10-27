@@ -20,6 +20,9 @@
 namespace RelationLibrary
 {
     public interface IRoot { }
+    public interface ITagged { int Tag { get; } }
+    public sealed class Tagged : ITagged { public int Tag => 3; }
+    public struct Bits { public int Value; }
     public interface IItem<T> { }
     public class Base { public int Number; }
     public class Middle : Base { }
@@ -108,6 +111,9 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static object CastForeignInterface(RelationLibrary.Tagged value) => (RelationLibrary.ITagged)value;
+        public static RelationLibrary.ITagged AsForeignInterface(object value) => value as RelationLibrary.ITagged;
+        public static RelationLibrary.Tagged CastForeignClass(object value) => (RelationLibrary.Tagged)value;
 
         [System.Runtime.CompilerServices.SkipLocalsInit]
         public static int SkipInitBranch(int value)
@@ -141,6 +147,11 @@ namespace RelationCases
             LocalInitNegative.Increment(ref result);
             return result;
         }
+    }
+
+    public static class ForeignKeyProbe
+    {
+        public static RelationLibrary.Bits Field;
     }
 
     public static class ExternalGenericNegative

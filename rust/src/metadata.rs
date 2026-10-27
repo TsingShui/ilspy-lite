@@ -172,6 +172,8 @@ pub(crate) struct Image<'a> {
             std::result::Result<crate::dependencies::ExternalMethodInstantiation, String>,
         >,
     >,
+    external_type_kinds:
+        std::cell::RefCell<std::collections::BTreeMap<u32, std::result::Result<(), String>>>,
 }
 
 impl<'a> Image<'a> {
@@ -213,6 +215,7 @@ impl<'a> Image<'a> {
             external_method_instantiations: std::cell::RefCell::new(
                 std::collections::BTreeMap::new(),
             ),
+            external_type_kinds: std::cell::RefCell::new(std::collections::BTreeMap::new()),
         })
     }
 
@@ -2503,6 +2506,19 @@ impl<'a> Image<'a> {
             .cloned()
     }
 
+    /// Proved reference kind of one external cast target, if it was asked for.
+    pub(crate) fn external_cast_kind(&self, token: u32) -> Option<std::result::Result<(), String>> {
+        self.external_type_kinds.borrow().get(&token).cloned()
+    }
+
+    pub(crate) fn cache_external_cast_kind(
+        &self,
+        token: u32,
+        value: std::result::Result<(), String>,
+    ) {
+        self.external_type_kinds.borrow_mut().insert(token, value);
+    }
+
     pub(crate) fn cache_external_method_instantiation(
         &self,
         token: u32,
@@ -3709,6 +3725,16 @@ impl<'a> Image<'a> {
             Ok("String") => return Ok(crate::ir::Ty::String),
             Ok("Object") => return Ok(crate::ir::Ty::Object),
             _ => {}
+        }
+        if token.table() == Some(TableId::TypeRef) {
+            // The operation and its exact token are already in the IL; only the
+            // class-versus-value distinction needs the selected definition.
+            self.external_class_context(token.0)?;
+            match self.external_cast_kind(token.0) {
+                Some(Ok(())) => return Ok(crate::ir::Ty::ExternalClass(token.0)),
+                Some(Err(reason)) => return Err(reason.into()),
+                None => return Err("cast target needs dependency facts".into()),
+            }
         }
         if token.table() != Some(TableId::TypeDef) || token.rid() == 0 {
             return Err(

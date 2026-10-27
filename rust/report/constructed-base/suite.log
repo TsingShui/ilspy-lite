@@ -1,0 +1,478 @@
+   Compiling ilspy-lite v0.1.0 (/Users/bytedance/zhome/ilspy-lite/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.38s
+────────────
+ Nextest run ID 8f56d707-785c-49e2-99b9-8aa77b01e274 with nextest profile: default
+    Starting 471 tests across 5 binaries
+        PASS [   0.016s] (  1/471) ilspy-lite::all addresses::element_identity_index_and_array_categories_are_checked
+        PASS [   0.016s] (  2/471) ilspy-lite::all addresses::indirect_u4_reads_snapshot_the_value_at_the_read_instruction
+        PASS [   0.017s] (  3/471) ilspy-lite dependencies::cast_kind_tests::external_cast_targets_need_a_reference_kind_and_prove_it
+        PASS [   0.018s] (  4/471) ilspy-lite::all addresses::indirect_u4_rejects_ordinary_values_and_empty_stack
+        PASS [   0.019s] (  5/471) ilspy-lite::all addresses::indirect_i4_writes_use_the_previously_acquired_address
+        PASS [   0.020s] (  6/471) ilspy-lite metadata::token_tests::member_reference_signature_distinguishes_field_and_method_handles
+        PASS [   0.027s] (  7/471) ilspy-lite::all addresses::indirect_i4_rejects_invalid_destination_and_value_categories
+        PASS [   0.029s] (  8/471) ilspy-lite::all addresses::address_values_remain_distinct_from_integer_operations_and_escape_slots
+        PASS [   0.029s] (  9/471) ilspy-lite::all addresses::element_addresses_are_taken_immediately_and_not_read_as_values
+        PASS [   0.029s] ( 10/471) ilspy-lite::all abstract_members::abstract_constructed_owners_allow_member_calls
+        PASS [   0.031s] ( 11/471) ilspy-lite::all abstract_members::abstract_owner_allocation_is_still_refused
+        PASS [   0.018s] ( 12/471) ilspy-lite::all addresses::primitive_names_do_not_substitute_for_core_scope_identity
+        PASS [   0.019s] ( 13/471) ilspy-lite::all array_references::different_vector_element_types_are_not_merged
+        PASS [   0.036s] ( 14/471) ilspy-lite::all abstract_members::interface_dispatch_remains_an_explicit_refusal
+        PASS [   0.027s] ( 15/471) ilspy-lite::all arrays::array_lengths_use_native_stack_values_and_keep_the_conversion_chain
+        PASS [   0.021s] ( 16/471) ilspy-lite::all arrays::arrays_do_not_become_class_receivers_or_interchangeable_element_types
+        PASS [   0.019s] ( 17/471) ilspy-lite::all arrays::integer_array_reads_are_lowered_with_stable_values
+        PASS [   0.031s] ( 18/471) ilspy-lite::all arrays::allocation_is_a_typed_zero_initialized_array_at_the_original_instruction
+        PASS [   0.021s] ( 19/471) ilspy-lite::all arrays::integer_array_writes_keep_store_order
+        PASS [   0.018s] ( 20/471) ilspy-lite::all arrays::ldlen_requires_an_array_and_explicit_fixed_width_conversion
+        PASS [   0.026s] ( 21/471) ilspy-lite::all arrays::arrays_keep_field_snapshots_locals_and_same_type_joins
+        PASS [   0.020s] ( 22/471) ilspy-lite::all arrays::newarr_checks_element_identity_and_requires_an_i4_length
+        PASS [   0.022s] ( 23/471) ilspy-lite::all arrays::null_array_return_is_a_reference_not_an_integer
+        PASS [   0.029s] ( 24/471) ilspy-lite::all arrays::invalid_array_operands_and_element_addresses_remain_fallback
+        PASS [   0.017s] ( 25/471) ilspy-lite::all assembly::exceptions_are_lowered_with_explicit_region_evidence
+        PASS [   0.016s] ( 26/471) ilspy-lite::all assembly::il_dump_preserves_offsets_and_exception_regions
+        PASS [   0.023s] ( 27/471) ilspy-lite::all assembly::control_flow_calls_and_old_values_are_supported
+        PASS [   0.021s] ( 28/471) ilspy-lite::all assembly::integer_corpus_is_supported_in_debug_and_release
+        PASS [   0.019s] ( 29/471) ilspy-lite::all assembly::lists_every_method_including_generated_implementations
+        PASS [   0.026s] ( 30/471) ilspy-lite::all assembly::checked_add_is_not_rendered_as_wrapping_addition
+        PASS [   0.019s] ( 31/471) ilspy-lite::all casts::core_cast_targets_require_the_original_core_identity
+        PASS [   0.021s] ( 32/471) ilspy-lite::all casts::casts_keep_the_runtime_check_instead_of_being_erased
+        PASS [   0.022s] ( 33/471) ilspy-lite::all casts::core_object_cast_keeps_a_reference_runtime_check
+        PASS [   0.065s] ( 34/471) ilspy-lite::all array_references::owned_fixture_contract_holds_in_both_views
+        PASS [   0.017s] ( 35/471) ilspy-lite::all class_attachment_owners::zero_attachment_owner_is_not_a_valid_unrelated_scope
+        PASS [   0.024s] ( 36/471) ilspy-lite::all class_attachment_owners::decodable_invalid_owners_keep_contextual_records_and_peer_method_statuses
+        PASS [   0.018s] ( 37/471) ilspy-lite::all class_endpoint_evidence::invalid_named_signature_reference_keeps_signature_and_other_identity_parts
+        PASS [   0.024s] ( 38/471) ilspy-lite::all class_attributes::broken_attribute_constructor_or_blob_keeps_record_and_peer_members
+        PASS [   0.019s] ( 39/471) ilspy-lite::all class_events::fire_other_and_unknown_event_relations_are_not_omitted
+        PASS [   0.024s] ( 40/471) ilspy-lite::all class_attributes::custom_attributes_preserve_parent_constructor_payload_and_uninterpreted_status
+        PASS [   0.025s] ( 41/471) ilspy-lite::all class_endpoint_evidence::malformed_constructor_or_mapping_signature_keeps_endpoint_identity_and_bytes
+        PASS [   0.023s] ( 42/471) ilspy-lite::all class_events::invalid_event_map_range_cannot_silently_hide_members
+        PASS [   0.021s] ( 43/471) ilspy-lite::all class_events::invalid_event_type_keeps_accessors_and_peer_events
+        PASS [   0.022s] ( 44/471) ilspy-lite::all class_events::unreadable_event_name_keeps_type_identity_on_its_declaration
+        PASS [   0.019s] ( 45/471) ilspy-lite::all class_fields::explicit_layout_with_members_is_not_a_proven_rva_data_extent
+        PASS [   0.035s] ( 46/471) ilspy-lite::all class_events::events_keep_types_and_accessor_methods_without_delegate_lowering
+        PASS [   0.022s] ( 47/471) ilspy-lite::all class_fields::class_fields_include_private_static_readonly_and_generated_storage
+        PASS [   0.018s] ( 48/471) ilspy-lite::all class_fields::field_constants_keep_type_value_and_exact_bytes
+        PASS [   0.021s] ( 49/471) ilspy-lite::all class_fields::field_layout_and_marshalling_evidence_are_not_dropped
+        PASS [   0.021s] ( 50/471) ilspy-lite::all class_fields::invalid_class_layout_retains_the_record_and_peer_fields
+        PASS [   0.058s] ( 51/471) ilspy-lite::all casts::owned_fixture_contract_holds_in_both_views
+        PASS [   0.019s] ( 52/471) ilspy-lite::all class_fields::invalid_field_ownership_ranges_do_not_hide_fields
+        PASS [   0.019s] ( 53/471) ilspy-lite::all class_fields::malformed_constant_keeps_raw_bytes_and_other_members
+        PASS [   0.021s] ( 54/471) ilspy-lite::all class_fields::rva_field_data_preserves_known_extent_bytes
+        PASS [   0.022s] ( 55/471) ilspy-lite::all class_fields::unreadable_constant_keeps_field_header_and_other_constants
+        PASS [   0.023s] ( 56/471) ilspy-lite::all class_fields::unreadable_field_name_keeps_flags_signature_constant_and_peers
+        PASS [   0.022s] ( 57/471) ilspy-lite::all class_generics::duplicate_generic_numbers_are_reported_without_renumbering
+        PASS [   0.018s] ( 58/471) ilspy-lite::all class_generics::invalid_constraint_retains_original_token_and_peer_members
+        PASS [   0.023s] ( 59/471) ilspy-lite::all class_generics::generic_context_preserves_owners_constraints_and_nested_members
+        PASS [   0.027s] ( 60/471) ilspy-lite::all class_fields::unreadable_field_signature_keeps_header_constant_and_peers
+        PASS [   0.022s] ( 61/471) ilspy-lite::all class_marshalling::broken_parameter_marshal_blob_or_flag_keeps_record_and_peer_methods
+        PASS [   0.023s] ( 62/471) ilspy-lite::all class_generics::unreadable_generic_name_keeps_constraint_identity_and_method_results
+        PASS [   0.024s] ( 63/471) ilspy-lite::all class_marshalling::return_and_ordinary_parameter_marshalling_retains_full_evidence_without_execution_claims
+        PASS [   0.020s] ( 64/471) ilspy-lite::all class_method_impls::explicit_method_mappings_preserve_both_exact_signatures_and_raw_records
+        PASS [   0.024s] ( 65/471) ilspy-lite::all class_method_impls::broken_method_mapping_keeps_record_and_all_peer_bodies
+        PASS [   0.017s] ( 66/471) ilspy-lite::all class_methods::duplicate_parameter_sequences_are_visible_not_normalized
+        PASS [   0.020s] ( 67/471) ilspy-lite::all class_methods::class_methods_keep_complete_headers_parameters_and_statuses
+        PASS [   0.020s] ( 68/471) ilspy-lite::all class_methods::optional_parameters_and_native_import_targets_keep_metadata
+        PASS [   0.020s] ( 69/471) ilspy-lite::all class_methods::invalid_parameter_name_keeps_header_constant_and_later_parameters
+        PASS [   0.018s] ( 70/471) ilspy-lite::all class_methods::unreadable_method_signature_keeps_header_parameters_and_original_body
+        PASS [   0.023s] ( 71/471) ilspy-lite::all class_methods::overlapping_parameter_ownership_is_rejected_before_class_output
+        PASS [   0.019s] ( 72/471) ilspy-lite::all class_ownership::overlapping_method_ranges_are_not_counted_as_selected_members
+        PASS [   0.026s] ( 73/471) ilspy-lite::all class_methods::unreadable_method_name_keeps_flags_signature_parameters_and_body
+        PASS [   0.021s] ( 74/471) ilspy-lite::all class_properties::accessor_from_an_unowned_method_is_reported_without_hiding_peers
+        PASS [   0.023s] ( 75/471) ilspy-lite::all class_properties::malformed_property_signature_does_not_remove_its_accessors
+        PASS [   0.016s] ( 76/471) ilspy-lite::all class_properties::property_map_ranges_are_not_silently_clamped
+        PASS [   0.030s] ( 77/471) ilspy-lite::all class_pinvoke_evidence::invalid_import_name_or_module_name_keeps_the_other_identity_and_raw_records
+        PASS [   0.017s] ( 78/471) ilspy-lite::all class_security::class_method_and_assembly_security_records_are_preserved_without_enforcement_claims
+        PASS [   0.028s] ( 79/471) ilspy-lite::all class_properties::properties_keep_signatures_and_accessor_methods_without_syntax_recovery
+        PASS [   0.024s] ( 80/471) ilspy-lite::all class_properties::unreadable_property_name_has_an_explicit_failure_and_keeps_accessors
+        PASS [   0.029s] ( 81/471) ilspy-lite::all class_properties::other_and_unknown_accessor_semantics_keep_original_evidence
+        PASS [   0.024s] ( 82/471) ilspy-lite::all class_security::broken_security_payload_keeps_raw_record_and_peer_method
+        PASS [   0.025s] ( 83/471) ilspy-lite::all class_type_reference_evidence::invalid_resolution_scope_keeps_encoded_scope_and_typeref_heap_values
+        PASS [   0.021s] ( 84/471) ilspy-lite::all class_type_reference_evidence::unreadable_assembly_reference_parts_do_not_erase_type_or_other_assembly_fields
+        PASS [   0.021s] ( 85/471) ilspy-lite::all class_type_reference_evidence::unreadable_type_reference_parts_keep_raw_identity_and_independent_scope_values
+        PASS [   0.018s] ( 86/471) ilspy-lite::all classes::class_entry_rejects_missing_type_and_invalid_image
+        PASS [   0.021s] ( 87/471) ilspy-lite::all classes::class_context_keeps_flags_base_and_interface_relations
+        PASS [   0.017s] ( 88/471) ilspy-lite::all classes::class_entry_selects_types_with_no_methods
+        PASS [   0.020s] ( 89/471) ilspy-lite::all classes::cyclic_nested_ownership_is_not_treated_as_a_name
+        PASS [   0.019s] ( 90/471) ilspy-lite::all classes::generated_type_can_be_selected_directly_without_hiding_methods
+        PASS [   0.024s] ( 91/471) ilspy-lite::all classes::class_result_retains_the_same_method_text_as_individual_selection
+        PASS [   0.019s] ( 92/471) ilspy-lite::all classes::generic_base_context_is_evidence_not_a_lowering_gate
+        PASS [   0.027s] ( 93/471) ilspy-lite::all classes::class_methods_keep_supported_and_unsupported_results_together
+        PASS [   0.022s] ( 94/471) ilspy-lite::all classes::invalid_type_member_range_is_not_silently_clamped
+        PASS [   0.022s] ( 95/471) ilspy-lite::all classes::legitimate_bodyless_member_keeps_declaration_status
+        PASS [   0.018s] ( 96/471) ilspy-lite::all classes::metadata_name_prefix_does_not_create_nested_ownership
+        PASS [   0.020s] ( 97/471) ilspy-lite::all classes::malformed_base_reference_does_not_hide_class_methods
+        PASS [   0.021s] ( 98/471) ilspy-lite::all classes::malformed_typespec_retains_raw_signature_and_methods
+        PASS [   0.019s] ( 99/471) ilspy-lite::all classes::one_unreadable_method_does_not_hide_its_peers
+        PASS [   0.018s] (100/471) ilspy-lite::all classes::unrelated_method_signature_is_not_needed_for_type_selection
+        PASS [   0.017s] (101/471) ilspy-lite::all classes::valid_typespec_with_invalid_named_reference_is_not_metadata_success
+        PASS [   0.021s] (102/471) ilspy-lite::all classes::selected_class_contains_owned_nested_types_not_siblings
+        PASS [   0.347s] (103/471) ilspy-lite::all cli::identities_reject_a_file_that_is_not_an_assembly
+        PASS [   0.344s] (104/471) ilspy-lite::all cli::identities_report_the_image_and_the_references_it_declares
+        PASS [   0.337s] (105/471) ilspy-lite::all cli::scan_rejects_an_unknown_option_instead_of_ignoring_it
+        PASS [   0.050s] (106/471) ilspy-lite::all cli::scan_reports_every_method_with_the_same_status_as_token_decompilation
+        PASS [   0.388s] (107/471) ilspy-lite::all cli::scan_records_the_selected_reference_set_without_changing_any_status
+        PASS [   0.060s] (108/471) ilspy-lite::all cli::scan_surfaces_a_reference_directory_that_was_not_available
+        PASS [   0.398s] (109/471) ilspy-lite::all cli::scan_and_decompile_agree_when_the_same_reference_set_is_given
+        PASS [   0.013s] (110/471) ilspy-lite::all constrained_calls::a_byref_local_rebinds_the_location_instead_of_overwriting_its_contents
+        PASS [   0.012s] (111/471) ilspy-lite::all constrained_calls::a_constraint_cannot_rebind_declaring_type_variables_as_method_variables
+        PASS [   0.013s] (112/471) ilspy-lite::all constrained_calls::a_null_or_reference_result_joins_without_erasing_its_exact_reference_type
+        PASS [   0.011s] (113/471) ilspy-lite::all constrained_calls::byref_locals_keep_invariant_elements_and_do_not_admit_unmanaged_pointers
+        PASS [   0.012s] (114/471) ilspy-lite::all constrained_calls::chosen_managed_locations_survive_control_flow_without_reading_their_contents
+        PASS [   0.012s] (115/471) ilspy-lite::all constrained_calls::constrained_prefixes_cannot_erase_shape_type_or_control_flow_boundaries
+        PASS [   0.014s] (116/471) ilspy-lite::all constrained_calls::ordinary_constrained_calls_keep_the_declared_type_and_managed_receiver
+        PASS [   0.011s] (117/471) ilspy-lite::all constructors::base_calls_preserve_preinitialization_and_ordered_effectful_arguments
+        PASS [   0.013s] (118/471) ilspy-lite::all constructors::constructor_body_has_distinct_identity_and_allows_own_readonly_initialization
+        PASS [   0.489s] (119/471) ilspy-lite::all class_wide_owners::oversized_four_byte_owners_cannot_alias_an_existing_token
+        PASS [   0.012s] (120/471) ilspy-lite::all constructors::core_clock_read_keeps_exact_target_and_original_call_position
+        PASS [   0.013s] (121/471) ilspy-lite::all constructors::core_constructor_admission_rejects_spoofs_wrong_calls_and_receiver_contexts
+        PASS [   0.012s] (122/471) ilspy-lite::all constructors::delegated_constructor_calls_keep_same_receiver_clock_order_and_exact_target
+        PASS [   0.013s] (123/471) ilspy-lite::all constructors::delegated_constructor_rejects_ordinary_other_receiver_and_invalid_target_contexts
+        PASS [   0.012s] (124/471) ilspy-lite::all constructors::exact_core_object_constructor_call_keeps_initialization_order_and_target
+        PASS [   0.011s] (125/471) ilspy-lite::all constructors::local_base_initialization_rejects_other_or_reassigned_receivers_and_ordinary_callers
+        PASS [   0.011s] (126/471) ilspy-lite::all constructors::local_direct_base_constructor_keeps_call_before_derived_initialization
+        PASS [   0.010s] (127/471) ilspy-lite::all conversions::conv_i4_identity_is_supported_but_reference_and_empty_stack_sources_are_not
+        PASS [   0.013s] (128/471) ilspy-lite::all constructors::readonly_permission_does_not_follow_another_receiver_or_a_reassigned_this_slot
+        PASS [   0.012s] (129/471) ilspy-lite::all constructors::readonly_writes_outside_the_owning_constructor_are_rejected
+        PASS [   0.014s] (130/471) ilspy-lite::all conversions::conv_i4_preserves_low_bits_and_evaluation_order
+        PASS [   0.011s] (131/471) ilspy-lite::all conversions::conv_i8_identity_and_invalid_source_categories_keep_distinct_results
+        PASS [   0.012s] (132/471) ilspy-lite::all conversions::conv_u8_preserves_i8_bits_and_rejects_unsupported_sources
+        PASS [   0.012s] (133/471) ilspy-lite::all conversions::conv_i8_sign_extends_stack_values_without_using_declared_unsignedness
+        PASS [   0.014s] (134/471) ilspy-lite::all conversions::conv_u8_zero_extends_at_source_width_before_canonical_i8_storage
+        PASS [   0.012s] (135/471) ilspy-lite::all core_types::a_core_defined_reference_marker_is_recognized_without_running_its_constructor
+        PASS [   0.013s] (136/471) ilspy-lite::all core_types::a_qualified_local_core_object_is_a_legal_reference_hierarchy_root
+        PASS [   0.013s] (137/471) ilspy-lite::all core_types::local_core_exception_ancestry_requires_the_qualified_exception_root
+        PASS [   0.010s] (138/471) ilspy-lite::all core_types::malformed_local_reference_marker_payload_is_not_contract_proof
+        PASS [   0.011s] (139/471) ilspy-lite::all core_types::local_core_value_type_and_enum_descendants_are_not_reference_receivers
+        PASS [   0.011s] (140/471) ilspy-lite::all core_types::noncanonical_null_base_tags_cannot_alias_the_core_root
+        PASS [   0.011s] (141/471) ilspy-lite::all core_types::null_bases_cycles_and_generic_owners_do_not_become_core_roots
+        PASS [   0.011s] (142/471) ilspy-lite::all core_types::qualified_local_core_string_and_primitive_string_keep_one_reference_identity
+        PASS [   0.011s] (143/471) ilspy-lite::all core_types::short_name_or_wrong_core_identity_cannot_admit_a_null_base
+        PASS [   0.013s] (144/471) ilspy-lite::all dependencies::bounded_reader_cannot_register_a_truncated_prefix_as_a_cached_snapshot
+        PASS [   0.023s] (145/471) ilspy-lite::all dependencies::cli_explicit_reference_reports_identity_and_keeps_missing_dependencies_nonfatal
+        PASS [   0.019s] (146/471) ilspy-lite::all dependencies::context_decompilation_keeps_bodies_and_reports_dependency_provenance_separately
+        PASS [   0.011s] (147/471) ilspy-lite::all dependencies::dependency_reference_tables_are_bounded_before_collecting_identities
+        PASS [   0.011s] (148/471) ilspy-lite::all dependencies::explicit_bytes_resolve_an_assembly_reference_without_searching_the_filesystem
+        PASS [   0.010s] (149/471) ilspy-lite::all dependencies::full_public_keys_match_their_cli_tokens_but_not_different_tokens
+        PASS [   0.010s] (150/471) ilspy-lite::all dependencies::immutable_byte_cache_obeys_assembly_and_total_byte_limits
+        PASS [   0.009s] (151/471) ilspy-lite::all dependencies::malformed_key_flags_and_token_lengths_are_not_normalized_into_valid_identities
+        PASS [   0.010s] (152/471) ilspy-lite::all dependencies::same_identity_with_different_content_is_conflicting_not_first_file_wins
+        PASS [   1.002s] (153/471) ilspy-lite::all cli::malformed_requests_are_not_silent_success
+        PASS [   1.003s] (154/471) ilspy-lite::all cli::inventory_and_token_cli_work_without_dotnet
+        PASS [   0.013s] (155/471) ilspy-lite::all dependencies::wrong_version_culture_or_file_name_cannot_override_metadata_identity
+        PASS [   0.014s] (156/471) ilspy-lite::all dependency_binding::a_dependency_source_label_cannot_redirect_main_image_property_lookup
+        PASS [   0.013s] (157/471) ilspy-lite::all dependency_binding::assembly_scoped_type_reference_binds_to_the_supplied_definition
+        PASS [   0.013s] (158/471) ilspy-lite::all dependency_binding::base_and_interface_relations_keep_resolved_and_missing_evidence_separate
+        PASS [   0.639s] (159/471) ilspy-lite::all cli::type_selection_accepts_empty_and_generic_types_without_methods
+        PASS [   0.013s] (160/471) ilspy-lite::all dependency_binding::constructed_generic_member_owners_keep_type_arguments_and_nested_positions
+        PASS [   0.013s] (161/471) ilspy-lite::all dependency_binding::declared_generic_and_concrete_overloads_do_not_collapse_after_instantiation
+        PASS [   0.014s] (162/471) ilspy-lite::all dependency_binding::generic_field_reference_uses_the_instantiated_owner_signature
+        PASS [   0.012s] (163/471) ilspy-lite::all dependency_binding::generic_method_instantiations_preserve_method_argument_context
+        PASS [   0.012s] (164/471) ilspy-lite::all dependency_binding::member_signature_mismatch_is_not_a_name_only_binding
+        PASS [   0.014s] (165/471) ilspy-lite::all dependency_binding::member_references_bind_using_full_signatures_and_owning_definitions
+        PASS [   0.013s] (166/471) ilspy-lite::all dependency_binding::method_binding_does_not_ignore_signature_suffix_bytes
+        PASS [   0.013s] (167/471) ilspy-lite::all dependency_binding::nested_reference_scopes_and_local_definitions_keep_their_declaring_identity
+        PASS [   0.015s] (168/471) ilspy-lite::all dependency_binding::named_signature_scopes_do_not_use_ambiguous_assembly_display_labels_as_identity
+        PASS [   0.013s] (169/471) ilspy-lite::all dependency_binding::property_accessors_require_metadata_relationships_not_get_or_set_names
+        PASS [   0.013s] (170/471) ilspy-lite::all dependency_binding::property_semantics_flags_and_signatures_must_agree
+        PASS [   0.014s] (171/471) ilspy-lite::all dependency_binding::type_forwarders_reach_the_defining_assembly_and_cycles_remain_unresolved
+        PASS [   0.012s] (172/471) ilspy-lite::all dependency_binding::type_names_do_not_cross_assembly_scope_and_duplicate_definitions_are_rejected
+        PASS [   0.025s] (173/471) ilspy-lite::all dependency_binding::reference_contract_definitions_are_not_reported_as_runtime_implementations
+        PASS [   0.014s] (174/471) ilspy-lite::all dependency_output::dependency_warning_names_cannot_inject_uncommented_source_lines
+        PASS [   0.014s] (175/471) ilspy-lite::all dependency_output::reference_input_is_explicitly_a_contract_not_an_executable_implementation
+        PASS [   0.017s] (176/471) ilspy-lite::all dependency_output::many_missing_dependencies_use_one_default_summary_but_keep_all_detailed_identities
+        PASS [   0.014s] (177/471) ilspy-lite::all enums::a_forged_core_name_key_or_content_type_cannot_prove_enum_storage
+        PASS [   0.013s] (178/471) ilspy-lite::all enums::enum_admission_keeps_unknown_external_storage_gated
+        PASS [   0.015s] (179/471) ilspy-lite::all enums::assembly_visible_enum_storage_preserves_its_declared_integer_width
+        PASS [   0.013s] (180/471) ilspy-lite::all enums::enum_underlying_field_shape_is_checked_instead_of_guessed
+        PASS [   0.014s] (181/471) ilspy-lite::all enums::enum_unbox_names_the_enum_and_its_storage_conversion
+        PASS [   0.015s] (182/471) ilspy-lite::all enums::exact_module_typeref_aliases_retain_the_local_enum_definition_and_storage
+        PASS [   0.016s] (183/471) ilspy-lite::all enums::generated_special_storage_field_keeps_enum_bits_without_requiring_roslyn_spelling
+        PASS [   0.017s] (184/471) ilspy-lite::all enums::narrow_integer_conversions_do_not_infer_float_or_reference_source_categories
+        PASS [   0.050s] (185/471) ilspy-lite::all enums::enum_scan_records_every_method_with_the_same_admission
+        PASS [   0.024s] (186/471) ilspy-lite::all enums::integer_narrowing_preserves_low_bits_and_the_result_stack_interpretation
+        PASS [   1.381s] (187/471) ilspy-lite::all array_references::scan_and_method_views_use_identical_vector_admission
+        PASS [   0.013s] (188/471) ilspy-lite::all equality::boxing_a_boolean_call_result_preserves_its_cli_storage_bits
+        PASS [   0.029s] (189/471) ilspy-lite::all enums::wide_and_native_integer_sources_preserve_narrow_conversion_bits
+        PASS [   0.013s] (190/471) ilspy-lite::all equality::reference_equality_is_identity_comparison_without_dereference
+        PASS [   0.023s] (191/471) ilspy-lite::all equality::owned_fixture_contract_holds_in_both_views
+        PASS [   0.012s] (192/471) ilspy-lite::all exception_regions::faults_are_not_silently_rendered_as_finally
+        PASS [   0.013s] (193/471) ilspy-lite::all exception_regions::general_catch_discards_only_an_unused_thrown_object
+        PASS [   0.016s] (194/471) ilspy-lite::all exception_regions::invalid_region_transfers_are_not_recovered
+        PASS [   0.031s] (195/471) ilspy-lite::all exception_regions::fixture_contract_keeps_unsupported_regions_visible
+        PASS [   0.021s] (196/471) ilspy-lite::all exception_regions::recovered_exception_regions_have_runtime_control_flow
+        PASS [   0.019s] (197/471) ilspy-lite::all exception_types::core_exception_constructors_keep_their_exact_overload_and_arguments
+        PASS [   0.018s] (198/471) ilspy-lite::all exception_types::core_exception_throws_and_rethrows_keep_the_original_reference
+        PASS [   0.017s] (199/471) ilspy-lite::all exception_types::exact_core_namespace_exception_identities_keep_catches_and_constructors
+        PASS [   0.015s] (200/471) ilspy-lite::all exception_types::exception_proofs_reject_counterfeit_scopes_ancestry_and_constructor_shapes
+        PASS [   0.015s] (201/471) ilspy-lite::all exception_types::local_exception_ancestry_preserves_typed_catch_matching_and_identity
+        PASS [   0.014s] (202/471) ilspy-lite::all exceptions::core_exception_identity_and_constructor_signature_boundaries_are_checked
+        PASS [   0.013s] (203/471) ilspy-lite::all exceptions::throw_keeps_the_existing_object_and_terminates_with_an_empty_stack
+        PASS [   0.024s] (204/471) ilspy-lite::all exceptions::exception_allocation_keeps_exact_target_arguments_and_position
+        PASS [   0.013s] (205/471) ilspy-lite::all external::differently_scoped_external_types_are_not_interchangeable
+        PASS [   0.015s] (206/471) ilspy-lite::all external::direct_memberref_calls_keep_full_identity_signature_and_no_virtual_dispatch
+        PASS [   0.015s] (207/471) ilspy-lite::all external::external_constructor_rejects_null_receivers_callvirt_and_unrelated_owners
+        PASS [   0.015s] (208/471) ilspy-lite::all external::external_direct_base_constructor_preserves_original_receiver_and_scoped_target
+        PASS [   0.015s] (209/471) ilspy-lite::all external::memberref_calls_do_not_infer_wrong_receiver_or_callvirt_semantics
+        PASS [   0.019s] (210/471) ilspy-lite::all external::opaque_external_classes_keep_image_scoped_identity_without_loading_dependencies
+        PASS [   0.016s] (211/471) ilspy-lite::all external_allocations::foreign_static_reads_keep_exact_storage_without_allocating
+        PASS [   1.339s] (212/471) ilspy-lite::all cli::class_cli_reports_one_method_failure_without_hiding_other_bodies
+        PASS [   0.162s] (213/471) ilspy-lite::all enums::owned_fixture_contract_holds_in_both_views
+        PASS [   0.036s] (214/471) ilspy-lite::all external_allocations::declared_reference_constructors_allocate_one_fresh_identity
+        PASS [   0.019s] (215/471) ilspy-lite::all external_allocations::gated_external_owners_keep_their_own_reason
+        PASS [   0.020s] (216/471) ilspy-lite::all external_calls::absent_source_facts_retain_exact_runtime_calls_instead_of_guessing_names
+        PASS [   0.028s] (217/471) ilspy-lite::all external_allocations::without_references_every_body_is_unchanged
+        PASS [   1.361s] (218/471) ilspy-lite::all cli::invalid_class_metadata_is_not_counted_as_a_failed_method
+        PASS [   0.030s] (219/471) ilspy-lite::all external_calls::declared_reference_dispatch_admits_external_class_calls
+        PASS [   0.028s] (220/471) ilspy-lite::all external_calls::the_negative_surface_keeps_its_stated_blocker
+        PASS [   0.034s] (221/471) ilspy-lite::all external_calls::scan_with_the_same_context_reports_the_same_status_for_every_method
+        PASS [   0.016s] (222/471) ilspy-lite::all external_enums::external_enum_storage_is_named_and_sized_in_the_recovered_source
+        PASS [   0.027s] (223/471) ilspy-lite::all external_enums::declared_reference_storage_admits_external_enums
+        PASS [   0.025s] (224/471) ilspy-lite::all external_enums::exact_foreign_assembly_enum_storage_keeps_its_width_and_other_flags_checked
+        PASS [   0.019s] (225/471) ilspy-lite::all external_enums::scan_with_the_same_context_reports_the_same_status_for_every_method
+        PASS [   0.018s] (226/471) ilspy-lite::all external_enums::the_negative_surface_keeps_its_stated_blocker
+        PASS [   0.016s] (227/471) ilspy-lite::all external_properties::direct_virtual_accessor_calls_keep_exact_call_notation
+        PASS [   0.018s] (228/471) ilspy-lite::all external_enums::the_same_fixture_without_the_declared_reference_stays_byte_only
+        PASS [   0.022s] (229/471) ilspy-lite::all external_properties::property_metadata_is_required_and_must_be_consistent
+        PASS [   0.024s] (230/471) ilspy-lite::all external_values::scan_with_the_same_context_reports_the_same_status_for_every_method
+        PASS [   0.030s] (231/471) ilspy-lite::all external_values::declared_reference_value_types_are_copied_whole
+        PASS [   0.024s] (232/471) ilspy-lite::all external_values::the_negative_surface_keeps_its_stated_blocker
+        PASS [   0.015s] (233/471) ilspy-lite::all external_values::the_same_fixture_without_the_declared_reference_stays_gated
+        PASS [   0.049s] (234/471) ilspy-lite::all external_properties::unproved_source_properties_keep_exact_calls_and_complete_scan_accounting
+        PASS [   0.056s] (235/471) ilspy-lite::all external_properties::metadata_associated_external_properties_keep_dispatch
+        PASS [   0.015s] (236/471) ilspy-lite::all floats::conv_r4_does_not_reinterpret_references_or_accept_float_to_integer_conversion
+        PASS [   0.056s] (237/471) ilspy-lite::all external_properties::unrelated_references_do_not_supply_property_facts
+        PASS [   0.018s] (238/471) ilspy-lite::all floats::external_float_call_keeps_the_exact_core_abs_r4_overload
+        PASS [   0.012s] (239/471) ilspy-lite::all floats::unsigned_or_mixed_float_division_remains_unsupported
+        PASS [   0.017s] (240/471) ilspy-lite::all floats::float_constants_and_division_keep_bits_and_target_runtime_precision
+        PASS [   0.014s] (241/471) ilspy-lite::all generic_binding::a_foreign_instantiation_cannot_borrow_an_out_of_range_caller_variable
+        PASS [   0.021s] (242/471) ilspy-lite::all floats::signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value
+        PASS [   0.014s] (243/471) ilspy-lite::all generic_binding::another_generic_definition_is_not_the_callers_open_self
+        PASS [   0.015s] (244/471) ilspy-lite::all generic_binding::constructed_member_arity_is_not_inferred_from_variable_positions
+        PASS [   0.015s] (245/471) ilspy-lite::all generic_binding::member_parameters_and_results_keep_the_callers_generic_scope
+        PASS [   0.015s] (246/471) ilspy-lite::all generic_declaring::substituting_the_argument_is_not_the_same_as_leaving_the_parameter_open
+        PASS [   0.011s] (247/471) ilspy-lite::all generic_references::constructed_argument_identity_is_not_just_the_generic_definition_name
+        PASS [   0.019s] (248/471) ilspy-lite::all generic_declaring::the_negative_surface_keeps_its_stated_blocker
+        PASS [   0.028s] (249/471) ilspy-lite::all generic_declaring::open_generic_declaring_types_keep_their_members
+        PASS [   0.012s] (250/471) ilspy-lite::all generic_references::identical_display_names_do_not_merge_distinct_generic_definitions
+        PASS [   0.015s] (251/471) ilspy-lite::all generic_references::local_definition_arity_and_class_value_kind_are_checked_before_reference_admission
+        PASS [   0.014s] (252/471) ilspy-lite::all generic_references::oversized_generic_definition_rid_cannot_alias_a_valid_constructed_reference
+        PASS [   0.041s] (253/471) ilspy-lite::all generic_binding::the_whole_owned_fixture_is_recovered_and_scan_agrees
+        PASS [   0.015s] (254/471) ilspy-lite::all generic_references::trailing_bytes_in_method_field_and_local_signatures_are_not_silently_erased
+        PASS [   0.015s] (255/471) ilspy-lite::all generic_values::an_open_value_definition_is_not_copied_as_a_closed_value
+        PASS [   0.015s] (256/471) ilspy-lite::all generic_values::the_negative_surface_keeps_its_stated_blocker
+        PASS [   0.022s] (257/471) ilspy-lite::all generic_values::constructed_value_plumbing_is_recovered_in_both_views
+        PASS [   0.016s] (258/471) ilspy-lite::all interface_references::implemented_interface_is_required_for_static_assignment
+        PASS [   0.017s] (259/471) ilspy-lite::all interface_references::malformed_interface_shapes_and_cycles_stay_refused
+        PASS [   0.044s] (260/471) ilspy-lite::all generic_references::owned_fixture_contract_holds_in_both_views
+        PASS [   0.015s] (261/471) ilspy-lite::all managed_locations::boolean_indirect_storage_does_not_canonicalize_nonzero_bytes
+        PASS [   0.012s] (262/471) ilspy-lite::all managed_locations::readable_indirect_reads_remain_value_snapshots_before_alias_writes
+        PASS [   0.018s] (263/471) ilspy-lite::all managed_locations::location_identity_is_invariant_and_initonly_addresses_keep_exact_field_operations
+        PASS [   0.045s] (264/471) ilspy-lite::all interface_references::local_interface_references_preserve_identity_and_dispatch
+        PASS [   0.021s] (265/471) ilspy-lite::all managed_locations::ref_parameters_are_real_locations_and_scalar_acquisition_is_not_a_value_load
+        PASS [   0.016s] (266/471) ilspy-lite::all method_instantiations::argument_count_and_non_generic_targets_are_not_guessed
+        PASS [   0.022s] (267/471) ilspy-lite::all managed_locations::typed_generic_struct_enum_and_boolean_locations_keep_their_storage_identity
+        PASS [   0.047s] (268/471) ilspy-lite::all managed_locations::byref_returns_keep_the_escape_gate_while_local_aliases_and_joins_are_recovered
+        PASS [   0.016s] (269/471) ilspy-lite::all naming::a_backtick_in_a_nongeneric_metadata_name_is_not_generic_context
+        PASS [   0.014s] (270/471) ilspy-lite::all naming::exact_module_local_memberrefs_share_the_friendly_definition_name
+        PASS [   0.015s] (271/471) ilspy-lite::all naming::friendly_lambda_names_avoid_members_and_share_exact_static_call_names
+        PASS [   0.018s] (272/471) ilspy-lite::all naming::generated_alias_does_not_collide_with_a_user_type_in_the_same_owner
+        PASS [   0.015s] (273/471) ilspy-lite::all naming::generated_and_reserved_type_references_agree_with_their_declarations
+        PASS [   0.032s] (274/471) ilspy-lite::all naming::ambiguous_or_cyclic_local_references_are_not_aliased_into_a_definition
+        PASS [   0.045s] (275/471) ilspy-lite::all method_instantiations::instantiated_methods_keep_original_tokens_and_substitute_parameters
+        PASS [   0.014s] (276/471) ilspy-lite::all naming::generated_method_name_does_not_block_captured_i4_reads_and_writes
+        PASS [   0.021s] (277/471) ilspy-lite::all naming::generated_lambda_names_are_readable_and_retain_original_metadata_names
+        PASS [   0.014s] (278/471) ilspy-lite::all naming::generated_owner_name_does_not_block_an_admitted_object_base_constructor
+        PASS [   0.015s] (279/471) ilspy-lite::all naming::malformed_lambda_spellings_keep_safe_encoding_without_comment_injection
+        PASS [   0.017s] (280/471) ilspy-lite::all naming::module_local_typeref_uses_its_exact_definition_name_policy
+        PASS [   0.016s] (281/471) ilspy-lite::all naming::namespace_keywords_are_escaped_in_both_declarations_and_type_references
+        PASS [   0.012s] (282/471) ilspy-lite::all naming::static_initialization_is_rendered_as_the_type_static_constructor
+        PASS [   0.015s] (283/471) ilspy-lite::all naming::static_field_alias_is_shared_by_its_declaration_load_and_store
+        PASS [   0.018s] (284/471) ilspy-lite::all naming::renamed_static_method_calls_keep_the_target_alias_and_original_token
+        PASS [   0.012s] (285/471) ilspy-lite::all native::native_arithmetic_and_implicit_width_changes_remain_fallback
+        PASS [   0.017s] (286/471) ilspy-lite::all native::native_values_keep_target_width_at_storage_and_call_boundaries
+        PASS [   0.014s] (287/471) ilspy-lite::all new_objects::allocation_is_one_fresh_identity_then_exact_constructor_in_order
+        PASS [   0.013s] (288/471) ilspy-lite::all new_objects::unproved_external_allocations_stay_gated
+        PASS [   0.011s] (289/471) ilspy-lite::all objects::integer_cannot_be_stored_into_an_object_static_field_without_boxing
+        PASS [   0.014s] (290/471) ilspy-lite::all objects::integer_values_cannot_return_as_object_without_boxing
+        PASS [   0.014s] (291/471) ilspy-lite::all objects::object_to_string_assignment_requires_an_explicit_cast
+        PASS [   0.012s] (292/471) ilspy-lite::all objects::object_values_cannot_be_integer_operands_or_typed_field_receivers
+        PASS [   0.040s] (293/471) ilspy-lite::all new_objects::owned_fixture_contract_holds_in_both_views
+        PASS [   0.013s] (294/471) ilspy-lite::all objects::unsupported_object_operations_retain_their_original_il
+        PASS [   0.030s] (295/471) ilspy-lite::all objects::object_cli_scan_and_method_output_have_identical_admission
+        PASS [   1.321s] (296/471) ilspy-lite::all cli::type_output_keeps_nested_state_machine_methods_visible
+        PASS [   0.014s] (297/471) ilspy-lite::all property_output::a_presentation_alias_cannot_rename_a_proven_runtime_property_lookup
+        PASS [   0.033s] (298/471) ilspy-lite::all objects::owned_fixture_contract_holds_in_both_views
+        PASS [   0.013s] (299/471) ilspy-lite::all property_output::a_real_property_relationship_does_not_override_a_conflicting_source_field_name
+        PASS [   0.027s] (300/471) ilspy-lite::all post_decrement::effectful_or_different_receivers_checks_and_extra_reads_keep_explicit_snapshots
+        PASS [   0.029s] (301/471) ilspy-lite::all post_decrement::local_and_field_postfix_keep_old_snapshots_before_later_reads_and_effects
+        PASS [   0.014s] (302/471) ilspy-lite::all property_output::changed_this_and_other_receivers_keep_exact_calls_instead_of_property_syntax
+        PASS [   0.049s] (303/471) ilspy-lite::all post_decrement::adjacent_original_this_i4_decrement_compares_the_old_value_under_unchecked
+        PASS [   0.018s] (304/471) ilspy-lite::all property_output::helper_like_user_member_names_and_string_literals_are_not_property_call_sites
+        PASS [   0.026s] (305/471) ilspy-lite::all property_output::exact_base_property_relationships_render_reads_and_writes_without_losing_dispatch
+        PASS [   0.015s] (306/471) ilspy-lite::all readability::base_declared_field_keeps_receiver_cast
+        PASS [   0.025s] (307/471) ilspy-lite::all property_output::reserved_property_identifiers_are_escaped_after_relationship_binding
+        PASS [   0.013s] (308/471) ilspy-lite::all readability::boolean_loads_and_returns_keep_stack_conversions
+        PASS [   0.014s] (309/471) ilspy-lite::all readability::exact_type_field_receivers_need_no_casts
+        PASS [   0.014s] (310/471) ilspy-lite::all readability::narrow_field_stores_keep_truncating_casts
+        PASS [   0.014s] (311/471) ilspy-lite::all readability::signed_arithmetic_keeps_overflow_context_without_result_casts
+        PASS [   0.012s] (312/471) ilspy-lite::all readability::signed_integer_snapshots_and_returns_need_no_identity_casts
+        PASS [   0.013s] (313/471) ilspy-lite::all readability::unsigned_operations_keep_reinterpretation_and_overflow_checks
+        PASS [   0.014s] (314/471) ilspy-lite::all readable_output::argument_renaming_does_not_rewrite_a_field_named_like_a_generated_argument
+        PASS [   0.012s] (315/471) ilspy-lite::all readable_output::backing_field_declarations_and_accessors_use_the_same_token_alias
+        PASS [   0.016s] (316/471) ilspy-lite::all readable_output::boolean_comparison_returns_do_not_roundtrip_through_integer_temporaries
+        PASS [   0.013s] (317/471) ilspy-lite::all readable_output::compacted_copy_chains_and_nested_indentation_stay_readable
+        PASS [   0.019s] (318/471) ilspy-lite::all readable_output::cli_defaults_to_readable_and_details_preserves_the_complete_analysis
+        PASS [   0.015s] (319/471) ilspy-lite::all readable_output::failed_readable_bodies_keep_raw_bytes_or_the_original_parse_error_inline
+        PASS [   0.013s] (320/471) ilspy-lite::all readable_output::fallback_parameter_names_cannot_collide_with_existing_source_parameters
+        PASS [   0.029s] (321/471) ilspy-lite::all readable_output::constructor_initializers_are_shown_only_when_no_prior_operation_is_crossed
+        PASS [   0.018s] (322/471) ilspy-lite::all readable_output::field_old_value_is_not_delayed_until_after_a_store
+        PASS [   0.011s] (323/471) ilspy-lite::all readable_output::out_parameter_contract_is_retained_even_when_the_body_falls_back
+        PASS [   0.014s] (324/471) ilspy-lite::all readable_output::property_and_event_relationships_show_names_types_and_accessors_not_tokens
+        PASS [   0.011s] (325/471) ilspy-lite::all readable_output::readable_class_view_uses_declarations_without_dumping_diagnostic_records
+        PASS [   0.012s] (326/471) ilspy-lite::all readable_output::readable_fields_and_nested_types_remain_visible
+        PASS [   0.010s] (327/471) ilspy-lite::all readable_output::simple_expression_view_removes_constant_argument_copies_and_unused_labels
+        PASS [   0.021s] (328/471) ilspy-lite::all readable_output::readable_fallback_keeps_complete_il_inside_its_method_and_class_body
+        PASS [   0.012s] (329/471) ilspy-lite::all readable_output::type_namespace_segments_are_not_substituted_as_generated_arguments
+        PASS [   0.021s] (330/471) ilspy-lite::all readable_output::return_only_branch_targets_can_replace_gotos_without_reordering_operations
+        PASS [   0.012s] (331/471) ilspy-lite::all reference_calls::forged_array_identity_and_reference_value_kind_stay_refused
+        PASS [   0.016s] (332/471) ilspy-lite::all reference_relations::cyclic_foreign_hierarchies_cannot_supply_assignment_proofs
+        PASS [   0.015s] (333/471) ilspy-lite::all reference_relations::external_generic_instance_calls_need_the_selected_definition_flags
+        PASS [   0.015s] (334/471) ilspy-lite::all reference_relations::external_reference_casts_need_only_the_reference_kind_fact
+        PASS [   0.041s] (335/471) ilspy-lite::all reference_calls::exact_reference_calls_keep_their_instantiated_signatures_without_source_facts
+        PASS [   0.018s] (336/471) ilspy-lite::all reference_relations::ilspy_relationships_use_the_selected_definition_not_literal_reference_versions
+        PASS [   0.028s] (337/471) ilspy-lite::all reference_relations::foreign_reference_relationships_need_exact_selected_definitions
+        PASS [   0.036s] (338/471) ilspy-lite::all reference_relations::foreign_exception_ancestry_needs_a_selected_class_hierarchy
+        PASS [   0.016s] (339/471) ilspy-lite::all reference_relations::interface_edges_cannot_prove_exception_ancestry
+        PASS [   0.013s] (340/471) ilspy-lite::all reference_relations::nested_base_constructor_calls_compare_the_declared_instantiation
+        PASS [   0.012s] (341/471) ilspy-lite::all reference_relations::open_self_cast_references_keep_their_declaring_member_identity
+        PASS [   0.023s] (342/471) ilspy-lite::all reference_relations::local_constructed_reference_relationships_preserve_arguments_and_scope
+        PASS [   0.013s] (343/471) ilspy-lite::all reference_relations::relationships_do_not_erase_positions_or_apply_variance_to_values
+        PASS [   0.023s] (344/471) ilspy-lite::all reference_relations::reference_registry_rebuilds_when_selected_definitions_change
+        PASS [   0.018s] (345/471) ilspy-lite::all reference_search::an_unreadable_named_candidate_cannot_authorize_version_substitution
+        PASS [   0.013s] (346/471) ilspy-lite::all reference_search::discovery_completeness_is_structured_not_inferred_from_warning_words
+        PASS [   0.028s] (347/471) ilspy-lite::all reference_relations::uninitialized_local_slots_need_definite_assignment_on_every_path
+        PASS [   0.010s] (348/471) ilspy-lite::all reference_search::ilspy_direct_reference_prefers_full_identity_over_the_main_short_name
+        PASS [   0.019s] (349/471) ilspy-lite::all reference_search::forwarder_dependencies_are_discovered_from_their_own_reference_scope
+        PASS [   0.017s] (350/471) ilspy-lite::all reference_search::ilspy_short_name_binding_selects_highest_loaded_reference_for_zero_version
+        PASS [   0.012s] (351/471) ilspy-lite::all reference_search::missing_candidate_attempts_consume_the_configured_probe_budget
+        PASS [   0.021s] (352/471) ilspy-lite::all reference_search::installed_layout_candidates_are_identity_checked_without_requiring_a_dotnet_process
+        PASS [   0.010s] (353/471) ilspy-lite::all reference_search::target_framework_comes_from_static_attribute_evidence_not_the_host_runtime
+        PASS [   0.011s] (354/471) ilspy-lite::all reference_search::zero_loader_budget_stops_before_automatic_path_enumeration
+        PASS [   0.021s] (355/471) ilspy-lite::all reference_search::reference_pack_origin_never_claims_a_runtime_implementation
+        PASS [   0.010s] (356/471) ilspy-lite::all references::callvirt_is_not_silently_treated_as_direct_call
+        PASS [   0.011s] (357/471) ilspy-lite::all references::direct_instance_calls_and_backing_fields_preserve_identity
+        PASS [   0.011s] (358/471) ilspy-lite::all references::instance_field_reads_and_writes_are_lowered
+        PASS [   0.010s] (359/471) ilspy-lite::all references::local_class_with_external_base_can_read_its_own_fields
+        PASS [   0.011s] (360/471) ilspy-lite::all references::null_return_keeps_a_reference_value
+        PASS [   0.011s] (361/471) ilspy-lite::all references::reference_joins_keep_the_reference_type
+        PASS [   0.012s] (362/471) ilspy-lite::all references::reference_truth_branches_do_not_admit_native_or_managed_address_values
+        PASS [   0.014s] (363/471) ilspy-lite::all references::references_cannot_be_used_as_integer_operands_or_fake_field_receivers
+        PASS [   0.014s] (364/471) ilspy-lite::all references::reference_truth_branches_test_identity_against_null_without_dereferencing
+        PASS [   0.012s] (365/471) ilspy-lite::all references::struct_value_receivers_read_their_own_fields_through_a_managed_location
+        PASS [   0.011s] (366/471) ilspy-lite::all robustness::corrupt_images_and_tokens_fail_without_panics
+        PASS [   0.013s] (367/471) ilspy-lite::all robustness::only_legitimate_bodyless_methods_are_declarations
+        PASS [   0.016s] (368/471) ilspy-lite::all robustness::malformed_control_flow_and_stack_never_report_success
+        PASS [   0.012s] (369/471) ilspy-lite::all robustness::stack_entry_backedge_uses_parallel_copies
+        PASS [   0.011s] (370/471) ilspy-lite::all robustness::synchronized_and_native_methods_are_not_plain_decompilations
+        PASS [   0.010s] (371/471) ilspy-lite::all robustness::undecodable_instructions_keep_the_raw_method_visible
+        PASS [   0.012s] (372/471) ilspy-lite::all scoped_references::equal_generic_spelling_in_different_methods_never_shares_an_alias
+        PASS [   0.011s] (373/471) ilspy-lite::all scoped_references::generic_positions_must_exist_in_their_own_declaring_context
+        PASS [   0.010s] (374/471) ilspy-lite::all scoped_references::generic_values_cannot_be_null_integer_operands_or_another_variable_without_proof
+        PASS [   0.011s] (375/471) ilspy-lite::all scoped_references::method_and_type_variable_zero_have_distinct_identities
+        PASS [   0.011s] (376/471) ilspy-lite::all static_constructors::a_readonly_static_field_is_assigned_by_its_own_initializer
+        PASS [   0.027s] (377/471) ilspy-lite::all scoped_references::scan_class_and_individual_output_share_scoped_admission_and_stable_aliases
+        PASS [   0.011s] (378/471) ilspy-lite::all static_constructors::a_static_initializer_reads_across_types
+        PASS [   0.041s] (379/471) ilspy-lite::all scoped_references::owned_fixture_contract_holds_in_both_views
+        PASS [   0.018s] (380/471) ilspy-lite::all static_constructors::owned_fixture_contract_holds_in_both_views
+        PASS [   0.016s] (381/471) ilspy-lite::all static_constructors::recovered_static_constructors_keep_their_member_shape
+        PASS [   0.012s] (382/471) ilspy-lite::all static_constructors::static_initializer_statements_keep_their_order
+        PASS [   0.012s] (383/471) ilspy-lite::all static_fields::readonly_initializer_permission_needs_the_same_closed_declaring_storage
+        PASS [   0.018s] (384/471) ilspy-lite::all static_fields::foreign_static_storage_requires_checked_selected_definition_facts
+        PASS [   0.019s] (385/471) ilspy-lite::all static_fields::generic_static_loads_and_stores_keep_the_instantiated_field_type
+        PASS [   0.014s] (386/471) ilspy-lite::all static_fields::static_field_facts_follow_exact_reference_identity_and_added_references
+        PASS [   0.014s] (387/471) ilspy-lite::all static_fields::static_field_operands_need_exact_storage_signatures_and_static_definitions
+        PASS [   0.018s] (388/471) ilspy-lite::all static_fields::value_type_static_containers_need_no_instance_layout_or_receiver_copy
+        PASS [   0.013s] (389/471) ilspy-lite::all strings::malformed_user_string_keeps_raw_evidence_without_dropping_utf16_bytes
+        PASS [   0.016s] (390/471) ilspy-lite::all strings::literals_preserve_utf16_units_and_original_module_load_identity
+        PASS [   0.011s] (391/471) ilspy-lite::all struct_copies::impossible_instance_field_types_cannot_become_opaque_struct_copies
+        PASS [   0.013s] (392/471) ilspy-lite::all struct_copies::struct_base_identity_uses_existing_case_insensitive_core_assembly_matching
+        PASS [   0.012s] (393/471) ilspy-lite::all struct_copies::struct_values_are_not_null_integers_or_other_nominal_structs
+        PASS [   0.040s] (394/471) ilspy-lite::all struct_copies::struct_scan_preserves_every_method_and_status
+        PASS [   0.036s] (395/471) ilspy-lite::all struct_receivers::owned_fixture_contract_holds_in_both_views
+        PASS [   0.022s] (396/471) ilspy-lite::all struct_receivers::scan_preserves_struct_receiver_admission
+        PASS [   0.013s] (397/471) ilspy-lite::all struct_receivers::struct_value_arguments_are_copies_while_receivers_are_locations
+        PASS [   0.012s] (398/471) ilspy-lite::all token_values::function_pointers_are_no_longer_a_standalone_opcode_blocker
+        PASS [   0.012s] (399/471) ilspy-lite::all token_values::non_token_operands_and_missing_rows_are_refused
+        PASS [   0.013s] (400/471) ilspy-lite::all token_values::token_operands_are_no_longer_a_standalone_opcode_blocker
+        PASS [   0.012s] (401/471) ilspy-lite::all typed_arrays::allocation_operands_keep_owner_and_method_variables_distinct
+        PASS [   0.106s] (402/471) ilspy-lite::all struct_copies::owned_fixture_contract_holds_in_both_views
+        PASS [   0.016s] (403/471) ilspy-lite::all typed_arrays::element_tokens_and_scalar_storage_widths_are_not_inferred_from_opcode_alone
+        PASS [   0.011s] (404/471) ilspy-lite::all typed_arrays::primitive_vector_allocation_does_not_trust_a_counterfeit_core_scope
+        PASS [   0.013s] (405/471) ilspy-lite::all typed_arrays::reference_element_loads_keep_element_identity_and_runtime_array_checks
+        PASS [   0.012s] (406/471) ilspy-lite::all typed_arrays::reference_element_opcodes_reject_scalar_vector_storage
+        PASS [   0.013s] (407/471) ilspy-lite::all typed_arrays::reference_element_stores_keep_runtime_covariance_checks_at_the_store
+        PASS [   0.017s] (408/471) ilspy-lite::all typed_arrays::scalar_element_operations_keep_declared_widths_and_float_storage
+        PASS [   0.016s] (409/471) ilspy-lite::all typed_arrays::tokenized_element_operations_copy_exact_value_and_generic_elements
+        PASS [   0.015s] (410/471) ilspy-lite::all typed_arrays::two_byte_array_elements_preserve_signed_short_and_unsigned_character_storage
+        PASS [   0.018s] (411/471) ilspy-lite::all typed_arrays::typed_element_addresses_keep_actual_cells_and_invariant_runtime_type_checks
+        PASS [   0.016s] (412/471) ilspy-lite::all typed_arrays::vector_lengths_need_no_element_value_or_layout_operation
+        PASS [   0.020s] (413/471) ilspy-lite::all typed_arrays::vector_allocations_keep_exact_element_identity_without_scalar_evaluation
+        PASS [   0.012s] (414/471) ilspy-lite::all typed_arrays::vector_operations_do_not_treat_named_references_as_vectors
+        PASS [   0.018s] (415/471) ilspy-lite::all value_calls::constructed_foreign_value_calls_keep_the_declared_owner_and_argument_scope
+        PASS [   0.024s] (416/471) ilspy-lite::all value_calls::boxing_and_unbox_any_keep_struct_and_scoped_generic_identities
+        PASS [   0.018s] (417/471) ilspy-lite::all value_calls::constructed_local_value_calls_use_the_original_managed_location
+        PASS [   0.010s] (418/471) ilspy-lite::all value_calls::constructed_value_fields_require_the_requested_instantiated_signature
+        PASS [   0.012s] (419/471) ilspy-lite::all value_calls::constructor_calls_keep_existing_cells_and_reject_nonlocation_or_virtual_receivers
+        PASS [   0.011s] (420/471) ilspy-lite::all value_calls::ordinary_value_constructor_delegation_initializes_the_existing_value_receiver
+        PASS [   0.016s] (421/471) ilspy-lite::all value_calls::ordinary_local_value_construction_uses_the_exact_method_definition_and_completed_copy
+        PASS [   0.011s] (422/471) ilspy-lite::all value_calls::ordinary_value_constructor_metadata_requires_instance_void_and_constructor_flags
+        PASS [   0.012s] (423/471) ilspy-lite::all value_calls::value_calls_and_fields_do_not_discard_operand_kind_or_signature
+        PASS [   0.014s] (424/471) ilspy-lite::all value_calls::value_newobj_constructs_a_value_in_its_original_instantiation
+        PASS [   0.011s] (425/471) ilspy-lite::all virtual_calls::callvirt_is_not_downgraded_to_a_direct_call_or_a_value_receiver
+        PASS [   0.011s] (426/471) ilspy-lite::all virtual_calls::callvirt_retains_null_check_and_target_runtime_dispatch
+        PASS [   0.015s] (427/471) ilspy-lite::discovery_paths deps_absent_or_empty_runtime_is_optional
+        PASS [   0.019s] (428/471) ilspy-lite::discovery_paths deps_exact_target_and_cache_paths_preserve_case_and_origin
+        PASS [   0.037s] (429/471) ilspy-lite::all virtual_calls::owned_fixture_contract_holds_in_both_views
+        PASS [   0.014s] (430/471) ilspy-lite::discovery_paths deps_present_nonobject_runtime_is_diagnostic
+        PASS [   0.027s] (431/471) ilspy-lite::discovery_paths deps_manifest_work_is_bounded_separately_from_file_size
+        PASS [   0.017s] (432/471) ilspy-lite::discovery_paths deps_runtime_target_is_explicit_evidence_not_an_invented_rid
+        PASS [   0.020s] (433/471) ilspy-lite::discovery_paths deps_symlink_loop_is_diagnosed_without_stopping_other_families
+        PASS [   0.033s] (434/471) ilspy-lite::discovery_paths framework_and_mono_roots_need_no_host_runtime
+        PASS [   0.034s] (435/471) ilspy-lite::discovery_paths gac_exact_paths_across_roots_precede_same_major_alternatives_and_keep_culture_token
+        PASS [   0.012s] (436/471) ilspy-lite::discovery_paths host_environment_child
+        PASS [   0.022s] (437/471) ilspy-lite::discovery_paths ilspy_framework_probe_uses_closest_target_or_newest_without_a_managed_host
+        PASS [   0.034s] (438/471) ilspy-lite::discovery_paths host_environment_uses_env_and_path_symlinks_without_executing_dotnet
+        PASS [   0.015s] (439/471) ilspy-lite::discovery_paths isolated_missing_sdk_and_neighbor_dll_before_exe
+        PASS [   0.018s] (440/471) ilspy-lite::discovery_paths missing_malformed_oversized_and_traversing_deps_do_not_hide_neighbors
+        PASS [   0.024s] (441/471) ilspy-lite::discovery_paths mono_gac_exact_precedes_windows_gac_version_alternatives
+        PASS [   0.021s] (442/471) ilspy-lite::discovery_paths mono_versions_prefer_framework_hint_but_not_modern_dotnet_hint
+        PASS [   0.033s] (443/471) ilspy-lite::discovery_paths reference_pack_provenance_is_separate_from_shared_implementation
+        PASS [   0.025s] (444/471) ilspy-lite::discovery_paths reference_pack_tfm_hint_prioritizes_without_excluding_alternatives
+        PASS [   2.503s] (445/471) ilspy-lite::all cli::partial_type_preserves_inventory_and_returns_nonzero
+        PASS [   0.216s] (446/471) ilspy-lite::discovery_paths symlink_duplicates_loops_and_cache_escapes_are_bounded
+        PASS [   2.421s] (447/471) ilspy-lite::all dependencies::metadata_reference_names_cannot_escape_a_supplied_directory
+        PASS [   2.565s] (448/471) ilspy-lite::all dependencies::unreadable_reference_identity_does_not_hide_independently_decompilable_bodies
+        PASS [   0.635s] (449/471) ilspy-lite::discovery_paths unsafe_names_are_rejected_before_any_probe
+        PASS [   1.472s] (450/471) ilspy-lite::all property_output::an_independent_substituted_property_signature_path_cannot_hide_behind_exact_accessors
+        PASS [   0.168s] (451/471) ilspy-lite::signature_guard deterministic_byte_mutations_never_panic
+        PASS [   0.020s] (452/471) ilspy-lite::signature_guard every_seam_rejects_trailing_bytes_and_every_truncation
+        PASS [   0.022s] (453/471) ilspy-lite::signature_guard every_token_position_is_checked_before_conversion
+        PASS [   0.677s] (454/471) ilspy-lite::discovery_paths shared_versions_use_target_hint_then_stable_alternatives_without_sdk
+        PASS [   0.469s] (455/471) ilspy-lite::signature_guard depth_modifier_size_and_work_limits_are_bounded
+        PASS [   1.577s] (456/471) ilspy-lite::all property_output::substituted_signature_types_cannot_prove_property_source_binding_for_an_exact_owner
+        PASS [   0.932s] (457/471) ilspy-lite::discovery_paths directory_and_candidate_limits_are_diagnostic_and_deterministic
+        PASS [   0.251s] (458/471) ilspy-lite::signature_guard known_good_literals_preserve_cildec_results
+        PASS [   0.246s] (459/471) ilspy-lite::signature_guard nested_generic_array_and_fnptr_types_survive
+        PASS [   0.255s] (460/471) ilspy-lite::signature_guard method_conventions_flags_generics_and_varargs_survive
+        PASS [   2.900s] (461/471) ilspy-lite::all dependencies::cli_finds_neighboring_dependencies_by_default_and_can_disable_discovery
+        PASS [   2.901s] (462/471) ilspy-lite::all dependencies::cli_reference_directories_try_later_exact_identity_and_explicit_files_take_precedence
+        PASS [   0.235s] (463/471) ilspy-lite::signature_guard noncanonical_compressed_values_are_rejected
+        PASS [   0.245s] (464/471) ilspy-lite::signature_guard non_token_integers_are_not_mistaken_for_tokens
+        PASS [   0.149s] (465/471) ilspy-lite::signature_guard oversized_rid_does_not_alias_typeref_one
+        PASS [   0.143s] (466/471) ilspy-lite::signature_guard signed_array_bounds_keep_signed_width_semantics
+        PASS [   0.272s] (467/471) ilspy-lite::signature_guard malformed_element_types_counts_and_compressed_prefixes_fail
+        PASS [   0.011s] (468/471) ilspy-lite::signature_guard unsupported_flags_and_misplaced_sentinels_fail_closed
+        PASS [   0.024s] (469/471) ilspy-lite::signature_guard token_checks_cover_all_exported_roots
+        PASS [   1.730s] (470/471) ilspy-lite::all reference_search::exact_identity_beats_version_alternatives_and_substitution_requires_explicit_policy
+        PASS [   3.255s] (471/471) ilspy-lite::all generic_binding::cyclic_constructed_type_owner_is_refused_without_overflowing
+────────────
+     Summary [   4.915s] 471 tests run: 471 passed, 0 skipped

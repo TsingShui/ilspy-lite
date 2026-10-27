@@ -140,6 +140,59 @@ pub(crate) struct ExternalProperty {
     pub getter: bool,
 }
 
+#[cfg(test)]
+mod cast_kind_tests {
+    use super::{DependencyContext, ExternalTypeKindLookup};
+    use cildec::{TableId, Token};
+
+    fn type_ref(context: &DependencyContext, name: &str) -> Token {
+        let image = context.binding_image(0).unwrap();
+        image
+            .md
+            .tables()
+            .iter::<cildec::tables::TypeRefRow>()
+            .find(|(_, row)| {
+                image
+                    .md
+                    .strings()
+                    .str(row.as_ref().unwrap().type_name)
+                    .unwrap()
+                    == name
+            })
+            .map(|(rid, _)| Token::new(TableId::TypeRef, rid))
+            .unwrap_or_else(|| panic!("owned TypeRef {name} missing"))
+    }
+
+    #[test]
+    fn external_cast_targets_need_a_reference_kind_and_prove_it() {
+        let mut context = DependencyContext::new(
+            include_bytes!("../tests/fixtures/reference-relation-release.bin").to_vec(),
+        )
+        .unwrap();
+        context
+            .add_reference(
+                "owned relation library",
+                include_bytes!("../tests/fixtures/relation-library-release.bin").to_vec(),
+            )
+            .unwrap();
+        for name in ["Tagged", "ITagged", "Api"] {
+            assert!(
+                matches!(
+                    context.external_type_kind(type_ref(&context, name).0),
+                    ExternalTypeKindLookup::Fact(_)
+                ),
+                "{name} should be a reference type"
+            );
+        }
+        match context.external_type_kind(type_ref(&context, "Bits").0) {
+            ExternalTypeKindLookup::Refused(reason) => {
+                assert!(reason.contains("value type"), "{reason}")
+            }
+            other => panic!("value-type cast target was not refused: {other:?}"),
+        }
+    }
+}
+
 /// Facts read from the defining image for `newobj` on a foreign constructor.
 ///
 /// The owner name and the constructor's shape come from the definition; the
@@ -180,6 +233,24 @@ pub(crate) struct ExternalMethodInstantiation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum ExternalMethodInstantiationLookup {
     Fact(ExternalMethodInstantiation),
+    Refused(String),
+    Unavailable,
+}
+
+/// Kind of a referenced type, as needed by a runtime type test or cast.
+///
+/// The exact identity stays the caller's TypeRef; only the class-versus-value
+/// distinction is taken from the selected definition, because `castclass` on a
+/// value type tests a boxed value rather than producing one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalTypeKind {
+    pub value_type: bool,
+}
+
+/// Outcome of asking the context about one referenced cast target.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalTypeKindLookup {
+    Fact(ExternalTypeKind),
     Refused(String),
     Unavailable,
 }
@@ -390,6 +461,45 @@ impl DependencyContext {
     /// supplies them, and it must declare exactly the arity the call site used.
     /// A reference that cannot be resolved is reported as unavailable so the
     /// caller keeps the blocker it would have had without a context.
+    /// Reference kind of a cast target declared outside this image.
+    ///
+    /// The caller keeps the original TypeRef as the identity; this only decides
+    /// whether the runtime operation is a reference cast or a boxed-value test.
+    pub(crate) fn external_type_kind(&self, token: u32) -> ExternalTypeKindLookup {
+        let token = cildec::Token(token);
+        if token.table() != Some(cildec::TableId::TypeRef) || token.rid() == 0 {
+            return ExternalTypeKindLookup::Unavailable;
+        }
+        let bound = match self.bind_type_in(0, token, &mut std::collections::BTreeSet::new()) {
+            Ok(bound) => bound,
+            Err(_) => return ExternalTypeKindLookup::Unavailable,
+        };
+        let (module, bound) = bound;
+        let image = match self.binding_image(module) {
+            Ok(image) => image,
+            Err(_) => return ExternalTypeKindLookup::Unavailable,
+        };
+        let definition = cildec::Token(bound.definition.token);
+        if definition.table() != Some(cildec::TableId::TypeDef) {
+            return ExternalTypeKindLookup::Unavailable;
+        }
+        let flags = match image.md.tables().type_def(definition.rid()) {
+            Ok(row) => row.flags,
+            Err(_) => return ExternalTypeKindLookup::Unavailable,
+        };
+        // An interface or class needs no boxing distinction; only a value type
+        // changes what the runtime operation means.
+        let value_type = flags & 0x0020 == 0
+            && (matches!(image.has_core_base(definition, "ValueType"), Ok(true))
+                || matches!(image.has_core_base(definition, "Enum"), Ok(true)));
+        if value_type {
+            return ExternalTypeKindLookup::Refused(
+                "cast target is a value type; a boxed-value test is not a reference cast".into(),
+            );
+        }
+        ExternalTypeKindLookup::Fact(ExternalTypeKind { value_type })
+    }
+
     /// Facts for an instantiated instance method whose owner is referenced.
     ///
     /// ILSpy resolves a MethodSpec through its MemberRef, finds the declaration

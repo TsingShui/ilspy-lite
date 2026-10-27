@@ -214,6 +214,39 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn external_reference_casts_need_only_the_reference_kind_fact() {
+    for (bytes, library) in IMAGES {
+        // An implicit upcast carries no IL operation, so only the two runtime
+        // casts are evidence for this fact.
+        let methods = [
+            ("RelationCases.Ops", "AsForeignInterface"),
+            ("RelationCases.Ops", "CastForeignClass"),
+        ];
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        for (owner, name) in methods {
+            let result = context
+                .decompile(token(bytes, owner, name), OutputStyle::Readable)
+                .unwrap();
+            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("cast target needs dependency facts"),
+                "{}",
+                result.text
+            );
+        }
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        for (owner, name) in methods {
+            let result = context
+                .decompile(token(bytes, owner, name), OutputStyle::Readable)
+                .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
 fn nested_base_constructor_calls_compare_the_declared_instantiation() {
     for (bytes, library) in IMAGES {
         // A nested class that inherits its enclosing type's parameters names its

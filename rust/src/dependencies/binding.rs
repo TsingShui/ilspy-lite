@@ -269,7 +269,7 @@ impl DependencyContext {
         }
     }
 
-    fn bind_type_in(
+    pub(crate) fn bind_type_in(
         &self,
         module: usize,
         token: Token,

@@ -185,6 +185,8 @@ generated output remain ignored and retain their original license boundaries.
   referenced classes, with the generic-virtual and value-type boundaries.
 - `CONSTRUCTED_BASE_CALLS.md`: nested/constructed base constructor identity, with
   the cross-image and different-instantiation boundaries.
+- `EXTERNAL_REFERENCE_CASTS.md`: runtime casts to referenced classes/interfaces,
+  with the value-type and unavailable-definition boundaries.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

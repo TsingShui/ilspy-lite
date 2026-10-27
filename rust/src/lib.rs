@@ -381,6 +381,46 @@ fn prime_external_allocations(
     }
 }
 
+/// Prefetch the reference kind of external cast targets.
+///
+/// Only `castclass`/`isinst` operands reaching a TypeRef are asked about; a
+/// local definition, a TypeSpec or a core intrinsic already decides locally.
+fn prime_external_cast_targets(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        if !matches!(
+            instruction.opcode.canonical().name(),
+            "castclass" | "isinst"
+        ) {
+            continue;
+        }
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::TypeRef)
+            || !seen.insert(candidate.0)
+            || image.external_cast_kind(candidate.0).is_some()
+        {
+            continue;
+        }
+        image.cache_external_cast_kind(
+            candidate.0,
+            match context.external_type_kind(candidate.0) {
+                crate::dependencies::ExternalTypeKindLookup::Fact(_) => Ok(()),
+                crate::dependencies::ExternalTypeKindLookup::Refused(reason) => Err(reason),
+                crate::dependencies::ExternalTypeKindLookup::Unavailable => continue,
+            },
+        );
+    }
+}
+
 /// Prefetch facts for instantiated instance methods declared outside this image.
 ///
 /// Only a MethodSpec whose target is a MemberRef on an external TypeRef owner
@@ -505,6 +545,7 @@ fn decompile_method(
         prime_external_allocations(image, &body, context);
         prime_external_fields(image, &body, context);
         prime_external_method_instantiations(image, &body, context);
+        prime_external_cast_targets(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
     image.reference_queries.borrow_mut().clear();

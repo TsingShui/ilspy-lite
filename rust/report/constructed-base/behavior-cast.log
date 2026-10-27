@@ -1,0 +1,18 @@
+release: Reference relation behavior: 187 comparisons, 44 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match.
+release: rejected DeclaredOverload mutant
+release: rejected Swap mutant
+release: rejected Foreign mutant
+release: rejected ReadCast mutant
+release: rejected SkipInitBranch mutant
+release: rejected SkipInitLoop mutant
+release: rejected SkipInitAddress mutant
+release: rejected ExternalGeneric mutant
+debug: Reference relation behavior: 187 comparisons, 44 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match.
+debug: rejected DeclaredOverload mutant
+debug: rejected Swap mutant
+debug: rejected Foreign mutant
+debug: rejected ReadCast mutant
+debug: rejected SkipInitBranch mutant
+debug: rejected SkipInitLoop mutant
+debug: rejected SkipInitAddress mutant
+debug: rejected ExternalGeneric mutant
