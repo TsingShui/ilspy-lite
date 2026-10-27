@@ -2463,6 +2463,11 @@ fn join_reference_type(image: &crate::metadata::Image<'_>, stored: Ty, incoming:
     {
         for ancestor in chain {
             let base = Ty::Class(ancestor);
+            // An open generic definition is not a value type in C# and would
+            // drop the instantiation; only a closed definition can merge here.
+            if image.generic_definition_name(base).unwrap_or(false) {
+                continue;
+            }
             if image.assignable(Ty::Class(b), base).is_ok() {
                 return Some(base);
             }

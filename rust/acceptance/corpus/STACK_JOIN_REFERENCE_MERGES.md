@@ -34,3 +34,15 @@ two different reference types stopped at
   pass. Targeted scans: `FSharp.Core` 7,471 -> 7,493 (+22),
   `System.Private.CoreLib` 15,067 -> 15,074 (+7), `OpenRA.Game` and
   `OpenRA.Mods.Common` unchanged.
+
+## Open generic definitions are not merge targets
+
+`class_chain` follows a constructed base to its *definition*, so the common-ancestor
+loop could return `Ty::Class(definition)` for a generic definition such as
+`FSharpFunc`2` or a generated closure base. That is an open generic, not a C# type,
+and assigning a closed instance to it loses the instantiation (traced on F#
+`PrintfImpl::basicNumberToString$cont@1127-1`: `Class(2545) <- StructuralRef(...)`).
+The merge now skips ancestors whose definition is generic and falls back to the
+CLI's reference merge (`object`); only closed definitions can become the merged
+slot type. Status counts are unchanged on the four sampled images, so this is an
+output-correctness fix, not a recovery gain; 488 tests and clippy pass.
