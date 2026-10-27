@@ -249,6 +249,130 @@ class CorpusE2E(unittest.TestCase):
             self.assertEqual([r["pass"] for r in decisions["images"]], [True, False, False, False])
             self.assertEqual(decisions["images"][1]["unrecovered"], 1)
 
+    def test_gate_uses_the_weighted_five_percent_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "baseline.json"
+            images = [
+                {"id": 0, "bodies": 10, "counts": {"Decompiled": 8, "Partial": 2}, "scan_complete": True},
+                {"id": 1, "bodies": 90, "counts": {"Decompiled": 87, "Failed": 3}, "scan_complete": True},
+            ]
+            def run():
+                report.write_text(json.dumps({"complete": True, "images": images}))
+                result = subprocess.run([sys.executable, str(HERE / "corpus.py"), "gate",
+                                         "--baseline", str(report)], capture_output=True, text=True)
+                return result, json.loads(result.stdout)
+            result, decision = run()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(decision["pass"])
+            self.assertEqual((decision["bodies"], decision["unrecovered"]), (100, 5))
+            self.assertFalse(decision["images"][0]["pass"])
+            images[1]["counts"] = {"Decompiled": 86, "Failed": 4}
+            result, decision = run()
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
+            self.assertEqual(decision["unrecovered"], 6)
+            images[1]["counts"] = {"Decompiled": 86, "Failed": 3}
+            result, decision = run()
+            self.assertEqual(result.returncode, 1, result.stderr)
+            self.assertFalse(decision["complete"])
+            self.assertEqual(decision["unrecovered"], 6)
+            images[:] = [{"id": 0, "bodies": 200000,
+                          "counts": {"Decompiled": 189999, "Partial": 10001}, "scan_complete": True}]
+            result, decision = run()
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
+            self.assertEqual(f"{100 * decision['unrecovered'] / decision['bodies']:.2f}", "5.00")
+            images[:] = [{"id": 0, "bodies": 0, "counts": {}, "scan_complete": True}]
+            result, decision = run()
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
+            self.assertFalse(decision["applicable"])
+
+    def test_baseline_exit_uses_aggregate_not_each_image(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            images = []
+            for i, count in enumerate((10, 90)):
+                methods = [{"token": f"0x{0x06000000 | n:08X}", "body_kind": "cil",
+                            "owner": "Owned", "name": f"M{n}"} for n in range(1, count + 1)]
+                snapshot = root / f"methods-{i}.json"
+                snapshot.write_text(json.dumps({"methods": methods}))
+                images.append({"id": i, "kind": "managed", "assembly": f"Owned{i}",
+                               "path": str(root / f"input-{i}.bin"), "origins": [f"owned{i}"],
+                               "inventory_path": str(snapshot)})
+            inventory = root / "inventory.json"
+            inventory.write_text(json.dumps({"complete": True, "images": images}))
+            cli = root / "owned-fake-cli"
+            cli.write_text("#!/usr/bin/env python3\nimport json,sys\n"
+                           "i=int(sys.argv[2].split('-')[-1].split('.')[0])\n"
+                           "n,p=((10,2),(90,3))[i]\n"
+                           "for x in range(1,n+1):\n"
+                           " print(json.dumps({'token':f'0x{0x06000000|x:08X}',"
+                           "'status':'Partial' if x<=p else 'Decompiled','reason':'owned'}))\n")
+            cli.chmod(0o755)
+            result = subprocess.run([sys.executable, str(HERE / "corpus.py"), "baseline",
+                                     "--inventory", str(inventory), "--cli", str(cli),
+                                     "--output", str(root / "baseline"), "--workers", "2"],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            baseline = json.loads((root / "baseline/baseline.json").read_text())
+            self.assertTrue(baseline["complete"])
+            self.assertEqual(baseline["summary"]["bodies"], 100)
+            self.assertEqual(baseline["summary"]["counts"]["Partial"], 5)
+            self.assertFalse(baseline["images"][0]["gate_pass"])
+            inventory.write_text(json.dumps({"complete": True, "images": []}))
+            empty = subprocess.run([sys.executable, str(HERE / "corpus.py"), "baseline",
+                                    "--inventory", str(inventory), "--cli", str(cli),
+                                    "--output", str(root / "empty"), "--workers", "2"],
+                                   capture_output=True, text=True)
+            self.assertEqual(empty.returncode, 2, empty.stderr)
+            empty_report = json.loads((root / "empty/baseline.json").read_text())
+            self.assertTrue(empty_report["complete"])
+            self.assertFalse(empty_report["summary"]["aggregate_gate_applicable"])
+
+    def test_implementation_scope_exit_uses_the_weighted_gate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manifest = root / "manifest.json"
+            manifest.write_text(json.dumps({"complete": True}))
+            inventory_images, baseline_images = [], []
+            for i, (bodies, recovered, reference) in enumerate(((10, 8, False), (90, 87, False), (100, 0, True))):
+                identity = {"id": i, "assembly": f"Owned{i}", "origins": [f"owned{i}"], "sha256": str(i) * 64}
+                inventory_images.append({**identity, "kind": "managed", "reference_marker": reference,
+                                         "zero_code_methods": 0, "counts": {"cil": bodies},
+                                         "inventory_path": f"owned-{i}.json"})
+                baseline_images.append({**identity, "bodies": bodies,
+                                        "counts": {"Decompiled": recovered, "Partial": bodies - recovered},
+                                        "scan_complete": True, "reasons": {"owned": bodies - recovered},
+                                        "results_path": f"results-{i}.json", "stamp": {"image_sha256": identity["sha256"]}})
+            inventory = root / "inventory.json"
+            inventory.write_text(json.dumps({"complete": True, "manifest": str(manifest), "images": inventory_images}))
+            baseline = root / "baseline.json"
+            baseline.write_text(json.dumps({"complete": True, "images": baseline_images, "cli": {},
+                                            "summary": {"bodies": 200, "counts": {"Decompiled": 95, "Partial": 105}}}))
+            result = subprocess.run([sys.executable, str(HERE / "implementation_scope.py"),
+                                     "--inventory", str(inventory), "--baseline", str(baseline),
+                                     "--output", str(root / "scope")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            scoped = json.loads((root / "scope/implementation-baseline.json").read_text())
+            self.assertTrue(scoped["complete"])
+            self.assertEqual(scoped["summary"]["bodies"], 100)
+            self.assertEqual(scoped["summary"]["counts"], {"Decompiled": 95, "Partial": 5})
+            self.assertEqual(len(scoped["skipped"]), 1)
+            self.assertEqual(scoped["reconciliation"]["newly_recovered_by_scope_change"], 0)
+            baseline_images[1]["counts"]["Decompiled"] -= 1
+            baseline.write_text(json.dumps({"complete": True, "images": baseline_images, "cli": {},
+                                            "summary": {"bodies": 200, "counts": {"Decompiled": 94, "Partial": 105}}}))
+            result = subprocess.run([sys.executable, str(HERE / "implementation_scope.py"),
+                                     "--inventory", str(inventory), "--baseline", str(baseline),
+                                     "--output", str(root / "incomplete")], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1, result.stderr)
+            incomplete = json.loads((root / "incomplete/implementation-baseline.json").read_text())
+            self.assertFalse(incomplete["complete"])
+            self.assertEqual(incomplete["summary"]["unrecovered"], 6)
+            self.assertEqual(incomplete["summary"]["incomplete_images"], 1)
+            self.assertIn("unrecovered: 6", (root / "incomplete/SCOPE.md").read_text())
+
     def test_inventory_preserves_raw_windows_metadata_without_projection(self):
         fixture = HERE.parents[2] / "ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/winrtcomp.winmd"
         self.assertTrue(fixture.is_file(), "fixed submodule fixture is required")

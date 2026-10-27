@@ -6,6 +6,22 @@
 
 Goal: mvouhw7y-679jgb
 
+## Work after the last complete scan
+
+- Commit `e5c3b7dc0` follows local core and selected foreign class-base ancestry
+  for exception identities. Owned validation is green (466 tests; seven foreign
+  comparisons and two mutants per config); six of eight audited candidates
+  decompile in targeted runs. No new aggregate coverage is claimed until the
+  next batched scan. See `acceptance/corpus/EXCEPTION_ANCESTRY.md`.
+- The acceptance tooling now evaluates the user-approved weighted <=5% integer
+  gate; its historical per-image <=1% results remain informational only. The
+  three new public-command checks were red before the fix and the 21-test
+  corpus-tool suite passes. Applying the new gate to the last complete scan
+  confirms it remains unmet; this is an arithmetic correction, not a recovery gain.
+- One post-checkpoint capability group is complete. Continue two more focused
+  capability groups before the next full fixed-corpus scan and bounded
+  gained-method self-review, with a local commit per group.
+
 ## Current verified state: constructed foreign allocations and value arrays
 
 - `report/constructed-foreign-batch/corpus-scan-final/baseline.json`:

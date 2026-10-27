@@ -8,11 +8,13 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Current ILSpy-style reference-selection scan: **616,563 / 770,748** implementation
-bodies recovered; **20.00459% fallback**, so the aggregate <=5% goal is unmet.
-This scan changes reference selection explicitly and records two coverage losses;
-it is not a like-for-like instruction gain. See
-[reference resolution evidence](ILSPY_REFERENCE_RESOLUTION.md).
+Latest complete fixed-scope scan: **640,225 / 770,748** implementation bodies
+recovered; **16.93459% fallback**, so the aggregate <=5% goal is unmet. The
+earlier explicit reference-selection change recorded two coverage losses and is
+not a like-for-like instruction gain; see
+[reference resolution evidence](ILSPY_REFERENCE_RESOLUTION.md). Later groups
+may be committed without a new full scan; see
+[the live checkpoint](../../report/fallback-corpus/CHECKPOINT.md).
 
 ## Acquire and independently inventory
 
@@ -81,11 +83,16 @@ uses the fixed exact reference selection; `--references ilspy` records the
 host-discovered dependency report separately. The CLI itself discovers
 references by default.
 
-Gate decisions use `100 * unrecovered <= bodies`, with exact integer counts.
-Legitimate bodyless declarations and native resources are reported separately;
-images with no CIL bodies have no recovery rate. Incomplete scans cannot pass.
-Acceptance commands exit 0 for complete passing gates, 2 for complete but
-unsatisfied gates, and 1 for incomplete/error results.
+The acceptance gate sums bodies and unrecovered counts across the complete
+implementation scope and uses exact integers:
+`100 * unrecovered <= 5 * bodies`. Per-image `pass`, `gate_pass`, and
+`passing_body_images` retain the historical <=1% diagnostic for comparison;
+they do not determine acceptance. Legitimate bodyless declarations and native
+resources are reported separately, and images with no CIL bodies have no
+recovery rate. Incomplete scans cannot pass. An aggregate with no bodies is not
+applicable and does not pass. Commands exit 0 for a complete passing aggregate,
+2 for a complete unsatisfied/not-applicable aggregate, and 1 for incomplete or
+error results.
 
 ## Validation and iteration
 
@@ -150,8 +157,8 @@ The baseline and per-method evidence are in
 `baseline-final/` and `scope-contradiction.json`. The final baseline has identical
 per-method results to the initial scan; `baseline-comparison.json` retains that
 cross-check. `baseline-integrity.json` covers all MethodDef rows, including
-bodyless declarations. The acceptance and architecture decisions awaiting user
-approval are documented in [DESIGN_PROPOSAL.md](DESIGN_PROPOSAL.md). `report.py` summarizes these saved snapshots without
+bodyless declarations. The historical proposal is documented in [DESIGN_PROPOSAL.md](DESIGN_PROPOSAL.md);
+the current approved objective and checkpoint take precedence. `report.py` summarizes these saved snapshots without
 recompiling, rescanning or rehashing unchanged inputs. External binaries and
 generated output remain ignored and retain their original license boundaries.
 
@@ -169,6 +176,8 @@ generated output remain ignored and retain their original license boundaries.
   treated as final; IL is the semantic authority, not ILSpy's appearance.
 - `EXCEPTION_REGIONS.md`: bounded catch/finally regions, validated transfers and
   executable default output, with filters/faults kept as explicit fallbacks.
+- `EXCEPTION_ANCESTRY.md`: core-local and selected foreign class ancestry for
+  catch and throw identities, with owned identity and negative-boundary checks.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

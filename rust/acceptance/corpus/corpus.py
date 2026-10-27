@@ -267,6 +267,7 @@ def inventory(args):
 
 
 def gate_image(image):
+    # Historical per-image 1% diagnostic; acceptance uses aggregate_gate.
     bodies = image["bodies"]
     counts = image["counts"]
     recovered = counts.get("Decompiled", 0)
@@ -279,13 +280,22 @@ def gate_image(image):
             "complete": complete, "pass": complete and 100 * unrecovered <= bodies}
 
 
+def aggregate_gate(images, complete=True):
+    decisions = [gate_image(image) for image in images]
+    complete = complete and all(decision["complete"] for decision in decisions)
+    bodies = sum(decision["bodies"] for decision in decisions)
+    unrecovered = sum(decision["unrecovered"] for decision in decisions)
+    applicable = bodies > 0
+    passed = complete and applicable and 100 * unrecovered <= 5 * bodies
+    return {"complete": complete, "applicable": applicable, "pass": passed,
+            "bodies": bodies, "unrecovered": unrecovered, "images": decisions}
+
+
 def gate(args):
     report = json.loads(args.baseline.read_text())
-    decisions = [gate_image(i) for i in report["images"]]
-    complete = report["complete"] and all(i["complete"] for i in decisions)
-    passed = complete and all(i["pass"] for i in decisions)
-    print(json.dumps({"complete": complete, "pass": passed, "images": decisions}))
-    return 0 if passed else 2 if complete else 1
+    decision = aggregate_gate(report["images"], report["complete"])
+    print(json.dumps(decision))
+    return 0 if decision["pass"] else 2 if decision["complete"] else 1
 
 
 def build_identity_index(cli, paths, timeout):
@@ -595,10 +605,14 @@ def baseline(args):
                 for image in managed]
     # Process-based, not thread-based: the JSON accounting below is CPU-bound and
     # the GIL otherwise serializes it across workers.
-    with ProcessPoolExecutor(max_workers=args.workers,
-                             initializer=_init_worker,
-                             initargs=(owned_identities, declared_references)) as pool:
-        images = list(pool.map(scan_one, *zip(*payloads)))
+    if payloads:
+        with ProcessPoolExecutor(max_workers=args.workers,
+                                 initializer=_init_worker,
+                                 initargs=(owned_identities, declared_references)) as pool:
+            images = list(pool.map(scan_one, *zip(*payloads)))
+    else:
+        images = []
+    aggregate = aggregate_gate(images)
     counts, reasons = {}, {}
     for image in images:
         for key, value in image["counts"].items():
@@ -607,10 +621,13 @@ def baseline(args):
             reasons[key] = reasons.get(key, 0) + value
     summary = {"managed_images": len(images), "body_images": sum(i["bodies"] > 0 for i in images),
                "bodies": sum(i["bodies"] for i in images), "counts": counts,
-               "incomplete_images": sum(not i["scan_complete"] for i in images),
-               "passing_body_images": sum(i["bodies"] > 0 and i["gate_pass"] for i in images)}
+               "incomplete_images": sum(not decision["complete"] for decision in aggregate["images"]),
+               "passing_body_images": sum(i["bodies"] > 0 and i["gate_pass"] for i in images),
+               "unrecovered": aggregate["unrecovered"],
+               "aggregate_gate_pass": aggregate["pass"],
+               "aggregate_gate_applicable": aggregate["applicable"]}
     report = {"schema": 1, "inventory": str(args.inventory.resolve()), "cli": cli_stamp,
-              "complete": all(i["scan_complete"] for i in images), "images": images,
+              "complete": aggregate["complete"], "images": images,
               "references": {"mode": args.references,
                              "policy": args.reference_version_policy,
                              "ambiguity": args.reference_ambiguity,
@@ -619,7 +636,7 @@ def baseline(args):
               "elapsed_ms": round((time.monotonic() - started) * 1000)}
     save(output / "baseline.json", report)
     print(json.dumps({"summary": summary, "elapsed_ms": report["elapsed_ms"]}))
-    return 0 if report["complete"] and all(i["gate_pass"] for i in images) else 2 if report["complete"] else 1
+    return 0 if aggregate["pass"] else 2 if aggregate["complete"] else 1
 
 
 def plan(args):
@@ -718,7 +735,7 @@ def main():
                      default="exact")
     dry.add_argument("--reference-ambiguity", choices=("tie-break", "skip"), default="tie-break")
     dry.add_argument("--reference-hop", type=int, choices=(0, 1), default=0)
-    check = commands.add_parser("gate", help="Evaluate per-image integer <= 1% gates")
+    check = commands.add_parser("gate", help="Evaluate the weighted integer <= 5% gate")
     check.add_argument("--baseline", type=Path, required=True)
     args = parser.parse_args()
     try:

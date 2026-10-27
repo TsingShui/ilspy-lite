@@ -1,0 +1,26 @@
+test_ambiguity_tie_break_prefers_non_legacy_then_path_order (test_e2e.CorpusE2E) ... ok
+test_ambiguity_tie_break_prefers_the_scanned_images_directory_family (test_e2e.CorpusE2E) ... ok
+test_archive_cannot_follow_an_existing_extraction_directory_symlink (test_e2e.CorpusE2E) ... ok
+test_baseline_exit_uses_aggregate_not_each_image (test_e2e.CorpusE2E) ... ok
+test_baseline_rejects_omitted_bodyless_methods (test_e2e.CorpusE2E) ... ok
+test_baseline_runs_production_cli_and_accounts_for_every_fixture_body (test_e2e.CorpusE2E) ... ok
+test_baseline_stamp_records_the_reference_selection_knobs (test_e2e.CorpusE2E) ... ok
+test_collect_retains_direct_and_archived_inputs_with_provenance (test_e2e.CorpusE2E) ... ok
+test_gate_uses_integer_counts_and_incomplete_scans_cannot_pass (test_e2e.CorpusE2E) ... ok
+test_gate_uses_the_weighted_five_percent_boundary (test_e2e.CorpusE2E) ... ok
+test_implementation_scope_exit_uses_the_weighted_gate (test_e2e.CorpusE2E) ... ok
+test_independent_inventory_reads_all_fixture_methods_without_execution (test_e2e.CorpusE2E) ... ok
+test_inventory_distinguishes_reference_markers_from_implementation_images (test_e2e.CorpusE2E) ... ok
+test_inventory_preserves_raw_windows_metadata_without_projection (test_e2e.CorpusE2E) ... ok
+test_inventory_recognizes_a_core_local_reference_marker_but_not_a_local_impostor (test_e2e.CorpusE2E) ... ok
+test_one_hop_closure_adds_only_the_references_of_selected_files (test_e2e.CorpusE2E) ... ok
+test_plan_prints_the_selection_without_invoking_the_scan (test_e2e.CorpusE2E) ... ok
+test_scope_does_not_skip_an_unmarked_empty_image_by_name_or_failure (test_e2e.CorpusE2E) ... ok
+test_scope_skips_reference_contracts_without_rescanning_inputs (test_e2e.CorpusE2E) ... ok
+test_tie_break_passes_exactly_one_file_per_identity_and_never_the_image_itself (test_e2e.CorpusE2E) ... ok
+test_unsafe_archive_is_explicitly_incomplete_without_traversal (test_e2e.CorpusE2E) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 4.528s
+
+OK

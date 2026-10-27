@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Tsingshui
 # SPDX-License-Identifier: MIT
-"""Summarize the unchanged goal denominator and explicit scope contradictions."""
+"""Summarize the historical raw-input denominator and scope evidence."""
 import json
 from pathlib import Path
 
@@ -59,7 +59,7 @@ lines = [
     "## Production baseline", "",
     f"- Recovered: {baseline['summary']['counts'].get('Decompiled', 0):,}.",
     f"- Unrecovered: {summary['unrecovered']:,} ({rate * 100:.2f}%).",
-    "- 546 managed snapshots have CIL bodies; 32 currently satisfy the per-image <= 1% gate.",
+    "- 546 managed snapshots have CIL bodies; 32 met the historical per-image <= 1% diagnostic.",
     "- All scans completed. No failed process, omitted body, unknown or duplicated scan token.",
     "- Gates use integer counts, not rounded display percentages.", "",
     "### Leading first-failure reasons", "",
@@ -82,7 +82,7 @@ lines += [
     "reference assemblies. Marker, raw headers, per-method RVAs and code lengths are retained in",
     "inventory-final/images/. Directory naming alone is not used as classification proof.", "",
     "The user approved retaining every file while skipping proven reference-only inputs, without",
-    "an extra metadata/API gate. Real implementation bodies remain subject to per-image <= 1%.",
+    "an extra metadata/API gate. The current target is weighted <= 5% across implementation bodies.",
     "Exact local-core marker recognition subsequently classified the legacy mscorlib and the",
     ".NET 5 System.Runtime reference input. This is classification, not semantic recovery.",
     "Historical snapshots here preserve the original denominator and counts; later reports",

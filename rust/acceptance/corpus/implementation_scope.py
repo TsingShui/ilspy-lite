@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 import time
 
-from corpus import gate_image, save
+from corpus import aggregate_gate, gate_image, save
 
 
 def load(path):
@@ -104,10 +104,14 @@ def apply(args):
         errors.append({"error": "original summary differs from per-image accounting"})
     if original_counts != Counter(baseline["summary"]["counts"]):
         errors.append({"error": "original status summary differs from per-image accounting"})
+    aggregate = aggregate_gate(images, not errors)
     summary = {"managed_images": len(images), "body_images": sum(i["bodies"] > 0 for i in images),
                "bodies": implementation_bodies, "counts": dict(counts),
                "incomplete_images": sum(not gate_image(i)["complete"] for i in images),
                "passing_body_images": sum(i["bodies"] > 0 and gate_image(i)["pass"] for i in images),
+               "unrecovered": aggregate["unrecovered"],
+               "aggregate_gate_pass": aggregate["pass"],
+               "aggregate_gate_applicable": aggregate["applicable"],
                "skipped_reference_images": len(skipped),
                "native_images": sum(i["reason"] == "native_image" for i in not_applicable)}
     reconciliation = {"original_bodies": original_bodies, "original_counts": dict(original_counts),
@@ -137,8 +141,8 @@ def apply(args):
     save(output / "implementation-inventory.json", target_inventory)
     save(output / "skipped-reference-inputs.json", skipped)
     save(output / "reconciliation.json", reconciliation)
-    unrecovered = sum(v for k, v in counts.items() if k != "Decompiled")
-    rate = unrecovered / implementation_bodies if implementation_bodies else 0
+    unrecovered = aggregate["unrecovered"]
+    rate = f"{100 * unrecovered / implementation_bodies:.2f}%" if implementation_bodies else "not applicable"
     lines = ["# Implementation-only scope", "",
              "Reference-only inputs are excluded under the user-approved goal revision.",
              "No separate reference metadata gate is required. Every original input and",
@@ -147,8 +151,9 @@ def apply(args):
              f"- Skipped reference snapshots: {len(skipped):,}; original bodies: {skipped_bodies:,}.",
              f"- Remaining managed snapshots: {len(images):,}; snapshots with CIL bodies: {summary['body_images']:,}.",
              f"- Target implementation bodies: {implementation_bodies:,}.",
-             f"- Recovered: {counts.get('Decompiled', 0):,}; unrecovered: {unrecovered:,} ({rate * 100:.2f}%).",
-             f"- Passing per-image <= 1% gates: {summary['passing_body_images']} / {summary['body_images']}.",
+             f"- Recovered: {counts.get('Decompiled', 0):,}; unrecovered: {unrecovered:,} ({rate}).",
+             f"- Informational per-image <= 1%: {summary['passing_body_images']} / {summary['body_images']}.",
+             f"- Aggregate <= 5% gate: {'pass' if aggregate['pass'] else 'not passed'}.",
              "- Newly recovered by classification alone: 0.",
              "- Acquisition, hashing, compilation, decompilation and input execution: none.", "",
              "## Leading implementation first failures", "", "| Reason | Bodies |", "|---|---:|"]
@@ -159,7 +164,7 @@ def apply(args):
               "implementation-baseline.json. reconciliation.json accounts for every original body.", ""]
     (output / "SCOPE.md").write_text("\n".join(lines))
     print(json.dumps({"summary": summary, "complete": not errors, "elapsed_ms": report["elapsed_ms"]}))
-    return 1 if errors else 0 if all(gate_image(i)["pass"] for i in images) else 2
+    return 0 if aggregate["pass"] else 2 if aggregate["complete"] else 1
 
 
 def main():
