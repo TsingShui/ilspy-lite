@@ -24,6 +24,16 @@ pub(super) fn constructor(
         if image.generic_declaring_context(owner)? {
             return Ok(None);
         }
+        // Constructing a core scalar (`new IntPtr(5)`) keeps the scalar stack
+        // model; the emitted operation is the exact constructor call.
+        if let Some(scalar) = crate::ir::core_scalar(image, owner)? {
+            let signature = image.signature(token.0)?;
+            let declaration = image.method_type_context(token.0, &signature)?;
+            return Ok(Some((
+                scalar,
+                parameters(image, &signature, None, declaration)?,
+            )));
+        }
         let Some(id) = image.struct_type(owner)? else {
             return Ok(None);
         };

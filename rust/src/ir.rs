@@ -128,6 +128,35 @@ pub(crate) enum StackKind {
     Value,
 }
 
+/// The stack model of an admitted core scalar named by a `TypeRef` or by the
+/// local `TypeDef` in the image that defines it. Other core names and refused
+/// identities return `None` and continue through the value/reference paths.
+pub(crate) fn core_scalar(image: &Image<'_>, token: cildec::Token) -> Result<Option<Ty>> {
+    use cildec::TableId;
+    let name = match token.table() {
+        Some(TableId::TypeRef) => image.core_type_name(token).ok(),
+        Some(TableId::TypeDef) => image.local_core_type_name(token)?,
+        _ => None,
+    };
+    Ok(name.and_then(|name| match name {
+        "Boolean" => Some(Ty::Bool),
+        "Char" => Some(Ty::Char),
+        "SByte" => Some(Ty::I1),
+        "Byte" => Some(Ty::U1),
+        "Int16" => Some(Ty::I2),
+        "UInt16" => Some(Ty::U2),
+        "Int32" => Some(Ty::I4),
+        "UInt32" => Some(Ty::U4),
+        "Int64" => Some(Ty::I8),
+        "UInt64" => Some(Ty::U8),
+        "IntPtr" => Some(Ty::Native),
+        "UIntPtr" => Some(Ty::UNative),
+        "Single" => Some(Ty::R4),
+        "Double" => Some(Ty::R8),
+        _ => None,
+    }))
+}
+
 impl Ty {
     pub fn from_sig(t: &cildec::Type<'_>) -> Result<Self> {
         use cildec::Type as T;
@@ -168,30 +197,11 @@ impl Ty {
         context: crate::signature_types::TypeContext,
     ) -> Result<Self> {
         if let cildec::Type::ValueType(token) = t {
-            // A TypeRef to an admitted core scalar is the same runtime type as the
-            // inline primitive encoding; it must keep that stack model instead of
-            // being treated as an opaque struct.
-            if let Ok(name) = image.core_type_name(*token) {
-                let scalar = match name {
-                    "Boolean" => Some(Self::Bool),
-                    "Char" => Some(Self::Char),
-                    "SByte" => Some(Self::I1),
-                    "Byte" => Some(Self::U1),
-                    "Int16" => Some(Self::I2),
-                    "UInt16" => Some(Self::U2),
-                    "Int32" => Some(Self::I4),
-                    "UInt32" => Some(Self::U4),
-                    "Int64" => Some(Self::I8),
-                    "UInt64" => Some(Self::U8),
-                    "IntPtr" => Some(Self::Native),
-                    "UIntPtr" => Some(Self::UNative),
-                    "Single" => Some(Self::R4),
-                    "Double" => Some(Self::R8),
-                    _ => None,
-                };
-                if let Some(scalar) = scalar {
-                    return Ok(scalar);
-                }
+            // A `TypeRef` or the local `TypeDef` of an admitted core scalar is the
+            // same runtime type as the inline primitive encoding; both keep that
+            // stack model instead of being treated as an opaque struct.
+            if let Some(scalar) = core_scalar(image, *token)? {
+                return Ok(scalar);
             }
             return match image.enum_type(*token) {
                 Ok(ty) => Ok(Self::Enum(ty)),

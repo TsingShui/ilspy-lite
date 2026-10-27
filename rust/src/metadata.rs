@@ -3272,29 +3272,10 @@ impl<'a> Image<'a> {
             }
             return Err("box/unbox TypeSpec needs an admitted stored or generic identity".into());
         }
-        if token.table() == Some(TableId::TypeRef)
-            && let Ok(name) = self.core_type_name(token)
-        {
-            let scalar = match name {
-                "Boolean" => Some(Ty::Bool),
-                "Char" => Some(Ty::Char),
-                "SByte" => Some(Ty::I1),
-                "Byte" => Some(Ty::U1),
-                "Int16" => Some(Ty::I2),
-                "UInt16" => Some(Ty::U2),
-                "Int32" => Some(Ty::I4),
-                "UInt32" => Some(Ty::U4),
-                "Int64" => Some(Ty::I8),
-                "UInt64" => Some(Ty::U8),
-                "Single" => Some(Ty::R4),
-                "Double" => Some(Ty::R8),
-                _ => None,
-            };
-            if let Some(scalar) = scalar {
-                return Ok(scalar);
-            }
-            // A core-named non-scalar (`System.Decimal`) is an ordinary stored
-            // value type and continues through the value/reference paths below.
+        // A core scalar named by a TypeRef or by the local TypeDef of the image
+        // that defines it keeps the scalar stack model.
+        if let Some(scalar) = crate::ir::core_scalar(self, token)? {
+            return Ok(scalar);
         }
         if let Ok(reference) = self.cast_class(token, context)
             && reference.kind() == StackKind::Ref
@@ -4089,6 +4070,11 @@ impl<'a> Image<'a> {
                 args: (0..count as u32).map(cildec::Type::Var).collect(),
             };
             return self.address_of(crate::ir::Ty::from_sig_scoped(&ty, self, context)?);
+        }
+        // `this` of a core scalar's instance method is the managed address of that
+        // scalar value, so the receiver keeps the scalar stack model.
+        if let Some(scalar) = crate::ir::core_scalar(self, Token(token))? {
+            return self.address_of(scalar);
         }
         if let Some(id) = self.struct_type(Token(token))? {
             return Ok(crate::ir::Ty::ValueAddress(id));

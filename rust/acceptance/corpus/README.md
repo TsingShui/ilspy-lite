@@ -222,6 +222,9 @@ generated output remain ignored and retain their original license boundaries.
 - `CORE_NAMED_BOX_VALUES.md`: boxing/unboxing core-named reference and value types.
 - `SCAN_ORDER_INDEPENDENT_VALUE_FACTS.md`: member-owner value facts primed per
   method, so scan and decompile agree.
+- `LOCAL_CORE_SCALARS.md`: core scalars named by their local TypeDef.
+- `EXCEPTION_REGION_DEFINITE_ASSIGNMENT.md`: definite assignment across exception
+  regions.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.
