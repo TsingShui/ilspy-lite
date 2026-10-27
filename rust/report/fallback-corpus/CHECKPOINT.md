@@ -6,7 +6,28 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: constructed base calls
+## Current verified state: external reference casts
+
+- `report/external-casts/corpus-scan/baseline.json`: **668,334 Decompiled /
+  102,414 Partial of 770,748**, fallback **13.287612%**. Zero incomplete images;
+  raw gate 10,241,400 > 3,853,740, so <=5% is still unmet.
+- Against `report/constructed-base/corpus-scan/baseline.json`: **+6,368 in 165
+  images, zero regressions**. OpenRA.Game **3,955/812 (+21)**; Common
+  **15,441/2,966 (+28)**.
+- Commit `a065ca1dd` admits `castclass`/`isinst` on a referenced TypeRef once the
+  selected definition proves a class/interface (value types refused, unavailable
+  definitions keep the dependency-fact reason). The runtime operation, token,
+  null handling and `InvalidCastException` behavior are unchanged. Scan and
+  five-method self-review: `93f2e9e0b`.
+- 471 Rust tests, fmt/clippy, release build and the relation behavior driver
+  (187 comparisons / 44 selections / 8 mutants per config) pass. No third-party
+  body was executed.
+- Next candidates, in measured order: double/float64 signature support (F# 77,
+  CoreLib 229; needs full NaN/rounding treatment), multidimensional arrays
+  (F# 76, needs Get/Set/Address mapping), pointer signatures (CoreLib 794, unsafe
+  semantics), then the remaining constructed/foreign member facts.
+
+## Previous verified state: constructed base calls
 
 - `report/constructed-base/corpus-scan/baseline.json`: **661,966 Decompiled /
   108,782 Partial of 770,748**, fallback **14.113822%**. Fixed scope, zero
