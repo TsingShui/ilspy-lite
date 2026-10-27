@@ -156,8 +156,16 @@ fn external_float_call_keeps_the_exact_core_abs_r4_overload() {
             let mut patched = bytes.to_vec();
             patched[start] ^= 1;
             let result = decompile(&patched, method).unwrap();
-            assert_eq!(result.status, Status::Partial, "{}", result.text);
-            assert!(result.text.contains("IL FALLBACK"));
+            // The exact Abs specialization must never follow a mutated identity.
+            // A mutated call may still be admitted as an ordinary external call
+            // with the argument/result packing helpers; if it is not, it keeps a
+            // stated fallback.
+            if result.status == Status::Decompiled {
+                assert!(!result.text.contains("__cil_abs_r4_"), "{}", result.text);
+            } else {
+                assert_eq!(result.status, Status::Partial, "{}", result.text);
+                assert!(result.text.contains("IL FALLBACK"));
+            }
         }
     }
 }

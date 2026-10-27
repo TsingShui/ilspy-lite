@@ -217,6 +217,8 @@ generated output remain ignored and retain their original license boundaries.
 - `REFERENCE_ARGUMENT_CASTS.md`: explicit casts for reference arguments whose
   assignability proof is missing.
 - `OPEN_SELF_ALLOCATION.md`: allocating the enclosing generic type from inside it.
+- `EXTERNAL_FLOAT_CALLS.md`: ordinary external calls with float operands and the
+  exact `Math.Abs(float32)` specialization.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.
