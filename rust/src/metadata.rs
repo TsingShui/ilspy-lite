@@ -2806,6 +2806,22 @@ impl<'a> Image<'a> {
     /// the consumer's signature.
     pub(crate) fn handle_type(&self, kind: HandleKind) -> Result<crate::ir::Ty> {
         let name = kind.core_name();
+        // The image that defines the core types names the handle struct through a
+        // local TypeDef; consuming images name it through a TypeRef.
+        for (rid, row) in self.md.tables().iter::<cildec::tables::TypeDefRow>() {
+            row?;
+            let token = Token(0x02000000 | rid);
+            if self.local_core_type_name(token)? != Some(name) {
+                continue;
+            }
+            if let Some(id) = self.struct_type(token)? {
+                return Ok(crate::ir::Ty::Value(id));
+            }
+            return Ok(crate::ir::Ty::Value(self.intern_signature_type(
+                &cildec::Type::ValueType(token),
+                Default::default(),
+            )?));
+        }
         for (rid, row) in self.md.tables().iter::<cildec::tables::TypeRefRow>() {
             row?;
             let token = Token(0x01000000 | rid);

@@ -1,0 +1,23 @@
+{
+  "group": "local runtime handle types",
+  "tests": 488,
+  "targeted": {
+    "System.Private.CoreLib": [
+      16335,
+      16762
+    ],
+    "FSharp.Core": [
+      8764,
+      8764
+    ],
+    "OpenRA.Game": [
+      4282,
+      4282
+    ],
+    "OpenRA.Mods.Common": [
+      16903,
+      16903
+    ]
+  },
+  "third_party_bodies_executed": false
+}
