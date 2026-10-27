@@ -1,0 +1,117 @@
+[
+  {
+    "slug": "0002-060002B6",
+    "id": 2,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+    "token": "0x060002B6",
+    "owner": "ICSharpCode.Decompiler.Tests.TestCases.Pretty.ExceptionHandling",
+    "name": "ConditionalReturnInThrow",
+    "previous_reason": "EH catch type needs an admitted core exception identity",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0002-0600040D",
+    "id": 2,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+    "token": "0x0600040D",
+    "owner": "ICSharpCode.Decompiler.Tests.TestCases.Correctness.YieldReturnTest/<YieldBreakInCatch>d__19",
+    "name": "MoveNext",
+    "previous_reason": "EH catch type needs an admitted core exception identity",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0004-060001DC",
+    "id": 4,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x060001DC",
+    "owner": "Microsoft.CodeAnalysis.CSharp.Binder",
+    "name": "FoldStringConcatenation",
+    "previous_reason": "EH catch type needs an admitted core exception identity",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0004-0600124F",
+    "id": 4,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+    "token": "0x0600124F",
+    "owner": "Microsoft.CodeAnalysis.CSharp.DocumentationCommentCompiler",
+    "name": "GetDescription",
+    "previous_reason": "EH catch type needs an admitted core exception identity",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0005-060008A0",
+    "id": 5,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+    "token": "0x060008A0",
+    "owner": "Microsoft.CodeAnalysis.CommandLineParser",
+    "name": "TryParseUInt64",
+    "previous_reason": "EH catch type needs an admitted core exception identity",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  }
+]

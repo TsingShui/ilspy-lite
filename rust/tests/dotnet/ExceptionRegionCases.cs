@@ -115,4 +115,22 @@ public static class Ops
         try { return 5; }
         catch (Exception) { return 0; }
     }
+
+    public static int GeneralCatch(int value)
+    {
+        try { return 100 / value; }
+        catch { return -1; }
+    }
+
+    public static int OutOfMemory()
+    {
+        try { return 7; }
+        catch (OutOfMemoryException) { return -2; }
+    }
+
+    public static int ForeignException()
+    {
+        try { return 1; }
+        catch (System.Net.WebException) { return -3; }
+    }
 }

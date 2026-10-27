@@ -8,7 +8,16 @@ drivers covering it. The full fixed-corpus scan plus gained-method self-review r
 after at least three completed groups. Each group stays its own local commit so a
 regression found in a batched scan can be attributed by rescanning those commits.
 
-## Current position (token operands; aggregate 5% target)
+## Current position (general catch; aggregate 5% target)
+
+- **626,242 Decompiled / 144,506 Partial; fallback 18.7488%**.
+- +578 in 88 images, zero regressions. Game +5 / Common +5. <=5% still unmet.
+- `catch (System.Object)` is a general catch; OOM added to the core parent table.
+- 460 tests green; owned red-then-green plus a frozen non-core-scope negative.
+- Next: replace the bounded exception whitelist with ancestry facts from the
+  defining image, then external constructed members and uninitialized locals.
+
+## Previous position (token operands; aggregate 5% target)
 
 - **625,664 Decompiled / 145,084 Partial; fallback 18.82379%**.
 - +9,101 in 233 images, zero regressions; same 770,748 bodies. Game +44 /

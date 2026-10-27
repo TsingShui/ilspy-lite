@@ -6,7 +6,27 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: token-operand values
+## Current verified state: general catch clauses
+
+- `report/catch-general/corpus-scan/baseline.json`: **626,242 Decompiled / 144,506
+  Partial of 770,748**, fallback **18.7488%**. **+578 in 88 images**, zero
+  regressions, zero incomplete; fixed scope, inputs and ILSpy reference policy.
+  Game **3,693/1,074 (+5)**; Common **13,683/4,724 (+5)**. <=5% unmet.
+- A catch of exact core `System.Object` is a general catch: the handler still binds
+  the thrown object, so its store survives. `System.OutOfMemoryException` joins
+  the bounded core parent table with the parent read from CoreLib metadata.
+  Throw targets and other scopes are unchanged.
+- Owned red-then-green: `ExceptionRegionCases.GeneralCatch`, `.OutOfMemory`.
+  Frozen negative kept: `.ForeignException` (non-core scope) must stay Partial.
+  **460 tests**, fmt/clippy green.
+- Five gained triples self-reviewed CRUDE-BUT-EQUIVALENT; no changed-semantic
+  SUSPECT. No third-party execution, no agents, no push.
+- Next: the bounded core parent table now limits the rest of the EH bucket; a
+  proper group should walk ancestry from the defining image through dependency
+  facts instead of extending the whitelist by name. Other queued gaps: external
+  constructed members, uninitialized-local analysis.
+
+## Previous verified state: token-operand values
 
 - `report/token-values/corpus-scan/baseline.json`: **625,664 Decompiled / 145,084
   Partial of 770,748**, fallback **18.82379195275239%**. **+9,101 in 233 images**,

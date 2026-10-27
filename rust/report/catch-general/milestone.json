@@ -1,0 +1,44 @@
+{
+  "group": "general-catch",
+  "prior_scan": "report/token-values/corpus-scan/baseline.json",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 145084,
+      "Decompiled": 625664
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 50
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 144506,
+      "Decompiled": 626242
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 50
+  },
+  "newly_recovered": 578,
+  "regressions": [],
+  "gained_images": 88,
+  "fallback_percent": 18.74879986714205,
+  "scan": "report/catch-general/corpus-scan/baseline.json",
+  "delta": "report/catch-general/delta.json",
+  "rust_tests": 460,
+  "reviewed_methods": 5,
+  "owned_red_then_green": [
+    "ExceptionRegionCases.GeneralCatch",
+    "ExceptionRegionCases.OutOfMemory"
+  ],
+  "owned_frozen_negative": [
+    "ExceptionRegionCases.ForeignException"
+  ],
+  "review_kind": "bounded main-session self-review",
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false
+}

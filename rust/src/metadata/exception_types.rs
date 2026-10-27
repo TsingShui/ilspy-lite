@@ -8,6 +8,7 @@ use cildec::Token;
 fn parent(name: &str) -> Option<&'static str> {
     match name {
         "System.SystemException" | "System.ApplicationException" => Some("System.Exception"),
+        "System.OutOfMemoryException" => Some("System.SystemException"),
         "System.ArithmeticException"
         | "System.ArgumentException"
         | "System.NullReferenceException"

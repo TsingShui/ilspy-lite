@@ -11,11 +11,20 @@ const IMAGES: [&[u8]; 2] = [
     include_bytes!("fixtures/exception-region-debug.bin"),
 ];
 
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
-    "ExceptionRegionCases.Ops",
-    "Filtered",
-    "EH filters need filter-region lowering",
-)];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
+    (
+        "ExceptionRegionCases.Ops",
+        "Filtered",
+        "EH filters need filter-region lowering",
+    ),
+    // A non-core assembly scope is not an admitted exception identity, so the
+    // general-catch admission for System.Object does not widen to other scopes.
+    (
+        "ExceptionRegionCases.Ops",
+        "ForeignException",
+        "EH catch type needs an admitted core exception identity",
+    ),
+];
 
 fn token(bytes: &[u8], name: &str) -> u32 {
     list_methods(bytes)
@@ -38,7 +47,7 @@ fn fixture_contract_keeps_unsupported_regions_visible() {
 fn recovered_exception_regions_have_runtime_control_flow() {
     for bytes in IMAGES {
         for method in list_methods(bytes).unwrap() {
-            if method.simple_name == "Filtered" {
+            if matches!(method.simple_name.as_str(), "Filtered" | "ForeignException") {
                 continue;
             }
             let result = decompile_with_style(bytes, method.token, OutputStyle::Readable).unwrap();

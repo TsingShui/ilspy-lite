@@ -3182,6 +3182,14 @@ impl<'a> Image<'a> {
     }
 
     pub(crate) fn catch_type(&self, token: Token) -> Result<(crate::ir::Ty, String)> {
+        // ILSpy keeps a catch clause's variable and prints its type only when the
+        // variable is used or the type is not object, so `catch (object)` is the
+        // general catch. It names no exception ancestry: it catches any thrown value.
+        if token.table() == Some(TableId::TypeRef)
+            && matches!(self.core_type_parts(token), Ok(("System", "Object")))
+        {
+            return Ok((crate::ir::Ty::Object, "object".into()));
+        }
         let ty = match token.table() {
             Some(TableId::TypeDef) => crate::ir::Ty::Class(token.0),
             Some(TableId::TypeRef) => crate::ir::Ty::ExternalClass(token.0),
