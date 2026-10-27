@@ -35,7 +35,22 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: binary64 and unordered float comparisons
+## Current verified state: unsigned-to-float conversion
+
+- `report/conv-run/corpus-scan/baseline.json`: **670,864 Decompiled / 99,884
+  Partial of 770,748**, fallback **12.959345%**. Zero incomplete images; raw gate
+  9,988,400 > 3,853,740, so <=5% is unmet.
+- Against `report/binary64/corpus-scan/baseline.json`: **+21 in 11 images, zero
+  regressions**. OpenRA unchanged. The 49 first-blocker occurrences of
+  `conv.r.un` mostly stopped at later gates, so the measured gain is 21.
+- Commit `6cc8c27ed` reads unsigned integer sources through `__cil_conv_r_u4`/
+  `_u8` and binary64 before the existing `conv.r4` rounding; native-width
+  sources keep a stated refusal. 474 Rust tests, fmt/clippy, release build pass.
+- Remaining largest first blockers are unchanged in shape: incompatible
+  value/receiver types, unsupported (pointer/multidim/typedref) signatures, cast
+  facts, external value allocation and constructed-member facts.
+
+## Previous verified state: binary64 and unordered float comparisons
 
 - `report/binary64/corpus-scan/baseline.json`: **670,843 Decompiled / 99,905
   Partial of 770,748**, fallback **12.995690%**. Zero incomplete images; raw gate
