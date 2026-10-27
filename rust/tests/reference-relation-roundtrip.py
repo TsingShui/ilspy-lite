@@ -77,6 +77,11 @@ def main():
                 # candidate list; the Rust test covers the copy form, and the
                 # field-reading variant stays a documented separate gap.
                 "ReadRefBox", "CopyRefBox",
+                # The write forms mutate the candidate instance and the static
+                # field; this driver compares instance state across two calls, so
+                # the mutation itself would be the difference. Their read forms
+                # below stay in the selection.
+                "WriteVolatile", "WriteVolatileStatic",
             }
             if match and not match[2].startswith(".") and match[2] not in excluded:
                 names[token] = (match[1], match[2])
@@ -125,7 +130,9 @@ def main():
                                   + "namespace RelationCases { public static class Recovered {\n"
                                   + float_helpers + double_helpers + helpers + "\n".join(bodies) + "\n} }\n")
             binary = source.with_suffix(".dll")
-            support.compile_cs(binary, [source], references=[fixture, library])
+            # Taking a ref to a volatile field warns CS0420 even though the
+            # emitted Volatile.Read/Write are what provide the ordering.
+            support.compile_cs(binary, [source], references=[fixture, library], nowarn="0420")
             return binary
         binary = compile_carrier("Recovered", methods)
         command = [support.DOTNET / "dotnet", harness, fixture, "--reference-relation-check", binary, library]

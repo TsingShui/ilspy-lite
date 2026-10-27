@@ -4475,6 +4475,40 @@ impl<'a> Image<'a> {
         }
     }
 
+    /// A field whose only modifiers are `modreq(IsVolatile)`. The CLI marks a
+    /// volatile field this way, and every access then carries `volatile.`.
+    pub(crate) fn volatile_only_modifiers(&self, modifiers: &[cildec::CustomMod]) -> Result<bool> {
+        let mut volatile = false;
+        for modifier in modifiers {
+            if !modifier.required {
+                return Ok(false);
+            }
+            let token = modifier.type_token;
+            let (namespace, name) = match token.table() {
+                Some(TableId::TypeRef) => {
+                    let row = self.md.tables().type_ref(token.rid())?;
+                    (
+                        self.md.strings().str(row.type_namespace)?,
+                        self.md.strings().str(row.type_name)?,
+                    )
+                }
+                Some(TableId::TypeDef) => {
+                    let row = self.md.tables().type_def(token.rid())?;
+                    (
+                        self.md.strings().str(row.type_namespace)?,
+                        self.md.strings().str(row.type_name)?,
+                    )
+                }
+                _ => return Ok(false),
+            };
+            if namespace != "System.Runtime.CompilerServices" || name != "IsVolatile" {
+                return Ok(false);
+            }
+            volatile = true;
+        }
+        Ok(volatile)
+    }
+
     fn field_from_parts(
         &self,
         token: u32,
@@ -4495,7 +4529,9 @@ impl<'a> Image<'a> {
             return Err("interface instance fields are invalid".into());
         }
         let signature = crate::signature_guard::field(signature)?;
-        if !signature.custom_mods.is_empty() {
+        if !signature.custom_mods.is_empty()
+            && !self.volatile_only_modifiers(&signature.custom_mods)?
+        {
             return Err("modified field needs IL fallback".into());
         }
         let ty = match arguments {
@@ -5016,7 +5052,7 @@ impl<'a> Image<'a> {
             .ok_or("missing field owner")?;
         let name = field_name(t.0, self.md.strings().str(row.name)?);
         let sig = crate::signature_guard::field(self.md.blobs().get(row.signature)?)?;
-        if !sig.custom_mods.is_empty() {
+        if !sig.custom_mods.is_empty() && !self.volatile_only_modifiers(&sig.custom_mods)? {
             return Err("modified field needs IL fallback".into());
         }
         if self.generic_declaring_context(Token(0x02000000 | owner.get()))? {

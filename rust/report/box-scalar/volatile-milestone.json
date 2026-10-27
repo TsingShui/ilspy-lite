@@ -1,0 +1,31 @@
+{
+  "group": "volatile field access",
+  "tests": 487,
+  "relation_driver": {
+    "comparisons": 669,
+    "selections": 67,
+    "excluded_writes": [
+      "WriteVolatile",
+      "WriteVolatileStatic"
+    ]
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      14830,
+      15067
+    ],
+    "OpenRA.Game": [
+      4092,
+      4129
+    ],
+    "FSharp.Core": [
+      7464,
+      7471
+    ],
+    "OpenRA.Mods.Common": [
+      15974,
+      15980
+    ]
+  },
+  "third_party_bodies_executed": false
+}

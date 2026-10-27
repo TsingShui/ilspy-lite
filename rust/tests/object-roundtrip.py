@@ -39,7 +39,7 @@ def without_boolean_helpers(text):
     return re.sub(r"\b__cil_bool_(?:load|store)\b", "", text)
 
 
-def compile_cs(output, sources, executable=False, references=(), unsafe=False):
+def compile_cs(output, sources, executable=False, references=(), unsafe=False, nowarn=None):
     sources = list(sources)
     if any("__cil_bool_load" in p.read_text() or "__cil_bool_store" in p.read_text() for p in sources):
         helper = ROOT / "tests/dotnet/BooleanStorage.cs"
@@ -54,7 +54,7 @@ def compile_cs(output, sources, executable=False, references=(), unsafe=False):
     response = output.with_suffix(".rsp")
     response.write_text("\n".join([
         "-nologo", "-target:exe" if executable else "-target:library", "-langversion:14",
-        "-warnaserror+", "-nowarn:0164,0219", "-deterministic+", *(["-unsafe+"] if unsafe else []), f'-out:"{output}"',
+        "-warnaserror+", "-nowarn:0164,0219" + ("," + nowarn if nowarn else ""), "-deterministic+", *(["-unsafe+"] if unsafe else []), f'-out:"{output}"',
         *[f'-r:"{p}"' for p in sorted(refs.glob("*.dll"))],
         *[f'-r:"{p}"' for p in references], *[f'"{p}"' for p in sources]]) + "\n")
     started = time.monotonic()

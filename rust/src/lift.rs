@@ -106,6 +106,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
         return Err("constructor receiver reassignment needs IL fallback".into());
     }
     let constrained_calls = crate::constrained::calls(&instructions)?;
+    let volatile_accesses = crate::volatile::accesses(&instructions)?;
     let boundaries = crate::eh::boundaries(body, &instructions)?;
     let blocks = crate::cfg::build(&instructions, body.code.len(), &boundaries)?;
     if !locals.is_empty() && !body.flags.init_locals() {
@@ -136,6 +137,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             let mut w = Writer {
                 image,
                 constrained_calls: &constrained_calls,
+                volatile_accesses: &volatile_accesses,
                 type_context: context,
                 stack,
                 lines: Vec::new(),
@@ -194,6 +196,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     let mut writer = Writer {
         image,
         constrained_calls: &constrained_calls,
+        volatile_accesses: &volatile_accesses,
         type_context: context,
         stack: Vec::new(),
         lines: Vec::new(),
@@ -446,6 +449,7 @@ struct Value {
 struct Writer<'i, 'a> {
     image: &'i Image<'a>,
     constrained_calls: &'i std::collections::BTreeMap<u32, cildec::Token>,
+    volatile_accesses: &'i std::collections::BTreeSet<u32>,
     type_context: crate::signature_types::TypeContext,
     stack: Vec<Value>,
     lines: Vec<String>,
@@ -609,7 +613,7 @@ impl Writer<'_, '_> {
         self.lines
             .push(format!("// IL_{:04X}: {}", i.offset, i.opcode.name()));
         match op {
-            "nop" | "constrained." => {}
+            "nop" | "constrained." | "volatile." => {}
             "ldnull" => self.stack.push(Value {
                 name: "null".into(),
                 ty: Ty::Null,
@@ -1994,6 +1998,13 @@ impl Writer<'_, '_> {
                     field.token,
                     crate::metadata::escape_line(&cildec::Names::new(&self.image.md).try_token(t)?)
                 ));
+                let volatile = self.volatile_accesses.contains(&i.offset);
+                if volatile && !volatile_supported(field.ty) {
+                    return Err(
+                        "volatile access needs a scalar or reference field with a Volatile overload"
+                            .into(),
+                    );
+                }
                 if let Some(v) = value {
                     if field.readonly
                         && (self.constructor_owner != Some(field.owner)
@@ -2002,10 +2013,24 @@ impl Writer<'_, '_> {
                         return Err("readonly field write needs IL fallback".into());
                     }
                     self.image.assignable(v.ty, field.ty.stack())?;
-                    self.lines.push(format!(
-                        "{target} = {};",
-                        field.ty.store(&v.name, self.image)?
-                    ));
+                    if volatile {
+                        self.lines.push(format!(
+                            "global::System.Threading.Volatile.Write(ref {target}, {});",
+                            field.ty.store(&v.name, self.image)?
+                        ));
+                    } else {
+                        self.lines.push(format!(
+                            "{target} = {};",
+                            field.ty.store(&v.name, self.image)?
+                        ));
+                    }
+                } else if volatile {
+                    self.lines
+                        .push("// Volatile field read: acquire semantics, no plain load.".into());
+                    self.push(
+                        field.ty.stack(),
+                        format!("global::System.Threading.Volatile.Read(ref {target})"),
+                    )?;
                 } else {
                     self.push(field.ty.stack(), field.ty.load(&target, self.image)?)?;
                 }
@@ -2016,8 +2041,36 @@ impl Writer<'_, '_> {
                 let ty = field.ty;
                 self.track_type(ty)?;
                 self.lines.push(format!("// field token 0x{:08X}", t.0));
-                if op == "ldsfld" {
+                let volatile = self.volatile_accesses.contains(&i.offset);
+                if volatile && !volatile_supported(ty) {
+                    return Err(
+                        "volatile access needs a scalar or reference field with a Volatile overload"
+                            .into(),
+                    );
+                }
+                if op == "ldsfld" && volatile {
+                    self.lines
+                        .push("// Volatile static read: acquire semantics, no plain load.".into());
+                    self.push(
+                        ty.stack(),
+                        format!(
+                            "global::System.Threading.Volatile.Read(ref {})",
+                            field.address()
+                        ),
+                    )?;
+                } else if op == "ldsfld" {
                     self.push(ty.stack(), field.load(self.image)?)?;
+                } else if volatile {
+                    if !field.writable_in(self.static_constructor) {
+                        return Err("readonly static field write needs IL fallback".into());
+                    }
+                    let v = self.pop()?;
+                    self.image.assignable(v.ty, ty.stack())?;
+                    self.lines.push(format!(
+                        "global::System.Threading.Volatile.Write(ref {}, {});",
+                        field.address(),
+                        ty.store(&v.name, self.image)?
+                    ));
                 } else {
                     // A `static readonly` field is assignable only by the static
                     // constructor of its own declaring type; every other write would
@@ -2306,6 +2359,28 @@ fn comparison(
     Ok(format!("{x} {symbol} {y}"))
 }
 // A struct receiver is a managed location of that exact value type.
+/// Types with a `System.Threading.Volatile` overload. Enums, chars and structs
+/// have no overload, so their volatile access keeps a stated refusal instead of a
+/// plain read/write that would drop the acquire/release ordering.
+fn volatile_supported(ty: Ty) -> bool {
+    matches!(
+        ty,
+        Ty::Bool
+            | Ty::I1
+            | Ty::U1
+            | Ty::I2
+            | Ty::U2
+            | Ty::I4
+            | Ty::U4
+            | Ty::I8
+            | Ty::U8
+            | Ty::Native
+            | Ty::UNative
+            | Ty::R4
+            | Ty::R8
+    ) || ty.kind() == StackKind::Ref
+}
+
 fn receiver_matches(actual: Ty, expected: Ty) -> bool {
     actual == expected
         || matches!((actual, expected), (Ty::ValueAddress(a), Ty::Value(b)) if a == b)

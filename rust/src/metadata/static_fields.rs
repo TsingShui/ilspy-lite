@@ -59,7 +59,9 @@ fn field_type<'a>(
     arguments: Option<&[cildec::Type<'a>]>,
 ) -> Result<Ty> {
     let signature = crate::signature_guard::field(bytes)?;
-    if !signature.custom_mods.is_empty() {
+    if !signature.custom_mods.is_empty()
+        && !image.volatile_only_modifiers(&signature.custom_mods)?
+    {
         return Err("modified field needs IL fallback".into());
     }
     let type_ = match arguments {

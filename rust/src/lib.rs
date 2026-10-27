@@ -16,6 +16,7 @@ mod readable;
 mod signature_guard;
 mod signature_types;
 mod symbol_names;
+mod volatile;
 
 pub use dependencies::{
     AssemblyIdentity, AssemblyKind, AssemblyReference, AssemblyResolution, DefinitionLocation,

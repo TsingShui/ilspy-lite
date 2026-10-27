@@ -52,6 +52,8 @@ namespace RelationCases
 {
     public interface IItem<T> { }
     public struct LocalBox { public int Seed; public T Echo<T>(T input) { Seed = 1; return input; } }
+    public sealed class VolatileHolder { public volatile int Value; public volatile object Reference = ""; }
+    public static class VolatileStore { public static volatile int Shared; }
     public interface ITransform<T> { T Apply(T value); }
     public sealed class UpperTransform : ITransform<string>
     {
@@ -122,6 +124,11 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static int ReadVolatile(VolatileHolder holder) => holder.Value;
+        public static int WriteVolatile(VolatileHolder holder, int value) { holder.Value = value; return value; }
+        public static bool VolatileReferenceNull(VolatileHolder holder) => holder.Reference == null;
+        public static int ReadVolatileStatic() => VolatileStore.Shared;
+        public static void WriteVolatileStatic(int value) => VolatileStore.Shared = value;
         public static int ReadRefBox(RelationLibrary.RefBox box) => box.Read();
         public static int CopyRefBox(RelationLibrary.RefBox box) { RelationLibrary.RefBox copy = box; return copy.Value; }
         public static int CallValueGeneric(RelationLibrary.SeededBox box, int value) => box.Echo(value);

@@ -214,6 +214,33 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn volatile_field_access_keeps_acquire_release_operations() {
+    for (bytes, _) in IMAGES {
+        for name in [
+            "ReadVolatile",
+            "WriteVolatile",
+            "VolatileReferenceNull",
+            "ReadVolatileStatic",
+            "WriteVolatileStatic",
+        ] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("System.Threading.Volatile."),
+                "{name}: {}",
+                result.text
+            );
+            assert!(result.text.contains("ref "), "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
 fn byref_like_values_are_copied_as_values_and_never_boxed() {
     for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
         let configuration = if index == 0 { "release" } else { "debug" };
