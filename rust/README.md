@@ -9,6 +9,19 @@ framework layouts when available. The decoder remains pinned `cildec 0.1.0`;
 `sha1 0.10.7` supplies ECMA-335 identity tokens (not authentication), and
 `serde_json 1.0.154` reads bounded local deps manifests. See [third-party notices](THIRD-PARTY-NOTICES.md).
 
+## Corpus coverage
+
+The fixed implementation corpus is the pinned ILSpy-tests scope (614 managed
+images, 319 with CIL bodies) plus the two pinned OpenRA assemblies: 770,748 method
+bodies. The latest complete scan recovers **728,029** of them and leaves **42,719**
+as stated IL fallbacks, i.e. **5.5413%** against the 5% weighted gate (38,537
+allowed). Per-assembly counts, batch scans, the remaining first blockers and the
+closure audit are in
+[the fallback-corpus checkpoint](report/fallback-corpus/CHECKPOINT.md); owned
+behavioral gates are in
+[the behavior matrix](report/fallback-corpus/BEHAVIOR_GATES.md). Static coverage and
+executed behavior are reported separately, and no third-party body is executed.
+
 ## Build and use
 
 ```sh
