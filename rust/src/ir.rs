@@ -168,6 +168,31 @@ impl Ty {
         context: crate::signature_types::TypeContext,
     ) -> Result<Self> {
         if let cildec::Type::ValueType(token) = t {
+            // A TypeRef to an admitted core scalar is the same runtime type as the
+            // inline primitive encoding; it must keep that stack model instead of
+            // being treated as an opaque struct.
+            if let Ok(name) = image.core_type_name(*token) {
+                let scalar = match name {
+                    "Boolean" => Some(Self::Bool),
+                    "Char" => Some(Self::Char),
+                    "SByte" => Some(Self::I1),
+                    "Byte" => Some(Self::U1),
+                    "Int16" => Some(Self::I2),
+                    "UInt16" => Some(Self::U2),
+                    "Int32" => Some(Self::I4),
+                    "UInt32" => Some(Self::U4),
+                    "Int64" => Some(Self::I8),
+                    "UInt64" => Some(Self::U8),
+                    "IntPtr" => Some(Self::Native),
+                    "UIntPtr" => Some(Self::UNative),
+                    "Single" => Some(Self::R4),
+                    "Double" => Some(Self::R8),
+                    _ => None,
+                };
+                if let Some(scalar) = scalar {
+                    return Ok(scalar);
+                }
+            }
             return match image.enum_type(*token) {
                 Ok(ty) => Ok(Self::Enum(ty)),
                 Err(error) => match image.struct_type(*token)? {

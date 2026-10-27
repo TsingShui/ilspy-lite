@@ -35,7 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: reference arguments and provenance
+## Current verified state: open-self allocation
+
+- `report/openself-batch/corpus-scan/baseline.json`: **714,714 Decompiled / 56,034
+  Partial of 770,748**, fallback **7.269927%**. Zero incomplete images; raw gate
+  5,603,400 > 3,853,740, so <=5% is unmet (17,497 bodies to go).
+- Against `report/refarg-batch3/corpus-scan/baseline.json`: **+1,524 in 89 images,
+  zero regressions**. OpenRA.Game +19, OpenRA.Mods.Common +13.
+- Groups: scoped external constructor signatures, open-self allocation from inside
+  the generic type, and core scalar TypeRefs keeping the scalar stack model.
+- Remaining largest first blockers are re-derived from this scan for the next
+  group.
+
+## Previous verified state: reference arguments and provenance
 
 - `report/refarg-batch3/corpus-scan/baseline.json`: **713,190 Decompiled / 57,558
   Partial of 770,748**, fallback **7.467812%**. Zero incomplete images; raw gate

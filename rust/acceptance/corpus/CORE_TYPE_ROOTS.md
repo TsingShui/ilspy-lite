@@ -121,3 +121,17 @@ counted as capability gains.
 
 Structural TypeId/generic signatures, exact value/enum transfers and managed
 addresses remain in progress under the approved design. The goal is not complete.
+
+## Core scalar TypeRefs keep the scalar stack model
+
+A signature may name a core scalar through a `TypeRef` (`valuetype [mscorlib]System.Double`)
+instead of the inline primitive encoding. Both denote the same runtime type, so
+`Ty::from_sig_scoped` now maps an admitted core identity to the matching scalar
+(`Boolean`..`Double`, `IntPtr`/`UIntPtr` to the native categories) instead of
+sending it through the struct path, which refused it as a "core scalar/special
+value signature". `TypedReference` and `Void` keep their refusals; the mapping needs
+`Image::core_type_name`, which is now crate-visible.
+
+Evidence: `FSharp.Core` 8,668 -> 8,669 with the other images unchanged; 488 tests,
+fmt and clippy pass. The bucket is dominated by other causes, so this is a
+correctness fix rather than a large gain.

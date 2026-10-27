@@ -3252,7 +3252,7 @@ impl<'a> Image<'a> {
         })
     }
 
-    fn core_type_name(&self, token: Token) -> Result<&'a str> {
+    pub(crate) fn core_type_name(&self, token: Token) -> Result<&'a str> {
         let (namespace, name) = self.core_type_parts(token)?;
         if namespace != "System" {
             return Err("unresolved core type identity".into());

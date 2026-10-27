@@ -1,0 +1,32 @@
+{
+  "groups": [
+    "66c2aa73a scoped external constructor signatures",
+    "94b6360a4 open self allocation",
+    "core scalar TypeRef mapping"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 56034,
+      "Decompiled": 714714
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 71,
+    "unrecovered": 56034,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 1524,
+  "gained_images": 89,
+  "regressions": 0,
+  "fallback_percent": 7.270080493235143,
+  "acceptance_integer": {
+    "left": 5603400,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 488,
+  "third_party_bodies_executed": false
+}
