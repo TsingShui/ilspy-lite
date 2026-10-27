@@ -1,0 +1,61 @@
+{
+  "revision": "91194c11e",
+  "reference_policy": "ilspy",
+  "DOTNET_ROOT": "/Users/bytedance/.dotnet10",
+  "scan": "report/exception-ancestry/batch-scan/baseline.json",
+  "delta": "report/exception-ancestry/batch-delta.json",
+  "baseline_scan": "report/constructed-foreign-batch/corpus-scan-final/baseline.json",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 113962,
+      "Decompiled": 656786
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 59,
+    "unrecovered": 113962,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 16561,
+  "gained_images": 201,
+  "regressions": 0,
+  "unrecovered": 113962,
+  "bodies": 770748,
+  "fallback_percent": 14.785896298141546,
+  "acceptance_integer": {
+    "left": 11396200,
+    "right": 3853740,
+    "passes": false
+  },
+  "openra": [
+    {
+      "id": 1041,
+      "assembly": "OpenRA.Game",
+      "counts": {
+        "Decompiled": 3931,
+        "Partial": 836
+      },
+      "bodies": 4767
+    },
+    {
+      "id": 1042,
+      "assembly": "OpenRA.Mods.Common",
+      "counts": {
+        "Decompiled": 15261,
+        "Partial": 3146
+      },
+      "bodies": 18407
+    }
+  ],
+  "groups_since_baseline": [
+    "exception ancestry (e5c3b7dc0)",
+    "acceptance gate tooling (b2e710829)",
+    "definite assignment (74bf7ae12)",
+    "instantiated foreign instance calls (91194c11e)"
+  ],
+  "self_review": "report/exception-ancestry/batch-review/review-source.md",
+  "third_party_bodies_executed": false
+}

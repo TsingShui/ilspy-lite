@@ -6,28 +6,35 @@
 
 Goal: mvouhw7y-679jgb
 
-## Work after the last complete scan
+## Current verified state: third batch after the constructed-foreign checkpoint
 
-- Commit `e5c3b7dc0` follows local core and selected foreign class-base ancestry
-  for exception identities. Owned validation is green (466 tests; seven foreign
-  comparisons and two mutants per config); six of eight audited candidates
-  decompile in targeted runs. No new aggregate coverage is claimed until the
-  next batched scan. See `acceptance/corpus/EXCEPTION_ANCESTRY.md`.
-- Non-initialized local slots now use a class of ILSpy-style definite-assignment
-  proofs for methods without exception handlers. Branch, loop and acquired-address
-  owned behavior passes; potentially uninitialized reads/addresses and EH remain
-  Partial. Six of eight audited candidates decompile in targeted runs; full
-  corpus impact is not yet measured.
-- The acceptance tooling now evaluates the user-approved weighted <=5% integer
-  gate; its historical per-image <=1% results remain informational only. The
-  three new public-command checks were red before the fix and the 21-test
-  corpus-tool suite passes. Applying the new gate to the last complete scan
-  confirms it remains unmet; this is an arithmetic correction, not a recovery gain.
-- Two post-checkpoint capability groups are complete. Continue one more focused
-  capability group before the next full fixed-corpus scan and bounded
-  gained-method self-review, with a local commit per group.
+- `report/exception-ancestry/batch-scan/baseline.json`: **656,786 Decompiled /
+  113,962 Partial of 770,748**, fallback **14.7858959897%**. Fixed scope: 614
+  managed images, 319 with bodies, zero incomplete. Raw gate
+  11,396,200 > 3,853,740, so <=5% is still unmet.
+- Against `report/constructed-foreign-batch/corpus-scan-final/baseline.json`:
+  **+16,561 in 201 images, zero regressions**. OpenRA.Game **3,931/836 (+2)**;
+  OpenRA.Mods.Common **15,261/3,146 (+838)**.
+- The four commits in this batch: exception ancestry from selected definitions
+  (`e5c3b7dc0`), weighted acceptance-gate tooling (`b2e710829`), definite
+  assignment for non-initialized locals (`74bf7ae12`), and nonvirtual
+  instantiated calls on referenced classes (`91194c11e`). The gate-tooling commit
+  changes no method status.
+- Eight gained methods across five images were self-reviewed against readable
+  output, ILSpy and IL with no changed-semantic suspect:
+  `report/exception-ancestry/batch-review/`. Bounded sample only, not
+  independent verification.
+- 468 Rust tests, fmt/clippy, release build and the relevant owned drivers pass
+  (relation behavior 178 comparisons / 41 selections / 8 mutants per config,
+  both reference modes; exception 51 comparisons / 6 mutants; foreign exception
+  7 comparisons / 2 mutants). No third-party body was executed.
+- Leading first blockers after the batch: incompatible value/receiver types
+  12,366; unsupported signature type 11,038; cast facts 7,691; external value
+  allocation 5,716; constructor reference-class owner 5,260; byref-like struct
+  copies 3,784; integer operation on a non-integer 3,748; external array element
+  facts 3,593; constructed-member facts 3,536; reference comparison 3,394.
 
-## Current verified state: constructed foreign allocations and value arrays
+## Previous verified state: constructed foreign allocations and value arrays
 
 - `report/constructed-foreign-batch/corpus-scan-final/baseline.json`:
   **640,225 Decompiled / 130,523 Partial of 770,748**; **16.934588218198424%**

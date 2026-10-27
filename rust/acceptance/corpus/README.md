@@ -8,8 +8,9 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Latest complete fixed-scope scan: **640,225 / 770,748** implementation bodies
-recovered; **16.93459% fallback**, so the aggregate <=5% goal is unmet. The
+Latest complete fixed-scope scan: **656,786 / 770,748** implementation bodies
+recovered; **14.78590% fallback** (14.7858959897%), so the aggregate <=5% goal
+is unmet. The
 earlier explicit reference-selection change recorded two coverage losses and is
 not a like-for-like instruction gain; see
 [reference resolution evidence](ILSPY_REFERENCE_RESOLUTION.md). Later groups
