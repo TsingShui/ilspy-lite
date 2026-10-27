@@ -35,7 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: address writes and Silverlight core identity
+## Current verified state: boxed-value type tests
+
+- `report/boxed-test-batch/corpus-scan/baseline.json`: **722,962 Decompiled / 47,786
+  Partial of 770,748**, fallback **6.199946%**. Zero incomplete images; raw gate
+  4,778,600 > 3,853,740, so <=5% is unmet (9,249 bodies to go).
+- Against `report/handle-batch/corpus-scan/baseline.json`: **+1,118 in 94 images,
+  zero regressions**.
+- `638cf742e` emits boxed-value `isinst`/`castclass` as exact C# type tests; the
+  runtime handle lookup (`5e09eae6e`) and address-write assignment (`21cb785f4`)
+  landed just before.
+- Remaining first blockers from this scan drive the next group.
+
+## Previous verified state: address writes and Silverlight core identity
 
 - `report/silverlight-da-batch/corpus-scan/baseline.json`: **720,579 Decompiled /
   50,169 Partial of 770,748**, fallback **6.505257%**. Zero incomplete images; raw

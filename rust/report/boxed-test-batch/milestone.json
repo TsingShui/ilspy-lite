@@ -1,0 +1,30 @@
+{
+  "groups": [
+    "638cf742e boxed-value type tests"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 47786,
+      "Decompiled": 722962
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 84,
+    "unrecovered": 47786,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 1118,
+  "gained_images": 94,
+  "regressions": 0,
+  "fallback_percent": 6.199951216221126,
+  "acceptance_integer": {
+    "left": 4778600,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 488,
+  "third_party_bodies_executed": false
+}
