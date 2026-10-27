@@ -219,6 +219,7 @@ generated output remain ignored and retain their original license boundaries.
 - `OPEN_SELF_ALLOCATION.md`: allocating the enclosing generic type from inside it.
 - `EXTERNAL_FLOAT_CALLS.md`: ordinary external calls with float operands and the
   exact `Math.Abs(float32)` specialization.
+- `CORE_NAMED_BOX_VALUES.md`: boxing/unboxing core-named reference and value types.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

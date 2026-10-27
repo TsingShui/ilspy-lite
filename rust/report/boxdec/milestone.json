@@ -1,0 +1,23 @@
+{
+  "group": "core-named box values",
+  "tests": 488,
+  "targeted": {
+    "FSharp.Core": [
+      8717,
+      8758
+    ],
+    "OpenRA.Game": [
+      4280,
+      4282
+    ],
+    "System.Private.CoreLib": [
+      15132,
+      15132
+    ],
+    "OpenRA.Mods.Common": [
+      16903,
+      16903
+    ]
+  },
+  "third_party_bodies_executed": false
+}

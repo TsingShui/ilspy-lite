@@ -3221,35 +3221,41 @@ impl<'a> Image<'a> {
             }
             return Err("box/unbox TypeSpec needs an admitted stored or generic identity".into());
         }
-        if token.table() != Some(TableId::TypeRef) || self.core_type_name(token).is_err() {
-            if let Ok(reference) = self.cast_class(token, context)
-                && reference.kind() == StackKind::Ref
-            {
-                // `box` on a reference type preserves the reference and allocates
-                // nothing, so the exact castable type is the operand's type.
-                return Ok(reference);
-            }
-            return match Ty::from_sig_scoped(&cildec::Type::ValueType(token), self, context) {
-                Ok(ty @ (Ty::Enum(_) | Ty::Value(_))) => Ok(ty),
-                _ => Err("box/unbox needs an admitted core scalar or local enum".into()),
+        if token.table() == Some(TableId::TypeRef)
+            && let Ok(name) = self.core_type_name(token)
+        {
+            let scalar = match name {
+                "Boolean" => Some(Ty::Bool),
+                "Char" => Some(Ty::Char),
+                "SByte" => Some(Ty::I1),
+                "Byte" => Some(Ty::U1),
+                "Int16" => Some(Ty::I2),
+                "UInt16" => Some(Ty::U2),
+                "Int32" => Some(Ty::I4),
+                "UInt32" => Some(Ty::U4),
+                "Int64" => Some(Ty::I8),
+                "UInt64" => Some(Ty::U8),
+                "Single" => Some(Ty::R4),
+                "Double" => Some(Ty::R8),
+                _ => None,
             };
+            if let Some(scalar) = scalar {
+                return Ok(scalar);
+            }
+            // A core-named non-scalar (`System.Decimal`) is an ordinary stored
+            // value type and continues through the value/reference paths below.
         }
-        let name = self.core_type_name(token)?;
-        Ok(match name {
-            "Boolean" => Ty::Bool,
-            "Char" => Ty::Char,
-            "SByte" => Ty::I1,
-            "Byte" => Ty::U1,
-            "Int16" => Ty::I2,
-            "UInt16" => Ty::U2,
-            "Int32" => Ty::I4,
-            "UInt32" => Ty::U4,
-            "Int64" => Ty::I8,
-            "UInt64" => Ty::U8,
-            "Single" => Ty::R4,
-            "Double" => Ty::R8,
-            _ => return Err("box/unbox needs an admitted core scalar or local enum".into()),
-        })
+        if let Ok(reference) = self.cast_class(token, context)
+            && reference.kind() == StackKind::Ref
+        {
+            // `box` on a reference type preserves the reference and allocates
+            // nothing, so the exact castable type is the operand's type.
+            return Ok(reference);
+        }
+        match Ty::from_sig_scoped(&cildec::Type::ValueType(token), self, context) {
+            Ok(ty @ (Ty::Enum(_) | Ty::Value(_))) => Ok(ty),
+            _ => Err("box/unbox needs an admitted core scalar or local enum".into()),
+        }
     }
 
     pub(crate) fn core_type_name(&self, token: Token) -> Result<&'a str> {
