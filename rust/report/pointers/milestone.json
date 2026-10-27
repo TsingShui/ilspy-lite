@@ -1,0 +1,19 @@
+{
+  "group": "unmanaged pointers",
+  "tests": 481,
+  "behavior": {
+    "comparisons": 9,
+    "configurations": 2,
+    "mutants_rejected": [
+      "DroppedWrite",
+      "DoubleScaling"
+    ]
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      13699,
+      14122
+    ]
+  },
+  "third_party_bodies_executed": false
+}

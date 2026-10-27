@@ -39,8 +39,8 @@ fn native_values_keep_target_width_at_storage_and_call_boundaries() {
             );
         }
         let result = decompile_type(bytes, "NativeCases.Cells").unwrap();
-        assert_eq!(result.summary.decompiled, 8);
-        assert_eq!(result.summary.partial, 1); // Native arithmetic.
+        assert_eq!(result.summary.decompiled, 9);
+        assert_eq!(result.summary.partial, 0);
         assert_eq!(result.summary.failed, 0);
         assert_eq!(result.summary.metadata_failed, 0);
         assert!(result.text.contains("native int @Signed"));
@@ -49,7 +49,7 @@ fn native_values_keep_target_width_at_storage_and_call_boundaries() {
 }
 
 #[test]
-fn native_arithmetic_and_implicit_width_changes_remain_fallback() {
+fn native_arithmetic_is_recovered_and_width_changes_stay_fallback() {
     let bytes = IMAGES[0];
     let method = list_methods(bytes)
         .unwrap()
@@ -66,19 +66,30 @@ fn native_arithmetic_and_implicit_width_changes_remain_fallback() {
     let body = cildec::MethodBody::from_image(&pe, &row).unwrap().unwrap();
     assert_eq!(body.kind, cildec::HeaderKind::Tiny);
     let start = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
-    for code in [
-        &[0x02, 0x25, 0x58, 0x2a][..],       // native add
-        &[0x02, 0x65, 0x2a][..],             // native neg
-        &[0x02, 0x25, 0xfe, 0x01, 0x2a][..], // native ceq
-        &[0x16, 0x2a][..],                   // I4 returned as native
-        &[0x14, 0x2a][..],                   // object returned as native
+    // Native arithmetic and comparison are recovered with the native type kept
+    // explicit; an implicit conversion into a native return slot still needs an
+    // instruction the value does not carry, so it stays Partial.
+    for (code, decompiled) in [
+        (&[0x02, 0x25, 0x58, 0x2a][..], true), // native add
+        (&[0x02, 0x65, 0x2a][..], true),       // native neg
+        // ceq yields an int32, which cannot be returned as native without a
+        // conversion the patched body omits; the comparison itself is covered by
+        // the owned nint equality cases.
+        (&[0x02, 0x25, 0xfe, 0x01, 0x2a][..], false), // native ceq into native return
+        (&[0x16, 0x2a][..], false),                   // I4 returned as native
+        (&[0x14, 0x2a][..], false),                   // object returned as native
     ] {
         assert!(code.len() <= body.code.len());
         let mut patched = bytes.to_vec();
         patched[start - 1] = ((code.len() as u8) << 2) | 2;
         patched[start..start + code.len()].copy_from_slice(code);
         let result = decompile(&patched, method.token).unwrap();
-        assert_eq!(result.status, Status::Partial, "{}", result.text);
-        assert!(result.text.contains("IL FALLBACK"));
+        if decompiled {
+            assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+            assert!(result.text.contains("nint"), "{}", result.text);
+        } else {
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+            assert!(result.text.contains("IL FALLBACK"));
+        }
     }
 }

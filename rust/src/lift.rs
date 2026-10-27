@@ -679,6 +679,10 @@ impl Writer<'_, '_> {
             }
             "conv.i" => {
                 let value = self.pop()?;
+                if value.ty.kind() == StackKind::Pointer {
+                    self.push(Ty::Native, format!("unchecked((nint)({}))", value.name))?;
+                    return Ok(());
+                }
                 if !matches!(
                     value.ty.kind(),
                     StackKind::I4 | StackKind::I8 | StackKind::Native
@@ -693,6 +697,10 @@ impl Writer<'_, '_> {
             }
             "conv.u4" => {
                 let value = self.pop()?;
+                if value.ty.kind() == StackKind::Pointer {
+                    self.push(Ty::U4, format!("unchecked((uint)(nuint)({}))", value.name))?;
+                    return Ok(());
+                }
                 if !matches!(
                     value.ty.kind(),
                     StackKind::I4 | StackKind::I8 | StackKind::Native
@@ -704,6 +712,10 @@ impl Writer<'_, '_> {
             }
             "conv.u" => {
                 let value = self.pop()?;
+                if value.ty.kind() == StackKind::Pointer {
+                    self.push(Ty::UNative, format!("unchecked((nuint)({}))", value.name))?;
+                    return Ok(());
+                }
                 if !matches!(
                     value.ty.kind(),
                     StackKind::I4 | StackKind::I8 | StackKind::Native
@@ -716,6 +728,18 @@ impl Writer<'_, '_> {
             "conv.i4" | "conv.i8" | "conv.u8" => {
                 let value = self.pop()?;
                 let kind = value.ty.kind();
+                if kind == StackKind::Pointer {
+                    // A pointer converts to an integer through its native width;
+                    // the truncation of conv.i4 is kept explicitly.
+                    let expression = match op {
+                        "conv.i4" => format!("unchecked((int)(nint)({}))", value.name),
+                        "conv.u8" => format!("unchecked((long)(ulong)(nuint)({}))", value.name),
+                        _ => format!("unchecked((long)(nint)({}))", value.name),
+                    };
+                    let target = if op == "conv.i4" { Ty::I4 } else { Ty::I8 };
+                    self.push(target, expression)?;
+                    return Ok(());
+                }
                 if !matches!(kind, StackKind::I4 | StackKind::I8 | StackKind::Native) {
                     return Err(format!("{op} source category needs IL fallback").into());
                 }
@@ -1201,7 +1225,17 @@ impl Writer<'_, '_> {
             "ldind.i1" | "ldind.u1" | "ldind.i2" | "ldind.u2" | "ldind.i4" | "ldind.u4"
             | "ldind.i8" | "ldind.u8" | "ldind.i" | "ldind.r4" | "ldind.ref" => {
                 let address = self.pop()?;
-                let element = self.image.address_element(address.ty)?;
+                let pointer = matches!(address.ty.kind(), StackKind::Pointer);
+                let element = if pointer {
+                    self.image.pointee(address.ty)?
+                } else {
+                    self.image.address_element(address.ty)?
+                };
+                let access = if pointer {
+                    format!("(*{})", address.name)
+                } else {
+                    address.name.clone()
+                };
                 let storage = match element {
                     Ty::Enum(e) => e.storage.ty(),
                     other => other,
@@ -1224,16 +1258,12 @@ impl Writer<'_, '_> {
                     }
                 };
                 let expression = if element == Ty::Bool {
-                    element.load(&address.name, self.image)?
+                    element.load(&access, self.image)?
                 } else if op == "ldind.ref" || requested == Ty::R4 {
-                    requested.load(&address.name, self.image)?
+                    requested.load(&access, self.image)?
                 } else {
                     requested.load(
-                        &format!(
-                            "unchecked(({})({}))",
-                            requested.cs(self.image)?,
-                            address.name
-                        ),
+                        &format!("unchecked(({})({}))", requested.cs(self.image)?, access),
                         self.image,
                     )?
                 };
@@ -1243,7 +1273,17 @@ impl Writer<'_, '_> {
             | "stind.r8" | "stind.ref" => {
                 let value = self.pop()?;
                 let address = self.pop()?;
-                let element = self.image.address_element(address.ty)?;
+                let pointer = matches!(address.ty.kind(), StackKind::Pointer);
+                let element = if pointer {
+                    self.image.pointee(address.ty)?
+                } else {
+                    self.image.address_element(address.ty)?
+                };
+                let access = if pointer {
+                    format!("(*{})", address.name)
+                } else {
+                    address.name.clone()
+                };
                 let storage = match element {
                     Ty::Enum(e) => e.storage.ty(),
                     other => other,
@@ -1265,7 +1305,7 @@ impl Writer<'_, '_> {
                 self.image.assignable(value.ty, element.stack())?;
                 self.lines.push(format!(
                     "{} = {};",
-                    address.name,
+                    access,
                     element.store(&value.name, self.image)?
                 ));
             }
@@ -1424,6 +1464,75 @@ impl Writer<'_, '_> {
             | "mul.ovf" | "mul.ovf.un" | "and" | "or" | "xor" => {
                 let b = self.pop()?;
                 let a = self.pop()?;
+                let pointer = |ty: Ty| matches!(ty.kind(), StackKind::Pointer);
+                if matches!(op, "add" | "sub") && (pointer(a.ty) || pointer(b.ty)) {
+                    // C# pointer arithmetic: pointer +/- integer scales by the
+                    // pointee, pointer - pointer yields the element delta. Both
+                    // are exactly the CLI operations on unmanaged pointers.
+                    let offset = |ty: Ty| {
+                        if matches!(ty, Ty::I4 | Ty::Native) {
+                            Ok(())
+                        } else {
+                            Err("pointer offset needs a 32-bit or native integer".to_string())
+                        }
+                    };
+                    if op == "add" {
+                        if pointer(a.ty) && pointer(b.ty) {
+                            return Err("pointer addition needs one integer offset".into());
+                        }
+                        // IL adds a byte offset; C# `T* + n` scales by the
+                        // pointee, so the addition happens on byte pointers and
+                        // the result is cast back to the declared pointer type.
+                        let pointee =
+                            self.image
+                                .pointee(if pointer(a.ty) { a.ty } else { b.ty })?;
+                        let pointer_type = self.image.pointer(pointee)?.cs(self.image)?;
+                        if pointer(a.ty) {
+                            offset(b.ty)?;
+                            self.push(
+                                a.ty,
+                                format!("(({pointer_type})((byte*)({}) + ({})))", a.name, b.name),
+                            )?;
+                        } else {
+                            offset(a.ty)?;
+                            self.push(
+                                b.ty,
+                                format!("(({pointer_type})((byte*)({}) + ({})))", b.name, a.name),
+                            )?;
+                        }
+                        return Ok(());
+                    }
+                    if !pointer(a.ty) {
+                        return Err("integer minus pointer needs IL fallback".into());
+                    }
+                    if pointer(b.ty) {
+                        if a.ty != b.ty {
+                            return Err("pointer difference needs identical pointee types".into());
+                        }
+                        // IL subtracts byte addresses; C# pointer subtraction
+                        // divides by the pointee size, so byte pointers keep the
+                        // exact count.
+                        self.push(
+                            Ty::Native,
+                            format!(
+                                "unchecked((nint)((byte*)({}) - (byte*)({})))",
+                                a.name, b.name
+                            ),
+                        )?;
+                    } else {
+                        offset(b.ty)?;
+                        let pointer_type = a.ty.cs(self.image)?;
+                        self.push(
+                            a.ty,
+                            format!("(({pointer_type})((byte*)({}) - ({})))", a.name, b.name),
+                        )?;
+                    }
+                    return Ok(());
+                }
+                // The CLI widens a narrower integer operand to the wider one and
+                // computes in that width; C# has no implicit mixed-width arithmetic
+                // for these types, so the widening is written out explicitly.
+                let (a, b) = widen_integers(self.image, a, b)?;
                 expect(a.ty, b.ty)?;
                 let symbol = match op.split('.').next().unwrap_or("") {
                     "add" => "+",
@@ -1477,16 +1586,17 @@ impl Writer<'_, '_> {
                     self.push(Ty::R8, format!("__cil_div_F8({}, {})", a.name, b.name))?;
                     return Ok(());
                 }
+                let (a, b) = widen_integers(self.image, a, b)?;
                 expect(a.ty, b.ty)?;
                 let symbol = if op.starts_with("div") { "/" } else { "%" };
                 let (x, y) = if op.ends_with(".un") {
                     let ty = if a.ty == Ty::I8 {
-            "ulong"
-        } else if matches!(a.ty, Ty::Native | Ty::UNative) {
-            "nuint"
-        } else {
-            "uint"
-        };
+                        "ulong"
+                    } else if matches!(a.ty, Ty::Native | Ty::UNative) {
+                        "nuint"
+                    } else {
+                        "uint"
+                    };
                     (
                         format!("unchecked(({ty}){})", a.name),
                         format!("unchecked(({ty}){})", b.name),
@@ -1532,7 +1642,7 @@ impl Writer<'_, '_> {
             "ceq" | "cgt" | "cgt.un" | "clt" | "clt.un" => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                let cmp = comparison(op, &a, &b)?;
+                let cmp = comparison(op, &a, &b, self.image)?;
                 self.push(Ty::I4, format!("({cmp} ? 1 : 0)"))?;
             }
             "br" => {}
@@ -1561,7 +1671,7 @@ impl Writer<'_, '_> {
             | "blt.un" => {
                 let b = self.pop()?;
                 let a = self.pop()?;
-                self.lines.push(comparison(op, &a, &b)?);
+                self.lines.push(comparison(op, &a, &b, self.image)?);
             }
             "switch" => {
                 let a = self.pop()?;
@@ -2079,9 +2189,49 @@ impl Writer<'_, '_> {
         Ok(())
     }
 }
-fn comparison(op: &str, a: &Value, b: &Value) -> Result<String> {
+fn comparison(
+    op: &str,
+    a: &Value,
+    b: &Value,
+    image: &crate::metadata::Image<'_>,
+) -> Result<String> {
     // Reference equality is identity comparison. It never dereferences, never
     // calls an overloaded operator and never runs a user-defined equality body.
+    let pointer_like = |ty: Ty| matches!(ty.kind(), StackKind::Pointer);
+    // A pointer compared with the null constant is a null-pointer test in C#.
+    // A pointer compared with an integer is the null-pointer-constant form; the
+    // cast is bit-preserving and the equality is the same identity test.
+    if matches!(op, "ceq" | "bne" | "beq") {
+        let integer_like =
+            |ty: Ty| matches!(ty.kind(), StackKind::I4 | StackKind::I8 | StackKind::Native);
+        if pointer_like(a.ty) && integer_like(b.ty) {
+            let target = a.ty.cs(image)?;
+            let comparison = format!(
+                "({} {symbol} ({target})({}))",
+                a.name,
+                b.name,
+                symbol = if op == "ceq" { "==" } else { "!=" }
+            );
+            return Ok(comparison);
+        }
+        if pointer_like(b.ty) && integer_like(a.ty) {
+            let target = b.ty.cs(image)?;
+            let comparison = format!(
+                "(({target})({}) {} {})",
+                a.name,
+                if op == "ceq" { "==" } else { "!=" },
+                b.name
+            );
+            return Ok(comparison);
+        }
+    }
+    if b.ty == Ty::Null && pointer_like(a.ty) && matches!(op, "ceq" | "cgt.un" | "beq") {
+        return Ok(if op == "ceq" {
+            format!("({} == null)", a.name)
+        } else {
+            format!("({} != null)", a.name)
+        });
+    }
     let reference_like = |ty: Ty| ty == Ty::Null || ty.kind() == StackKind::Ref;
     if reference_like(a.ty) && reference_like(b.ty) {
         let base = op.split('.').next().unwrap_or("");
@@ -2225,16 +2375,72 @@ fn array_element(ty: Ty) -> Result<Ty> {
 fn integer(ty: Ty) -> Result<()> {
     // Native int and native uint share the integer stack category; the CLI
     // performs the same wrapping arithmetic on them.
-    if matches!(
-        ty.kind(),
-        StackKind::I4 | StackKind::I8 | StackKind::Native
-    ) {
+    if matches!(ty.kind(), StackKind::I4 | StackKind::I8 | StackKind::Native) {
         Ok(())
     } else {
         Err("integer operation on non-integer value".into())
     }
 }
+/// Widen a narrower integer operand to the wider one, preserving its own sign
+/// rule (unsigned storage zero-extends). Equal or non-integer operands are
+/// returned unchanged so the caller's existing checks still decide.
+fn widen_integers(
+    image: &crate::metadata::Image<'_>,
+    a: Value,
+    b: Value,
+) -> Result<(Value, Value)> {
+    let rank = |ty: Ty| match ty.kind() {
+        StackKind::I4 => Some(1),
+        StackKind::I8 => Some(2),
+        StackKind::Native => Some(2),
+        _ => None,
+    };
+    let (Some(left), Some(right)) = (rank(a.ty), rank(b.ty)) else {
+        return Ok((a, b));
+    };
+    if a.ty.kind() == b.ty.kind() {
+        return Ok((a, b));
+    }
+    if left == right {
+        // int64 and native int are the same width; mixing their spellings has no
+        // single C# result type, so keep the refusal explicit.
+        return Err("mixed int64/native integer arithmetic needs IL fallback".into());
+    }
+    let (narrow, wide) = if left < right {
+        (a.clone(), b)
+    } else {
+        (b.clone(), a)
+    };
+    let target = wide.ty.cs(image)?;
+    let converted = if matches!(narrow.ty, Ty::U4 | Ty::U8 | Ty::UNative) {
+        format!(
+            "unchecked(({target})({}){})",
+            narrow.ty.cs(image)?,
+            narrow.name
+        )
+    } else {
+        format!("unchecked(({target})({}))", narrow.name)
+    };
+    let widened = Value {
+        name: converted,
+        ty: wide.ty.stack(),
+    };
+    Ok(if left < right {
+        (widened, wide)
+    } else {
+        (wide, widened)
+    })
+}
+
 fn expect(actual: Ty, expected: Ty) -> Result<()> {
+    if matches!(actual.kind(), StackKind::Pointer) || matches!(expected.kind(), StackKind::Pointer)
+    {
+        return if actual == expected {
+            Ok(())
+        } else {
+            Err("pointer operation needs identical pointee types".into())
+        };
+    }
     // Float operands share one stack category; equality is exact identity, so
     // binary32 and binary64 never mix without an explicit conversion.
     if matches!(actual.kind(), StackKind::Float) || matches!(expected.kind(), StackKind::Float) {

@@ -214,6 +214,37 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn unmanaged_pointers_keep_their_pointee_and_operation_forms() {
+    for (bytes, _) in IMAGES {
+        for (name, needle) in [
+            ("ReadPointer", "*pointer"),
+            ("ReadWrite", "*pointer"),
+            ("SamePointer", "first == second"),
+            ("NullPointer", "== (int*)"),
+            ("OffsetValue", "+"),
+        ] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains(needle), "{name}: {}", result.text);
+            assert!(result.text.contains("int*"), "{name}: {}", result.text);
+        }
+        let difference = decompile_with_style(
+            bytes,
+            token(bytes, "RelationCases.Ops", "Difference"),
+            OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(difference.status, Status::Decompiled, "{}", difference.text);
+        assert!(difference.text.contains("(nint)"), "{}", difference.text);
+    }
+}
+
+#[test]
 fn reference_identity_comparison_needs_no_common_static_type() {
     for (bytes, library) in IMAGES {
         let mut context = DependencyContext::new(bytes.to_vec()).unwrap();

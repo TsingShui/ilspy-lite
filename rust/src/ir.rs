@@ -40,6 +40,8 @@ pub(crate) enum Ty {
     I4Address,
     U4Address,
     Null,
+    /// Unmanaged pointer; the pointee fixes its C# spelling and dereference width.
+    Pointer(crate::pointers::PointerId),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -118,6 +120,7 @@ pub(crate) enum StackKind {
     I4,
     I8,
     Native,
+    Pointer,
     Float,
     Ref,
     Address,
@@ -208,6 +211,13 @@ impl Ty {
             }
             return Ok(Self::StructuralRef(id));
         }
+        if let cildec::Type::Ptr(modifiers, inner) = t {
+            if !modifiers.is_empty() {
+                return Err("modified pointer signature needs IL fallback".into());
+            }
+            let pointee = Self::from_sig_scoped(inner, image, context)?;
+            return image.pointer(pointee);
+        }
         // A general array is an ordinary reference type; the element and rank stay
         // in the structural signature that serves as its identity.
         if matches!(t, cildec::Type::Array(..)) {
@@ -280,6 +290,9 @@ impl Ty {
             }
             Self::I4Array => "int[]",
             Self::U4Array => "uint[]",
+            Self::Pointer(_) => {
+                return Ok(format!("{}*", image.pointee(self)?.cs(image)?));
+            }
             Self::I4Address => "ref int",
             Self::U4Address => "ref uint",
             Self::I8Address => "ref long",
@@ -293,6 +306,7 @@ impl Ty {
             Self::Void => StackKind::Void,
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
+            Self::Pointer(_) => StackKind::Pointer,
             Self::R4 | Self::R8 | Self::F4 => StackKind::Float,
             Self::I4Address | Self::U4Address | Self::ManagedAddress(_) => StackKind::Address,
             Self::GenericValue(_) => StackKind::GenericValue,
@@ -331,6 +345,7 @@ impl Ty {
             | Self::Null => self,
             Self::I8 | Self::U8 => Self::I8,
             Self::Native | Self::UNative => Self::Native,
+            Self::Pointer(_) => self,
             Self::R4 | Self::F4 => Self::F4,
             Self::R8 => Self::R8,
             Self::Enum(t) => t.storage.ty().stack(),
@@ -352,6 +367,7 @@ impl Ty {
             | Self::Object
             | Self::StructuralRef(_)
             | Self::GenericValue(_)
+            | Self::Pointer(_)
             | Self::Value(_) => expression.into(),
             // Copying an acquired managed pointer keeps its original location.
             Self::ValueAddress(_) | Self::ManagedAddress(_) => expression.into(),

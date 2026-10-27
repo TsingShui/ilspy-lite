@@ -11,6 +11,7 @@ mod ir;
 mod lift;
 mod locations;
 mod metadata;
+mod pointers;
 mod readable;
 mod signature_guard;
 mod signature_types;

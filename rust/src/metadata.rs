@@ -133,6 +133,7 @@ pub(crate) struct Image<'a> {
     pub(crate) reference_queries: std::cell::RefCell<std::collections::BTreeSet<u32>>,
     pub(crate) reference_attempted: std::cell::RefCell<std::collections::BTreeSet<u32>>,
     location_types: std::cell::RefCell<crate::locations::LocationTypes>,
+    pointer_types: std::cell::RefCell<crate::pointers::PointerTypes>,
     struct_types: StructTypes,
     pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
     enum_types: std::cell::RefCell<
@@ -204,6 +205,7 @@ impl<'a> Image<'a> {
             reference_queries: std::cell::RefCell::new(std::collections::BTreeSet::new()),
             reference_attempted: std::cell::RefCell::new(std::collections::BTreeSet::new()),
             location_types: std::cell::RefCell::new(crate::locations::LocationTypes::new()?),
+            pointer_types: std::cell::RefCell::new(crate::pointers::PointerTypes::new()?),
             struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
             enum_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
@@ -2509,6 +2511,19 @@ impl<'a> Image<'a> {
             .cloned()
     }
 
+    /// Pointer to one pointee type; identical pointees share a descriptor.
+    pub(crate) fn pointer(&self, pointee: crate::ir::Ty) -> Result<crate::ir::Ty> {
+        let id = self.pointer_types.borrow_mut().intern(pointee)?;
+        Ok(crate::ir::Ty::Pointer(id))
+    }
+
+    pub(crate) fn pointee(&self, ty: crate::ir::Ty) -> Result<crate::ir::Ty> {
+        match ty {
+            crate::ir::Ty::Pointer(id) => self.pointer_types.borrow().pointee(id),
+            _ => Err("operation needs an unmanaged pointer".into()),
+        }
+    }
+
     /// Proved kind of one external array element, if its definition resolved.
     pub(crate) fn external_element_kind(
         &self,
@@ -4136,6 +4151,7 @@ impl<'a> Image<'a> {
                 && matches!(
                     expected,
                     Ty::String
+                        | Ty::Pointer(_)
                         | Ty::ExternalClass(_)
                         | Ty::StructuralRef(_)
                         | Ty::Class(_)

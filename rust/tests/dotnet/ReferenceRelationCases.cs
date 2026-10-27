@@ -112,6 +112,12 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static unsafe int ReadPointer(int* pointer) => *pointer;
+        public static unsafe int ReadWrite(int* pointer) { int value = *pointer; *pointer = value + 1; return value; }
+        public static unsafe bool SamePointer(int* first, int* second) => first == second;
+        public static unsafe bool NullPointer(int* pointer) => pointer == null;
+        public static unsafe int OffsetValue(int* pointer, int offset) => *(pointer + offset);
+        public static unsafe nint Difference(int* first, int* second) => (nint)(first - second);
         public static bool SameNative(nint first, nint second) => first == second;
         public static nint AddNative(nint first, nint second) => unchecked(first + second);
         public static bool SameReference(RelationLibrary.Base first, object second) => first == second;

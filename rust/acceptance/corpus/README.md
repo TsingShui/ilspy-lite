@@ -199,6 +199,8 @@ generated output remain ignored and retain their original license boundaries.
 - `EXTERNAL_VALUE_ALLOCATION.md`: constructing referenced value types.
 - `REFERENCE_IDENTITY_COMPARISON.md`: identity comparison across static types.
 - `NATIVE_INTEGER_OPERATIONS.md`: native-width integer arithmetic and comparison.
+- `UNMANAGED_POINTERS.md`: pointer declarations, dereference, byte-scaled
+  arithmetic and conversions.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.
