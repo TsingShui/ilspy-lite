@@ -1,4 +1,4 @@
-# Behavioral gates at revision `5f94a0f53`
+# Behavioral gates at revision `c1e690b26`
 
 All drivers run owned fixtures only; **no third-party method body is executed**.
 Each compares original and recovered bodies for return values, state, identity and
@@ -11,7 +11,7 @@ exceptions, and where marked also rejects deliberate mutants.
 | constrained calls | 720 | 40 | location joins, receiver slots, value copies |
 | value calls | 585 | 65 | receiver writes, value copies, generics |
 | exception regions | 51 | 10 | six mutants rejected |
-| external allocation | 38 | 12 | static-storage and null-allocation mutants rejected |
+| external allocation | 41 | 13 | static-storage and null-allocation mutants rejected |
 | struct receivers | 43 | 21 | managed-location writes and copies |
 | external enums | 30 | 9 | storage widths, loads/stores |
 | general arrays (multidim) | 23 | 5 | dropped store and swapped dimensions rejected |
@@ -32,3 +32,8 @@ Scope statements:
   through MethodSpec (`CallValueGeneric`, `CallLocalValueGeneric`,
   `CallConstructedValueGeneric`) and ref-struct copies are excluded from the
   reflection drivers for the documented reasons and covered statically.
+
+Revision note: the external-allocation driver now accepts a constructed external
+owner (`MakeBox`) whose inlined declaration is a valid C# instantiation, so the
+matrix records 41 comparisons over 13 methods. All ten drivers were re-run at
+`c1e690b26`; no third-party body was executed.

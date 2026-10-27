@@ -77,19 +77,32 @@ def main():
             ))
 
             def allocate(match):
-                indent, variable, site, arguments = match.groups()
+                indent, declared, variable, site, arguments = match.groups()
                 owner = owners.get(site)
                 if owner is None:
                     raise ValueError("allocation owner is not named at " + site)
                 type_name = re.sub(r"\[[^\]]+\]", "", owner).replace("/", ".")
+                # The inlined declaration is already a valid C# type (including a
+                # constructed instantiation); the metadata name is the fallback.
+                if "__cil_" not in declared:
+                    type_name = declared
                 return f"{indent}{type_name} {variable} = new {type_name}({arguments});"
 
             body = re.sub(
-                r"(?m)^(\s*)(?:__cil_(?:type|value)_[0-9A-F]{8}|[\w.]+) (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
+                r"(?m)^(\s*)(.+?) (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
                 allocate,
                 body,
             )
-            if "__cil_type_" in body or "__cil_value_" in body or "__cil_newobj_" in body:
+            if any(
+                marker in body
+                for marker in (
+                    "__cil_type_",
+                    "__cil_value_",
+                    "__cil_ref_",
+                    "__cil_generic_",
+                    "__cil_newobj_",
+                )
+            ):
                 raise ValueError("unexecutable allocation alias in " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)
