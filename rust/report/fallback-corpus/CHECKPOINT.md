@@ -1427,3 +1427,15 @@ negative exists, and no recovery is claimed from it.
 Latest verified numbers remain `report/substituted-ctor/corpus-scan` plus the
 four-body arity change: **727,335 / 43,413 = 5.6326%**, 4,876 bodies short of the
 5% gate.
+
+## Audit note: constructed external allocation without dependency facts
+
+A candidate admission for `newobj` on a constructed external class (taking the
+owner's class/value kind from the TypeSpec and the parameters from the MemberRef,
+without the dependency fact) was written and reverted: it also admitted delegate
+creation (`newobj System.Func`2<int,int>::.ctor(object, native int)`), which broke
+the frozen `token_values`/`static_constructors` negatives. Delegate allocation is
+not an ordinary constructor call in C#: the target/method arguments must be the
+method-group/target form, so it needs its own lowering and negative before any
+generic constructed-allocation admission. The tree is unchanged and no recovery is
+claimed.
