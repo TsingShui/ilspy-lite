@@ -1,0 +1,27 @@
+{
+  "group": "native integer operations",
+  "tests": 480,
+  "relation_driver": {
+    "comparisons": 624,
+    "selections": 58
+  },
+  "targeted": {
+    "FSharp.Core": [
+      7416,
+      7452
+    ],
+    "System.Private.CoreLib": [
+      13630,
+      13699
+    ],
+    "OpenRA.Mods.Common": [
+      15656,
+      15681
+    ],
+    "OpenRA.Game": [
+      4028,
+      4033
+    ]
+  },
+  "third_party_bodies_executed": false
+}

@@ -48,6 +48,8 @@ internal static partial class GenericReferenceRoundtrip
         {
             if (parameter == typeof(int))
                 return new object[] { -2, 0, 1, 4, 7 };
+            if (parameter == typeof(nint))
+                return new object[] { (nint)0, (nint)1, (nint)(-1), (nint)7 };
             if (parameter == typeof(long))
                 return new object[] { -2L, 0L, 2L, long.MinValue, long.MaxValue };
             if (parameter == typeof(float))

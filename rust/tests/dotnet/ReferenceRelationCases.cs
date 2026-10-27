@@ -112,6 +112,8 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static bool SameNative(nint first, nint second) => first == second;
+        public static nint AddNative(nint first, nint second) => unchecked(first + second);
         public static bool SameReference(RelationLibrary.Base first, object second) => first == second;
         public static bool DifferentReference(RelationLibrary.Base first, object second) => first != second;
         public static RelationLibrary.Seeded SeededValue(int seed) => new RelationLibrary.Seeded(seed);

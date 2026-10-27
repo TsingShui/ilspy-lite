@@ -1480,7 +1480,13 @@ impl Writer<'_, '_> {
                 expect(a.ty, b.ty)?;
                 let symbol = if op.starts_with("div") { "/" } else { "%" };
                 let (x, y) = if op.ends_with(".un") {
-                    let ty = if a.ty == Ty::I8 { "ulong" } else { "uint" };
+                    let ty = if a.ty == Ty::I8 {
+            "ulong"
+        } else if matches!(a.ty, Ty::Native | Ty::UNative) {
+            "nuint"
+        } else {
+            "uint"
+        };
                     (
                         format!("unchecked(({ty}){})", a.name),
                         format!("unchecked(({ty}){})", b.name),
@@ -2217,7 +2223,12 @@ fn array_element(ty: Ty) -> Result<Ty> {
     }
 }
 fn integer(ty: Ty) -> Result<()> {
-    if matches!(ty.kind(), StackKind::I4 | StackKind::I8) {
+    // Native int and native uint share the integer stack category; the CLI
+    // performs the same wrapping arithmetic on them.
+    if matches!(
+        ty.kind(),
+        StackKind::I4 | StackKind::I8 | StackKind::Native
+    ) {
         Ok(())
     } else {
         Err("integer operation on non-integer value".into())
