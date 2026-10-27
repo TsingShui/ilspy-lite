@@ -634,6 +634,42 @@ impl Writer<'_, '_> {
                 let truncated = format!("unchecked(({})({}))", storage.cs(self.image)?, value.name);
                 self.push(Ty::I4, storage.load(&truncated, self.image)?)?;
             }
+            "conv.i" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err("conv.i source category needs IL fallback".into());
+                }
+                self.lines.push(
+                    "// Sign-extend or truncate to the target runtime's native signed width."
+                        .into(),
+                );
+                self.push(Ty::Native, format!("unchecked((nint)({}))", value.name))?;
+            }
+            "conv.u4" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err("conv.u4 source category needs IL fallback".into());
+                }
+                self.lines.push("// Low 32 bits zero-extended into the 32-bit integer stack category; no sign extension.".into());
+                self.push(Ty::U4, format!("unchecked((uint)({}))", value.name))?;
+            }
+            "conv.u" => {
+                let value = self.pop()?;
+                if !matches!(
+                    value.ty.kind(),
+                    StackKind::I4 | StackKind::I8 | StackKind::Native
+                ) {
+                    return Err("conv.u source category needs IL fallback".into());
+                }
+                self.lines.push("// Zero-extend to the target runtime's native unsigned width; no sign extension.".into());
+                self.push(Ty::UNative, format!("unchecked((nuint)({}))", value.name))?;
+            }
             "conv.i4" | "conv.i8" | "conv.u8" => {
                 let value = self.pop()?;
                 let kind = value.ty.kind();

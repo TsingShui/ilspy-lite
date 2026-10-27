@@ -3963,6 +3963,22 @@ impl<'a> Image<'a> {
         {
             return Ok(());
         }
+        // One CLI integer stack category carries both signs and every width up to
+        // its size, so a value already in that category needs no conversion. A
+        // Boolean destination is excluded because its store normalizes the byte.
+        let bits32 = |ty: Ty| {
+            matches!(
+                ty,
+                Ty::I1 | Ty::U1 | Ty::I2 | Ty::U2 | Ty::Char | Ty::Bool | Ty::I4 | Ty::U4
+            )
+        };
+        if (bits32(actual) && bits32(expected) && expected != Ty::Bool)
+            || (matches!(actual, Ty::I8 | Ty::U8) && matches!(expected, Ty::I8 | Ty::U8))
+            || (matches!(actual, Ty::Native | Ty::UNative)
+                && matches!(expected, Ty::Native | Ty::UNative))
+        {
+            return Ok(());
+        }
         if let Some(expected_name) = self.intrinsic_reference_name(expected)? {
             if expected_name == "Object" && actual.kind() == crate::ir::StackKind::Ref
                 || self.intrinsic_reference_name(actual)? == Some(expected_name)

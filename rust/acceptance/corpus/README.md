@@ -189,6 +189,8 @@ generated output remain ignored and retain their original license boundaries.
   with the value-type and unavailable-definition boundaries.
 - `FLOAT_COMPARISONS.md`: unordered/NaN float comparison semantics, and the
   prerequisite they form for float64 support.
+- `INTEGER_CONVERSIONS.md`: `conv.u4`/`conv.u`/`conv.i` width rules and the
+  integer stack-category assignment rule.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

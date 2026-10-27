@@ -214,6 +214,21 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn integer_conversions_keep_the_stack_category_exact() {
+    for (bytes, _) in IMAGES {
+        for name in ["ToUInt32", "ToNativeUnsigned"] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
 fn binary64_values_keep_their_own_type_and_semantics() {
     for (bytes, _) in IMAGES {
         for name in [
