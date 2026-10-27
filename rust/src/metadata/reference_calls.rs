@@ -28,7 +28,13 @@ pub(super) fn constructed(
     else {
         return Ok(None);
     };
-    if image.local_type_definition(*def)?.is_some() {
+    // A local class instantiation is resolved against its definition so the
+    // declared signature is checked; a local *interface* instantiation has no
+    // class members behind it, so it keeps the exact-token dispatch path and a
+    // callvirt on it becomes the interface call the IL names.
+    if let Some(definition) = image.local_type_definition(*def)?
+        && image.md.tables().type_def(definition.rid())?.flags & 0x0020 == 0
+    {
         return Ok(None);
     }
     let signature = crate::signature_guard::method(image.md.blobs().get(member.signature)?)?;

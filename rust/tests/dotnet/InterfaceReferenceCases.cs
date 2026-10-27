@@ -56,6 +56,6 @@ public static class Ops
     public static IValue Read(Holder holder) => holder.Field;
     public static IValue Exchange(Holder holder, IValue value) { IValue old = holder.Field; holder.Field = value; return old; }
     public static int ArgumentOrder(Counter log, IValue receiver, int value) => receiver.Compute(log.Record(value));
-    public static int UnsupportedGeneric(IGeneric<int> receiver, int value) => receiver.Compute(value);
+    public static int RecoveredGeneric(IGeneric<int> receiver, int value) => receiver.Compute(value);
     public static Counter Allocate() => new Counter();
 }

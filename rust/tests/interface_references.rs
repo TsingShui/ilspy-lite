@@ -25,11 +25,7 @@ fn local_interface_references_preserve_identity_and_dispatch() {
     for bytes in IMAGES {
         fixture_contract::check_with_declarations(
             bytes,
-            &[(
-                "InterfaceReferenceCases.Ops",
-                "UnsupportedGeneric",
-                "constructed member parent must be a class; interface dispatch needs IL fallback",
-            )],
+            &[],
             &[
                 ("InterfaceReferenceCases.IValue", "Compute"),
                 ("InterfaceReferenceCases.IGeneric`1", "Compute"),
@@ -39,6 +35,11 @@ fn local_interface_references_preserve_identity_and_dispatch() {
         let result = decompile(bytes, token(bytes, "Invoke")).unwrap();
         assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
         assert!(!result.text.contains("__cil_direct_"), "{}", result.text);
+        // A constructed interface keeps exact-token dispatch: the promoted case
+        // must still be a callvirt on the interface MemberRef, not a direct call.
+        let generic = decompile(bytes, token(bytes, "RecoveredGeneric")).unwrap();
+        assert_eq!(generic.status, Status::Decompiled, "{}", generic.text);
+        assert!(generic.text.contains("__cil_callvirt_"), "{}", generic.text);
     }
 }
 

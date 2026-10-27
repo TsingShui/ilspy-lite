@@ -214,6 +214,21 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn local_constructed_interface_dispatch_uses_the_exact_token() {
+    for (bytes, _) in IMAGES {
+        let result = decompile_with_style(
+            bytes,
+            token(bytes, "RelationCases.Ops", "ApplyLocalInterface"),
+            OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
+        assert!(result.text.contains("ITransform"), "{}", result.text);
+    }
+}
+
+#[test]
 fn foreign_constructed_fields_use_the_site_arguments() {
     for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
         let configuration = if index == 0 { "release" } else { "debug" };

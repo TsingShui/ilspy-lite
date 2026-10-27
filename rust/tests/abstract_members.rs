@@ -16,21 +16,38 @@ const IMAGES: [&[u8]; 2] = [
 mod fixture_contract;
 
 #[test]
-fn interface_dispatch_remains_an_explicit_refusal() {
+fn abstract_interface_dispatch_uses_the_constructed_interface_token() {
     for bytes in IMAGES {
         fixture_contract::check_with_declarations(
             bytes,
-            &[(
-                "AbstractMemberCases.Ops",
-                "Interface",
-                "constructed member parent must be a class; interface dispatch needs IL fallback",
-            )],
+            &[],
             &[
                 ("AbstractMemberCases.Base`1", "Compute"),
                 ("AbstractMemberCases.IValue`1", "Compute"),
             ],
         );
         fixture_contract::check_scan_parity(bytes);
+        // Calling through a constructed interface is an interface dispatch on the
+        // exact MemberRef; it must not become a direct call.
+        let interface = decompile_with_style(
+            bytes,
+            list_methods(bytes)
+                .unwrap()
+                .into_iter()
+                .find(|m| {
+                    m.declaring_type == "AbstractMemberCases.Ops" && m.simple_name == "Interface"
+                })
+                .unwrap()
+                .token,
+            OutputStyle::Readable,
+        )
+        .unwrap();
+        assert_eq!(interface.status, Status::Decompiled, "{}", interface.text);
+        assert!(
+            interface.text.contains("__cil_callvirt_"),
+            "{}",
+            interface.text
+        );
     }
 }
 

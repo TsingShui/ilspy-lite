@@ -1,0 +1,27 @@
+{
+  "group": "constructed interface dispatch",
+  "tests": 484,
+  "relation_driver": {
+    "comparisons": 662,
+    "selections": 64
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      14122,
+      14316
+    ],
+    "OpenRA.Game": [
+      4033,
+      4077
+    ],
+    "FSharp.Core": [
+      7455,
+      7464
+    ],
+    "OpenRA.Mods.Common": [
+      15939,
+      15939
+    ]
+  },
+  "third_party_bodies_executed": false
+}

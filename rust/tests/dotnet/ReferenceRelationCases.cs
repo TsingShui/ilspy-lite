@@ -49,6 +49,12 @@ namespace RelationLibrary
 namespace RelationCases
 {
     public interface IItem<T> { }
+    public interface ITransform<T> { T Apply(T value); }
+    public sealed class UpperTransform : ITransform<string>
+    {
+        public string Apply(string value) => value;
+    }
+
     public interface IRoot { }
     public interface ISource<out T> { }
     public interface IConsumer<in T> { }
@@ -113,6 +119,7 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);
         public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
         public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;
         public static void WriteForeignValue(RelationLibrary.GenericBase<string> box, string value) => box.Value = value;
