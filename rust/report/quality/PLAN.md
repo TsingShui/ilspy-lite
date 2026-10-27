@@ -102,8 +102,21 @@ transform pipeline, and the brief marks these low priority.
 - Each item ships with its own red/green Rust test and, where behavior could
   change, the existing owned behaviour drivers stay green. Readable output is
   regression-tested by re-harvesting a slice and comparing before/after counts.
-- The corpus admission baseline (42,044 fallback) is unrelated to this work and
-  must not move because of a printer change; a status change is a defect here.
+- The corpus admission baseline (42,044 fallback and the 89/319 per-sample gate)
+  is unrelated to this work and must not move because of a printer change; a
+  status or per-sample change is a defect here. A change that admits a body
+  belongs to the admission track, not this plan.
+
+## Review and validation
+
+- Review is main-session self-review per `acceptance/corpus/REVIEW_PROTOCOL.md`;
+  no subagents are launched. The report separates self-review from owned-fixture
+  behavior validation.
+- Tests follow the current AGENTS: test changed behavior, keep validation
+  proportional, and use red/green where behavior changes. Re-harvest the five
+  slices before/after each Phase 1 item and at each Phase 2 proof gate.
+- The per-sample gate (`100 * unrecovered <= bodies` for every body image) is the
+  active acceptance; the aggregate 1% is diagnostic.
 
 ## Correction to an earlier claim
 

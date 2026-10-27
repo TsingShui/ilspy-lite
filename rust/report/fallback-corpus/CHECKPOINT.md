@@ -10,16 +10,18 @@
 > historical transfer notes; its older working-tree state is not the live checkpoint.
 
 
-Goal: mvouhw7y-679jgb
+Goal: mvqw1edf-rt8get (previous: mvouhw7y-679jgb)
 
 ## Current complete state: constructed reference batch
 
 `report/foreign-hidden-batch/corpus-scan-fixed/baseline.json` is a complete
 production scan of the unchanged 614 implementation images, 319 body-bearing:
 **728,704 Decompiled / 42,044 Partial out of 770,748**, fallback **5.454961%**.
-The current <=1% raw gate is 4,204,400 > 770,748: at most 7,707 bodies may
-remain unrecovered, so 34,337 more must be recovered. The former <=5% gate is an
-intermediate milestone and also remains unmet (3,507 more recoveries). Against
+The aggregate <=1% diagnostic is 4,204,400 > 770,748: at most 7,707 bodies
+may remain unrecovered, so 34,337 more are needed for that diagnostic. The
+active acceptance is per-sample: every body image must satisfy
+`100 * unrecovered <= bodies`; **89/319** currently pass. The former <=5% gate
+is historical. Against
 `report/modopt/corpus-scan`, the delta records **675 newly recovered in 76 images,
 zero regressions and zero incomplete images**.
 OpenRA.Game is 4,325 / 442; OpenRA.Mods.Common is 17,058 / 1,349.

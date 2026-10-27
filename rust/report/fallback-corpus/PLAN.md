@@ -8,7 +8,25 @@ drivers covering it. The full fixed-corpus scan plus gained-method self-review r
 after at least three completed groups. Each group stays its own local commit so a
 regression found in a batched scan can be attributed by rescanning those commits.
 
-## Current position (general catch; aggregate 5% target)
+## Current position (per-sample 1% goal, 2026-10-28)
+
+- **728,704 Decompiled / 42,044 Partial of 770,748 (5.454961%)**, 319 body images,
+  0 incomplete.
+- Acceptance is **per-sample**: every body image must satisfy
+  `100 * unrecovered <= bodies`; currently **89/319** pass. The aggregate 1%
+  (7,707 allowed) is a diagnostic intermediate, not the gate.
+- Fixed inputs and the per-method anchor are committed. The admission continuation
+  is `report/residual-audit/PLAN.md` (Groups C -> B -> A/A2 -> D -> E -> F); the
+  readability track is `report/quality/PLAN.md` (Phase 1 printer-only, Phase 2
+  proof-dependent).
+- One group per commit; full scan and main-session self-review after at least three
+  groups; 0 lost and 0 incomplete. Printer-only quality changes must not move
+  admission or the per-sample count.
+- The sections below are historical positions; their aggregate 5% wording is
+  retained as history. The old queue is superseded by the residual audit and
+  quality plans.
+
+## Historical position (general catch; aggregate 5% target)
 
 - **626,242 Decompiled / 144,506 Partial; fallback 18.7488%**.
 - +578 in 88 images, zero regressions. Game +5 / Common +5. <=5% still unmet.
@@ -340,7 +358,8 @@ Sources: `report/boxing/corpus-scan-enum/baseline.json`,
   assertions, mutation control in the roundtrip driver, release and debug.
 - Full corpus scan with `--references declared`, delta against the previous baseline:
   zero lost images/methods, every gained method's previous reason accounted for.
-- Independent review against ILSpy output; SUSPECT is fixed or demoted before counting.
+- Main-session self-review per `acceptance/corpus/REVIEW_PROTOCOL.md`; no subagents.
+  ILSpy output is a secondary reference; the original IL is the correctness basis.
 - Docs: `acceptance/corpus/<SLICE>.md`, README index, `CHECKPOINT.md` line, this table.
 
 ## Known gaps that are not slices yet

@@ -1,9 +1,11 @@
 # Per-assembly view and slice order
 
-> Historical analysis only: the former per-image 1% gate described below has
-> been replaced by an overall weighted gate (currently 1%). Current per-image counts are
-> in `report/foreign-hidden-batch/per-image.csv`; the current overall state is
-> in `CHECKPOINT.md`.
+> Historical analysis. The active goal requires the **per-sample** gate again:
+> every body image must satisfy `100 * unrecovered <= bodies`; currently **89/319**
+> pass at the 728,704/42,044 anchor. The 33/319 and median 60.4% below are from the
+> old boxing baseline. Current per-image counts are in
+> `report/foreign-hidden-batch/per-image.csv`; current state is in `CHECKPOINT.md`.
+> The aggregate 1% is diagnostic only.
 
 Measured from `report/boxing/corpus-scan/baseline.json` (the scan before local-enum
 boxing; enum boxing only removes methods, it does not change which shapes block).

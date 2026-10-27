@@ -1,5 +1,10 @@
 # Closure gate (provisional)
 
+> Historical: this closure report is from the boxing baseline (33/319, 473,770
+> unrecovered). The active goal is per-sample 1%; current per-image counts are in
+> `report/foreign-hidden-batch/per-image.csv` (89/319 at the 728,704 anchor).
+> The aggregate 1% is diagnostic, not the acceptance.
+
 Sourced from `report/boxing/corpus-scan/baseline.json` (before local-enum boxing).
 Integers only: pass iff `100 * unrecovered <= bodies`. Re-check with
 `python3 report/per-assembly-gate.py <baseline.json>`.

@@ -7,6 +7,12 @@ The acceptance gate is overall weighted **1%**, i.e. `100 * unrecovered <= bodie
 at most 7,707 may remain, so **34,337 more bodies** are required. The former 5%
 gate needs 3,507 and is only an intermediate milestone.
 
+> The active goal's acceptance is **per-sample**: every one of the 319 body images
+> must satisfy `100 * unrecovered <= bodies` (currently 89/319). The aggregate
+> weighted 1% above is a diagnostic intermediate, not the gate. Quality work is
+> tracked in `report/quality/PLAN.md`; printer-only quality changes must not move
+> admission or the per-sample count.
+
 This document is the working plan for continuing on another machine. It records
 what the residual failures actually are, which shared machinery each group needs,
 and the exact commands and pitfalls for reproducing the measurements.
@@ -165,7 +171,7 @@ cd rust
 cargo build --release --locked
 ```
 
-The two OpenRA inputs are committed at `rust/report/openra/assemblies/`
+The two OpenRA inputs are committed at `rust/acceptance/openra/assemblies/`
 (4.1 MB total, GPL-3.0 input-only; see `acceptance/openra/manifest.json` for
 provenance and hashes). They are never executed by the decompiler.
 
@@ -175,8 +181,8 @@ Regenerate the corpus and the anchor (do not re-download anything):
 cd ..
 python3 rust/acceptance/corpus/corpus.py collect \
   --checkout ILSpy-tests --output rust/report/fallback-corpus/frozen \
-  --supplement rust/report/openra/assemblies/OpenRA.Game.dll \
-  --supplement rust/report/openra/assemblies/OpenRA.Mods.Common.dll
+  --supplement rust/acceptance/openra/assemblies/OpenRA.Game.dll \
+  --supplement rust/acceptance/openra/assemblies/OpenRA.Mods.Common.dll
 python3 rust/acceptance/corpus/corpus.py inventory \
   --manifest rust/report/fallback-corpus/frozen/manifest.json \
   --output rust/report/fallback-corpus/inventory-final
