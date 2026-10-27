@@ -2090,9 +2090,9 @@ fn comparison(op: &str, a: &Value, b: &Value) -> Result<String> {
         if !matches!(base, "ceq" | "beq" | "bne") {
             return Err("ordered comparison of references needs IL fallback".into());
         }
-        if !(a.ty == b.ty || a.ty == Ty::Null || b.ty == Ty::Null) {
-            return Err("reference comparison needs identical or null static types".into());
-        }
+        // `ReferenceEquals` takes both operands as `object`, so two references of
+        // different static types need no common-type proof: the comparison is
+        // identity on the values, not on their declared types.
         let identity = format!(
             "global::System.Object.ReferenceEquals({}, {})",
             a.name, b.name

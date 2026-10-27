@@ -58,7 +58,12 @@ def main():
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(r"(RelationCases\.(?:Ops|Cell\S*))::([^\s(<]+)", signature)
-            if match and not match[2].startswith("."): names[token] = (match[1], match[2])
+            # Semantic groups with their own drivers stay out of this selection:
+            # value construction (external-allocation driver) and array allocation
+            # and element access (general-array driver).
+            excluded = {"SeededValue", "ForeignArray", "ForeignValueArray"}
+            if match and not match[2].startswith(".") and match[2] not in excluded:
+                names[token] = (match[1], match[2])
         methods = []
         for row in map(json.loads, support.run([args.cli, "scan", fixture, "--no-auto-references", "--reference", library]).stdout.splitlines()):
             if row["token"] not in names: continue

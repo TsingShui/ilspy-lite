@@ -1,0 +1,21 @@
+{
+  "group": "reference identity comparison",
+  "tests": 480,
+  "relation_driver": {
+    "comparisons": 592,
+    "selections": 56,
+    "mutants": "DeclaredOverload, ExternalGeneric, FloatLe, DoubleSum"
+  },
+  "targeted": {
+    "OpenRA.Mods.Common": [
+      15629,
+      15656
+    ],
+    "OpenRA.Game": [
+      4024,
+      4028
+    ],
+    "FSharp.Core": 7416
+  },
+  "third_party_bodies_executed": false
+}

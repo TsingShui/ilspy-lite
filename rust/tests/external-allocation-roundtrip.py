@@ -85,11 +85,11 @@ def main():
                 return f"{indent}{type_name} {variable} = new {type_name}({arguments});"
 
             body = re.sub(
-                r"(?m)^(\s*)__cil_type_[0-9A-F]{8} (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
+                r"(?m)^(\s*)(?:__cil_(?:type|value)_[0-9A-F]{8}|[\w.]+) (\w+) = __cil_newobj_([0-9A-F]{8})\(([^()]*)\);$",
                 allocate,
                 body,
             )
-            if "__cil_type_" in body or "__cil_newobj_" in body:
+            if "__cil_type_" in body or "__cil_value_" in body or "__cil_newobj_" in body:
                 raise ValueError("unexecutable allocation alias in " + name)
             (OUT / f"{config}-{name}.details.txt").write_text(details.stdout)
             (OUT / f"{config}-{name}.readable.txt").write_text(readable.stdout)

@@ -214,6 +214,30 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn reference_identity_comparison_needs_no_common_static_type() {
+    for (bytes, library) in IMAGES {
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        for name in ["SameReference", "DifferentReference"] {
+            let result = context
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("ReferenceEquals"),
+                "{name}: {}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
 fn referenced_value_type_construction_keeps_value_identity() {
     for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
         let configuration = if index == 0 { "release" } else { "debug" };
