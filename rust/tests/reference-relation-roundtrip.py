@@ -147,6 +147,7 @@ def main():
                                        ("Swap", "return null;"), ("Foreign", "return null;"),
                                        ("ForeignHiddenToBase", "return null;"),
                                        ("ForeignHiddenOpen", "return null;"),
+                                       ("ForeignDeep", "return null;"),
                                        ("ReadCast", "return default;"),
                                        ("ClosedSiblingJoin", ""), ("ForeignSiblingJoin", ""),
                                        ("SiblingJoinIsNull", ""),

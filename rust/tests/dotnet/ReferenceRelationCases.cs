@@ -32,6 +32,20 @@ namespace RelationLibrary
     public sealed class HiddenBox<T> : VisibleGeneric<T> { }
     public class HiddenChild : IView<Hidden> { }
     public class HiddenGeneric<T> : IView<HiddenBox<T>> { }
+    public class Deep0 { }
+    public class Deep1 : Deep0 { }
+    public class Deep2 : Deep1 { }
+    public class Deep3 : Deep2 { }
+    public class Deep4 : Deep3 { }
+    public class Deep5 : Deep4 { }
+    public class Deep6 : Deep5 { }
+    public class Deep7 : Deep6 { }
+    public class Deep8 : Deep7 { }
+    public class Deep9 : Deep8 { }
+    public class Deep10 : Deep9 { }
+    public class Deep11 : Deep10 { }
+    public class Deep12 : Deep11 { }
+    public sealed class DeepValue : Deep12 { }
     public sealed class Tagged : ITagged { public int Tag => 3; }
     public struct Bits { public int Value; }
     public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
@@ -186,6 +200,7 @@ namespace RelationCases
         public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.IView<RelationLibrary.VisibleBase> ForeignHiddenToBase(RelationLibrary.HiddenChild input) => input;
         public static RelationLibrary.IView<RelationLibrary.VisibleGeneric<A>> ForeignHiddenOpen<A, B>(RelationLibrary.HiddenGeneric<A> input) => input;
+        public static RelationLibrary.Deep0 ForeignDeep(RelationLibrary.DeepValue input) => input;
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);

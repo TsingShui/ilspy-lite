@@ -434,6 +434,27 @@ impl Proof<'_, '_> {
         Ok(true)
     }
 
+    fn foreign_ancestry(
+        &mut self,
+        fact: &Definition,
+        args: &[Term],
+        expected: &Term,
+        depth: usize,
+    ) -> Result<bool> {
+        if fact.variance.len() != args.len() {
+            return Err("foreign reference arity differs".into());
+        }
+        // Dependency facts already contain the validated transitive parent
+        // templates. Re-expanding each parent would revisit the same paths.
+        let mut found = false;
+        for parent in &fact.parents {
+            self.step(depth + 1)?;
+            let parent = instantiate(parent, args, 0)?;
+            found |= self.same_or_variant(&parent, expected, depth + 1)?;
+        }
+        Ok(found)
+    }
+
     fn prove(&mut self, actual: &Term, expected: &Term, depth: usize) -> Result<bool> {
         self.step(depth)?;
         let mut pending = vec![(actual.clone(), Vec::<u32>::new())];
@@ -460,13 +481,7 @@ impl Proof<'_, '_> {
                         .get(&definition)
                         .cloned()
                     {
-                        if fact.variance.len() != args.len() {
-                            return Err("foreign reference arity differs".into());
-                        }
-                        for parent in &fact.parents {
-                            let parent = instantiate(parent, &args, 0)?;
-                            found |= self.prove(&parent, expected, depth + 1)?;
-                        }
+                        found |= self.foreign_ancestry(&fact, &args, expected, depth)?;
                     }
                     continue;
                 }
@@ -481,13 +496,7 @@ impl Proof<'_, '_> {
                     .get(&token.0)
                     .cloned()
                 {
-                    if fact.variance.len() != args.len() {
-                        return Err("foreign reference arity differs".into());
-                    }
-                    for parent in &fact.parents {
-                        let parent = instantiate(parent, &args, 0)?;
-                        found |= self.prove(&parent, expected, depth + 1)?;
-                    }
+                    found |= self.foreign_ancestry(&fact, &args, expected, depth)?;
                 }
                 continue;
             }

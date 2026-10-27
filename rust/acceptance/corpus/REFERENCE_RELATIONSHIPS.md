@@ -136,6 +136,15 @@ owned library. The prior constructor/value/exception gates and 495 Rust tests pa
 Four like-for-like targeted real-input scans show no gains or losses from this
 specific group. An initial 22-method Roslyn gain was measured against an older
 baseline and is withdrawn as an attribution to this group; the isolated prior
-revision scan shows those methods were already recovered. The complete scan for
-the three groups remains pending. Audit, negative tests, raw evidence and bounded
-main-session self-review are in `report/foreign-hidden-relations/`.
+revision scan shows those methods were already recovered. Audit, negative tests,
+raw evidence and bounded main-session self-review are in
+`report/foreign-hidden-relations/`.
+
+The first subsequent complete scan had 122 real status regressions, all proof
+work-limit failures. Re-expanding every already-flattened foreign parent caused
+repeated traversal; the repair compares all validated transitive parents once,
+without bypassing cycle/arity checks or increasing the work limit. An owned
+13-level class chain was red and is green, while cyclic and missing-reference
+mutations remain Partial. All 122 loss tokens are restored in five targeted
+image scans; a new complete scan and delta are still required. See
+`report/foreign-hidden-batch/REGRESSIONS.md`.

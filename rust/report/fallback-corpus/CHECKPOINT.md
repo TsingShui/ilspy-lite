@@ -6,6 +6,19 @@
 
 Goal: mvouhw7y-679jgb
 
+## Three-group batch: regressions under repair
+
+The complete `report/foreign-hidden-batch/corpus-scan` contains 728,579
+Decompiled and 42,169 Partial of 770,748, but its delta has **122 regressions**
+(all reference-proof work-limit failures), so the net +550 is not an acceptable
+milestone. All 122 affected tokens have since recovered in five targeted image
+scans after eliminating repeated expansion of already-validated transitive
+foreign parent facts. The repair preserves cycle checks, generic substitutions
+and the proof work bound. Its owned deep-chain red/green, cyclic/missing-reference
+negatives, 851/81 behavior comparisons and 496-test regression are recorded in
+`report/foreign-hidden-batch/REGRESSIONS.md`. A complete follow-up scan is still
+required; do not report zero regressions or a new validated aggregate yet.
+
 ## Post-baseline foreign hidden-argument identity (targeted only)
 
 Selected foreign types without caller TypeRefs can now participate in a

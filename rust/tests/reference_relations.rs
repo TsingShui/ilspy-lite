@@ -350,6 +350,53 @@ fn foreign_hidden_generic_arguments_keep_exact_variance_and_ancestry() {
 }
 
 #[test]
+fn deep_foreign_hierarchies_do_not_exhaust_a_flattened_proof() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "RelationCases.Ops", "ForeignDeep");
+        let absent = DependencyContext::new(bytes.to_vec()).unwrap();
+        let result = absent.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let result = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let type_rid = |name: &str| {
+            md.tables()
+                .iter::<cildec::tables::TypeDefRow>()
+                .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == name)
+                .unwrap()
+                .0
+        };
+        let first = type_rid("Deep1");
+        let last = type_rid("Deep12");
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::TypeDef, first)
+            .unwrap();
+        assert_eq!(row.len(), 14);
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 8;
+        let mut cyclic = library.to_vec();
+        cyclic[at..at + 2].copy_from_slice(&u16::try_from(last << 2).unwrap().to_le_bytes());
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("cyclic owned library", cyclic)
+            .unwrap();
+        let result = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("incompatible value/receiver types"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn reference_joins_keep_a_proved_closed_constructed_base() {
     for (bytes, library) in IMAGES {
         let pe = cildec::PeImage::parse(bytes).unwrap();
