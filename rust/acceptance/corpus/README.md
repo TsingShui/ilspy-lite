@@ -207,6 +207,7 @@ generated output remain ignored and retain their original license boundaries.
 - `VALUE_TYPE_GENERIC_RECEIVERS.md`: MethodSpec calls on value-type receivers.
 - `BYREF_LIKE_VALUES.md`: ref-struct value copies and the retained boxing refusal.
 - `VOLATILE_ACCESS.md`: volatile fields and `volatile.`-prefixed reads/writes.
+- `STACK_JOIN_REFERENCE_MERGES.md`: reference-type merging at control-flow joins.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

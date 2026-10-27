@@ -3119,7 +3119,7 @@ impl<'a> Image<'a> {
         Ok(Some(self.md.strings().str(row.type_name)?))
     }
 
-    fn class_chain(&self, token: u32) -> Result<Vec<u32>> {
+    pub(crate) fn class_chain(&self, token: u32) -> Result<Vec<u32>> {
         let mut chain = Vec::new();
         let mut current = Token(token);
         for _ in 0..64 {

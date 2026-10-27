@@ -1,0 +1,24 @@
+{
+  "group": "reference join merges",
+  "tests": 487,
+  "gained_fsharp": 22,
+  "targeted": {
+    "FSharp.Core": [
+      7471,
+      7493
+    ],
+    "System.Private.CoreLib": [
+      15067,
+      15074
+    ],
+    "OpenRA.Game": [
+      4129,
+      4129
+    ],
+    "OpenRA.Mods.Common": [
+      15980,
+      15980
+    ]
+  },
+  "third_party_bodies_executed": false
+}

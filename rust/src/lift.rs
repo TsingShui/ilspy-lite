@@ -168,10 +168,12 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                         if *stored == incoming {
                             continue;
                         }
-                        if *stored == Ty::Null && incoming.kind() == StackKind::Ref {
-                            *stored = incoming;
-                            changed = true;
-                        } else if incoming != Ty::Null || stored.kind() != StackKind::Ref {
+                        if let Some(merged) = join_reference_type(image, *stored, incoming) {
+                            if merged != *stored {
+                                *stored = merged;
+                                changed = true;
+                            }
+                        } else {
                             return Err("incompatible evaluation stacks at join".into());
                         }
                     }
@@ -2379,6 +2381,46 @@ fn volatile_supported(ty: Ty) -> bool {
             | Ty::R4
             | Ty::R8
     ) || ty.kind() == StackKind::Ref
+}
+
+/// Merge two stack values at a control-flow join. The verifier merges reference
+/// types to a common supertype; a null with a reference becomes that reference.
+/// Anything else (mixed integer widths, addresses, value types) has no single C#
+/// slot type here and stays a stated refusal.
+fn join_reference_type(image: &crate::metadata::Image<'_>, stored: Ty, incoming: Ty) -> Option<Ty> {
+    let reference = |ty: Ty| ty == Ty::Null || ty.kind() == StackKind::Ref;
+    if stored == incoming {
+        return Some(stored);
+    }
+    if !reference(stored) || !reference(incoming) {
+        return None;
+    }
+    if stored == Ty::Null {
+        return Some(incoming);
+    }
+    if incoming == Ty::Null {
+        return Some(stored);
+    }
+    if image.assignable(stored, incoming).is_ok() {
+        return Some(incoming);
+    }
+    if image.assignable(incoming, stored).is_ok() {
+        return Some(stored);
+    }
+    // A shared local base class is the most precise common type; otherwise the
+    // CLI's reference merge is object, and later uses that need a specific type
+    // will keep their own refusal.
+    if let (Ty::Class(a), Ty::Class(b)) = (stored, incoming)
+        && let Ok(chain) = image.class_chain(a)
+    {
+        for ancestor in chain {
+            let base = Ty::Class(ancestor);
+            if image.assignable(Ty::Class(b), base).is_ok() {
+                return Some(base);
+            }
+        }
+    }
+    Some(Ty::Object)
 }
 
 fn receiver_matches(actual: Ty, expected: Ty) -> bool {
