@@ -6,7 +6,31 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: third batch after the constructed-foreign checkpoint
+## Current verified state: constructed base calls
+
+- `report/constructed-base/corpus-scan/baseline.json`: **661,966 Decompiled /
+  108,782 Partial of 770,748**, fallback **14.113822%**. Fixed scope, zero
+  incomplete images. Raw gate 10,878,200 > 3,853,740: <=5% still unmet.
+- Against `report/exception-ancestry/batch-scan/baseline.json`: **+5,180 in 69
+  images, zero regressions**. OpenRA.Game **3,934/833 (+3)**; Common
+  **15,413/2,994 (+152)**.
+- Commit `822a7f4cc` compares a base constructor call's declared base with its
+  owner in one generic scope, so nested classes inheriting enclosing parameters
+  are admitted while cross-image, differently-instantiated and value-type bases
+  still fall back. The scan and eight-method self-review are `964c907e7`.
+- 469 Rust tests, fmt/clippy, release build, relation behavior (178 comparisons /
+  41 selections / 8 mutants per config) and the exception driver pass. No
+  third-party body was executed.
+- Bucket diagnosis recorded for the next groups: the "unsupported signature type"
+  family is dominated by pointer (CoreLib 794) and float/double signatures
+  (F# 77, CoreLib 229), plus multidimensional arrays (F# 76); F#'s next blocker
+  is a cross-image enum/struct signature (596); `incompatible value/receiver
+  types` is diffuse (numeric widening, absent external casts/ancestry).
+- Next: one or two more capability groups (multidimensional array reference types
+  or double/float64 support are the largest safe candidates), then the next
+  batch scan and self-review.
+
+## Previous verified state: third batch after the constructed-foreign checkpoint
 
 - `report/exception-ancestry/batch-scan/baseline.json`: **656,786 Decompiled /
   113,962 Partial of 770,748**, fallback **14.7858959897%**. Fixed scope: 614
