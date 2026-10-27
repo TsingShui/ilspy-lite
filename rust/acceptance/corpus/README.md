@@ -201,6 +201,7 @@ generated output remain ignored and retain their original license boundaries.
 - `NATIVE_INTEGER_OPERATIONS.md`: native-width integer arithmetic and comparison.
 - `UNMANAGED_POINTERS.md`: pointer declarations, dereference, byte-scaled
   arithmetic and conversions.
+- `FOREIGN_CONSTRUCTED_FIELDS.md`: field reads on referenced constructed types.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

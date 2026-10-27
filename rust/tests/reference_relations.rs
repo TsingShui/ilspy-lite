@@ -214,6 +214,51 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn foreign_constructed_fields_use_the_site_arguments() {
+    for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
+        let configuration = if index == 0 { "release" } else { "debug" };
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .discover_references(
+                std::path::Path::new("tests/fixtures/reference-relation-release.bin"),
+                &ilspy_lite::ReferenceSearchOptions {
+                    automatic: false,
+                    files: vec![std::path::PathBuf::from(format!(
+                        "tests/fixtures/relation-library-{configuration}.bin"
+                    ))],
+                    version_policy: ilspy_lite::ReferenceVersionPolicy::IlSpy,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        for name in ["ReadForeignValue", "ReadForeignHolder"] {
+            let result = context
+                .decompile(
+                    token(bytes, "RelationCases.Ops", name),
+                    OutputStyle::Readable,
+                )
+                .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains(".Value"), "{name}: {}", result.text);
+        }
+        let write = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "WriteForeignValue"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(write.status, Status::Partial, "{}", write.text);
+        assert!(
+            write
+                .text
+                .contains("readonly field write needs IL fallback"),
+            "{}",
+            write.text
+        );
+    }
+}
+
+#[test]
 fn boxed_float_scalars_keep_their_exact_declared_type() {
     for (bytes, _) in IMAGES {
         for (name, needle) in [

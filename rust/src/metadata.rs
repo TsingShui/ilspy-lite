@@ -4259,6 +4259,7 @@ impl<'a> Image<'a> {
         &self,
         t: Token,
         context: crate::signature_types::TypeContext,
+        instance: bool,
     ) -> Result<FieldRef> {
         match t.table() {
             Some(TableId::Field) => {
@@ -4348,9 +4349,26 @@ impl<'a> Image<'a> {
                                 "constructed member parent is not a class instantiation".into()
                             );
                         };
-                        let definition = self.local_type_definition(*def)?.ok_or(
-                            "constructed member needs a local definition; external constructed members need dependency facts",
-                        )?;
+                        let Some(definition) = self.local_type_definition(*def)? else {
+                            // The MemberRef names the field through the instantiation,
+                            // so the site's arguments substitute its `!0`-style
+                            // signature. The instance/static split is not in the
+                            // MemberRef, and the opcode that names the field states
+                            // it; the definition's initonly flag is unread here, so
+                            // writes are refused.
+                            let owner = crate::ir::Ty::from_sig_scoped(&spec.type_, self, context)?;
+                            return self.field_from_parts(
+                                t.0,
+                                &name,
+                                context,
+                                FieldParts {
+                                    flags: if instance { 0x0020 } else { 0x0030 },
+                                    signature: self.md.blobs().get(row.signature)?,
+                                    owner,
+                                    arguments: Some(args),
+                                },
+                            );
+                        };
                         let field = self.find_field(definition, &name)?;
                         let field_row = self.md.tables().field(field.rid())?;
                         let blob = self.md.blobs().get(field_row.signature)?;

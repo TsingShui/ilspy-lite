@@ -66,6 +66,8 @@ def main():
                 # Unmanaged pointer bodies are executed by the unsafe pointer driver.
                 "ReadPointer", "ReadWrite", "SamePointer", "NullPointer", "OffsetValue",
                 "Difference",
+                # Negative case: a foreign constructed field write stays refused.
+                "WriteForeignValue",
             }
             if match and not match[2].startswith(".") and match[2] not in excluded:
                 names[token] = (match[1], match[2])

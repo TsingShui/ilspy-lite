@@ -968,7 +968,9 @@ impl Writer<'_, '_> {
             }
             "ldflda" => {
                 let t = i.operand.token().ok_or("missing field token")?;
-                let field = self.image.field(t, self.type_context)?;
+                let field =
+                    self.image
+                        .field(t, self.type_context, op != "ldsfld" && op != "stsfld")?;
                 self.track_type(field.ty)?;
                 if field.is_static {
                     return Err("instance address of a static field".into());
@@ -1927,7 +1929,9 @@ impl Writer<'_, '_> {
             }
             "ldfld" | "stfld" => {
                 let t = i.operand.token().ok_or("missing field token")?;
-                let field = self.image.field(t, self.type_context)?;
+                let field =
+                    self.image
+                        .field(t, self.type_context, op != "ldsfld" && op != "stsfld")?;
                 self.track_type(field.ty)?;
                 if field.is_static {
                     return Err("instance access to static field".into());

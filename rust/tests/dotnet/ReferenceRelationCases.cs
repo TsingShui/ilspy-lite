@@ -24,6 +24,7 @@ namespace RelationLibrary
     public sealed class Tagged : ITagged { public int Tag => 3; }
     public struct Bits { public int Value; }
     public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
+    public struct Holder<T> { public T Value; }
     public interface IItem<T> { }
     public class Base { public int Number; }
     public class Middle : Base { }
@@ -112,6 +113,9 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
+        public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;
+        public static void WriteForeignValue(RelationLibrary.GenericBase<string> box, string value) => box.Value = value;
         public static object BoxDouble(double value) => value;
         public static object BoxSingle(float value) => value;
         public static double UnboxDouble(object value) => (double)value;

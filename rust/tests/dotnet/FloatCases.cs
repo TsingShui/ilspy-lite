@@ -66,5 +66,5 @@ public class Cells
     public static float RecoveredUnsigned(uint value) => value;
     public static float UnsupportedUnsignedNative(nuint value) => value;
     public static double RecoveredDouble(double value) => value;
-    public static double UnsupportedDoubleUnbox(object value) => (double)value;
+    public static double RecoveredDoubleUnbox(object value) => (double)value;
 }

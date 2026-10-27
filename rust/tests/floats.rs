@@ -46,14 +46,15 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             );
         }
         let class = decompile_type(bytes, "FloatCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 24);
-        assert_eq!(class.summary.partial, 2);
+        assert_eq!(class.summary.decompiled, 25);
+        assert_eq!(class.summary.partial, 1);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
-        for name in ["UnsupportedUnsignedNative", "UnsupportedDoubleUnbox"] {
-            let result = decompile(bytes, token(bytes, name)).unwrap();
-            assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
-            assert!(result.text.contains("IL FALLBACK"));
-        }
+        let unbox = decompile(bytes, token(bytes, "RecoveredDoubleUnbox")).unwrap();
+        assert_eq!(unbox.status, Status::Decompiled, "{}", unbox.text);
+        assert!(unbox.text.contains("(double)"), "{}", unbox.text);
+        let native = decompile(bytes, token(bytes, "UnsupportedUnsignedNative")).unwrap();
+        assert_eq!(native.status, Status::Partial, "{}", native.text);
+        assert!(native.text.contains("IL FALLBACK"));
     }
 }
 

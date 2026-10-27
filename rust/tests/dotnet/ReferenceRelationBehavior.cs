@@ -61,7 +61,8 @@ internal static partial class GenericReferenceRoundtrip
                 Type cell = fixture.GetType("RelationCases.Cell`1").MakeGenericType(typeof(string));
                 return new[] { null, shared, Sample(cell, 1) };
             }
-            var choices = fixture.GetTypes().Concat(library.GetTypes()).Where(t => t.IsClass && !t.IsAbstract)
+            var choices = fixture.GetTypes().Concat(library.GetTypes())
+                .Where(t => !t.IsAbstract && (t.IsClass || (t.IsValueType && !t.IsEnum)))
                 .SelectMany(type => !type.ContainsGenericParameters ? new[] { type }
                     : type.GetGenericArguments().Length == 1
                         ? new[] { type.MakeGenericType(parameter.IsGenericType ? parameter.GetGenericArguments()[0] : typeof(string)) }
