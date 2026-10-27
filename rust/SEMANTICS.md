@@ -442,6 +442,11 @@ and storage rounding. Generic opaque operations do not admit scalar R8 math.
 I4 dimensions/indices remain the subset; native dimensions/indices, new covariance
 assignment proofs, multidimensional and lifetime/prefix extensions stay gated.
 
+[Ordinary local value construction](acceptance/corpus/LOCAL_VALUE_CONSTRUCTION.md)
+uses separate completed storage for newobj, while direct value constructor calls
+initialize the original acquired cell without clearing or copying it. Both retain
+exact MethodDef tokens, argument effects and writes before exceptions.
+
 ## Local enum storage
 
 [Captured enum storage and integer normalization](acceptance/corpus/ENUM_STORAGE_ACCESS.md)

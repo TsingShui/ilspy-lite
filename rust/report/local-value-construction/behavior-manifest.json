@@ -1,0 +1,122 @@
+[
+  {
+    "name": "struct-receiver",
+    "command": [
+      "python3",
+      "tests/struct-receiver-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/struct-receiver-final.log",
+    "seconds": 4.487
+  },
+  {
+    "name": "new-object",
+    "command": [
+      "python3",
+      "tests/new-object-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--readable"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/new-object-final.log",
+    "seconds": 0.732
+  },
+  {
+    "name": "managed-location",
+    "command": [
+      "python3",
+      "tests/managed-location-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/managed-location-final.log",
+    "seconds": 19.184
+  },
+  {
+    "name": "generic-binding",
+    "command": [
+      "python3",
+      "tests/generic-binding-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/generic-binding-final.log",
+    "seconds": 4.767
+  },
+  {
+    "name": "generic-declaring",
+    "command": [
+      "python3",
+      "tests/generic-declaring-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/generic-declaring-final.log",
+    "seconds": 2.955
+  },
+  {
+    "name": "external-allocation",
+    "command": [
+      "python3",
+      "tests/external-allocation-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/external-allocation-final.log",
+    "seconds": 3.961
+  },
+  {
+    "name": "value-call",
+    "command": [
+      "python3",
+      "tests/value-call-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/value-call-final.log",
+    "seconds": 15.389
+  },
+  {
+    "name": "constrained",
+    "command": [
+      "python3",
+      "tests/constrained-roundtrip.py",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/constrained-final.log",
+    "seconds": 7.386
+  },
+  {
+    "name": "value-call-reinitialize",
+    "command": [
+      "python3",
+      "tests/value-call-roundtrip.py",
+      "--reinitialize",
+      "--mutation-control",
+      "--cli",
+      "target/release/ilspy-lite"
+    ],
+    "status": 0,
+    "log": "report/local-value-construction/value-call-reinitialize-final.log",
+    "seconds": 16.969
+  }
+]

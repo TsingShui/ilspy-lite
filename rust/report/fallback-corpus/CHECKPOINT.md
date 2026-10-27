@@ -6,7 +6,54 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: enum storage encodings and narrow conversions
+## Current verified state: ordinary local value construction
+
+- `report/local-value-construction/corpus-scan/baseline.json`: **566,419
+  Decompiled / 204,329 Partial of 770,748**, fallback **26.510480727812464%**.
+  **+7,662 in 102 images**, zero regressions/incomplete images; fixed scope,
+  inputs, hashes, exclusions and exact reference stamps.
+  Game **3,113/1,654 (+215)**; Common **12,129/6,278 (+14)**. <=5% unmet.
+- metadata/value_calls.rs recognizes ordinary local nongeneric MethodDef
+  constructors with declaration-scoped parameters. Existing generic newobj
+  remains. Direct MethodDef value constructor calls initialize any exact
+  acquired value cell, not only original-this in a reference constructor.
+  newobj uses separate completed storage; call .ctor adds no zeroing/copy.
+- **453 tests**, fmt/clippy and **nine relevant owned drivers** pass. Existing
+  value gate **585 comparisons / 65 closures/config**, default and authored
+  acquired-cell variants; **16 / 18 compiled semantic mutants**. Readonly store
+  adapter is one exact stfld; constructors/argument support execute recovered
+  text. Ref arguments and destination aliases are covered.
+- Legacy promotions execute first: struct receiver **43/21** with recovered
+  Point ctor support; new-object **54/16** with one exact Holder newobj.
+  First full regression retained 2 promotion failures (451/453); final is green.
+  No blanket test/behavior matrix expansion. Prior semantic red/negatives kept.
+- Zeroing mutant first survived because an overbroad selector picked a byref
+  overload; corrected selection compiles and fails acquired-cell observation.
+  Do not misreport that authoring issue as a production defect or initial reject.
+- Seven audit triples, eight gained self-reviewed source/IL triples. All review
+  runs succeed without unknown-result diagnostics; eight CRUDE-BUT-EQUIVALENT,
+  no changed-semantic SUSPECT in bounded sample. Foreign CVec.Minus remains
+  independent/inconclusive in ILSpy and is not claimed.
+- Docs/evidence: `acceptance/corpus/LOCAL_VALUE_CONSTRUCTION.md`;
+  `report/local-value-construction/{AUDIT.md,REDS.md,behavior-manifest.json,
+  milestone.json,review/}`. No third-party execution, agents or push.
+- **Latest user direction:** prioritize fast functional work, reduce defensive/
+  duplicate checks and stop expanding test maintenance/matrices. User explicitly
+  requested deletion of the TDD clause from AGENTS.md; it is deleted, not marked
+  optional. This session still follows already-loaded higher-priority constraints,
+  but future loaded repository instructions should reflect the actual file.
+  Keep necessary semantic identity/order checks; do not fabricate successful
+  validation or erase failures.
+- Next high-yield work: exact selected foreign nominal/constructed value proofs,
+  then foreign value calls/construction and remaining assignment relationships.
+  Existing code has external_value_defs/cache plumbing; investigate why usable
+  selected definitions are not providing facts rather than weakening reference
+  policy or guessing enum/struct layout. Prior value-metadata candidate triples
+  cover StreamingContext/KeyValuePair. Ordinary nominal MemberRef constructor
+  forms and generic direct constructor calls remain separately gated.
+  Next baseline is the local-value-construction scan. Continue autonomously.
+
+## Previous verified state: enum storage encodings and narrow conversions
 
 - `report/value-metadata/corpus-scan-final/baseline.json`: **558,757
   Decompiled / 211,991 Partial of 770,748**, fallback **27.504579966474125%**.

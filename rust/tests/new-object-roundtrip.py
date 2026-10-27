@@ -82,6 +82,16 @@ def main():
                 if "System.Object::ToString" not in il: raise ValueError("Unexpected constrained generic target")
                 for operation in set(re.findall(r"__cil_constrained_[0-9A-F]{8}_[0-9A-F]{8}", statements)):
                     shells.setdefault(operation, None)
+            if name == "UnsupportedStruct":
+                aliases = re.findall(r"structural signature (__cil_value_\w+) bytes=\S+: valuetype NewObjectCases.Holder;", statements)
+                if len(aliases) != 1: raise ValueError("Owned Holder identity missing")
+                statements = statements.replace(aliases[0], "global::NewObjectCases.Holder")
+                def value_newobj(match):
+                    key = "0x" + match[1]
+                    if owners.get(key) != "NewObjectCases.Holder" or names.get(key) != ".ctor":
+                        raise ValueError("Owned Holder constructor target differs")
+                    return "new global::NewObjectCases.Holder(" + match[2] + ")"
+                statements = re.sub(r"__cil_value_newobj_([0-9A-F]{8})\(([^()]*)\)", value_newobj, statements)
             for token_hex in re.findall(r"__cil_newobj_([0-9A-F]{8})\(", statements):
                 key = "0x" + token_hex
                 owner = owners.get(key)

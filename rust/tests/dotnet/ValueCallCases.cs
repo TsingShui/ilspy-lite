@@ -41,6 +41,7 @@ namespace ValueCallCases
         public static int Entries;
         public static int Trace;
         public static int Argument(int value) { Trace = Trace * 10 + 1; return value; }
+        public static object ArgumentTag(object value) { Trace = Trace * 10 + 2; if (value == null) throw null; return value; }
     }
     public struct Cell<T>
     {
@@ -52,8 +53,36 @@ namespace ValueCallCases
         public static T Echo(T value) => value;
         public int ReadThrow(int divisor) { Count++; return 100 / divisor; }
     }
+    public struct Plain
+    {
+        public readonly int Value;
+        public object Tag;
+        public int Count;
+        public Plain(int value) : this(value, null) { Probe.Trace = unchecked(Probe.Trace * 10 + 4); }
+        public Plain(ref int value, ref object tag) {
+            Value = value; value++;
+            Probe.Entries++;
+            Probe.Trace = unchecked(Probe.Trace * 10 + 5);
+            Count = 100 / Probe.Divisor;
+            Tag = tag; tag = null;
+        }
+        public Plain(int value, object tag) {
+            Value = value;
+            Probe.Entries++;
+            Probe.Trace = unchecked(Probe.Trace * 10 + 3);
+            Count = 100 / Probe.Divisor;
+            Tag = tag;
+        }
+    }
     public static class Ops
     {
+        public static Plain NewPlainRef(ref int value, ref object tag) => new Plain(ref value, ref tag);
+        public static void NewPlainAliased(ref Plain target) { target = new Plain(ref target.Count, ref target.Tag); }
+        public static Plain NewPlainDelegated(int value) => new Plain(value);
+        public static void ReinitializePlain(ref Plain target, int value, object tag) { target = new Plain(value, tag); }
+        public static Plain NewPlain(int value, object tag) => new Plain(value, tag);
+        public static void NewPlainInto(ref Plain target, int value, object tag) { target = new Plain(value, tag); }
+        public static Plain NewPlainOrder(int value, object tag) => new Plain(Probe.Argument(value), Probe.ArgumentTag(tag));
         public static object Box(Cell<string> value) => value;
         public static object BoxGeneric<T>(T value) => value;
         public static bool SameBox<T>(T value) { object box = value; return object.ReferenceEquals(box, box); }

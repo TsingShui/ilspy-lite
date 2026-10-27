@@ -3,7 +3,25 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (enum storage/narrow conversions; aggregate 5% target)
+## Current position (ordinary local value construction; aggregate 5% target)
+
+- **566,419 Decompiled / 204,329 Partial; fallback 26.51048%**.
+- +7,662 in 102 images; zero losses/incomplete; fixed scope/reference policy.
+  Game +215 / Common +14. <=5% still unmet.
+- Ordinary local MethodDef value newobj and acquired-cell constructor calls
+  preserve separate completed values versus partial writes to existing storage.
+- 453 tests, fmt/clippy and nine relevant existing owned drivers pass. Default/
+  acquired-cell gates are 585 comparisons / 65 closures/config with 16/18 mutants.
+  Two frozen new-object failures were retained, executed, then promoted.
+- Eight gained source/IL triples self-reviewed crude but equivalent; no
+  changed-semantic suspect or third-party execution.
+- Next: selected foreign nominal/constructed value definition facts, then
+  related foreign value members/construction and assignment proof gaps.
+  Reduce test/defensive overhead per latest user direction; do not weaken exact
+  identities, semantics, reference policy or scan completeness to lower counts.
+  No agents or push. TDD clause removed from AGENTS.md by explicit user request.
+
+## Previous position (enum storage/narrow conversions; aggregate 5% target)
 
 - **558,757 Decompiled / 211,991 Partial; fallback 27.50458%**.
 - +4,588 in 101 images, zero losses/incomplete; fixed scope/references.

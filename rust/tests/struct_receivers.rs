@@ -50,18 +50,11 @@ mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring). There
 // are no counts; a promotion must drop its row and a regression must add one.
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "StructReceiverCases.Ops",
-        "UnsupportedConstruct",
-        "value-type receiver needs IL fallback",
-    ),
-    (
-        "StructReceiverCases.Ops",
-        "UnsupportedRefReturn",
-        "byref return needs escape/lifetime analysis",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "StructReceiverCases.Ops",
+    "UnsupportedRefReturn",
+    "byref return needs escape/lifetime analysis",
+)];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {

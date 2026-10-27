@@ -46,10 +46,11 @@ def main():
             match = re.search(r" StructReceiverCases\.(\w+)::([A-Za-z][A-Za-z0-9_]*)\(", signature)
             if match:
                 names[token] = match[2]
-                if not match[2].startswith("Unsupported") or match[2] in {"UnsupportedByRef", "UnsupportedLocalEscape", "UnsupportedBox", "UnsupportedArray"}:
+                if not match[2].startswith("Unsupported") or match[2] in {"UnsupportedByRef", "UnsupportedLocalEscape", "UnsupportedBox", "UnsupportedArray", "UnsupportedConstruct"}:
                     selected.append((token, match[2]))
         if not selected: raise ValueError("struct receiver selection is empty")
         snippets, identities = [], {}
+        constructors = set()
         for token, name in selected:
             details = support.run([args.cli, "decompile", fixture, "--method", token, "--details", "--no-auto-references"])
             if details.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
@@ -72,13 +73,30 @@ def main():
                     raise ValueError("direct call target has no recovered body: " + match.group(0))
                 return "Recovered." + names[token] + "("
             statements = re.sub(r"__cil_direct_([0-9A-F]{8})\(", bind, statements)
+            constructors.update(re.findall(r"__cil_value_newobj_([0-9A-F]{8})", statements))
             snippets.append(statements)
+        value_helpers = ""
+        if constructors:
+            if len(constructors) != 1: raise ValueError("Owned Point constructor selection drift")
+            raw = next(iter(constructors))
+            result = support.run([args.cli, "decompile", fixture, "--method", "0x" + raw, "--no-auto-references"])
+            if result.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0": raise ValueError("Owned Point constructor body missing")
+            body = result.stdout
+            parameters = re.search(r"\bPoint\(([^()]*)\)", body)
+            if parameters is None: raise ValueError("Owned Point constructor parameters missing")
+            body = "public static void PlainCtor_" + raw + "(ref global::StructReceiverCases.Point receiver, " + parameters[1] + ")" + body[body.index("\n{"):]
+            body = "\n".join(line if line.lstrip().startswith("//") else re.sub(r"\bthis\b", "receiver", line) for line in body.splitlines())
+            snippets.append(body)
+            plan_file = OUT / f"value-constructors-{config}.json"
+            support.write_changed(plan_file, json.dumps([{"caller": raw, "calls": [], "constructors": [raw], "initializers": []}]))
+            value_helpers = support.run([support.DOTNET / "dotnet", harness, fixture, "--value-call-plan", plan_file, fixture]).stdout
         directives = OUT / f"aliases-{config}.json"
         support.write_changed(directives, json.dumps([{"alias": k, "bytes": v} for k, v in identities.items()], indent=2))
         aliases = support.run([support.DOTNET / "dotnet", harness, fixture, "--receiver-plan", directives]).stdout
         array_helpers, snippets = array_leaves.plan(support, harness, fixture, OUT,
-            [(token, snippet) for (token, _), snippet in zip(selected, snippets)])
-        text = aliases + array_helpers + "\nnamespace StructReceiverCases\n{\npublic static class Recovered\n{\n" + "\n".join(snippets) + "\n}\n}\n"
+            [(token, snippets[i]) for i, (token, _) in enumerate(selected)])
+        if constructors: snippets.append(body)
+        text = aliases + array_helpers + "\nnamespace StructReceiverCases\n{\npublic static class Recovered\n{\n" + value_helpers + "\n".join(snippets) + "\n}\n}\n"
         suffix = config + ("-readable" if args.readable else "-details")
         source = OUT / f"Recovered-{suffix}.cs"
         support.write_changed(source, text)

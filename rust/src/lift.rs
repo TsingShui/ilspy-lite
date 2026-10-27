@@ -1463,7 +1463,9 @@ impl Writer<'_, '_> {
                     } else {
                         self.image.assignable(receiver.ty, owner)?;
                     }
-                    if method.constructor {
+                    if method.constructor && owner.kind() != StackKind::Ref {
+                        self.lines.push("// Exact value constructor call on the acquired managed cell; no allocation, synthetic zeroing, or receiver copy.".into());
+                    } else if method.constructor {
                         let current = self
                             .constructor_owner
                             .ok_or("constructor call outside constructor context")?;

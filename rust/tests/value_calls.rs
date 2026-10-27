@@ -24,6 +24,173 @@ fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
 }
 
 #[test]
+fn constructor_calls_keep_existing_cells_and_reject_nonlocation_or_virtual_receivers() {
+    for (bytes, _) in IMAGES {
+        let method = token(bytes, "ValueCallCases.Ops", "ReinitializePlain");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(method & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let instructions = body.instructions().map(Result::unwrap).collect::<Vec<_>>();
+        let created = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "newobj")
+            .unwrap();
+        let stored = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "stobj")
+            .unwrap();
+        let base = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut owned = bytes.to_vec();
+        owned[base + created.offset as usize] = 0x28;
+        owned[base + stored.offset as usize..base + stored.offset as usize + 5].fill(0);
+        let result = decompile_with_style(&owned, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_value_ctor_"), "{}", result.text);
+        assert!(
+            !result.text.contains("__cil_value_newobj_"),
+            "{}",
+            result.text
+        );
+        let mut virtual_call = owned.clone();
+        virtual_call[base + created.offset as usize] = 0x6f;
+        let result = decompile_with_style(&virtual_call, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("constructor/intrinsic callvirt"),
+            "{}",
+            result.text
+        );
+        let receiver = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "ldarg.0")
+            .unwrap();
+        owned[base + receiver.offset as usize] = 0x03;
+        let result = decompile_with_style(&owned, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("exact managed location"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
+fn ordinary_value_constructor_metadata_requires_instance_void_and_constructor_flags() {
+    for (bytes, _) in IMAGES {
+        let method = token(bytes, "ValueCallCases.Ops", "NewPlain");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(method & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let ctor = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.opcode.name() == "newobj")
+            .unwrap()
+            .operand
+            .token()
+            .unwrap();
+        let row = md.tables().method_def(ctor.rid()).unwrap();
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::MethodDef, ctor.rid())
+            .unwrap();
+        let at = raw.as_ptr() as usize - bytes.as_ptr() as usize + 6;
+        for flags in [row.flags | 0x10, row.flags | 0x40, row.flags & !0x1800] {
+            let mut invalid = bytes.to_vec();
+            invalid[at..at + 2].copy_from_slice(&flags.to_le_bytes());
+            let result = decompile_with_style(&invalid, method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+        }
+        let signature = md.blobs().get(row.signature).unwrap();
+        assert_eq!(signature[2], 1);
+        let at = signature.as_ptr() as usize - bytes.as_ptr() as usize + 2;
+        let mut invalid = bytes.to_vec();
+        invalid[at] = 8;
+        let result = decompile_with_style(&invalid, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("ordinary instance void"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
+fn ordinary_value_constructor_delegation_initializes_the_existing_value_receiver() {
+    for (bytes, _) in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let constructor = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .filter(|m| m.declaring_type == "ValueCallCases.Plain" && m.simple_name == ".ctor")
+            .find(|m| {
+                let row = md.tables().method_def(m.token & 0xffffff).unwrap();
+                cildec::MethodSig::parse(md.blobs().get(row.signature).unwrap())
+                    .unwrap()
+                    .params
+                    .len()
+                    == 1
+            })
+            .unwrap();
+        let result = decompile_with_style(bytes, constructor.token, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("__cil_value_ctor_"), "{}", result.text);
+    }
+}
+
+#[test]
+fn ordinary_local_value_construction_uses_the_exact_method_definition_and_completed_copy() {
+    for (bytes, _) in IMAGES {
+        for name in [
+            "NewPlain",
+            "NewPlainInto",
+            "NewPlainOrder",
+            "NewPlainRef",
+            "NewPlainAliased",
+        ] {
+            let method = token(bytes, "ValueCallCases.Ops", name);
+            let pe = cildec::PeImage::parse(bytes).unwrap();
+            let md = pe.metadata().unwrap();
+            let body = cildec::MethodBody::from_image(
+                &pe,
+                &md.tables().method_def(method & 0xffffff).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+            let operand = body
+                .instructions()
+                .map(Result::unwrap)
+                .find(|i| i.opcode.name() == "newobj")
+                .unwrap()
+                .operand
+                .token()
+                .unwrap();
+            assert_eq!(operand.table(), Some(cildec::TableId::MethodDef));
+            let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result.text.contains("__cil_value_newobj_"),
+                "{}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
 fn boxing_and_unbox_any_keep_struct_and_scoped_generic_identities() {
     for (bytes, _) in IMAGES {
         for name in [

@@ -529,6 +529,11 @@ internal static partial class GenericReferenceRoundtrip
             ExternalAllocationMain(args);
             return;
         }
+        if (args[1] == "--value-reinit-fixture")
+        {
+            ValueCallFixture(args);
+            return;
+        }
         if (args[1] == "--external-value-check")
         {
             ExternalValueMain(args);

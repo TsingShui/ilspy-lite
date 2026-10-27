@@ -4031,6 +4031,23 @@ impl<'a> Image<'a> {
         if t.table() == Some(TableId::MethodSpec) {
             return method_instantiations::resolve(self, t, context);
         }
+        if t.table() == Some(TableId::MethodDef)
+            && let Some((owner, args)) = self.value_constructor(t, context)?
+        {
+            return Ok(MethodRef {
+                token: t.0,
+                name: ".ctor".into(),
+                receiver: Some(owner),
+                target: format!("__cil_value_ctor_{:08X}", t.0),
+                args,
+                ret: crate::ir::Ty::Void,
+                core_object_constructor: None,
+                tick_count: false,
+                constructor: true,
+                generic_virtual: false,
+                exact_reference: true,
+            });
+        }
         let (name, owner, sig) = match t.table() {
             Some(TableId::MethodDef) => {
                 let row = self.row(t.0)?;

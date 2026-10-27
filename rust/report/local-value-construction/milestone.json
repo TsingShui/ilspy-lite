@@ -1,0 +1,41 @@
+{
+  "group": "ordinary-local-value-construction",
+  "prior_commit": "602e2fbc2",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 211991,
+      "Decompiled": 558757
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 204329,
+      "Decompiled": 566419
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "newly_recovered": 7662,
+  "gained_images": 102,
+  "regressions": [],
+  "scope_and_reference_stamps_equal": true,
+  "fallback_percent": 26.510480727812464,
+  "rust_tests": 453,
+  "relevant_owned_driver_invocations": 9,
+  "value_comparisons_per_config_per_variant": 585,
+  "value_closed_selections_per_config_per_variant": 65,
+  "default_semantic_mutants": 16,
+  "acquired_cell_semantic_mutants": 18,
+  "reviewed_production_methods": 8,
+  "review_kind": "bounded main-session source/IL self-review",
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false
+}

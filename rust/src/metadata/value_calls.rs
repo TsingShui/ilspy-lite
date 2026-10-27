@@ -10,6 +10,35 @@ pub(super) fn constructor(
     token: Token,
     context: TypeContext,
 ) -> Result<Option<(Ty, Vec<Ty>)>> {
+    if token.table() == Some(TableId::MethodDef) {
+        let row = image.row(token.0)?;
+        if image.md.strings().str(row.name)? != ".ctor" {
+            return Ok(None);
+        }
+        let owner = image
+            .md
+            .tables()
+            .type_of_method(cildec::Rid::new(token.rid()))?
+            .ok_or("value constructor has no declaring type")?;
+        let owner = Token(0x02000000 | owner.get());
+        if image.generic_declaring_context(owner)? {
+            return Ok(None);
+        }
+        let Some(id) = image.struct_type(owner)? else {
+            return Ok(None);
+        };
+        if row.is_static() || row.flags & 0x1800 != 0x1800 || row.flags & 0x440 != 0 {
+            return Err(
+                "value constructor needs an ordinary instance constructor definition".into(),
+            );
+        }
+        let signature = image.signature(token.0)?;
+        let declaration = image.method_type_context(token.0, &signature)?;
+        return Ok(Some((
+            Ty::Value(id),
+            parameters(image, &signature, None, declaration)?,
+        )));
+    }
     if token.table() != Some(TableId::MemberRef) {
         return Ok(None);
     }
@@ -29,6 +58,22 @@ pub(super) fn constructor(
         return Ok(None);
     };
     let signature = crate::signature_guard::method(image.md.blobs().get(member.signature)?)?;
+    let owner = Ty::from_sig_scoped(&spec.type_, image, context)?;
+    if !matches!(owner, Ty::Value(_)) {
+        return Err("value constructor needs an admitted value identity".into());
+    }
+    Ok(Some((
+        owner,
+        parameters(image, &signature, Some(args), context)?,
+    )))
+}
+
+fn parameters(
+    image: &Image<'_>,
+    signature: &cildec::MethodSig<'_>,
+    arguments: Option<&[cildec::Type<'_>]>,
+    context: TypeContext,
+) -> Result<Vec<Ty>> {
     if !signature.has_this
         || signature.explicit_this
         || signature.calling_convention != cildec::CallConv::Default
@@ -39,16 +84,11 @@ pub(super) fn constructor(
     {
         return Err("value constructor needs an ordinary instance void signature".into());
     }
-    let owner = Ty::from_sig_scoped(&spec.type_, image, context)?;
-    if !matches!(owner, Ty::Value(_)) {
-        return Err("value constructor needs an admitted value identity".into());
-    }
-    let parameters = signature
+    signature
         .params
         .iter()
-        .map(|p| image.member_parameter(p, Some(args), context))
-        .collect::<Result<Vec<_>>>()?;
-    Ok(Some((owner, parameters)))
+        .map(|p| image.member_parameter(p, arguments, context))
+        .collect()
 }
 
 /// Direct value calls retain the requested instantiation and actual this location.

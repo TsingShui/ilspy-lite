@@ -22,18 +22,11 @@ fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
 mod fixture_contract;
 
 // Frozen known-unsupported set: (owner, method, stable reason substring).
-const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
-    (
-        "NewObjectCases.Ops",
-        "UnsupportedExternal",
-        "external allocation needs dependency facts; only local classes and local instantiations are admitted",
-    ),
-    (
-        "NewObjectCases.Ops",
-        "UnsupportedStruct",
-        "value-type receiver needs IL fallback",
-    ),
-];
+const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[(
+    "NewObjectCases.Ops",
+    "UnsupportedExternal",
+    "external allocation needs dependency facts; only local classes and local instantiations are admitted",
+)];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {
@@ -70,15 +63,13 @@ fn allocation_is_one_fresh_identity_then_exact_constructor_in_order() {
 }
 
 #[test]
-fn unproved_external_and_value_allocations_stay_gated() {
+fn unproved_external_allocations_stay_gated() {
     for bytes in IMAGES {
-        for name in ["UnsupportedExternal", "UnsupportedStruct"] {
-            let result = decompile(bytes, token(bytes, "NewObjectCases.Ops", name)).unwrap();
-            assert!(
-                result.text.contains("IL FALLBACK"),
-                "{name}\n{}",
-                result.text
-            );
-        }
+        let result = decompile(
+            bytes,
+            token(bytes, "NewObjectCases.Ops", "UnsupportedExternal"),
+        )
+        .unwrap();
+        assert!(result.text.contains("IL FALLBACK"), "{}", result.text);
     }
 }
