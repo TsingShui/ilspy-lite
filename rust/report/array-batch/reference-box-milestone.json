@@ -1,0 +1,24 @@
+{
+  "group": "reference box/unbox",
+  "tests": 478,
+  "targeted": {
+    "FSharp.Core": [
+      7367,
+      7402
+    ],
+    "System.Private.CoreLib": [
+      13630,
+      13630
+    ],
+    "OpenRA.Game": [
+      4022,
+      4022
+    ],
+    "OpenRA.Mods.Common": [
+      15483,
+      15483
+    ]
+  },
+  "behavior_driver": "existing reference/equality drivers cover identity and castclass",
+  "third_party_bodies_executed": false
+}

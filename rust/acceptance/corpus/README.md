@@ -195,6 +195,7 @@ generated output remain ignored and retain their original license boundaries.
   element mapping.
 - `EXTERNAL_ARRAY_ELEMENTS.md`: referenced-class elements in `newarr`, admitted
   from the selected definition's kind fact.
+- `REFERENCE_BOX.md`: reference-type `box`/`unbox.any` admission.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

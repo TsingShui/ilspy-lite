@@ -3176,6 +3176,13 @@ impl<'a> Image<'a> {
             return Err("box/unbox TypeSpec needs an admitted stored or generic identity".into());
         }
         if token.table() != Some(TableId::TypeRef) || self.core_type_name(token).is_err() {
+            if let Ok(reference) = self.cast_class(token, context)
+                && reference.kind() == StackKind::Ref
+            {
+                // `box` on a reference type preserves the reference and allocates
+                // nothing, so the exact castable type is the operand's type.
+                return Ok(reference);
+            }
             return match Ty::from_sig_scoped(&cildec::Type::ValueType(token), self, context) {
                 Ok(ty @ (Ty::Enum(_) | Ty::Value(_))) => Ok(ty),
                 _ => Err("box/unbox needs an admitted core scalar or local enum".into()),
@@ -3925,7 +3932,12 @@ impl<'a> Image<'a> {
                     ..
                 } | cildec::Type::SzArray(..)
             ),
-            Some(TableId::TypeRef) => matches!(self.core_type_name(token), Ok("String" | "Object")),
+            // Any referenced class admitted as a cast target is a reference type
+            // here too: `unbox.any` on it is a castclass check, not unboxing.
+            Some(TableId::TypeRef) => {
+                matches!(self.core_type_name(token), Ok("String" | "Object"))
+                    || self.cast_class(token, context).is_ok()
+            }
             Some(TableId::TypeDef) => self.class_name(token.0).is_ok(),
             _ => false,
         };

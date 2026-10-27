@@ -427,7 +427,7 @@ fn prime_external_cast_targets(
         };
         if !matches!(
             instruction.opcode.canonical().name(),
-            "castclass" | "isinst"
+            "castclass" | "isinst" | "box" | "unbox.any"
         ) {
             continue;
         }

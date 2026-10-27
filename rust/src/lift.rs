@@ -1943,7 +1943,9 @@ impl Writer<'_, '_> {
                 self.track_type(declared)?;
                 let value = self.pop()?;
                 if declared.kind() == StackKind::Ref {
-                    self.image.assignable(value.ty, declared)?;
+                    if value.ty.kind() != StackKind::Ref && value.ty != Ty::Null {
+                        return Err("box of a reference type needs a reference operand".into());
+                    }
                     self.lines.push("// box of a proved reference type preserves the reference, including null; no value box is allocated.".into());
                     self.push(Ty::Object, format!("((object)({}))", value.name))?;
                     return Ok(());
