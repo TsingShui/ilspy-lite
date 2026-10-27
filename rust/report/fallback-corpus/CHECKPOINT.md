@@ -35,7 +35,19 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: scalar TypeRefs and external float calls
+## Current verified state: core-named box values
+
+- `report/boxcore-batch/corpus-scan/baseline.json`: **717,763 Decompiled / 52,985
+  Partial of 770,748**, fallback **6.873323%**. Zero incomplete images; raw gate
+  5,298,500 > 3,853,740, so <=5% is unmet (14,448 bodies to go).
+- Against `report/floatcall-batch/corpus-scan/baseline.json`: **+1,480 in 86 images,
+  zero regressions**. OpenRA.Game +2.
+- The single group continues `box`/`unbox.any` past core-named non-scalars
+  (`System.Type` keeps reference identity, `System.Decimal` boxes as a value).
+- Remaining largest first blockers come from this scan; the next group targets the
+  largest one that is still tractable.
+
+## Previous verified state: scalar TypeRefs and external float calls
 
 - `report/floatcall-batch/corpus-scan/baseline.json`: **716,283 Decompiled / 54,465
   Partial of 770,748**, fallback **7.066477%**. Zero incomplete images; raw gate
