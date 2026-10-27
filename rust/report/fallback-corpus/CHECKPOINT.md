@@ -35,7 +35,21 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: scan-order independent value facts
+## Current verified state: local core scalars and exception-region assignment
+
+- `report/da-eh-batch/corpus-scan/baseline.json`: **720,202 Decompiled / 50,546
+  Partial of 770,748**, fallback **6.557925%**. Zero incomplete images; raw gate
+  5,054,600 > 3,853,740, so <=5% is unmet (12,009 bodies to go).
+- Against `report/scanorder-batch/corpus-scan/baseline.json`: **+2,437 in 29
+  images, zero regressions**.
+- Groups: `ab8e829ae` core scalars named by their local TypeDef (signature,
+  receiver, scalar constructor and box paths), `878af346a` definite assignment
+  across exception regions (handler seeds are the union of the protected region's
+  states, checked after convergence).
+- Remaining largest first blockers are re-derived from this scan for the next
+  group.
+
+## Previous verified state: scan-order independent value facts
 
 - `report/scanorder-batch/corpus-scan/baseline.json`: **717,765 Decompiled / 52,983
   Partial of 770,748**, fallback **6.873062%**. Zero incomplete images; raw gate

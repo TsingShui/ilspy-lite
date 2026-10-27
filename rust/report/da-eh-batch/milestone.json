@@ -1,0 +1,32 @@
+{
+  "groups": [
+    "ab8e829ae local core scalars",
+    "878af346a exception-region definite assignment"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 50546,
+      "Decompiled": 720202
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 79,
+    "unrecovered": 50546,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 2437,
+  "gained_images": 29,
+  "regressions": 0,
+  "fallback_percent": 6.558044912215147,
+  "acceptance_integer": {
+    "left": 5054600,
+    "right": 3853740,
+    "passes": false
+  },
+  "review": "report/da-eh-batch/review/review-source.md",
+  "tests": 488,
+  "third_party_bodies_executed": false
+}
