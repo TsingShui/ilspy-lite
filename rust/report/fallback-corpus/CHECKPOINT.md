@@ -35,7 +35,24 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: native integers and identity comparison
+## Current verified state: unmanaged pointers
+
+- `report/pointer-batch/corpus-scan/baseline.json`: **687,105 Decompiled / 83,643
+  Partial of 770,748**, fallback **10.852113%**. Zero incomplete images; raw gate
+  8,364,300 > 3,853,740, so <=5% is unmet (45,106 bodies to go).
+- Against `report/native-batch/corpus-scan/baseline.json`: **+2,792 in 44 images,
+  zero regressions**. OpenRA unchanged.
+- Commit `9d551c743` adds pointer declarations, dereference, byte-scaled
+  arithmetic, null/integer comparisons, pointer conversions and explicit
+  narrowing-to-wider integer widening; behavior driver executes recovered pointer
+  bodies on owned stack memory (9 comparisons, two mutants rejected per config).
+- The three gained ILSpy `UnsafeCode` cases were reviewed and match ILSpy's own
+  pointer arithmetic output.
+- Remaining largest first blockers: incompatible value/receiver types, byref-like
+  copies, constructed member facts, value-type instantiated receivers, box/unbox
+  admission, generic-variable ownership.
+
+## Previous verified state: native integers and identity comparison
 
 - `report/native-batch/corpus-scan/baseline.json`: **684,313 Decompiled / 86,435
   Partial of 770,748**, fallback **11.214766%**. Zero incomplete images; raw gate
