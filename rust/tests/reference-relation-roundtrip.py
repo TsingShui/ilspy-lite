@@ -29,7 +29,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cli", type=Path, default=ROOT / "target/debug/ilspy-lite")
     parser.add_argument("--mutation-control", action="store_true")
+    parser.add_argument("--selected-version", action="store_true", help="Use a version-substituted owned library")
     args = parser.parse_args()
+    global OUT
+    if args.selected_version:
+        OUT = OUT / "selected-version"
     OUT.mkdir(parents=True, exist_ok=True)
     support.run([sys.executable, ROOT / "tests/build-reference-relation-fixtures.py"])
     harness = OUT / "ReferenceRelationRoundtrip.dll"
@@ -42,6 +46,13 @@ def main():
     for config in ("release", "debug"):
         fixture = ROOT / f"tests/fixtures/reference-relation-{config}.bin"
         library = ROOT / f"tests/fixtures/relation-library-{config}.bin"
+        if args.selected_version:
+            source = OUT / f"SelectedLibrary-{config}.cs"
+            original = (ROOT / "tests/dotnet/ReferenceRelationCases.cs").read_text()
+            support.write_changed(source, original.replace("#if LIBRARY",
+                '#define LIBRARY\n[assembly: System.Reflection.AssemblyVersion("4.0.0.0")]\n#if LIBRARY', 1))
+            library = OUT / f"relation-library-{config}.bin"
+            support.compile_cs(library, [source])
         names = {}
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)

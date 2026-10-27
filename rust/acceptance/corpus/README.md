@@ -8,10 +8,11 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Current local-value-construction milestone: **566,419 / 770,748** implementation
-bodies recovered; **26.51048% fallback**, so the aggregate <=5% goal is unmet. See
-[local value construction evidence](LOCAL_VALUE_CONSTRUCTION.md) for scope, owned execution,
-self-review and complete scan evidence.
+Current ILSpy-style reference-selection scan: **616,563 / 770,748** implementation
+bodies recovered; **20.00459% fallback**, so the aggregate <=5% goal is unmet.
+This scan changes reference selection explicitly and records two coverage losses;
+it is not a like-for-like instruction gain. See
+[reference resolution evidence](ILSPY_REFERENCE_RESOLUTION.md).
 
 ## Acquire and independently inventory
 
@@ -61,9 +62,10 @@ python3 rust/acceptance/corpus/corpus.py gate \
   --baseline rust/report/fallback-corpus/baseline/baseline.json
 ```
 
-`--resume` on `baseline` reuses per-image checkpoints only when the image,
-independent inventory timestamp and CLI timestamp/size match. Full rescans omit
-this flag. Equal-content inputs share one analysis but retain every origin.
+`--resume` on `baseline` reuses exact-policy per-image checkpoints only when
+the image, inventory timestamp and CLI timestamp/size match. ILSpy-style
+discovery does not reuse checkpoints because host references can change. Full
+rescans omit this flag. Equal-content inputs share one analysis but retain every origin.
 A method is scoped to its input snapshot, not its token alone.
 
 The production command `ilspy-lite scan <assembly>` emits one NDJSON record per
@@ -74,8 +76,10 @@ and failed records remain explicit. Exit 1 reports a request/input/output error.
 The acceptance baseline combines those records with the independent CIL-body
 inventory. Partial, Failed and missing body results count as unrecovered. A
 failed process, duplicate/unknown token, omitted CIL body or declaration reported
-for a CIL body makes the scan incomplete. There is no implicit auto-reference
-search during the production status scan.
+for a CIL body makes the scan incomplete. Acceptance `--references declared`
+uses the fixed exact reference selection; `--references ilspy` records the
+host-discovered dependency report separately. The CLI itself discovers
+references by default.
 
 Gate decisions use `100 * unrecovered <= bodies`, with exact integer counts.
 Legitimate bodyless declarations and native resources are reported separately;

@@ -1,0 +1,51 @@
+[
+  {
+    "name": "selected-relations",
+    "command": [
+      "python3",
+      "tests/reference-relation-roundtrip.py",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--mutation-control",
+      "--selected-version"
+    ],
+    "status": 0,
+    "log": "report/foreign-value-facts/selected-relations-behavior-final.log"
+  },
+  {
+    "name": "external-enum",
+    "command": [
+      "python3",
+      "tests/external-enum-roundtrip.py",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--mutation-control"
+    ],
+    "status": 0,
+    "log": "report/foreign-value-facts/external-enum-behavior-final.log"
+  },
+  {
+    "name": "external-allocation",
+    "command": [
+      "python3",
+      "tests/external-allocation-roundtrip.py",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--mutation-control"
+    ],
+    "status": 0,
+    "log": "report/foreign-value-facts/external-allocation-behavior-final.log"
+  },
+  {
+    "name": "external-property",
+    "command": [
+      "python3",
+      "tests/external-property-roundtrip.py",
+      "--cli",
+      "target/release/ilspy-lite",
+      "--mutation-control"
+    ],
+    "status": 0,
+    "log": "report/foreign-value-facts/external-property-behavior-final.log"
+  }
+]

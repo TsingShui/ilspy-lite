@@ -50,6 +50,31 @@ fn paths(result: &discovery_paths::DiscoveryResult) -> Vec<&Path> {
 }
 
 #[test]
+fn ilspy_framework_probe_uses_closest_target_or_newest_without_a_managed_host() {
+    let f = Fixture::new();
+    let earlier = f.file("dotnet/shared/Microsoft.NETCore.App/8.0.31/Widget.dll");
+    let newer = f.file("dotnet/shared/Microsoft.NETCore.App/10.0.12/Widget.dll");
+    let env = DiscoveryEnvironment {
+        dotnet_roots: vec![f.0.join("dotnet")],
+        ..DiscoveryEnvironment::default()
+    };
+    let result = discovery_paths::candidates_for_ilspy(
+        &f.input(),
+        &identity(),
+        Some(".NETCoreApp,Version=v7.0"),
+        &env,
+    );
+    assert_eq!(paths(&result), vec![earlier.as_path()]);
+    let result = discovery_paths::candidates_for_ilspy(
+        &f.input(),
+        &identity(),
+        Some(".NETFramework,Version=v4.0"),
+        &env,
+    );
+    assert_eq!(paths(&result), vec![newer.as_path()]);
+}
+
+#[test]
 fn isolated_missing_sdk_and_neighbor_dll_before_exe() {
     let f = Fixture::new();
     let environment = DiscoveryEnvironment::default();

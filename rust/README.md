@@ -92,19 +92,19 @@ views retain partial/failure diagnostics.
 
 ### Automatic static dependencies
 
-The CLI discovers local dependencies by default: neighboring images, static
-framework hints, deps/local NuGet assets, shared frameworks/reference packs and
-common Framework/GAC/Mono layouts. No SDK/runtime installation is required.
-`--reference <file>` and `--reference-dir <directory>` repeat; explicit files
-precede ordered directories and automatic families. `--no-auto-references`
-disables automatic lookup. Every candidate is checked by full assembly identity,
-not filename.
+The CLI discovers local dependencies by default for both decompile and scan.
+It uses ILSpy-style short-name selection and follows loaded type forwarders:
+neighboring images, deps/local NuGet assets, selected shared frameworks and
+available Framework/GAC/Mono layouts are searched. No SDK/runtime installation
+is required. `--reference <file>` and `--reference-dir <directory>` repeat;
+`--no-auto-references` disables automatic lookup.
 
-Version policy defaults to `--reference-version-policy exact`. Explicit
-`same-major` permits nearest nonolder metadata replacement, reports requested and
-selected versions/provenance, and is not runtime compatibility proof. Incomplete
-search never authorizes replacement. Source property binding requires exact
-owner and method/property signature scopes, not merely a resolved AssemblyRef.
+The default `--reference-version-policy ilspy` can select an identity different
+from the requested reference. `exact` requires full identity; `same-major`
+permits a limited nonolder version replacement. Requested/selected identities
+and provenance are recorded, and a substitute is not runtime compatibility
+proof. `--details` exposes dependency selections for decompile and scan.
+Source property binding requires exact owner and signature scopes.
 
 Missing/conflicting/rejected metadata never hides independently recovered bodies.
 Large missing sets use a concise default notice; `--details` retains all scoped

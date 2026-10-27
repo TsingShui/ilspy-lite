@@ -7,6 +7,112 @@ use ilspy_lite::{
 };
 
 #[test]
+fn ilspy_short_name_binding_selects_highest_loaded_reference_for_zero_version() {
+    let main = include_bytes!("fixtures/external-release.bin");
+    let dependency = include_bytes!("fixtures/external-library-release.bin");
+    let md = cildec::PeImage::parse(dependency)
+        .unwrap()
+        .metadata()
+        .unwrap();
+    let row = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let offset = row.as_ptr() as usize - dependency.as_ptr() as usize;
+    let mut selected = dependency.to_vec();
+    selected[offset + 4..offset + 6].copy_from_slice(&4u16.to_le_bytes());
+    let root = std::env::temp_dir().join(format!("ilspy-short-name-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    let original = root.join("original.bin");
+    let newer = root.join("newer.bin");
+    std::fs::write(&original, dependency).unwrap();
+    std::fs::write(&newer, selected).unwrap();
+    let mut context = DependencyContext::new(main.to_vec()).unwrap();
+    let request = context
+        .references()
+        .iter()
+        .find(|r| r.identity.name == "ExternalLibrary")
+        .unwrap()
+        .token;
+    context
+        .discover_references(
+            &root.join("owned.dll"),
+            &ReferenceSearchOptions {
+                automatic: false,
+                files: vec![original, newer],
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    let resolution = context.resolve(request).unwrap();
+    std::fs::remove_dir_all(root).unwrap();
+    let AssemblyResolution::Substituted {
+        requested,
+        selected,
+        ..
+    } = resolution
+    else {
+        panic!(
+            "ILSpy keeps the highest loaded short name, not an exact-version candidate: {resolution:?}"
+        );
+    };
+    assert_eq!(requested.version, [0; 4]);
+    assert_eq!(selected.version, [4, 0, 0, 0]);
+    let md = cildec::PeImage::parse(main).unwrap().metadata().unwrap();
+    let base = md
+        .tables()
+        .iter::<cildec::tables::TypeRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Base")
+        .unwrap()
+        .0;
+    let bound = context.resolve_type(0x01000000 | base).unwrap();
+    assert_eq!(bound.definition.assembly.version, [4, 0, 0, 0]);
+    assert!(!bound.exact_identity);
+}
+
+#[test]
+fn ilspy_direct_reference_prefers_full_identity_over_the_main_short_name() {
+    let original = include_bytes!("fixtures/external-release.bin");
+    let library = include_bytes!("fixtures/external-library-release.bin");
+    let md = cildec::PeImage::parse(original)
+        .unwrap()
+        .metadata()
+        .unwrap();
+    let (rid, reference) = md
+        .tables()
+        .iter::<cildec::tables::AssemblyRefRow>()
+        .find(|(_, row)| md.strings().str(row.as_ref().unwrap().name).unwrap() == "ExternalLibrary")
+        .unwrap();
+    let reference = reference.unwrap();
+    let assembly = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let request = md
+        .tables()
+        .row_bytes(cildec::TableId::AssemblyRef, rid)
+        .unwrap();
+    let assembly_at = assembly.as_ptr() as usize - original.as_ptr() as usize;
+    let request_at = request.as_ptr() as usize - original.as_ptr() as usize;
+    let mut main = original.to_vec();
+    main[assembly_at + 18..assembly_at + 20]
+        .copy_from_slice(&(reference.name.0 as u16).to_le_bytes());
+    main[request_at..request_at + 2].copy_from_slice(&4u16.to_le_bytes());
+    let md = cildec::PeImage::parse(library).unwrap().metadata().unwrap();
+    let assembly = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let at = assembly.as_ptr() as usize - library.as_ptr() as usize;
+    let mut selected = library.to_vec();
+    selected[at + 4..at + 6].copy_from_slice(&4u16.to_le_bytes());
+    let mut context = DependencyContext::new(main).unwrap();
+    context.add_reference("selected-library", selected).unwrap();
+    context
+        .discover_references(
+            std::path::Path::new("input.dll"),
+            &ReferenceSearchOptions {
+                automatic: false,
+                ..ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    assert!(matches!(context.resolve(0x23000000 | rid).unwrap(),
+        AssemblyResolution::Resolved { source, .. } if source == "selected-library"));
+}
+
+#[test]
 fn exact_identity_beats_version_alternatives_and_substitution_requires_explicit_policy() {
     let main = include_bytes!("fixtures/external-release.bin");
     let dependency = include_bytes!("fixtures/external-library-release.bin");
@@ -84,7 +190,7 @@ fn exact_identity_beats_version_alternatives_and_substitution_requires_explicit_
                     .unwrap()
                     .text;
                 assert!(
-                    output.contains("Dependency version substituted"),
+                    output.contains("Dependency identity substituted"),
                     "{output}"
                 );
             }
@@ -302,6 +408,7 @@ fn reference_pack_origin_never_claims_a_runtime_implementation() {
         .discover_references(
             &root.join("input.dll"),
             &ReferenceSearchOptions {
+                version_policy: ReferenceVersionPolicy::Exact,
                 environment: DiscoveryEnvironment {
                     dotnet_roots: vec![root.join("dotnet")],
                     ..DiscoveryEnvironment::default()
@@ -358,11 +465,16 @@ fn forwarder_dependencies_are_discovered_from_their_own_reference_scope() {
         include_bytes!("fixtures/binding-facade-release.bin"),
     )
     .unwrap();
-    std::fs::write(
-        root.join("BindingLibrary.dll"),
-        include_bytes!("fixtures/binding-library-release.bin"),
-    )
-    .unwrap();
+    let library = include_bytes!("fixtures/binding-library-release.bin");
+    let library_md = cildec::PeImage::parse(library).unwrap().metadata().unwrap();
+    let assembly = library_md
+        .tables()
+        .row_bytes(cildec::TableId::Assembly, 1)
+        .unwrap();
+    let at = assembly.as_ptr() as usize - library.as_ptr() as usize;
+    let mut selected = library.to_vec();
+    selected[at + 4..at + 6].copy_from_slice(&4u16.to_le_bytes());
+    std::fs::write(root.join("BindingLibrary.dll"), selected).unwrap();
     let peer = md
         .tables()
         .iter::<cildec::tables::TypeRefRow>()
@@ -375,6 +487,8 @@ fn forwarder_dependencies_are_discovered_from_their_own_reference_scope() {
         .unwrap();
     let resolved = context.resolve_type(0x01000000 | peer).unwrap();
     assert_eq!(resolved.definition.assembly.name, "BindingLibrary");
+    assert_eq!(resolved.definition.assembly.version, [4, 0, 0, 0]);
+    assert!(!resolved.exact_identity);
     assert_eq!(resolved.forwarders.len(), 1);
     std::fs::remove_dir_all(root).unwrap();
 }

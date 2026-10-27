@@ -1,0 +1,88 @@
+{
+  "group": "ilspy-reference-resolution",
+  "prior_commit": "14fdfa22f",
+  "input_scope_unchanged": true,
+  "reference_policy_change_explicitly_user_authorized": true,
+  "reference_policy": "IlSpy",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 204329,
+      "Decompiled": 566419
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 39
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 154185,
+      "Decompiled": 616563
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 46
+  },
+  "newly_recovered": 50146,
+  "coverage_losses": [
+    {
+      "id": 76,
+      "assembly": "nunit.framework.tests",
+      "origins": [
+        "NUnit/net-2.0/nunit.framework.tests.dll"
+      ],
+      "token": "0x060007EA",
+      "owner": "NUnit.Framework.Syntax.TestCompiler",
+      "name": "CompileCode",
+      "status": "Partial",
+      "reason": "incompatible value/receiver types",
+      "previous_status": "Decompiled",
+      "previous_reason": null
+    },
+    {
+      "id": 84,
+      "assembly": "nunit.framework.tests",
+      "origins": [
+        "NUnit/net-3.5/nunit.framework.tests.dll"
+      ],
+      "token": "0x06000800",
+      "owner": "NUnit.Framework.Syntax.TestCompiler",
+      "name": "CompileCode",
+      "status": "Partial",
+      "reason": "incompatible value/receiver types",
+      "previous_status": "Decompiled",
+      "previous_reason": null
+    }
+  ],
+  "net_recovered": 50144,
+  "gained_images": 211,
+  "fallback_percent": 20.004592940883402,
+  "strict_exact_scan_counts": {
+    "Partial": 204329,
+    "Decompiled": 566419
+  },
+  "rust_tests": 457,
+  "corpus_tool_tests": 18,
+  "relevant_owned_behavior_drivers": 4,
+  "gained_methods_reviewed": 8,
+  "coverage_losses_reviewed": 2,
+  "review_kind": "bounded main-session source/IL self-review",
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false,
+  "dependency_sources": 492,
+  "dependency_hashes_reused": 326,
+  "acceptance_tool_tests": 18,
+  "final_scan": "report/foreign-value-facts/ilspy-scan-identity-final/baseline.json",
+  "intermediate_scan": "report/foreign-value-facts/ilspy-scan-final/baseline.json",
+  "exact_policy_scan": "report/foreign-value-facts/exact-scan/baseline.json",
+  "identity_preference_fix": {
+    "scan": "report/foreign-value-facts/identity-fix-delta.json",
+    "newly_recovered": 0,
+    "regressions": 0,
+    "note": "full-identity-before-short-name selection changed no corpus body"
+  },
+  "scan_cadence": "full-corpus scan and gained-method self-review every >=3 completed groups; per-group focused tests only"
+}

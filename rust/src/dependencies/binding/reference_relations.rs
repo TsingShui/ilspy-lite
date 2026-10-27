@@ -6,6 +6,7 @@
 use super::DependencyContext;
 use crate::{
     Result,
+    dependencies::ReferenceVersionPolicy,
     ir::Ty,
     metadata::reference_relations::{Definition, Facts, Term},
 };
@@ -23,6 +24,10 @@ pub(crate) struct CachedRegistry {
 }
 
 impl DependencyContext {
+    fn relationship_definition_usable(&self, definition: &super::ResolvedType) -> bool {
+        definition.exact_identity || self.version_policy == ReferenceVersionPolicy::IlSpy
+    }
+
     pub(crate) fn reference_assignment_facts(&self, requested: &BTreeSet<u32>) -> Result<Facts> {
         let stamp = (
             self.candidates.len(),
@@ -70,7 +75,7 @@ impl DependencyContext {
         for (rid, _) in main.md.tables().iter::<cildec::tables::TypeRefRow>() {
             let token = Token(0x01000000 | rid);
             if let Ok((module, owner)) = self.bind_type_in(0, token, &mut BTreeSet::new())
-                && owner.exact_identity
+                && self.relationship_definition_usable(&owner)
             {
                 let representative = *locations
                     .entry((module, owner.definition.token))
@@ -184,7 +189,7 @@ impl DependencyContext {
                 };
                 if let Ok((target, bound)) =
                     self.bind_type_in(module, definition, &mut BTreeSet::new())
-                    && bound.exact_identity
+                    && self.relationship_definition_usable(&bound)
                 {
                     pending.push((target, Token(bound.definition.token), args, active.clone()));
                 }
@@ -251,7 +256,7 @@ impl DependencyContext {
                     }
                 }
                 let (target, bound) = self.bind_type_in(module, *token, &mut BTreeSet::new())?;
-                if !bound.exact_identity {
+                if !self.relationship_definition_usable(&bound) {
                     return Err("reference argument uses a substituted definition".into());
                 }
                 let caller = *locations
@@ -269,7 +274,7 @@ impl DependencyContext {
                 args,
             } => {
                 let (target, bound) = self.bind_type_in(module, *def, &mut BTreeSet::new())?;
-                if !bound.exact_identity {
+                if !self.relationship_definition_usable(&bound) {
                     return Err("reference argument uses a substituted definition".into());
                 }
                 let caller = *locations

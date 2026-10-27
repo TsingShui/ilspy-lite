@@ -448,7 +448,7 @@ def scan_one(image, cli, cli_stamp, output, references_mode, reference_policy,
                             "selection": {"declared": selection["declared"],
                                           "hop1": selection["hop1"]}}}
     checkpoint = image_output / "summary.json"
-    if resume and checkpoint.is_file():
+    if resume and references_mode != "ilspy" and checkpoint.is_file():
         previous = json.loads(checkpoint.read_text())
         if previous.get("stamp") == stamp:
             return previous
@@ -462,8 +462,11 @@ def scan_one(image, cli, cli_stamp, output, references_mode, reference_policy,
             command = [str(cli), "scan", image["path"]]
             if scan_threads > 1:
                 command += ["--threads", str(scan_threads)]
+            if references_mode != "ilspy":
+                command += ["--no-auto-references", "--reference-version-policy", reference_policy]
+            else:
+                command += ["--reference-version-policy", "ilspy", "--details"]
             if references_mode == "declared":
-                command.append("--no-auto-references")
                 for reference in selected:
                     command += ["--reference", reference]
             process = subprocess.run(command, stdout=stdout, stderr=stderr,
@@ -515,6 +518,18 @@ def scan_one(image, cli, cli_stamp, output, references_mode, reference_policy,
             resolution = {"declared": int(match.group(1)),
                           "resolved": int(match.group(2)),
                           "failed": int(match.group(3))}
+    if references_mode == "ilspy":
+        loaded = []
+        for line in (image_output / "stderr.log").read_text().splitlines():
+            if line.startswith(".dependency-candidate source="):
+                path, _ = json.JSONDecoder().raw_decode(line.split("source=", 1)[1])
+                loaded.append(path)
+        stamp["references"]["loaded"] = loaded
+        stamp["references"]["environment"] = {
+            key: os.environ.get(key) for key in
+            ("DOTNET_ROOT", "DOTNET_ROOT_ARM64", "DOTNET_ROOT_X64", "DOTNET_ROOT_X86",
+             "DOTNET_ROOT_ARM", "PATH", "HOME", "NUGET_PACKAGES", "MONO_GAC_PREFIX", "WINDIR")}
+        stamp["references"]["report_path"] = str(image_output / "stderr.log")
     result = {"id": image["id"], "assembly": image["assembly"], "origins": image["origins"],
               "bodies": len(bodies), "counts": counts, "reasons": reasons,
               "references": reference_record(references_mode, reference_policy, reference_ambiguity,
@@ -558,6 +573,8 @@ def reference_record(references_mode, reference_policy, reference_ambiguity, ref
 
 
 def baseline(args):
+    if args.references == "ilspy":
+        args.reference_version_policy = "ilspy"
     started = time.monotonic()
     source = json.loads(args.inventory.read_text())
     if not source["complete"]:
@@ -682,9 +699,9 @@ def main():
                       help="Threads inside each scan process; each worker keeps its own fact caches")
     scan.add_argument("--timeout", type=int, default=300)
     scan.add_argument("--resume", action="store_true")
-    scan.add_argument("--references", choices=("none", "declared"), default="none",
-                      help="Pass exactly the references each image declares and record the selection")
-    scan.add_argument("--reference-version-policy", choices=("exact", "same-major"),
+    scan.add_argument("--references", choices=("none", "declared", "ilspy"), default="none",
+                      help="Use no references, the fixed declared selection, or ILSpy-style discovery")
+    scan.add_argument("--reference-version-policy", choices=("exact", "same-major", "ilspy"),
                       default="exact")
     scan.add_argument("--reference-ambiguity", choices=("tie-break", "skip"), default="tie-break",
                       help="Pass one deterministic file when an identity is owned by several "

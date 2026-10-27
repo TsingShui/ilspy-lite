@@ -7,7 +7,7 @@ use ilspy_lite::{
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite identities <assembly>...\n  ilspy-lite scan <assembly> [--threads <n>] [reference options]\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001> [--details]\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nReference options (decompile and scan): --reference <assembly>, --reference-dir <directory> (repeatable), --no-auto-references, --reference-version-policy <exact|same-major>.\nidentities prints one JSON line per image: its own identity and the reference identities it declares, read from that image alone.\nScan with reference options also prints references=<declared> resolved=<n> failed=<n> and one reference=<token> <identity> line per declared reference on stderr; it does not change any method status.\nDecompile exit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nScan: NDJSON status/reason per MethodDef; exit 0 means enumeration completed, not every body recovered. Scan exit 1 means request/input/output failure.\nOutput is C#-like; no promise of recompilable source.";
+const USAGE: &str = "Usage:\n  ilspy-lite list <assembly>\n  ilspy-lite identities <assembly>...\n  ilspy-lite scan <assembly> [--threads <n>] [reference options]\n  ilspy-lite il <assembly> --method <0x06000001>\n  ilspy-lite decompile <assembly> --method <0x06000001> [--details]\n  ilspy-lite decompile <assembly> --type <Namespace.Type> [--details]\n\nDefault: readable C#-like view. --details: full metadata/IL evidence.\nReference options (decompile and scan): --reference <assembly>, --reference-dir <directory> (repeatable), --no-auto-references, --reference-version-policy <ilspy|exact|same-major> (default: ilspy).\nidentities prints one JSON line per image: its own identity and the reference identities it declares, read from that image alone.\nScan prints declared reference identities on stderr; --details also prints dependency selection and provenance. Reference facts can affect method status.\nDecompile exit: 0 complete/declaration, 2 partial IL fallback, 1 failure.\nScan: NDJSON status/reason per MethodDef; exit 0 means enumeration completed, not every body recovered. Scan exit 1 means request/input/output failure.\nOutput is C#-like; no promise of recompilable source.";
 
 fn main() -> std::process::ExitCode {
     match run() {
@@ -24,10 +24,10 @@ fn run() -> Result<u8> {
     let mut style = OutputStyle::Readable;
     let mut references = Vec::new();
     let mut reference_dirs = Vec::new();
-    let mut version_policy = ReferenceVersionPolicy::Exact;
+    let mut version_policy = ReferenceVersionPolicy::IlSpy;
     let mut scan_threads = 1usize;
     let command = args.first().and_then(|arg| arg.to_str()).map(str::to_owned);
-    let mut automatic = command.as_deref() == Some("decompile");
+    let mut automatic = matches!(command.as_deref(), Some("decompile" | "scan"));
     let option_start = match command.as_deref() {
         Some("decompile") if args.len() >= 4 => Some(4),
         Some("scan") if args.len() >= 3 => Some(2),
@@ -44,7 +44,12 @@ fn run() -> Result<u8> {
                 version_policy = match args.get(index).and_then(|s| s.to_str()) {
                     Some("exact") => ReferenceVersionPolicy::Exact,
                     Some("same-major") => ReferenceVersionPolicy::SameMajor,
-                    _ => return Err("--reference-version-policy needs exact or same-major".into()),
+                    Some("ilspy") => ReferenceVersionPolicy::IlSpy,
+                    _ => {
+                        return Err(
+                            "--reference-version-policy needs ilspy, exact or same-major".into(),
+                        );
+                    }
                 };
             } else if args[index] == "--threads" {
                 index += 1;
@@ -154,6 +159,9 @@ fn run() -> Result<u8> {
             }
             for warning in dependency_warnings(&context) {
                 eprintln!("dependency warning: {warning}");
+            }
+            if style == OutputStyle::Details {
+                eprint!("{}", context.dependency_report()?);
             }
             Some(context)
         } else {

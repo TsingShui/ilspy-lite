@@ -6,7 +6,55 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: ordinary local value construction
+## Current verified state: ILSpy-style reference selection
+
+- `report/foreign-value-facts/ilspy-scan-identity-final/baseline.json`: **616,563
+  Decompiled / 154,185 Partial of 770,748**, fallback **20.004592940883402%**.
+  **+50,146 in 211 images** against the fixed exact baseline, **2 recorded
+  coverage losses**, zero incomplete images. Game **3,644/1,123 (+531)**;
+  Common **13,489/4,918 (+1,360)**. Aggregate <=5% still unmet.
+- The change is reference selection, explicitly requested by the user: follow
+  ILSpy instead of the stricter exact-identity rule. Mechanism copied from
+  UniversalAssemblyResolver/DotNetCorePathFinder (name-based directory probes,
+  closest-or-newest shared framework), DecompilerTypeSystem (closure over loaded
+  modules and assembly-scoped forwarders, highest version per short name) and
+  FindModuleByReference (full identity first, then short name; forwarders by
+  short name). Requested/selected identities and provenance stay recorded; a
+  differing selection is reported as substituted, not as an exact match.
+- `ReferenceVersionPolicy::{Exact,SameMajor}` remain for reproducible earlier
+  scans and byte-only callers. CLI and `ReferenceSearchOptions::default()` are
+  `IlSpy`; the fixed exact scan `report/foreign-value-facts/exact-scan/` is
+  retained for comparison. Selection does not fabricate definitions: missing
+  endpoints stay unresolved.
+- Selected-definition ancestry is used for reference relationships in this mode
+  (ILSpy compares type definitions, not calling AssemblyRef versions). A
+  regression sweep of that change removed 1,184 of the 1,186 first-pass losses;
+  final losses are 2 and both are recorded with their cause.
+- **Two coverage losses, not hidden:** NUnit net-2.0/net-3.5
+  `TestCompiler.CompileCode`. The fixed older System definition proved the
+  CSharpCodeProvider receiver; the installed System facade forwards CodeDom to
+  `System.CodeDom.dll`, absent from the selected host framework. ILSpy emits an
+  explicit cast there. No guessed ancestry or added cast reintroduces them; both
+  stay Partial and counted.
+- Validation: **457 tests**, fmt/clippy, 18 acceptance-tool tests, and four owned
+  drivers (version-substituted relationships 143 comparisons/36 closed
+  selections per config with four mutants; external enum 30/three mutants;
+  external allocation 26/two mutants; external property). A metadata-only ILSpy
+  resolver probe confirms it selects CoreLib 10.0.0.0 for the 0.0.0.0 request.
+- Eight gained triples and both losses retain production default/ILSpy/IL
+  evidence in `report/foreign-value-facts/review/`; eight
+  CRUDE-BUT-EQUIVALENT, no changed-semantic SUSPECT. No third-party execution.
+- Docs: `acceptance/corpus/ILSPY_REFERENCE_RESOLUTION.md`, updated
+  `DEPENDENCIES.md`, `README.md` and acceptance README. Scan cadence is now
+  batched: per group focused tests/fmt/clippy/owned drivers, full-corpus scan and
+  gained-method self-review after at least three completed groups, each group a
+  separate local commit so a batched regression stays attributable.
+- Next: token-valued instructions (`ldtoken`, `ldftn`), then the remaining
+  external-fact families (constructed members, generic instance dispatch, casts)
+  and non-core EH catch identities. Study the ILSpy implementation before each
+  group. No agents, no push.
+
+## Previous verified state: ordinary local value construction
 
 - `report/local-value-construction/corpus-scan/baseline.json`: **566,419
   Decompiled / 204,329 Partial of 770,748**, fallback **26.510480727812464%**.

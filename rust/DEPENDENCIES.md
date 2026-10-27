@@ -4,7 +4,7 @@ Production reads local PE/metadata bytes only. It never starts dotnet, executes
 input/dependency code, reflection-loads assemblies, restores packages or installs
 an SDK. Existing byte-only `decompile` / `decompile_type` APIs remain detailed and
 perform no implicit filesystem search. `DependencyContext` is the explicit
-metadata/search interface. Resolving metadata does not expand body lowering.
+metadata/search interface. Resolved metadata can provide facts used by body lowering.
 
 The closed-generic reference slice interns canonical structural signatures within
 each parsed input. TypeId handles cannot cross inputs; metadata tokens retain
@@ -25,19 +25,19 @@ content; source strings are provenance labels, never paths to open. Defining
 module indexes, not public labels, select snapshots. Reader overflow is rejected
 before cache matching, so a truncated prefix cannot masquerade as a complete image.
 
-Assembly matching includes name, four-part version, culture, public-key token and
-content type. Names/cultures compare ASCII case-insensitively. Full public keys
+Assembly identities record name, four-part version, culture, public-key token and
+content type. Exact matching includes all of them; ILSpy-style lookup can select a
+different identity by short name. Names/cultures compare ASCII case-insensitively. Full public keys
 use the standardized reversed final eight SHA-1 bytes. Tokens are legacy identity
 labels, **not publisher authentication or strong-name verification**. File names
 and framework-directory versions are not identities. Nominal signature keys quote
 structured identities; ambiguous human-readable display labels are not keys.
 
-Different explicit reference contents with the same identity conflict; identical
-reference bytes cache once and retain source aliases. Changed bytes at a cached
-source are rejected. Ordered search directories instead deliberately select the
-first exact identity, not an arbitrary enumeration winner. Distinct filesystem
-aliases can be conservatively rejected near the read budget; complete byte aliases
-still deduplicate. Malformed AssemblyRef rows retain token/reason/raw-row evidence.
+Identical reference bytes cache once and retain source aliases. Changed bytes at a
+cached source are rejected. Exact-policy binding reports conflicting contents with
+the same identity; ILSpy-style binding retains the highest loaded version of each
+short name, with the later file winning an equal-version tie. The main module
+remains distinct. Malformed AssemblyRef rows retain token/reason/raw-row evidence.
 
 ## CLI and lookup order
 
@@ -51,22 +51,20 @@ ilspy-lite decompile Assembly.dll --type Namespace.Type \
 ```
 
 Post-selector options may appear in any order; file/directory options repeat.
-Explicit files precede explicitly ordered directories (DLL before EXE), then
-these automatic families:
+Both CLI decompile and scan use ILSpy-style discovery by default. Explicit files
+and ordered directories are considered before automatic candidates. Automatic
+lookup uses the main image's directory, adjacent deps/NuGet assets, a selected
+installed shared framework, and available Framework/GAC/Mono paths. It walks
+assembly-scoped exported-type forwarders of selected references.
 
-1. The current referring image's directory.
-2. Adjacent `.deps.json` runtime assets in local NuGet caches, using metadata
-   target-framework hints and safe, case-preserving cache-relative paths.
-3. Installed .NET shared frameworks and separate SDK reference packs.
-4. Windows .NET Framework/GAC and common Mono layouts.
-
-A wrong/damaged early candidate does not hide a later exact identity. Selected
-references are searched transitively in each referrer's scope. Cycles, missing
-images, invalid requests and truncated searches retain diagnostics. `--no-auto-`
-`references` disables automatic families, not supplied file/directory inputs.
-Embedding defaults use empty injected roots; the CLI obtains host roots through
-environment/filesystem inspection only. Missing SDK/runtime installations are
-ordinary missing metadata, not prerequisites for independent bodies.
+ILSpy-style binding compares a direct reference against the full identities of
+loaded modules first, then uses the short name. Forwarders use the loaded short
+name. This adapts ILSpy's core selection and forwarder mechanisms, not every
+resolver feature: cyclic-forwarder repair, multimodule exports, host-runtime
+selection and all path ordering cases are not fully reproduced. Search is local
+and metadata-only; missing endpoints remain unresolved. `--no-auto-references`
+disables automatic families but still accepts supplied files/directories. Embedding
+uses injected roots; the CLI discovers host roots from the environment/filesystem.
 
 Framework hints come from static attributes, not the analyzer's runtime. Hints
 order relevant versions before deterministic alternatives; directories themselves
@@ -75,20 +73,22 @@ candidate deduplication prevent traversal/alias loops. Silverlight, WinMD/Window
 SDK specialization, archives/single-file containers, remote restore, RID-specific
 runtimeTargets selection and full runtimeconfig roll-forward are not implemented.
 
-## Exact versus metadata-only replacement
+## Reference selection policies
 
-`ReferenceVersionPolicy::Exact` is the default. Explicit `SameMajor` selects the
-nearest nonolder version with the same major/name/culture/token/content type only
-when no exact candidate exists. Exact candidates are searched first. Inspection,
-read/enumeration errors and resource truncation explicitly mark discovery
-incomplete; incomplete discovery cannot authorize replacement. Exact matches
-found independently remain usable.
+The CLI and `ReferenceSearchOptions::default()` use `IlSpy`; byte-only
+`DependencyContext::new` does not search and retains `Exact` until configured.
+`--reference-version-policy exact` preserves exact identity matching;
+`same-major` permits only the nearest nonolder version with the same
+major/name/culture/token/content type when no exact candidate exists.
 
-Requested/selected identities, source and policy remain auditable. A substituted
-type has `exact_identity=false` through forwarding hops. This is **not** API or
-runtime compatibility proof. Property source recovery additionally checks owner,
-accessor-reference, accessor-definition and PropertySig type paths; an exact
-owner cannot launder substituted return/argument/property types into C# proof.
+`ilspy` follows loaded short-name selection, including version changes and
+potentially other identity differences. Requested/selected identities, source
+and policy remain auditable; substituted type paths retain
+`exact_identity=false`. The selected metadata is not proof of compatibility
+with every target runtime or assembly of the same name. Property source recovery
+continues to require exact owner and signature paths. Selected-definition
+ancestry is used for reference relationships in ILSpy mode, without adding
+runtime casts, allocations or copies.
 
 ## Binding and metadata roles
 
@@ -144,9 +144,10 @@ complete hostile-input verifier.
 ## Sources and finite validation
 
 Rules were adapted from ILSpy's `Metadata/UniversalAssemblyResolver.cs`,
-`DotNetCorePathFinder.cs`, `DotNetCorePathFinderExtensions.cs` and
-`TypeSystem/DecompilerTypeSystem.cs`. Upstream MIT attribution remains in adapted
-source. Short-name/highest-version unification was deliberately not adopted.
+`DotNetCorePathFinder.cs`, `TypeSystem/DecompilerTypeSystem.cs`,
+`TypeSystem/MetadataModule.cs` and `TypeSystem/TypeSystemExtensions.cs`.
+Short-name/highest-version selection and forwarder walking follow those mechanisms
+within the documented limits. Upstream MIT attribution remains in adapted source.
 
 Owned tests cover isolated no-SDK/local/explicit order, deps/NuGet/shared/ref,
 Framework/GAC/Mono layouts, identity conflicts/missing/corrupt requests,

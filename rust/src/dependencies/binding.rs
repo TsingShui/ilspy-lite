@@ -181,7 +181,42 @@ impl DependencyContext {
         found
     }
 
+    fn ilspy_named_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
+        let mut modules = Vec::new();
+        if self
+            .identity_source(0)
+            .is_ok_and(|(identity, _)| identity.name.eq_ignore_ascii_case(&requested.name))
+        {
+            modules.push(0);
+        }
+        // DecompilerTypeSystem keeps the highest referenced version for each
+        // short name, replacing the earlier file on an equal version.
+        if let Some((index, _)) = self
+            .candidates
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, _, identity))| identity.name.eq_ignore_ascii_case(&requested.name))
+            .max_by_key(|(_, (_, _, identity))| identity.version)
+        {
+            modules.push(index + 1);
+        }
+        modules
+    }
+
     pub(super) fn matching_modules(&self, requested: &AssemblyIdentity) -> Vec<usize> {
+        if self.version_policy == ReferenceVersionPolicy::IlSpy {
+            let modules = self.ilspy_named_modules(requested);
+            // FindModuleByReference checks full identity before short name.
+            let selected = modules
+                .iter()
+                .copied()
+                .find(|module| {
+                    self.identity_source(*module)
+                        .is_ok_and(|(identity, _)| identity.matches(requested))
+                })
+                .or_else(|| modules.first().copied());
+            return selected.into_iter().collect();
+        }
         let mut found = self.exact_matching_modules(requested);
         if found.is_empty()
             && self.version_policy == ReferenceVersionPolicy::SameMajor
@@ -212,12 +247,20 @@ impl DependencyContext {
         found
     }
 
-    fn binding_assembly(&self, module: usize, token: Token) -> Result<usize> {
+    fn binding_assembly(&self, module: usize, token: Token, forwarder: bool) -> Result<usize> {
         if token.table() != Some(TableId::AssemblyRef) || token.rid() == 0 {
             return Err("type binding requires a non-null AssemblyRef".into());
         }
         let requested = reference_identity(&self.binding_image(module)?, token.rid())?;
-        match self.matching_modules(&requested).as_slice() {
+        let modules = if forwarder && self.version_policy == ReferenceVersionPolicy::IlSpy {
+            self.ilspy_named_modules(&requested)
+                .into_iter()
+                .take(1)
+                .collect()
+        } else {
+            self.matching_modules(&requested)
+        };
+        match modules.as_slice() {
             [only] => Ok(*only),
             [] => Err(format!("type binding requires a resolved assembly: {requested}").into()),
             _ => Err(
@@ -256,7 +299,7 @@ impl DependencyContext {
                     let mut inherited_forwarders = Vec::new();
                     let (target, parent) = match scope.table() {
                         Some(TableId::AssemblyRef) => {
-                            let target = self.binding_assembly(module, scope)?;
+                            let target = self.binding_assembly(module, scope, false)?;
                             exact_identity = reference_identity(&image, scope.rid())?
                                 .matches(&self.identity_source(target)?.0);
                             (target, None)
@@ -369,7 +412,7 @@ impl DependencyContext {
             if row.flags & 0x00200000 == 0 || implementation.table() != Some(TableId::AssemblyRef) {
                 return Err("exported type needs an assembly-scoped forwarder; multi-module exports remain unresolved".into());
             }
-            let target = self.binding_assembly(module, implementation)?;
+            let target = self.binding_assembly(module, implementation, true)?;
             let (definition, mut bound) =
                 self.lookup_named_type(target, namespace, name, None, visiting)?;
             bound.exact_identity &= reference_identity(&image, implementation.rid())?

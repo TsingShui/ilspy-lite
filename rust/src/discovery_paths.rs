@@ -204,6 +204,63 @@ pub fn candidates_for(
     search.result
 }
 
+/// ILSpy's normal resolver searches the main assembly directory, package assets,
+/// then a selected shared framework. Forwarder repair has a separate referrer path.
+pub fn candidates_for_ilspy(
+    input_path: &Path,
+    requested: &AssemblyIdentity,
+    target_framework: Option<&str>,
+    environment: &DiscoveryEnvironment,
+) -> DiscoveryResult {
+    let mut search = Search::default();
+    if !safe_component(&requested.name) {
+        search.diagnostic("unsafe assembly name component");
+        return search.result;
+    }
+    search.pair(
+        input_path.parent().unwrap_or(Path::new(".")),
+        &requested.name,
+        CandidateOrigin::Neighbor,
+    );
+    search.deps(input_path, requested, target_framework, environment);
+    let hint = target_framework.and_then(FrameworkHint::parse);
+    for root in environment.dotnet_roots.iter().take(MAX_ROOTS) {
+        for pack in [
+            "Microsoft.NETCore.App",
+            "Microsoft.WindowsDesktop.App",
+            "Microsoft.AspNetCore.App",
+            "Microsoft.AspNetCore.All",
+        ] {
+            let versions = search.versions(&root.join("shared").join(pack), "", None);
+            let selected = if let Some(hint) = hint.as_ref().filter(|h| h.family != ".NETFramework")
+            {
+                // DotNetCorePathFinder.GetClosestVersionFolder: first installed
+                // framework version at or above the target framework version.
+                versions.into_iter().find(|p| {
+                    p.file_name()
+                        .and_then(|n| n.to_str())
+                        .and_then(Version::parse)
+                        .is_some_and(|v| v.numbers >= hint.version.numbers)
+                })
+            } else {
+                // UniversalAssemblyResolver.FindSharedFramework without a
+                // managed host's preferred major uses the newest installed one.
+                versions.into_iter().last()
+            };
+            if let Some(directory) = selected {
+                search.pair(
+                    &directory,
+                    &requested.name,
+                    CandidateOrigin::SharedFramework,
+                );
+            }
+        }
+    }
+    search.framework_and_gac(requested, hint.as_ref(), environment);
+    search.mono(requested, hint.as_ref(), environment);
+    search.result
+}
+
 fn relative_asset(value: &str) -> Option<PathBuf> {
     let components: Vec<_> = value.split('/').collect();
     if components.len() > 32 || !components.iter().all(|part| safe_component(part)) {

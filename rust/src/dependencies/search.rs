@@ -32,7 +32,7 @@ impl Default for ReferenceSearchOptions {
             files: Vec::new(),
             directories: Vec::new(),
             environment: DiscoveryEnvironment::default(),
-            version_policy: ReferenceVersionPolicy::Exact,
+            version_policy: ReferenceVersionPolicy::IlSpy,
             max_loader_probes: 4096,
         }
     }
@@ -111,9 +111,35 @@ impl DependencyContext {
                 break 'closure;
             }
             work += count as usize;
+            let forwarded =
+                if options.version_policy == ReferenceVersionPolicy::IlSpy && module != 0 {
+                    let mut targets = BTreeSet::new();
+                    for (rid, row) in image.md.tables().iter::<cildec::tables::ExportedTypeRow>() {
+                        row?;
+                        let target = image.metadata_coded_token(
+                            cildec::CodedIndex::Implementation,
+                            image
+                                .md
+                                .tables()
+                                .raw_column(cildec::TableId::ExportedType, rid, 4)?,
+                        )?;
+                        if target.table() == Some(cildec::TableId::AssemblyRef) {
+                            targets.insert(target.rid());
+                        }
+                    }
+                    Some(targets)
+                } else {
+                    None
+                };
             let mut requests = Vec::new();
             let mut invalid = Vec::new();
             for rid in 1..=count {
+                if forwarded
+                    .as_ref()
+                    .is_some_and(|targets| !targets.contains(&rid))
+                {
+                    continue;
+                }
                 match super::reference_identity(&image, rid) {
                     Ok(identity) => requests.push((rid, identity)),
                     Err(error) => invalid.push((
@@ -140,12 +166,22 @@ impl DependencyContext {
                     ));
                     continue;
                 }
-                if self.exact_matching_modules(&identity).is_empty() {
+                if !self.search_satisfied(&identity) {
                     if budget.used >= budget.limit {
                         self.search_failure("dependency file probe limit exceeded".into());
                         break 'closure;
                     }
                     let mut paths = Vec::new();
+                    if options.automatic && options.version_policy == ReferenceVersionPolicy::IlSpy
+                    {
+                        let directory = input.parent().unwrap_or(Path::new("."));
+                        for extension in ["dll", "exe"] {
+                            paths.push((
+                                directory.join(format!("{}.{extension}", identity.name)),
+                                "Neighbor".to_string(),
+                            ));
+                        }
+                    }
                     for directory in &options.directories {
                         for extension in ["dll", "exe"] {
                             paths.push((
@@ -155,12 +191,21 @@ impl DependencyContext {
                         }
                     }
                     if options.automatic {
-                        let found = candidates_for(
-                            &referrer,
-                            &identity,
-                            framework.as_deref(),
-                            &options.environment,
-                        );
+                        let found = if options.version_policy == ReferenceVersionPolicy::IlSpy {
+                            crate::discovery_paths::candidates_for_ilspy(
+                                input,
+                                &identity,
+                                framework.as_deref(),
+                                &options.environment,
+                            )
+                        } else {
+                            candidates_for(
+                                &referrer,
+                                &identity,
+                                framework.as_deref(),
+                                &options.environment,
+                            )
+                        };
                         self.discovery_incomplete |= found.incomplete;
                         for diagnostic in found.diagnostics {
                             self.search_note(diagnostic);
@@ -173,7 +218,7 @@ impl DependencyContext {
                         );
                     }
                     for (path, origin) in paths {
-                        if !self.exact_matching_modules(&identity).is_empty() {
+                        if self.search_satisfied(&identity) {
                             break;
                         }
                         if !self.search_file(&path, &origin, &mut seen, &mut budget) {
@@ -210,6 +255,14 @@ impl DependencyContext {
             }
         }
         Ok(())
+    }
+
+    fn search_satisfied(&self, identity: &super::AssemblyIdentity) -> bool {
+        if self.version_policy == ReferenceVersionPolicy::IlSpy {
+            !self.matching_modules(identity).is_empty()
+        } else {
+            !self.exact_matching_modules(identity).is_empty()
+        }
     }
 
     fn search_file(

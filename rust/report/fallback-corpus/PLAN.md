@@ -3,7 +3,31 @@
 Authoritative numbers and the ordered queue. Update this file when a milestone lands;
 `CHECKPOINT.md` carries the operational state.
 
-## Current position (ordinary local value construction; aggregate 5% target)
+Scan cadence: a group is validated with focused tests, `fmt`/`clippy` and the owned
+drivers covering it. The full fixed-corpus scan plus gained-method self-review runs
+after at least three completed groups. Each group stays its own local commit so a
+regression found in a batched scan can be attributed by rescanning those commits.
+
+## Current position (ILSpy-style reference selection; aggregate 5% target)
+
+- **616,563 Decompiled / 154,185 Partial; fallback 20.00459%**.
+- +50,146 in 211 images and **2 recorded coverage losses** against the fixed
+  exact baseline; zero incomplete; same 770,748 bodies. Game +531 / Common
+  +1,360. <=5% still unmet.
+- Reference selection now follows ILSpy: name-based probes, closest-or-newest
+  shared framework, closure over loaded modules and assembly-scoped forwarders,
+  highest version per short name, full identity before short name for direct
+  references. Exact/SameMajor stay available; requested/selected identities and
+  substituted selection remain auditable. This is a selection change, not a
+  like-for-like matcher gain.
+- The two losses are NUnit net-2.0/net-3.5 CompileCode: the installed System
+  facade forwards CodeDom to an assembly absent from the host framework, so the
+  receiver ancestry is unprovable. They stay Partial and counted.
+- 457 tests, fmt/clippy, 18 acceptance-tool tests and four owned drivers pass.
+- Next: token-valued instructions (ldtoken, ldftn), then remaining external-fact
+  families and non-core EH catch identities. Study ILSpy first in each group.
+
+## Previous position (ordinary local value construction; aggregate 5% target)
 
 - **566,419 Decompiled / 204,329 Partial; fallback 26.51048%**.
 - +7,662 in 102 images; zero losses/incomplete; fixed scope/reference policy.

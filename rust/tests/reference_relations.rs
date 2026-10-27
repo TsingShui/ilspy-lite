@@ -24,6 +24,40 @@ fn token(bytes: &[u8], owner: &str, name: &str) -> u32 {
 }
 
 #[test]
+fn ilspy_relationships_use_the_selected_definition_not_literal_reference_versions() {
+    let (bytes, library) = IMAGES[0];
+    let md = cildec::PeImage::parse(library).unwrap().metadata().unwrap();
+    let assembly = md.tables().row_bytes(cildec::TableId::Assembly, 1).unwrap();
+    let at = assembly.as_ptr() as usize - library.as_ptr() as usize;
+    let mut selected = library.to_vec();
+    selected[at + 4..at + 6].copy_from_slice(&4u16.to_le_bytes());
+    let path = std::env::temp_dir().join(format!(
+        "ilspy-selected-relation-{}.dll",
+        std::process::id()
+    ));
+    std::fs::write(&path, selected).unwrap();
+    let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+    context
+        .discover_references(
+            std::path::Path::new("owned.dll"),
+            &ilspy_lite::ReferenceSearchOptions {
+                automatic: false,
+                files: vec![path.clone()],
+                ..ilspy_lite::ReferenceSearchOptions::default()
+            },
+        )
+        .unwrap();
+    let result = context
+        .decompile(
+            token(bytes, "RelationCases.Ops", "ForeignGeneric"),
+            OutputStyle::Readable,
+        )
+        .unwrap();
+    std::fs::remove_file(path).unwrap();
+    assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+}
+
+#[test]
 fn local_constructed_reference_relationships_preserve_arguments_and_scope() {
     for (bytes, _) in IMAGES {
         for name in [

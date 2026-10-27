@@ -86,6 +86,8 @@ pub struct ReferenceFailure {
 pub enum ReferenceVersionPolicy {
     #[default]
     Exact,
+    /// ILSpy loaded-reference binding: short assembly name, highest loaded version.
+    IlSpy,
     /// Explicit opt-in metadata substitution to the nearest nonolder same-major
     /// identity. This does not certify API compatibility or runtime behavior.
     SameMajor,
@@ -647,6 +649,13 @@ impl DependencyContext {
         self.binding_image(index + 1)
     }
 
+    /// Metadata-only reference requests, selected snapshots and discovery provenance.
+    pub fn dependency_report(&self) -> Result<String> {
+        let mut text = String::new();
+        self.append_report(&mut text, OutputStyle::Details)?;
+        Ok(text)
+    }
+
     fn append_report(&self, text: &mut String, style: OutputStyle) -> Result<()> {
         let kind = self.kinds[&0];
         if style == OutputStyle::Readable {
@@ -662,11 +671,16 @@ impl DependencyContext {
             text.insert_str(0, notice);
         }
         if style == OutputStyle::Details {
-            let (identity, _) = self.identity_source(0)?;
-            text.push_str(&format!(
-                "\n.dependency-main kind={kind:?} identity={:?}\n",
-                identity.to_string()
-            ));
+            match self.identity_source(0) {
+                Ok((identity, _)) => text.push_str(&format!(
+                    "\n.dependency-main kind={kind:?} identity={:?}\n",
+                    identity.to_string()
+                )),
+                Err(error) => text.push_str(&format!(
+                    "\n.dependency-main kind={kind:?} identity-unavailable={:?}\n",
+                    error.to_string()
+                )),
+            }
             for evidence in &self.search_evidence {
                 text.push_str(&format!("\n{evidence}\n"));
             }
@@ -739,7 +753,7 @@ impl DependencyContext {
                         selected.to_string()
                     ),
                     Some(format!(
-                        "Dependency version substituted: {requested} -> {selected}; {policy:?}, metadata only, not original-runtime behavior proof."
+                        "Dependency identity substituted: {requested} -> {selected}; {policy:?}, metadata only, not original-runtime behavior proof."
                     )),
                 ),
                 AssemblyResolution::Invalid { failure } => (
@@ -852,6 +866,41 @@ impl DependencyContext {
     }
 
     pub fn resolve(&self, reference_token: u32) -> Result<AssemblyResolution> {
+        if self.version_policy == ReferenceVersionPolicy::IlSpy {
+            if let Some(failure) = self
+                .reference_failures
+                .iter()
+                .find(|r| r.token == reference_token)
+            {
+                return Ok(AssemblyResolution::Invalid {
+                    failure: failure.clone(),
+                });
+            }
+            let requested = self
+                .references
+                .iter()
+                .find(|r| r.token == reference_token)
+                .ok_or("unknown assembly reference")?
+                .identity
+                .clone();
+            let Some(module) = self.matching_modules(&requested).first().copied() else {
+                return Ok(AssemblyResolution::Missing { requested });
+            };
+            let (selected, source) = self.identity_source(module)?;
+            return Ok(if requested.matches(&selected) {
+                AssemblyResolution::Resolved {
+                    identity: selected,
+                    source,
+                }
+            } else {
+                AssemblyResolution::Substituted {
+                    requested,
+                    selected,
+                    source,
+                    policy: self.version_policy,
+                }
+            });
+        }
         let exact = self.resolve_exact(reference_token)?;
         let AssemblyResolution::Missing { requested } = exact else {
             return Ok(exact);
