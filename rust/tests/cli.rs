@@ -14,7 +14,7 @@ fn fixture() -> &'static str {
 
 #[test]
 fn scan_reports_every_method_with_the_same_status_as_token_decompilation() {
-    let out = run(&["scan", fixture()]);
+    let out = run(&["scan", fixture(), "--no-auto-references"]);
     assert!(
         out.status.success(),
         "{}",
@@ -216,7 +216,7 @@ fn malformed_requests_are_not_silent_success() {
 
 #[test]
 fn scan_records_the_selected_reference_set_without_changing_any_status() {
-    let plain = run(&["scan", fixture()]);
+    let plain = run(&["scan", fixture(), "--no-auto-references"]);
     let with_references = run(&[
         "scan",
         fixture(),

@@ -2313,6 +2313,14 @@ impl<'a> Image<'a> {
             let (blob, field) = match instruction.operand {
                 cildec::Operand::Method(target) => (self.member_signature(target)?, false),
                 cildec::Operand::Field(target) => (self.member_signature(target)?, true),
+                // `newarr`/`initobj`/`box` name their type directly, so a foreign
+                // element or target only gets a fact if its token is collected here.
+                cildec::Operand::Type(target)
+                    if matches!(target.table(), Some(TableId::TypeRef | TableId::TypeDef)) =>
+                {
+                    tokens.values.push(target);
+                    continue;
+                }
                 _ => continue,
             };
             let Some(blob) = blob else { continue };
@@ -3126,6 +3134,15 @@ impl<'a> Image<'a> {
             } else {
                 Type::Class(token)
             }
+        } else if matches!(
+            crate::ir::Ty::from_sig_scoped(&Type::ValueType(token), self, context),
+            Ok(crate::ir::Ty::Value(_) | crate::ir::Ty::Enum(_))
+        ) {
+            // A foreign element whose value-type fact was already admitted keeps its
+            // instantiation; the array shape carries no extra layout claim.
+            Type::ValueType(token)
+        } else if self.external_struct_type(token).is_some() {
+            return Err("array allocation needs exact external element kind facts: the element definition was refused".into());
         } else {
             return Err("array allocation needs exact external element kind facts".into());
         };

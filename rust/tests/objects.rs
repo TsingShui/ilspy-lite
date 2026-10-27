@@ -44,7 +44,7 @@ fn object_cli_scan_and_method_output_have_identical_admission() {
             env!("CARGO_MANIFEST_DIR")
         );
         let output = Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
-            .args(["scan", &fixture])
+            .args(["scan", &fixture, "--no-auto-references"])
             .output()
             .unwrap();
         assert!(

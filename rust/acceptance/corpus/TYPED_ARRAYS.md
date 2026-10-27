@@ -103,3 +103,13 @@ No third-party runtime execution, independent/formal verification, whole-corpus
 or cross-runtime equivalence is claimed. **Aggregate <=5% remains unmet.** The
 complete per-image results and residual methods/reasons are retained under
 report/typed-arrays/corpus-scan/.
+
+## Foreign value elements
+
+`newarr` over a foreign value type is admitted when that element's own value-type
+fact is present: inline type operands now join the demand-driven fact priming, so
+the array names the element identity without claiming its layout. A recorded
+refusal keeps its own reason. Owned `TokenCases.Dates`/`Days` were red
+(`array allocation needs exact external element kind facts`) and are green after
+the change; `typed-array` behavior and mutants are unchanged. See
+`report/external-array-elements/AUDIT.md`.

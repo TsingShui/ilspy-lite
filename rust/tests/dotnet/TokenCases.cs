@@ -47,5 +47,14 @@ namespace TokenCases
         public sealed class Nested
         {
         }
+
+        public static System.DateTime[] Dates() => new System.DateTime[2];
+        public static System.DayOfWeek[] Days() => new System.DayOfWeek[2];
+        public static int ExternalArrays()
+        {
+            var dates = Dates();
+            var days = Days();
+            return dates.Length + days.Length;
+        }
     }
 }
