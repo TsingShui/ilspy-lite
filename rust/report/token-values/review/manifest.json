@@ -1,0 +1,186 @@
+[
+  {
+    "slug": "0000-06000482",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000482",
+    "owner": "Microsoft.FSharp.Quotations.FSharpExpr",
+    "name": "Value",
+    "previous_reason": "unsupported opcode ldtoken at IL_0006",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-06000616",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000616",
+    "owner": "Microsoft.FSharp.Core.ExtraTopLevelOperators",
+    "name": "CreateDictionary",
+    "previous_reason": "unsupported opcode ldtoken at IL_0000",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-0600067A",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x0600067A",
+    "owner": "Microsoft.FSharp.Linq.QueryModule",
+    "name": "get_boolTy",
+    "previous_reason": "unsupported opcode ldtoken at IL_0000",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-060009D3",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x060009D3",
+    "owner": "Microsoft.FSharp.Linq.RuntimeHelpers.LeafExpressionConverter",
+    "name": "|NullableConstruction|_|",
+    "previous_reason": "unsupported opcode ldtoken at IL_0047",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-06000A5B",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000A5B",
+    "owner": "Microsoft.FSharp.Linq.RuntimeHelpers.LeafExpressionConverter/ConvExprToLinqInContext@754-50",
+    "name": "Invoke",
+    "previous_reason": "unsupported opcode ldtoken at IL_0011",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-06000A63",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000A63",
+    "owner": "Microsoft.FSharp.Linq.RuntimeHelpers.LeafExpressionConverter/ConvExprToLinqInContext@763-54",
+    "name": "Invoke",
+    "previous_reason": "unsupported opcode ldtoken at IL_0011",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-06000BA0",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000BA0",
+    "owner": "Microsoft.FSharp.Control.WebExtensions",
+    "name": "handler@1752-1",
+    "previous_reason": "unsupported opcode ldftn at IL_0006",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  },
+  {
+    "slug": "0000-06000BC9",
+    "id": 0,
+    "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+    "token": "0x06000BC9",
+    "owner": "Microsoft.FSharp.Control.WebExtensions/AsyncDownloadString@1779-2",
+    "name": "Invoke",
+    "previous_reason": "unsupported opcode ldftn at IL_0006",
+    "runs": [
+      {
+        "view": "ours",
+        "exit": 0
+      },
+      {
+        "view": "il",
+        "exit": 0
+      },
+      {
+        "view": "ilspy",
+        "exit": 0
+      }
+    ]
+  }
+]

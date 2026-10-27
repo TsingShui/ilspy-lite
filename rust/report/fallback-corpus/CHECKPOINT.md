@@ -6,7 +6,32 @@
 
 Goal: mvouhw7y-679jgb
 
-## Current verified state: ILSpy-style reference selection
+## Current verified state: token-operand values
+
+- `report/token-values/corpus-scan/baseline.json`: **625,664 Decompiled / 145,084
+  Partial of 770,748**, fallback **18.82379195275239%**. **+9,101 in 233 images**,
+  **zero regressions**, zero incomplete; fixed scope, inputs and ILSpy reference
+  policy. Game **3,688/1,079 (+44)**; Common **13,678/4,729 (+189)**. <=5% unmet.
+- `ldtoken` yields the exact core handle struct chosen by the operand row
+  (`RuntimeTypeHandle`/`RuntimeFieldHandle`/`RuntimeMethodHandle`) and `ldftn`
+  yields a `nint` carrying the exact method token, following ILSpy's
+  `LdTypeToken`/`LdMemberToken`/`LdFtn`. No `typeof`/method-group fold, no
+  reflection call, no receiver change; consumers keep their own gates.
+- Bad operand tables and out-of-range rows are refused; `ldvirtftn`,
+  function-pointer signatures, varargs and constructed generic delegate types
+  remain gated (`constructed member needs a local definition`).
+- **460 tests**, fmt/clippy green. Owned `TokenCases` fixture: 10 of 12 bodies
+  recover with host references, two delegate bodies retain the external
+  constructed-member gate as a negative boundary. Seam tests cover the two
+  refusals and the removal of the standalone opcode blocker.
+- Eight gained triples self-reviewed CRUDE-BUT-EQUIVALENT; no changed-semantic
+  SUSPECT. No execution adapter for token leaves, so no executed-equivalence
+  claim for this group. No third-party execution, no agents, no push.
+- Scan cadence now batched; this scan covers groups 1-2 (ILSpy reference
+  selection, token operands). Next: external constructed members, then EH catch
+  identities; full scan after the third group.
+
+## Previous verified state: ILSpy-style reference selection
 
 - `report/foreign-value-facts/ilspy-scan-identity-final/baseline.json`: **616,563
   Decompiled / 154,185 Partial of 770,748**, fallback **20.004592940883402%**.

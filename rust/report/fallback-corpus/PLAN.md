@@ -8,7 +8,17 @@ drivers covering it. The full fixed-corpus scan plus gained-method self-review r
 after at least three completed groups. Each group stays its own local commit so a
 regression found in a batched scan can be attributed by rescanning those commits.
 
-## Current position (ILSpy-style reference selection; aggregate 5% target)
+## Current position (token operands; aggregate 5% target)
+
+- **625,664 Decompiled / 145,084 Partial; fallback 18.82379%**.
+- +9,101 in 233 images, zero regressions; same 770,748 bodies. Game +44 /
+  Common +189. <=5% still unmet.
+- `ldtoken`/`ldftn` are exact token values; consumers keep their own gates.
+- 460 tests, fmt/clippy green; 10/12 owned token bodies recover, 2 retained.
+- Next: external constructed members, then EH catch identities. Study ILSpy
+  first; full scan after the third group.
+
+## Previous position (ILSpy-style reference selection; aggregate 5% target)
 
 - **616,563 Decompiled / 154,185 Partial; fallback 20.00459%**.
 - +50,146 in 211 images and **2 recorded coverage losses** against the fixed

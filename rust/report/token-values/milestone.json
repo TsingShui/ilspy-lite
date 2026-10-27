@@ -1,0 +1,43 @@
+{
+  "group": "token-operands",
+  "prior_commit": "e5679c097",
+  "commit": "66e304320",
+  "before": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 154185,
+      "Decompiled": 616563
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 46
+  },
+  "after": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 145084,
+      "Decompiled": 625664
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 50
+  },
+  "newly_recovered": 9101,
+  "regressions": [],
+  "gained_images": 233,
+  "fallback_percent": 18.82379195275239,
+  "scan": "report/token-values/corpus-scan/baseline.json",
+  "delta": "report/token-values/delta.json",
+  "rust_tests": 460,
+  "clippy": "report/token-values/clippy.log",
+  "fixture": "tests/dotnet/TokenCases.cs",
+  "fixture_recovered_bodies": 10,
+  "fixture_retained_gate": 2,
+  "reviewed_methods": 8,
+  "review_kind": "bounded main-session source/IL self-review",
+  "execution_adapter": null,
+  "third_party_execution": false,
+  "aggregate_5_percent_pass": false
+}
