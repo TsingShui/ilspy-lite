@@ -76,6 +76,6 @@ Gain attribution by prior first reason (not isolated per-code-change causation):
 interface declaring type 15,401; concrete cast target 5,032; incompatible
 value/receiver 2,644; nonlocal cast target 189. These sum to 23,266.
 
-The current acceptance criterion is overall fallback <= 5%, with per-image
+The current acceptance criterion is overall fallback <= 1%, with per-image
 reporting retained. The scanner's historical 1%-per-image diagnostic is 34/319;
 it is not the revised acceptance gate. This group does not meet the overall goal.

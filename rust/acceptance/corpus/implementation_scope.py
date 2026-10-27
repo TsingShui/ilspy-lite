@@ -112,6 +112,7 @@ def apply(args):
                "unrecovered": aggregate["unrecovered"],
                "aggregate_gate_pass": aggregate["pass"],
                "aggregate_gate_applicable": aggregate["applicable"],
+               "aggregate_threshold_percent": aggregate["threshold_percent"],
                "skipped_reference_images": len(skipped),
                "native_images": sum(i["reason"] == "native_image" for i in not_applicable)}
     reconciliation = {"original_bodies": original_bodies, "original_counts": dict(original_counts),
@@ -153,7 +154,7 @@ def apply(args):
              f"- Target implementation bodies: {implementation_bodies:,}.",
              f"- Recovered: {counts.get('Decompiled', 0):,}; unrecovered: {unrecovered:,} ({rate}).",
              f"- Informational per-image <= 1%: {summary['passing_body_images']} / {summary['body_images']}.",
-             f"- Aggregate <= 5% gate: {'pass' if aggregate['pass'] else 'not passed'}.",
+             f"- Aggregate <= 1% gate: {'pass' if aggregate['pass'] else 'not passed'}.",
              "- Newly recovered by classification alone: 0.",
              "- Acquisition, hashing, compilation, decompilation and input execution: none.", "",
              "## Leading implementation first failures", "", "| Reason | Bodies |", "|---|---:|"]

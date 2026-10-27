@@ -14,9 +14,10 @@ framework layouts when available. The decoder remains pinned `cildec 0.1.0`;
 The fixed implementation corpus comprises the pinned ILSpy-tests scope and the
 two pinned OpenRA assemblies: 614 managed images in total, 319 with CIL bodies,
 and 770,748 method bodies. The latest complete scan recovers **728,704** of them
-and leaves **42,044** as stated IL fallbacks, i.e. **5.4550%** against the 5%
-weighted gate (38,537
-allowed). Per-assembly counts, batch scans, the remaining first blockers and the
+and leaves **42,044** as stated IL fallbacks, i.e. **5.4550%** against the 1%
+weighted gate (7,707 allowed). At least 34,337 additional bodies need recovery.
+The former 5% gate remains an intermediate milestone. Per-assembly counts,
+batch scans, the remaining first blockers and the
 closure audit are in
 [the fallback-corpus checkpoint](report/fallback-corpus/CHECKPOINT.md); owned
 behavioral gates are in

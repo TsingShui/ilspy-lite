@@ -1,0 +1,13 @@
+F
+======================================================================
+FAIL: test_gate_uses_the_weighted_one_percent_boundary (test_e2e.CorpusE2E)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/bytedance/zhome/ilspy-lite/rust/acceptance/corpus/test_e2e.py", line 265, in test_gate_uses_the_weighted_one_percent_boundary
+    self.assertEqual(result.returncode, 2, result.stderr)
+AssertionError: 0 != 2 :
+
+----------------------------------------------------------------------
+Ran 1 test in 0.103s
+
+FAILED (failures=1)

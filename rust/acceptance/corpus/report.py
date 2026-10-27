@@ -82,7 +82,7 @@ lines += [
     "reference assemblies. Marker, raw headers, per-method RVAs and code lengths are retained in",
     "inventory-final/images/. Directory naming alone is not used as classification proof.", "",
     "The user approved retaining every file while skipping proven reference-only inputs, without",
-    "an extra metadata/API gate. The current target is weighted <= 5% across implementation bodies.",
+    "an extra metadata/API gate. The current target is weighted <= 1% across implementation bodies.",
     "Exact local-core marker recognition subsequently classified the legacy mscorlib and the",
     ".NET 5 System.Runtime reference input. This is classification, not semantic recovery.",
     "Historical snapshots here preserve the original denominator and counts; later reports",

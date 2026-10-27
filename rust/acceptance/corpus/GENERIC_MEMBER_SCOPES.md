@@ -78,7 +78,7 @@ Prior first blockers: caller-variable scope 8,082; incompatible receiver 455;
 concrete nongeneric allocation owner 112; generic static owner 46. These sum
 to 8,695 but are attribution by old reason, not isolated causal measurements.
 The first scan's net +8,644 and 38 regressions are superseded, not discarded as
-evidence. The current overall <=5% goal is not yet met.
+evidence. The current overall <=1% goal is not yet met.
 
 ## External constructor and allocation signatures
 

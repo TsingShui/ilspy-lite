@@ -1,6 +1,9 @@
 # Aggregate acceptance gate audit
 
-The current user-approved objective requires one weighted implementation gate:
+> Historical 5% milestone. The current acceptance gate is overall weighted 1%;
+> see `report/one-percent-gate/AUDIT.md`. Historical scan results are unchanged.
+
+The objective at this milestone required one weighted implementation gate:
 `100 * unrecovered <= 5 * bodies`, with every target image complete. Per-image
 counts remain visible, but no individual image is required to meet 1%.
 

@@ -286,9 +286,9 @@ def aggregate_gate(images, complete=True):
     bodies = sum(decision["bodies"] for decision in decisions)
     unrecovered = sum(decision["unrecovered"] for decision in decisions)
     applicable = bodies > 0
-    passed = complete and applicable and 100 * unrecovered <= 5 * bodies
+    passed = complete and applicable and 100 * unrecovered <= bodies
     return {"complete": complete, "applicable": applicable, "pass": passed,
-            "bodies": bodies, "unrecovered": unrecovered, "images": decisions}
+            "threshold_percent": 1, "bodies": bodies, "unrecovered": unrecovered, "images": decisions}
 
 
 def gate(args):
@@ -625,7 +625,8 @@ def baseline(args):
                "passing_body_images": sum(i["bodies"] > 0 and i["gate_pass"] for i in images),
                "unrecovered": aggregate["unrecovered"],
                "aggregate_gate_pass": aggregate["pass"],
-               "aggregate_gate_applicable": aggregate["applicable"]}
+               "aggregate_gate_applicable": aggregate["applicable"],
+               "aggregate_threshold_percent": aggregate["threshold_percent"]}
     report = {"schema": 1, "inventory": str(args.inventory.resolve()), "cli": cli_stamp,
               "complete": aggregate["complete"], "images": images,
               "references": {"mode": args.references,
@@ -735,7 +736,7 @@ def main():
                      default="exact")
     dry.add_argument("--reference-ambiguity", choices=("tie-break", "skip"), default="tie-break")
     dry.add_argument("--reference-hop", type=int, choices=(0, 1), default=0)
-    check = commands.add_parser("gate", help="Evaluate the weighted integer <= 5% gate")
+    check = commands.add_parser("gate", help="Evaluate the weighted integer <= 1% gate")
     check.add_argument("--baseline", type=Path, required=True)
     args = parser.parse_args()
     try:

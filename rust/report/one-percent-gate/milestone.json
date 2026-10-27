@@ -1,0 +1,35 @@
+{
+  "scan": "report/foreign-hidden-batch/corpus-scan-fixed/baseline.json",
+  "scan_complete": true,
+  "threshold_percent": 1,
+  "bodies": 770748,
+  "unrecovered": 42044,
+  "allowed_unrecovered": 7707,
+  "additional_needed": 34337,
+  "fallback_percent": 5.454961,
+  "gate_pass": false,
+  "previous_5_percent_milestone": {
+    "allowed": 38537,
+    "pass": false,
+    "additional_needed": 3507
+  },
+  "images_complete": true,
+  "managed_images": 614,
+  "body_images": 319,
+  "openra": {
+    "OpenRA.Game": {
+      "bodies": 4767,
+      "decompiled": 4325,
+      "unrecovered": 442
+    },
+    "OpenRA.Mods.Common": {
+      "bodies": 18407,
+      "decompiled": 17058,
+      "unrecovered": 1349
+    }
+  },
+  "input_executed": false,
+  "inputs_reacquired": false,
+  "rescan_performed": false,
+  "note": "Recalculated from the existing complete scan; no new decompilation, classification or denominator change."
+}

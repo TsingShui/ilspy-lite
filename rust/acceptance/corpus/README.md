@@ -8,9 +8,8 @@ are never executed by this tooling. The owned metadata oracle is compiled and
 run with an existing .NET 10 SDK; it reads selected images using PEReader only.
 Production Rust decompilation remains independent of .NET.
 
-Latest complete fixed-scope scan: **656,786 / 770,748** implementation bodies
-recovered; **14.78590% fallback** (14.7858959897%), so the aggregate <=5% goal
-is unmet. The
+Latest complete fixed-scope scan: **728,704 / 770,748** implementation bodies
+recovered; **5.454961% fallback**, so the aggregate <=1% goal is unmet. The
 earlier explicit reference-selection change recorded two coverage losses and is
 not a like-for-like instruction gain; see
 [reference resolution evidence](ILSPY_REFERENCE_RESOLUTION.md). Later groups
@@ -86,9 +85,11 @@ references by default.
 
 The acceptance gate sums bodies and unrecovered counts across the complete
 implementation scope and uses exact integers:
-`100 * unrecovered <= 5 * bodies`. Per-image `pass`, `gate_pass`, and
-`passing_body_images` retain the historical <=1% diagnostic for comparison;
-they do not determine acceptance. Legitimate bodyless declarations and native
+`100 * unrecovered <= bodies`. Per-image `pass`, `gate_pass`, and
+`passing_body_images` retain the <=1% diagnostic for comparison; they do not
+determine acceptance. New aggregate reports identify the threshold explicitly;
+older saved summaries retain their historical threshold and should be reevaluated
+with `gate` before drawing a current acceptance conclusion. Legitimate bodyless declarations and native
 resources are reported separately, and images with no CIL bodies have no
 recovery rate. Incomplete scans cannot pass. An aggregate with no bodies is not
 applicable and does not pass. Commands exit 0 for a complete passing aggregate,

@@ -249,7 +249,37 @@ class CorpusE2E(unittest.TestCase):
             self.assertEqual([r["pass"] for r in decisions["images"]], [True, False, False, False])
             self.assertEqual(decisions["images"][1]["unrecovered"], 1)
 
-    def test_gate_uses_the_weighted_five_percent_boundary(self):
+    def test_gate_uses_the_weighted_one_percent_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            report = Path(directory) / "baseline.json"
+            images = [
+                {"id": 0, "bodies": 10, "counts": {"Decompiled": 9, "Partial": 1}, "scan_complete": True},
+                {"id": 1, "bodies": 190, "counts": {"Decompiled": 188, "Failed": 2}, "scan_complete": True},
+            ]
+            def run():
+                report.write_text(json.dumps({"complete": True, "images": images}))
+                result = subprocess.run([sys.executable, str(HERE / "corpus.py"), "gate",
+                                         "--baseline", str(report)], capture_output=True, text=True)
+                return result, json.loads(result.stdout)
+            result, decision = run()
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
+            self.assertEqual((decision["bodies"], decision["unrecovered"]), (200, 3))
+            images[1]["counts"] = {"Decompiled": 189, "Failed": 1}
+            result, decision = run()
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(decision["pass"])
+            self.assertEqual((decision["bodies"], decision["unrecovered"]), (200, 2))
+            self.assertFalse(decision["images"][0]["pass"])
+            self.assertEqual(decision["threshold_percent"], 1)
+            images[:] = [{"id": 0, "bodies": 200000,
+                          "counts": {"Decompiled": 197999, "Partial": 2001}, "scan_complete": True}]
+            result, decision = run()
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
+            self.assertEqual(f"{100 * decision['unrecovered'] / decision['bodies']:.2f}", "1.00")
+
+    def test_gate_rejects_five_percent_and_preserves_incomplete_cases(self):
         with tempfile.TemporaryDirectory() as directory:
             report = Path(directory) / "baseline.json"
             images = [
@@ -262,8 +292,8 @@ class CorpusE2E(unittest.TestCase):
                                          "--baseline", str(report)], capture_output=True, text=True)
                 return result, json.loads(result.stdout)
             result, decision = run()
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue(decision["pass"])
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertFalse(decision["pass"])
             self.assertEqual((decision["bodies"], decision["unrecovered"]), (100, 5))
             self.assertFalse(decision["images"][0]["pass"])
             images[1]["counts"] = {"Decompiled": 86, "Failed": 4}
@@ -314,12 +344,25 @@ class CorpusE2E(unittest.TestCase):
                                      "--inventory", str(inventory), "--cli", str(cli),
                                      "--output", str(root / "baseline"), "--workers", "2"],
                                     capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 2, result.stderr)
             baseline = json.loads((root / "baseline/baseline.json").read_text())
             self.assertTrue(baseline["complete"])
             self.assertEqual(baseline["summary"]["bodies"], 100)
             self.assertEqual(baseline["summary"]["counts"]["Partial"], 5)
+            self.assertEqual(baseline["summary"]["aggregate_threshold_percent"], 1)
+            self.assertFalse(baseline["summary"]["aggregate_gate_pass"])
             self.assertFalse(baseline["images"][0]["gate_pass"])
+            cli.write_text(cli.read_text().replace("((10,2),(90,3))", "((10,1),(90,0))"))
+            passing = subprocess.run([sys.executable, str(HERE / "corpus.py"), "baseline",
+                                      "--inventory", str(inventory), "--cli", str(cli),
+                                      "--output", str(root / "one-percent"), "--workers", "2"],
+                                     capture_output=True, text=True)
+            self.assertEqual(passing.returncode, 0, passing.stderr)
+            exact = json.loads((root / "one-percent/baseline.json").read_text())
+            self.assertEqual(exact["summary"]["unrecovered"], 1)
+            self.assertTrue(exact["summary"]["aggregate_gate_pass"])
+            self.assertEqual(exact["summary"]["aggregate_threshold_percent"], 1)
+            self.assertFalse(exact["images"][0]["gate_pass"])
             inventory.write_text(json.dumps({"complete": True, "images": []}))
             empty = subprocess.run([sys.executable, str(HERE / "corpus.py"), "baseline",
                                     "--inventory", str(inventory), "--cli", str(cli),
@@ -353,11 +396,13 @@ class CorpusE2E(unittest.TestCase):
             result = subprocess.run([sys.executable, str(HERE / "implementation_scope.py"),
                                      "--inventory", str(inventory), "--baseline", str(baseline),
                                      "--output", str(root / "scope")], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 2, result.stderr)
             scoped = json.loads((root / "scope/implementation-baseline.json").read_text())
             self.assertTrue(scoped["complete"])
             self.assertEqual(scoped["summary"]["bodies"], 100)
             self.assertEqual(scoped["summary"]["counts"], {"Decompiled": 95, "Partial": 5})
+            self.assertEqual(scoped["summary"]["aggregate_threshold_percent"], 1)
+            self.assertFalse(scoped["summary"]["aggregate_gate_pass"])
             self.assertEqual(len(scoped["skipped"]), 1)
             self.assertEqual(scoped["reconciliation"]["newly_recovered_by_scope_change"], 0)
             baseline_images[1]["counts"]["Decompiled"] -= 1
@@ -372,6 +417,20 @@ class CorpusE2E(unittest.TestCase):
             self.assertEqual(incomplete["summary"]["unrecovered"], 6)
             self.assertEqual(incomplete["summary"]["incomplete_images"], 1)
             self.assertIn("unrecovered: 6", (root / "incomplete/SCOPE.md").read_text())
+            baseline_images[0]["counts"] = {"Decompiled": 9, "Partial": 1}
+            baseline_images[1]["counts"] = {"Decompiled": 90, "Partial": 0}
+            baseline.write_text(json.dumps({"complete": True, "images": baseline_images, "cli": {},
+                                            "summary": {"bodies": 200, "counts": {"Decompiled": 99, "Partial": 101}}}))
+            passing = subprocess.run([sys.executable, str(HERE / "implementation_scope.py"),
+                                      "--inventory", str(inventory), "--baseline", str(baseline),
+                                      "--output", str(root / "one-percent")], capture_output=True, text=True)
+            self.assertEqual(passing.returncode, 0, passing.stderr)
+            exact = json.loads((root / "one-percent/implementation-baseline.json").read_text())
+            self.assertTrue(exact["complete"])
+            self.assertTrue(exact["summary"]["aggregate_gate_pass"])
+            self.assertEqual(exact["summary"]["aggregate_threshold_percent"], 1)
+            self.assertEqual(exact["summary"]["unrecovered"], 1)
+            self.assertIn("Aggregate <= 1% gate: pass", (root / "one-percent/SCOPE.md").read_text())
 
     def test_inventory_preserves_raw_windows_metadata_without_projection(self):
         fixture = HERE.parents[2] / "ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/winrtcomp.winmd"
