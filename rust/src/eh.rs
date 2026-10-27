@@ -85,6 +85,16 @@ pub(crate) fn parse(
             HandlerKind::Finally => None,
             _ => return Err("EH handler kind is not admitted".into()),
         };
+        if matches!(catch, Some((Ty::Object, _))) {
+            let first = instructions.iter().find(|instruction| {
+                raw.handler_offset <= instruction.offset
+                    && instruction.offset < raw.handler_end()
+                    && instruction.opcode.canonical().name() != "nop"
+            });
+            if !first.is_some_and(|instruction| instruction.opcode.canonical().name() == "pop") {
+                return Err("EH general catch needs an unused exception object".into());
+            }
+        }
         grouped
             .entry((raw.try_offset, raw.try_end()))
             .or_default()
@@ -246,7 +256,12 @@ impl Regions {
 
     pub fn catch_variable(&self, offset: u32) -> Option<String> {
         self.handler_at(offset)
-            .filter(|clause| clause.catch.is_some())
+            .filter(|clause| {
+                clause
+                    .catch
+                    .as_ref()
+                    .is_some_and(|(ty, _)| *ty != Ty::Object)
+            })
             .map(|clause| format!("__cil_exception_{}", clause.index))
     }
 
@@ -281,6 +296,7 @@ impl Regions {
                 Part::Handler(index) => {
                     let clause = &self.clauses[index];
                     lines.push(match &clause.catch {
+                        Some((Ty::Object, _)) => "catch {".into(),
                         Some((_, name)) => format!("catch ({name} __cil_exception_{index}) {{"),
                         None => "finally {".into(),
                     });

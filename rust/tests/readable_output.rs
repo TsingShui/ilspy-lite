@@ -587,7 +587,13 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
         "/tests/fixtures/class-release.bin"
     );
     let default = Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
-        .args(["decompile", path, "--type", "ClassCases.Mixed", "--no-auto-references"])
+        .args([
+            "decompile",
+            path,
+            "--type",
+            "ClassCases.Mixed",
+            "--no-auto-references",
+        ])
         .output()
         .unwrap();
     let details = Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))

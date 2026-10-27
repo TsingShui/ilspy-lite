@@ -34,8 +34,10 @@ def mutate_body(body, name):
         if count != 1:
             raise ValueError("finally store mutation target missing")
         return prefix + "finally {" + final
-    if name == "Catch":
+    if name in ("Catch", "GeneralCatch"):
         body, count = re.subn(r"= -1;", "= -9;", body, count=1)
+    elif name == "OutOfMemory":
+        body, count = re.subn(r"= -2;", "= -9;", body, count=1)
     elif name == "Rethrow":
         body, count = re.subn(r"(?m)^(\s*)throw;", r"\1return 999;", body, count=1)
     elif name == "RethrowIdentity":
@@ -84,6 +86,13 @@ def main():
                 raise ValueError("Readable admission drift: " + name)
             code = "\n".join(line for line in readable.stdout.splitlines()
                              if not line.startswith("// Dependency"))
+            if name == "OutOfMemory":
+                leaves = re.findall(r"__cil_newobj_([0-9A-F]{8})\(\)", code)
+                il = support.run([args.cli, "il", fixture, "--method", token]).stdout
+                if len(leaves) != 1 or not re.search(
+                        rf"newobj 0x{leaves[0]} \[System\.Runtime\]System\.OutOfMemoryException::\.ctor", il):
+                    raise ValueError("OutOfMemory constructor identity differs")
+                code = code.replace(f"__cil_newobj_{leaves[0]}()", "new System.OutOfMemoryException()")
             forbidden = ("__cil_handler_exception(", "__cil_endfinally(", "__cil_endfilter(")
             if any(intrinsic in code for intrinsic in forbidden):
                 raise ValueError("Unimplemented EH intrinsic in recovered output: " + name)
@@ -103,7 +112,7 @@ def main():
         rows.append({"configuration": config, "behavior": result.stdout.strip(),
                      "selected": [name for _, name in selected]})
         if args.mutation_control:
-            for name in ["FinallyOrder", "Catch", "Rethrow", "RethrowIdentity"]:
+            for name in ["FinallyOrder", "Catch", "Rethrow", "RethrowIdentity", "GeneralCatch", "OutOfMemory"]:
                 if name not in snippets:
                     raise ValueError("Required behavior mutation not selected: " + name)
                 modified = dict(snippets)

@@ -716,25 +716,8 @@ impl Writer<'_, '_> {
                     .operand
                     .token()
                     .ok_or("ldtoken needs a metadata token operand")?;
-                // LdTypeToken/LdMemberToken: the operand row decides the handle
-                // category and the core handle struct, not the consumer.
-                let kind = match token.table() {
-                    Some(
-                        cildec::TableId::TypeDef
-                        | cildec::TableId::TypeRef
-                        | cildec::TableId::TypeSpec,
-                    ) => crate::metadata::HandleKind::Type,
-                    Some(cildec::TableId::Field) => crate::metadata::HandleKind::Field,
-                    Some(
-                        cildec::TableId::MethodDef
-                        | cildec::TableId::MemberRef
-                        | cildec::TableId::MethodSpec,
-                    ) => crate::metadata::HandleKind::Method,
-                    _ => {
-                        return Err("ldtoken operand is not a type, field or method token".into());
-                    }
-                };
-                self.image.token_row_exists(token)?;
+                // LdTypeToken/LdMemberToken: the operand decides the handle kind.
+                let kind = self.image.token_handle_kind(token)?;
                 let handle = self.image.handle_type(kind)?;
                 self.lines.push(format!(
                     "// ldtoken {} 0x{:08X}: exact runtime handle for this metadata row; operand identity preserved, no reflection call.",
@@ -761,7 +744,9 @@ impl Writer<'_, '_> {
                 ) {
                     return Err("ldftn operand is not a method token".into());
                 }
-                self.image.token_row_exists(token)?;
+                if self.image.token_handle_kind(token)? != crate::metadata::HandleKind::Method {
+                    return Err("ldftn operand is not a method token".into());
+                }
                 // LdFtn: a native function pointer value. No receiver is popped;
                 // delegate construction consumes it as the IntPtr argument.
                 self.lines.push(format!(

@@ -1,0 +1,139 @@
+// Copyright (c) 2026 Tsingshui
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this
+// software and associated documentation files (the "Software"), to deal in the Software
+// without restriction, including without limitation the rights to use, copy, modify, merge,
+// publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons
+// to whom the Software is furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all copies or
+// substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+// INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+// PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+// FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+// DEALINGS IN THE SOFTWARE.
+
+using System;
+using System.Reflection;
+using System.Reflection.Emit;
+using TokenCases;
+
+internal static class TokenLeaves
+{
+    static readonly MethodInfo Generic = MakeGenericHandle();
+    static readonly Func<nint> Static = MakePointer(__STATIC_METHOD__);
+    static readonly Func<nint> Instance = MakePointer(__INSTANCE_METHOD__);
+    static readonly Func<object, nint, Func<int, int>> Allocate = MakeDelegate();
+
+    static MethodInfo MakeGenericHandle()
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("OwnedTokenLeaf"), AssemblyBuilderAccess.Run);
+        var owner = assembly.DefineDynamicModule("OwnedTokenLeaf").DefineType("OwnedTokenLeaf");
+        var method = owner.DefineMethod("Handle", MethodAttributes.Public | MethodAttributes.Static);
+        var parameter = method.DefineGenericParameters("T")[0];
+        method.SetReturnType(typeof(RuntimeTypeHandle));
+        var il = method.GetILGenerator();
+        il.Emit(OpCodes.Ldtoken, parameter);
+        il.Emit(OpCodes.Ret);
+        return owner.CreateType().GetMethod("Handle");
+    }
+
+    static class Closed<T>
+    {
+        internal static readonly Func<RuntimeTypeHandle> Invoke = Generic.MakeGenericMethod(typeof(T)).CreateDelegate<Func<RuntimeTypeHandle>>();
+    }
+
+    static Func<nint> MakePointer(int token)
+    {
+        var method = (MethodInfo)typeof(Tokens).Module.ResolveMethod(token);
+        var leaf = new DynamicMethod("OwnedLdftn", typeof(nint), Type.EmptyTypes, typeof(Tokens).Module, true);
+        var il = leaf.GetILGenerator();
+        il.Emit(OpCodes.Ldftn, method);
+        il.Emit(OpCodes.Ret);
+        return leaf.CreateDelegate<Func<nint>>();
+    }
+
+    static Func<object, nint, Func<int, int>> MakeDelegate()
+    {
+        var leaf = new DynamicMethod("OwnedDelegateNewobj", typeof(Func<int, int>), new[] { typeof(object), typeof(nint) }, typeof(Tokens).Module, true);
+        var il = leaf.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Newobj, typeof(Func<int, int>).GetConstructor(new[] { typeof(object), typeof(nint) }));
+        il.Emit(OpCodes.Ret);
+        return leaf.CreateDelegate<Func<object, nint, Func<int, int>>>();
+    }
+
+    internal static RuntimeTypeHandle GenericHandle<T>() => Closed<T>.Invoke();
+    internal static RuntimeTypeHandle StringHandle() => Closed<string>.Invoke();
+    internal static nint StaticPointer() => Static();
+    internal static nint InstancePointer() => Instance();
+    internal static Func<int, int> New(object target, nint pointer) => Allocate(target, pointer);
+    internal static DateTime[] NewDates(int length) => new DateTime[length];
+    internal static DayOfWeek[] NewDays(int length) => new DayOfWeek[length];
+}
+
+namespace TokenCases
+{
+    public static class RecoveredTokens
+    {
+        internal static Func<int, int> Cached;
+        __RECOVERED_METHODS__
+    }
+}
+
+internal static class Program
+{
+    static int comparisons;
+    static void Check(bool condition, string label)
+    {
+        comparisons++;
+        if (!condition) throw new Exception("Recovered token behavior differs: " + label);
+    }
+
+    static string InvokeOutcome(Func<Func<int, int>> make)
+    {
+        try { return "value:" + make()(7); }
+        catch (Exception exception) { return "error:" + exception.GetType().FullName; }
+    }
+
+    static void Main()
+    {
+        var original = typeof(Tokens).GetMethod("TypeName");
+        var recovered = typeof(RecoveredTokens).GetMethod("TypeName");
+        foreach (Type type in new[] { typeof(int), typeof(string), typeof(object), typeof(int?), typeof(DateTime[]), typeof(Tokens.Nested) })
+        {
+            var before = (string)original.MakeGenericMethod(type).Invoke(null, null);
+            var after = (string)recovered.MakeGenericMethod(type).Invoke(null, null);
+            Check(before == type.Name && after == before, "generic type token " + type);
+        }
+        Check(Tokens.ClosedName() == RecoveredTokens.ClosedName(), "closed type token");
+
+        var oldDates = Tokens.Dates(); var newDates = RecoveredTokens.Dates();
+        var oldDays = Tokens.Days(); var newDays = RecoveredTokens.Days();
+        Check(oldDates.Length == newDates.Length && newDates.Length == 2 && newDates[0] == default && newDates[1] == default, "DateTime allocation");
+        Check(oldDays.Length == newDays.Length && newDays.Length == 2 && newDays[0] == default && newDays[1] == default, "enum allocation");
+        Check(!ReferenceEquals(newDates, RecoveredTokens.Dates()) && !ReferenceEquals(newDays, RecoveredTokens.Days()), "array freshness");
+
+        var field = typeof(Tokens).GetNestedType("<>O", BindingFlags.NonPublic).GetField("<0>__Twice", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        field.SetValue(null, null);
+        RecoveredTokens.Cached = null;
+        var originalFirst = Tokens.StaticDelegate(); var originalSecond = Tokens.StaticDelegate();
+        var recoveredFirst = RecoveredTokens.StaticDelegate(); var recoveredSecond = RecoveredTokens.StaticDelegate();
+        Check(ReferenceEquals(originalFirst, originalSecond) && ReferenceEquals(recoveredFirst, recoveredSecond), "static delegate caching");
+        Check(originalFirst.Target == recoveredFirst.Target && originalFirst.Method == recoveredFirst.Method, "static delegate target");
+        foreach (int value in new[] { 0, -1, 7, int.MaxValue })
+            Check(originalFirst(value) == recoveredFirst(value), "static delegate invocation");
+
+        var target = new Tokens.Instance();
+        var first = Tokens.InstanceDelegate(target); var second = RecoveredTokens.InstanceDelegate(target);
+        Check(ReferenceEquals(first.Target, target) && ReferenceEquals(second.Target, target) && first.Method == second.Method, "instance delegate target");
+        Check(!ReferenceEquals(second, RecoveredTokens.InstanceDelegate(target)), "instance delegate freshness");
+        Check(first(7) == second(7), "instance delegate invocation");
+        Check(InvokeOutcome(() => Tokens.InstanceDelegate(null)) == InvokeOutcome(() => RecoveredTokens.InstanceDelegate(null)), "null instance behavior");
+        Console.WriteLine("Owned token behavior: " + comparisons + " comparisons; type scopes, arrays, delegates and null behavior match.");
+    }
+}

@@ -115,6 +115,65 @@ fn a_foreign_instantiation_cannot_borrow_an_out_of_range_caller_variable() {
 }
 
 #[test]
+fn cyclic_constructed_type_owner_is_refused_without_overflowing() {
+    for bytes in IMAGES {
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let bag = md
+            .tables()
+            .iter::<cildec::tables::TypeDefRow>()
+            .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Bag`1")
+            .unwrap()
+            .0;
+        let (rid, blob) = md
+            .tables()
+            .iter::<cildec::tables::TypeSpecRow>()
+            .filter_map(|(rid, row)| {
+                let blob = md.blobs().get(row.unwrap().signature).unwrap();
+                (rid < 32 && blob == [0x15, 0x12, (bag << 2) as u8, 1, 0x13, 0])
+                    .then_some((rid, blob))
+            })
+            .next()
+            .expect("owned constructed Bag TypeSpec");
+        let method = list_methods(bytes)
+            .unwrap()
+            .into_iter()
+            .find(|m| {
+                m.declaring_type == "GenericBindingCases.Bag`1" && m.simple_name == "ForwardGet"
+            })
+            .unwrap();
+        let mut owned = bytes.to_vec();
+        let position = blob.as_ptr() as usize - bytes.as_ptr() as usize;
+        owned[position + 2] = ((rid << 2) | 2) as u8;
+        let path = std::env::temp_dir().join(format!(
+            "ilspy-cyclic-type-{}-{rid}.bin",
+            std::process::id()
+        ));
+        std::fs::write(&path, owned).unwrap();
+        let result = std::process::Command::new(env!("CARGO_BIN_EXE_ilspy-lite"))
+            .arg("decompile")
+            .arg(&path)
+            .arg("--method")
+            .arg(format!("0x{:08X}", method.token))
+            .arg("--no-auto-references")
+            .output()
+            .unwrap();
+        std::fs::remove_file(path).unwrap();
+        assert_eq!(
+            result.status.code(),
+            Some(2),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let text = String::from_utf8(result.stdout).unwrap();
+        assert!(
+            text.contains("cyclic") || text.contains("TypeDef or TypeRef"),
+            "{text}"
+        );
+    }
+}
+
+#[test]
 fn the_whole_owned_fixture_is_recovered_and_scan_agrees() {
     for bytes in IMAGES {
         fixture_contract::check(bytes, &[]);

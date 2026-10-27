@@ -228,7 +228,12 @@ fn prime_external_enums(
     let Ok(types) = image.value_type_tokens(token, body) else {
         return;
     };
-    for candidate in types.values {
+    for (candidate, record_refusal) in types
+        .operands
+        .into_iter()
+        .map(|token| (token, false))
+        .chain(types.values.into_iter().map(|token| (token, true)))
+    {
         if candidate.table() != Some(cildec::TableId::TypeRef) || image.has_cached_enum(candidate) {
             continue;
         }
@@ -248,13 +253,15 @@ fn prime_external_enums(
                 let identity = image
                     .intern_signature_type(&cildec::Type::ValueType(candidate), Default::default())
                     .map_err(|error| error.to_string());
-                image.cache_external_struct_type(candidate, identity);
+                if record_refusal || identity.is_ok() {
+                    image.cache_external_struct_type(candidate, identity);
+                }
             }
-            Ok(ExternalValueLookup::Refused(reason)) => {
+            Ok(ExternalValueLookup::Refused(reason)) if record_refusal => {
                 image.cache_external_struct_type(candidate, Err(reason));
             }
-            // A context that could not answer must leave the caller byte-identical.
-            Ok(ExternalValueLookup::Unavailable) | Err(_) => {}
+            // Operand-only refusals do not apply to unrelated uses of the token.
+            Ok(ExternalValueLookup::Refused(_) | ExternalValueLookup::Unavailable) | Err(_) => {}
         }
     }
 }

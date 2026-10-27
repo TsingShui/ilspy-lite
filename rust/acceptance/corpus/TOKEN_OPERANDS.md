@@ -23,8 +23,11 @@ delegate creation (`ldfn` plus a delegate constructor). With host references all
 bodies (`ldftn` plus a constructed `Func<,>` constructor); without references they
 stop at the allocation-fact gate, which stays a negative boundary.
 
-Rust seam coverage: token operands are no longer reported as an unsupported
-opcode; a UserString operand is refused as "not a type, field or method token";
-an out-of-range row is refused during body evidence decoding. No execution
-adapter is provided for token leaves, so this group's evidence is static plus
-the seam tests; it claims no executed equivalence for the handle bodies.
+Rust seam coverage refuses UserString and out-of-range operands, and distinguishes
+field and method MemberRefs by their signatures. An owned behavior adapter now
+executes recovered generic/closed type-token, array and delegate bodies: 20
+comparisons per configuration with three semantic mutants rejected. Its
+Reflection.Emit leaves contain the specific `ldtoken`, `ldftn` and delegate
+`newobj` operations, not the selected original method bodies. The adapter and
+logs are under `report/constructed-foreign-batch/owned/`; this is bounded
+evidence, not a claim for all tokens or runtimes.

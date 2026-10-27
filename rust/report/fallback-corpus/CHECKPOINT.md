@@ -12,10 +12,11 @@ Goal: mvouhw7y-679jgb
   Partial of 770,748**, fallback **18.7488%**. **+578 in 88 images**, zero
   regressions, zero incomplete; fixed scope, inputs and ILSpy reference policy.
   Game **3,693/1,074 (+5)**; Common **13,683/4,724 (+5)**. <=5% unmet.
-- A catch of exact core `System.Object` is a general catch: the handler still binds
-  the thrown object, so its store survives. `System.OutOfMemoryException` joins
-  the bounded core parent table with the parent read from CoreLib metadata.
-  Throw targets and other scopes are unchanged.
+- A catch of exact core `System.Object` is admitted only when its handler first
+  discards the object; it renders as bare `catch { }`. Used caught objects now
+  fall back. The earlier `catch (object ...)` output failed C# compilation and
+  its prior equivalence claim is withdrawn. `System.OutOfMemoryException` joins
+  the bounded core parent table with its parent read from CoreLib metadata.
 - Owned red-then-green: `ExceptionRegionCases.GeneralCatch`, `.OutOfMemory`.
   Frozen negative kept: `.ForeignException` (non-core scope) must stay Partial.
   **460 tests**, fmt/clippy green.

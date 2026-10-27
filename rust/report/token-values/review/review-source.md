@@ -25,5 +25,7 @@ handle value rather than ILSpy's presentation-level sugar.
 - Delegate creation over a *constructed generic* delegate type still stops at the
   external constructed-member gate; that boundary is unchanged and counted.
 - `ldvirtftn`, function-pointer signatures and varargs are not admitted.
-- No execution adapter exists for token leaves, so this group claims static seam
-  evidence plus the fixture's own recoveries, not executed equivalence.
+- The original review was static-only. A later owned adapter executes recovered
+  generic/closed type-token, delegate and array bodies with exact operation leaves:
+  20 comparisons and three semantic mutants per configuration. This does not
+  establish whole-corpus or cross-runtime equivalence.

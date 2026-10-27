@@ -1,0 +1,68 @@
+{
+  "drivers": [
+    {
+      "name": "owned-token",
+      "log": "report/constructed-foreign-batch/final-owned-token.log",
+      "status": 0
+    },
+    {
+      "name": "exceptions",
+      "log": "report/constructed-foreign-batch/final-exceptions.log",
+      "status": 0
+    },
+    {
+      "name": "typed-arrays",
+      "log": "report/constructed-foreign-batch/final-typed-arrays.log",
+      "status": 0
+    },
+    {
+      "name": "scoped",
+      "log": "report/constructed-foreign-batch/final-scoped.log",
+      "status": 0
+    }
+  ],
+  "owned_token": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Owned token behavior: 20 comparisons; type scopes, arrays, delegates and null behavior match."
+      },
+      {
+        "configuration": "release",
+        "mutation": "GenericScope",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "CachedIdentity",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ArrayLength",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Owned token behavior: 20 comparisons; type scopes, arrays, delegates and null behavior match."
+      },
+      {
+        "configuration": "debug",
+        "mutation": "GenericScope",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "CachedIdentity",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ArrayLength",
+        "detected": true
+      }
+    ],
+    "third_party_execution": false
+  },
+  "third_party_execution": false
+}

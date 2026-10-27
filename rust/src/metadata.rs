@@ -47,6 +47,58 @@ impl HandleKind {
     }
 }
 
+#[cfg(test)]
+mod token_tests {
+    use super::{HandleKind, Image};
+    use cildec::{TableId, Token};
+
+    #[test]
+    fn member_reference_signature_distinguishes_field_and_method_handles() {
+        let image =
+            Image::parse(include_bytes!("../tests/fixtures/static-field-release.bin")).unwrap();
+        let field = image
+            .md
+            .tables()
+            .iter::<cildec::tables::MemberRefRow>()
+            .find(|(_, row)| {
+                let signature = image
+                    .md
+                    .blobs()
+                    .get(row.as_ref().unwrap().signature)
+                    .unwrap();
+                crate::signature_guard::field(signature).is_ok()
+            })
+            .expect("owned foreign field MemberRef")
+            .0;
+        assert_eq!(
+            image
+                .token_handle_kind(Token::new(TableId::MemberRef, field))
+                .unwrap(),
+            HandleKind::Field
+        );
+        let method = image
+            .md
+            .tables()
+            .iter::<cildec::tables::MemberRefRow>()
+            .find(|(_, row)| {
+                let signature = image
+                    .md
+                    .blobs()
+                    .get(row.as_ref().unwrap().signature)
+                    .unwrap();
+                crate::signature_guard::method(signature).is_ok()
+            })
+            .expect("owned method MemberRef")
+            .0;
+        assert_eq!(
+            image
+                .token_handle_kind(Token::new(TableId::MemberRef, method))
+                .unwrap(),
+            HandleKind::Method
+        );
+    }
+}
+
 /// Value types a method names, split by how they are admitted.
 #[derive(Default)]
 pub(crate) struct SignatureValueTypes {
@@ -54,6 +106,12 @@ pub(crate) struct SignatureValueTypes {
     pub values: Vec<Token>,
     /// Constructed value types, with the argument count the site supplies.
     pub value_definitions: Vec<(Token, usize)>,
+    /// Types named directly by an instruction operand (`newarr`, `box`, ...).
+    ///
+    /// These only contribute positive facts: an operand token may also be used
+    /// elsewhere without needing a storage fact, so a refusal here must not
+    /// become the answer for every other use of the same token.
+    pub operands: Vec<Token>,
 }
 
 type InterfaceEdges =
@@ -2083,6 +2141,7 @@ impl<'a> Image<'a> {
                 let cildec::Type::GenericInst { def, .. } = spec.type_ else {
                     return Ok(None);
                 };
+                seen.push(token.0);
                 return resolve(image, def, seen);
             }
             if token.table() != Some(TableId::TypeRef) {
@@ -2318,7 +2377,7 @@ impl<'a> Image<'a> {
                 cildec::Operand::Type(target)
                     if matches!(target.table(), Some(TableId::TypeRef | TableId::TypeDef)) =>
                 {
-                    tokens.values.push(target);
+                    tokens.operands.push(target);
                     continue;
                 }
                 _ => continue,
@@ -2581,6 +2640,28 @@ impl<'a> Image<'a> {
             storage: storage.ok_or("enum has no instance storage field")?,
             external: None,
         })
+    }
+
+    pub(crate) fn token_handle_kind(&self, token: Token) -> Result<HandleKind> {
+        let kind = match token.table() {
+            Some(TableId::TypeDef | TableId::TypeRef | TableId::TypeSpec) => HandleKind::Type,
+            Some(TableId::Field) => HandleKind::Field,
+            Some(TableId::MethodDef | TableId::MethodSpec) => HandleKind::Method,
+            Some(TableId::MemberRef) => {
+                let member = self.md.tables().member_ref(token.rid())?;
+                let signature = self.md.blobs().get(member.signature)?;
+                if signature.first() == Some(&0x06) {
+                    crate::signature_guard::field(signature)?;
+                    HandleKind::Field
+                } else {
+                    crate::signature_guard::method(signature)?;
+                    HandleKind::Method
+                }
+            }
+            _ => return Err("ldtoken operand is not a type, field or method token".into()),
+        };
+        self.token_row_exists(token)?;
+        Ok(kind)
     }
 
     /// Which runtime handle an `ldtoken` operand produces.

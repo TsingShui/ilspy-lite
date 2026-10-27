@@ -122,9 +122,13 @@ public static class Ops
         catch { return -1; }
     }
 
-    public static int OutOfMemory()
+    public static int OutOfMemory(int value)
     {
-        try { return 7; }
+        try
+        {
+            if (value == 0) throw new OutOfMemoryException();
+            return value;
+        }
         catch (OutOfMemoryException) { return -2; }
     }
 

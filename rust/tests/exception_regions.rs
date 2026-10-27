@@ -36,6 +36,46 @@ fn token(bytes: &[u8], name: &str) -> u32 {
 }
 
 #[test]
+fn general_catch_discards_only_an_unused_thrown_object() {
+    for bytes in IMAGES {
+        let method = token(bytes, "GeneralCatch");
+        let result = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("catch {"), "{}", result.text);
+        assert!(!result.text.contains("catch (object"), "{}", result.text);
+
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(method & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let handler = &body.exception_handlers[0];
+        let instruction = body
+            .instructions()
+            .map(Result::unwrap)
+            .find(|i| i.offset == handler.handler_offset)
+            .unwrap();
+        assert_eq!(instruction.opcode.name(), "pop");
+        let offset =
+            body.code.as_ptr() as usize - bytes.as_ptr() as usize + handler.handler_offset as usize;
+        let mut used = bytes.to_vec();
+        used[offset] = 0x25; // dup keeps the caught object on the evaluation stack.
+        let result = decompile_with_style(&used, method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result
+                .text
+                .contains("EH general catch needs an unused exception object"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn fixture_contract_keeps_unsupported_regions_visible() {
     for bytes in IMAGES {
         fixture_contract::check(bytes, EXPECTED_PARTIAL);
