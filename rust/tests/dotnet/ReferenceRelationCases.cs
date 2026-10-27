@@ -26,6 +26,12 @@ namespace RelationLibrary
     public class Child : Middle, IRoot, IItem<string> { }
     public class ForeignException : System.Exception { }
     public class ForeignDerivedException : ForeignException { }
+    public class Api
+    {
+        public int Calls;
+        public T Echo<T>(T value) => value;
+        public virtual T VirtualEcho<T>(T value) { Calls++; return value; }
+    }
     public class GenericBase<T> { public T Value; }
     public class GenericChild<T> : GenericBase<T>, IItem<T> { }
 }
@@ -77,6 +83,8 @@ namespace RelationCases
         public static RelationLibrary.IItem<T> ForeignOpenInterface<T>(RelationLibrary.GenericChild<T> input) => input;
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
+        public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+
         [System.Runtime.CompilerServices.SkipLocalsInit]
         public static int SkipInitBranch(int value)
         {
@@ -109,6 +117,11 @@ namespace RelationCases
             LocalInitNegative.Increment(ref result);
             return result;
         }
+    }
+
+    public static class ExternalGenericNegative
+    {
+        public static int Virtual(RelationLibrary.Api api, int value) => api.VirtualEcho<int>(value);
     }
 
     public static class LocalInitNegative

@@ -214,6 +214,93 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn external_generic_instance_calls_need_the_selected_definition_flags() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "RelationCases.Ops", "ExternalGeneric");
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        let absent = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(absent.status, Status::Partial, "{}", absent.text);
+        assert!(
+            absent
+                .text
+                .contains("external generic instance dispatch needs dependency facts"),
+            "{}",
+            absent.text
+        );
+        context
+            .add_reference("owned relation library", library.to_vec())
+            .unwrap();
+        let present = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(present.status, Status::Decompiled, "{}", present.text);
+        assert!(
+            present.text.contains("__cil_callvirt_")
+                || present.text.contains("__cil_methodspec_call_"),
+            "{}",
+            present.text
+        );
+
+        // The same call site keeps refusing when the selected definition is virtual.
+        let virtual_call = token(bytes, "RelationCases.ExternalGenericNegative", "Virtual");
+        let refused = context
+            .decompile(virtual_call, OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(refused.status, Status::Partial, "{}", refused.text);
+        assert!(
+            refused
+                .text
+                .contains("generic virtual dispatch needs runtime lookup-order modeling"),
+            "{}",
+            refused.text
+        );
+
+        // A mutated owner hierarchy/flag cannot admit the same token.
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let api = md
+            .tables()
+            .iter::<cildec::tables::TypeDefRow>()
+            .find(|(_, row)| md.strings().str(row.as_ref().unwrap().type_name).unwrap() == "Api")
+            .unwrap()
+            .0;
+        let echo = md
+            .tables()
+            .method_range(cildec::Rid::new(api))
+            .unwrap()
+            .find(|rid| {
+                md.strings()
+                    .str(md.tables().method_def(*rid).unwrap().name)
+                    .unwrap()
+                    == "Echo"
+            })
+            .unwrap();
+        let row = md
+            .tables()
+            .row_bytes(cildec::TableId::MethodDef, echo)
+            .unwrap();
+        assert_eq!(row.len(), 14, "Owned small-heap MethodDef row changed.");
+        let at = row.as_ptr() as usize - library.as_ptr() as usize + 6;
+        let mut flags = u16::from_le_bytes([row[6], row[7]]);
+        assert_eq!(flags & 0x0040, 0, "owned Echo must start nonvirtual");
+        flags |= 0x0040;
+        let mut marked_virtual = library.to_vec();
+        marked_virtual[at..at + 2].copy_from_slice(&flags.to_le_bytes());
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned virtual relation library", marked_virtual)
+            .unwrap();
+        let refused = context.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(refused.status, Status::Partial, "{}", refused.text);
+        assert!(
+            refused
+                .text
+                .contains("generic virtual dispatch needs runtime lookup-order modeling"),
+            "{}",
+            refused.text
+        );
+    }
+}
+
+#[test]
 fn uninitialized_local_slots_need_definite_assignment_on_every_path() {
     for (bytes, _) in IMAGES {
         let pe = cildec::PeImage::parse(bytes).unwrap();

@@ -14,11 +14,11 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
     ),
 ];
 
-/// Foreign generic method instance dispatch remains outside this subset.
+/// A virtual instantiated foreign method still needs runtime lookup order.
 const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[(
     "ExternalCallCases.Ops",
-    "UnsupportedGeneric",
-    "external generic instance dispatch needs dependency facts",
+    "UnsupportedGenericVirtual",
+    "generic virtual dispatch needs runtime lookup-order modeling",
 )];
 
 fn context(bytes: &[u8], library: &[u8]) -> DependencyContext {

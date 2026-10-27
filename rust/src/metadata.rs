@@ -166,6 +166,12 @@ pub(crate) struct Image<'a> {
             std::result::Result<crate::dependencies::ExternalCall, String>,
         >,
     >,
+    external_method_instantiations: std::cell::RefCell<
+        std::collections::BTreeMap<
+            u32,
+            std::result::Result<crate::dependencies::ExternalMethodInstantiation, String>,
+        >,
+    >,
 }
 
 impl<'a> Image<'a> {
@@ -204,6 +210,9 @@ impl<'a> Image<'a> {
             external_fields: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_allocations: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             external_calls: std::cell::RefCell::new(std::collections::BTreeMap::new()),
+            external_method_instantiations: std::cell::RefCell::new(
+                std::collections::BTreeMap::new(),
+            ),
         })
     }
 
@@ -2481,6 +2490,27 @@ impl<'a> Image<'a> {
         value: std::result::Result<crate::dependencies::ExternalAllocation, String>,
     ) {
         self.external_allocations.borrow_mut().insert(token, value);
+    }
+
+    /// Facts for one instantiated foreign method, if the caller asked for them.
+    pub(crate) fn external_method_instantiation(
+        &self,
+        token: u32,
+    ) -> Option<std::result::Result<crate::dependencies::ExternalMethodInstantiation, String>> {
+        self.external_method_instantiations
+            .borrow()
+            .get(&token)
+            .cloned()
+    }
+
+    pub(crate) fn cache_external_method_instantiation(
+        &self,
+        token: u32,
+        value: std::result::Result<crate::dependencies::ExternalMethodInstantiation, String>,
+    ) {
+        self.external_method_instantiations
+            .borrow_mut()
+            .insert(token, value);
     }
 
     pub(crate) fn cache_external_call(

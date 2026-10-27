@@ -164,6 +164,26 @@ pub(crate) enum ExternalAllocationLookup {
     Unavailable,
 }
 
+/// Flags read from the selected definition of an instantiated foreign method.
+///
+/// The caller already holds the exact MethodSpec token and reference signature;
+/// these facts only say whether that definition can be invoked as an ordinary
+/// nonvirtual instance method.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ExternalMethodInstantiation {
+    /// The selected definition is virtual, so dispatch needs the runtime's
+    /// generic lookup order rather than a direct call.
+    pub generic_virtual: bool,
+}
+
+/// Outcome of asking the context about one instantiated foreign method.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ExternalMethodInstantiationLookup {
+    Fact(ExternalMethodInstantiation),
+    Refused(String),
+    Unavailable,
+}
+
 /// Identity and storage flags read from the selected defining image of a foreign field.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ExternalField {
@@ -370,6 +390,89 @@ impl DependencyContext {
     /// supplies them, and it must declare exactly the arity the call site used.
     /// A reference that cannot be resolved is reported as unavailable so the
     /// caller keeps the blocker it would have had without a context.
+    /// Facts for an instantiated instance method whose owner is referenced.
+    ///
+    /// ILSpy resolves a MethodSpec through its MemberRef, finds the declaration
+    /// on the selected owner definition and specializes it with both the class
+    /// and method arguments. The exact call site keeps its original token here;
+    /// this lookup only decides whether a direct invocation preserves the
+    /// runtime's dispatch behavior.
+    pub(crate) fn external_method_instantiation(
+        &self,
+        token: u32,
+    ) -> ExternalMethodInstantiationLookup {
+        let method = match self.resolve_method(token) {
+            Ok(method) => method,
+            Err(_) => return ExternalMethodInstantiationLookup::Unavailable,
+        };
+        if method.method_arguments.is_empty() || method.instantiation_signature.is_empty() {
+            return ExternalMethodInstantiationLookup::Refused(
+                "method reference is not an instantiation".into(),
+            );
+        }
+        let signature = match crate::signature_guard::method(&method.definition_signature) {
+            Ok(signature) => signature,
+            Err(_) => {
+                return ExternalMethodInstantiationLookup::Refused(
+                    "instantiated definition signature is not usable".into(),
+                );
+            }
+        };
+        let cildec::CallConv::Generic(arity) = signature.calling_convention else {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated definition is not generic".into(),
+            );
+        };
+        if arity as usize != method.method_arguments.len() {
+            return ExternalMethodInstantiationLookup::Refused(
+                "method argument count differs from the selected definition".into(),
+            );
+        }
+        if signature.explicit_this
+            || !signature.vararg_params.is_empty()
+            || signature.has_this == (method.flags & 0x0010 != 0)
+        {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated definition has inconsistent instance/signature flags".into(),
+            );
+        }
+        if !signature.has_this {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated definition is static".into(),
+            );
+        }
+        let image = match self.image_for_source(&method.owner.definition.source) {
+            Ok(image) => image,
+            Err(_) => return ExternalMethodInstantiationLookup::Unavailable,
+        };
+        let owner = cildec::Token(method.owner.definition.token);
+        let flags = match image.md.tables().type_def(owner.rid()) {
+            Ok(row) => row.flags,
+            Err(_) => return ExternalMethodInstantiationLookup::Unavailable,
+        };
+        if flags & 0x0020 != 0 {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated method is declared on an interface".into(),
+            );
+        }
+        if matches!(image.has_core_base(owner, "ValueType"), Ok(true))
+            || matches!(image.has_core_base(owner, "Enum"), Ok(true))
+        {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated method owner is a value type; its receiver needs managed-location semantics"
+                    .into(),
+            );
+        }
+        if method.flags & 0x0400 != 0 {
+            return ExternalMethodInstantiationLookup::Refused(
+                "instantiated definition is abstract".into(),
+            );
+        }
+        ExternalMethodInstantiationLookup::Fact(ExternalMethodInstantiation {
+            generic_virtual: method.flags & 0x0040 != 0,
+        })
+    }
+
     /// Facts for `newobj` whose constructor belongs to a referenced image.
     ///
     /// Errors before the defining image is reached are `Unavailable`; once it is

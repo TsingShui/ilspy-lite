@@ -180,6 +180,8 @@ generated output remain ignored and retain their original license boundaries.
   catch and throw identities, with owned identity and negative-boundary checks.
 - `LOCAL_DEFINITE_ASSIGNMENT.md`: CFG proofs for non-initialized local slots,
   with loop, branch, address and exception-region boundaries.
+- `EXTERNAL_GENERIC_INSTANTIATION.md`: nonvirtual instantiated instance calls on
+  referenced classes, with the generic-virtual and value-type boundaries.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

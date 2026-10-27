@@ -140,9 +140,26 @@ pub(super) fn resolve(image: &Image<'_>, token: Token, context: TypeContext) -> 
         } else {
             None
         }
-    } else if owner.table() == Some(TableId::TypeRef) && !signature.has_this {
-        image.external_class_context(owner.0)?;
-        None
+    } else if owner.table() == Some(TableId::TypeRef) {
+        if !signature.has_this {
+            image.external_class_context(owner.0)?;
+            None
+        } else {
+            // ILSpy specializes the declaration found on the selected owner
+            // definition. A virtual instantiated method still dispatches by
+            // runtime lookup, so it keeps the generic-virtual refusal.
+            let fact = match image.external_method_instantiation(token.0) {
+                Some(Ok(fact)) => fact,
+                Some(Err(reason)) => return Err(reason.into()),
+                None => {
+                    return Err("external generic instance dispatch needs dependency facts".into());
+                }
+            };
+            if fact.generic_virtual {
+                return Err("generic virtual dispatch needs runtime lookup-order modeling".into());
+            }
+            Some(image.external_receiver_type(owner)?)
+        }
     } else {
         return Err("external generic instance dispatch needs dependency facts".into());
     };

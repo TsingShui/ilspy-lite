@@ -26,6 +26,7 @@ public class Service
     public virtual int Echo(int value) => value + 1;
     public virtual string Describe() => "service";
     public T EchoOf<T>(T value) => value;
+    public virtual T VirtualEchoOf<T>(T value) => value;
 }
 public sealed class Sealed
 {
@@ -65,6 +66,7 @@ public static class Ops
     public static int CallTwice(Service service) => service.Virtual() + service.Direct();
     public static int CallAbstract(Abstract abstractValue) => abstractValue.Compute();
     public static int UnsupportedInterface(IWidget widget) => widget.Measure();
-    public static int UnsupportedGeneric(Service service) => service.EchoOf(5);
+    public static int RecoveredGeneric(Service service) => service.EchoOf(5);
+    public static int UnsupportedGenericVirtual(Service service) => service.VirtualEchoOf(5);
 }
 #endif

@@ -52,9 +52,11 @@ internal static partial class GenericReferenceRoundtrip
         {
             int token = Convert.ToInt32(row.GetProperty("token").GetString(), 16);
             string operation = row.GetProperty("operation").GetString();
-            if ((token & unchecked((int)0xff000000)) != 0x0a000000
-                || !(operation == "callvirt" || operation == "reference_call" || operation == "memberref_call"))
-                throw new Exception("Owned leaf plan is not an exact MemberRef call.");
+            int table = token & unchecked((int)0xff000000);
+            if ((table != 0x0a000000 && table != 0x2b000000)
+                || !(operation == "callvirt" || operation == "reference_call"
+                     || operation == "memberref_call" || operation == "methodspec_call"))
+                throw new Exception("Owned leaf plan is not an exact MemberRef or MethodSpec call.");
             MethodInfo target = fixture.ManifestModule.ResolveMethod(token) as MethodInfo
                 ?? throw new Exception("Owned leaf is not an ordinary method.");
             if (target.ContainsGenericParameters || target.ReturnType.IsByRef

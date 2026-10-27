@@ -1,0 +1,247 @@
+{
+  "rust_tests": 468,
+  "fmt_clippy": "passed",
+  "release_build": "passed",
+  "behavior_manifest": "report/external-generic-instance/behavior-first.log",
+  "reference_relations": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Reference relation behavior: 178 comparisons, 41 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "release",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ExternalGeneric",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Reference relation behavior: 178 comparisons, 41 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "debug",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ExternalGeneric",
+        "detected": true
+      }
+    ],
+    "third_party_execution": false
+  },
+  "reference_relations_selected_version": {
+    "rows": [
+      {
+        "configuration": "release",
+        "behavior": "Reference relation behavior: 178 comparisons, 41 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "release",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "release",
+        "mutation": "ExternalGeneric",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "behavior": "Reference relation behavior: 178 comparisons, 41 closed selections; reference identity, generic positions, overload selection, null/cast flow and state match."
+      },
+      {
+        "configuration": "debug",
+        "mutation": "DeclaredOverload",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Swap",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "Foreign",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ReadCast",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitBranch",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitLoop",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "SkipInitAddress",
+        "detected": true
+      },
+      {
+        "configuration": "debug",
+        "mutation": "ExternalGeneric",
+        "detected": true
+      }
+    ],
+    "third_party_execution": false
+  },
+  "candidates": [
+    {
+      "id": 1042,
+      "token": "0x0600007E",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 1042,
+      "token": "0x06000080",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 1042,
+      "token": "0x0600009E",
+      "status": "Decompiled",
+      "exit": 0
+    },
+    {
+      "id": 1041,
+      "token": "0x0600006D",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 134,
+      "token": "0x060000DF",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 158,
+      "token": "0x060000CD",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 895,
+      "token": "0x06000A0F",
+      "status": "Partial",
+      "exit": 2
+    },
+    {
+      "id": 4,
+      "token": "0x0600007D",
+      "status": "Decompiled",
+      "exit": 0
+    }
+  ],
+  "third_party_bodies_executed": false,
+  "frozen_negative_promoted": {
+    "ExternalCallCases.Ops.UnsupportedGeneric": "now RecoveredGeneric (nonvirtual EchoOf<T>)",
+    "new_negative": "UnsupportedGenericVirtual (virtual generic instance)"
+  }
+}

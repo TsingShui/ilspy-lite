@@ -23,6 +23,7 @@ def module(name, path):
 
 support = module("object_roundtrip", ROOT / "tests/object-roundtrip.py")
 generic = module("generic_declaring", ROOT / "tests/generic-declaring-roundtrip.py")
+leaves = module("exact_reference_leaves", ROOT / "tests/support/exact_reference_leaves.py")
 
 
 def main():
@@ -73,14 +74,17 @@ def main():
             if name == "ReadCast":
                 text = "public class RecoveredCell<T> {\n" + text + "\n}\n"
             executable = "\n".join(line for line in text.splitlines() if not line.strip().startswith("//"))
-            if "__cil_" in support.without_boolean_helpers(executable): raise ValueError("Unbound relation body: " + name)
+            bound = re.sub(r"__cil_(?:callvirt|reference_call|memberref_call|methodspec_call)_[0-9A-F]{8}", "__leaf", executable)
+            if "__cil_" in support.without_boolean_helpers(bound): raise ValueError("Unbound relation body: " + name)
             methods.append(text)
         if not methods: raise ValueError("Empty relation selection")
         if not any("class RecoveredCell<T>" in method for method in methods): raise ValueError("Owned self-cast selection missing")
+        aliases, helpers = leaves.plan(support, harness, fixture, OUT, methods, "RelationCases.Ops", library)
+
         def compile_carrier(label, bodies):
             source = OUT / f"{label}-{config}.cs"
             support.write_changed(source, "namespace RelationCases { public static class Recovered {\n"
-                                  + "\n".join(bodies) + "\n} }\n")
+                                  + aliases + helpers + "\n".join(bodies) + "\n} }\n")
             binary = source.with_suffix(".dll")
             support.compile_cs(binary, [source], references=[fixture, library])
             return binary
@@ -95,12 +99,16 @@ def main():
                                        ("ReadCast", "return default;"),
                                        ("SkipInitBranch", "return 0;"),
                                        ("SkipInitLoop", "return 0;"),
-                                       ("SkipInitAddress", "return 0;")]:
+                                       ("SkipInitAddress", "return 0;"),
+                                       ("ExternalGeneric", "return 0;")]:
                 selected = [i for i, text in enumerate(methods) if re.search(r"\b" + name + r"(?:<[^>]+>)?\(", text)]
                 if len(selected) != 1: raise ValueError("Mutation target differs: " + name)
                 changed = list(methods)
                 if name == "DeclaredOverload":
                     changed[selected[0]], count = re.subn(r"\(\(RelationCases\.Base<string>\)\(input\)\)", "input", changed[selected[0]], count=1)
+                elif name == "ExternalGeneric":
+                    changed[selected[0]], count = re.subn(
+                        r"(__cil_callvirt_[0-9A-F]{8}\([^,]+, )value\)", r"\g<1>0)", changed[selected[0]], count=1)
                 elif name == "SkipInitAddress":
                     changed[selected[0]], count = re.subn(r"RelationCases\.LocalInitNegative\.Increment\(ref [^)]*\);", "", changed[selected[0]], count=1)
                 else:

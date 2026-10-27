@@ -381,6 +381,64 @@ fn prime_external_allocations(
     }
 }
 
+/// Prefetch facts for instantiated instance methods declared outside this image.
+///
+/// Only a MethodSpec whose target is a MemberRef on an external TypeRef owner
+/// needs them; a local declaration or a constructed owner is already decided by
+/// local metadata.
+fn prime_external_method_instantiations(
+    image: &metadata::Image<'_>,
+    body: &cildec::MethodBody<'_>,
+    context: &DependencyContext,
+) {
+    let mut seen = std::collections::BTreeSet::new();
+    for instruction in body.instructions() {
+        let Ok(instruction) = instruction else {
+            break;
+        };
+        let Some(candidate) = instruction.operand.token() else {
+            continue;
+        };
+        if candidate.table() != Some(cildec::TableId::MethodSpec)
+            || !seen.insert(candidate.0)
+            || image.external_method_instantiation(candidate.0).is_some()
+        {
+            continue;
+        }
+        let Ok(encoded) =
+            image
+                .md
+                .tables()
+                .raw_column(cildec::TableId::MethodSpec, candidate.rid(), 0)
+        else {
+            continue;
+        };
+        let Ok(target) = image.metadata_coded_token(cildec::CodedIndex::MethodDefOrRef, encoded)
+        else {
+            continue;
+        };
+        if target.table() != Some(cildec::TableId::MemberRef) {
+            continue;
+        }
+        let Ok(member) = image.md.tables().member_ref(target.rid()) else {
+            continue;
+        };
+        if member.class.table() != Some(cildec::TableId::TypeRef) {
+            continue;
+        }
+        image.cache_external_method_instantiation(
+            candidate.0,
+            match context.external_method_instantiation(candidate.0) {
+                crate::dependencies::ExternalMethodInstantiationLookup::Fact(fact) => Ok(fact),
+                crate::dependencies::ExternalMethodInstantiationLookup::Refused(reason) => {
+                    Err(reason)
+                }
+                crate::dependencies::ExternalMethodInstantiationLookup::Unavailable => continue,
+            },
+        );
+    }
+}
+
 /// Prefetch admission for constructed value types whose definition is external.
 ///
 /// The proof is about the definition, so one fact covers every instantiation of
@@ -446,6 +504,7 @@ fn decompile_method(
         prime_external_calls(image, &body, context);
         prime_external_allocations(image, &body, context);
         prime_external_fields(image, &body, context);
+        prime_external_method_instantiations(image, &body, context);
         prime_external_value_definitions(image, token, &body, context);
     }
     image.reference_queries.borrow_mut().clear();

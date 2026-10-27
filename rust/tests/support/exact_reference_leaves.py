@@ -7,7 +7,7 @@ import re
 
 def plan(support, harness, fixture, output, bodies, owner, library="-"):
     calls = sorted({(operation, token) for body in bodies for operation, token in re.findall(
-        r"__cil_(callvirt|reference_call|memberref_call)_([0-9A-F]{8})\(", body)})
+        r"__cil_(callvirt|reference_call|memberref_call|methodspec_call)_([0-9A-F]{8})\(", body)})
     aliases = sorted({token for body in bodies for token in re.findall(r"__cil_type_([0-9A-F]{8})", body)})
     if not calls and not aliases:
         return "", ""
