@@ -35,6 +35,20 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
+## Work after the external-cast scan (no full scan yet)
+
+- Commit `3869c14a5` fixes unordered float comparisons: `.un` forms on `F`
+  operands are true when either value is NaN, so they now lower to the negated
+  opposite ordered relation instead of casting the operands to integers. Ordered
+  forms and integer `.un` comparisons are unchanged. Owned red/green covers
+  `FloatLe`/`FloatGe`/`FloatNotLe`; the relation driver now runs 379 comparisons
+  / 47 closed selections per configuration with NaN, `-0` and both infinities,
+  and rejects nine mutants. 472 Rust tests pass.
+- Targeted scans: System.Private.CoreLib 13,425 -> 13,431, mcs System 14,038 ->
+  14,039. Latest full scan remains `report/external-casts/corpus-scan`
+  (668,334 / 102,414, 13.2876%). Two more groups are needed before the next full
+  scan; float64 is now unblocked as the next group.
+
 ## Current verified state: external reference casts
 
 - `report/external-casts/corpus-scan/baseline.json`: **668,334 Decompiled /
