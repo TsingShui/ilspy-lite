@@ -1,0 +1,33 @@
+{
+  "groups": [
+    "21cb785f4 address writes as assignment",
+    "Silverlight mscorlib core identity",
+    "87cb6f96f open-self struct values"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 50169,
+      "Decompiled": 720579
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 80,
+    "unrecovered": 50169,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 377,
+  "gained_images": 19,
+  "regressions": 0,
+  "fallback_percent": 6.509131389247847,
+  "acceptance_integer": {
+    "left": 5016900,
+    "right": 3853740,
+    "passes": false
+  },
+  "review": "report/silverlight-da-batch/review/review-source.md",
+  "tests": 488,
+  "third_party_bodies_executed": false
+}

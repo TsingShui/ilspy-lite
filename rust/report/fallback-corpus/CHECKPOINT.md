@@ -35,7 +35,23 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: local core scalars and exception-region assignment
+## Current verified state: address writes and Silverlight core identity
+
+- `report/silverlight-da-batch/corpus-scan/baseline.json`: **720,579 Decompiled /
+  50,169 Partial of 770,748**, fallback **6.505257%**. Zero incomplete images; raw
+  gate 5,016,900 > 3,853,740, so <=5% is unmet (11,632 bodies to go).
+- Against `report/da-eh-batch/corpus-scan/baseline.json`: **+377 in 19 images, zero
+  regressions** (253 in `System.Private.CoreLib` from address writes as definite
+  assignment, plus Silverlight/PCL core identities).
+- Also committed `87cb6f96f`: open-self generic struct allocation now yields a value
+  identity instead of a class type (correctness only, zero status change).
+- Remaining largest first blockers: incompatible value/receiver types 11,591;
+  malformed user strings 2,704 (corpus data); generic variable ownership 2,569;
+  constructed value generic method 2,180; generic virtual dispatch 1,998 (deliberate
+  refusal); pinned/byref locals 1,655; RuntimeTypeHandle identity 1,325; external
+  allocation facts 1,320; value-type receiver 1,129; core ValueType base 1,023.
+
+## Previous verified state: local core scalars and exception-region assignment
 
 - `report/da-eh-batch/corpus-scan/baseline.json`: **720,202 Decompiled / 50,546
   Partial of 770,748**, fallback **6.557925%**. Zero incomplete images; raw gate
