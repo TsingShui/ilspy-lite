@@ -1,0 +1,9 @@
+   Compiling ilspy-lite v0.1.0 (/Users/bytedance/zhome/ilspy-lite/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.46s
+────────────
+ Nextest run ID f9ae963e-7c77-448c-8df0-c6cc155faeb4 with nextest profile: default
+    Starting 2 tests across 5 binaries (496 tests skipped)
+        PASS [   0.021s] (1/2) ilspy-lite::all value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers
+        PASS [   0.026s] (2/2) ilspy-lite::all value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations
+────────────
+     Summary [   0.027s] 2 tests run: 2 passed, 496 skipped

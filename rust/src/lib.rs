@@ -456,9 +456,9 @@ fn prime_external_cast_targets(
 
 /// Prefetch facts for instantiated instance methods declared outside this image.
 ///
-/// Only a MethodSpec whose target is a MemberRef on an external TypeRef owner
-/// needs them; a local declaration or a constructed owner is already decided by
-/// local metadata.
+/// A MethodSpec on an external TypeRef or an external constructed value owner
+/// needs the selected declaration to establish instance and dispatch facts.
+/// Local declarations and constructed reference owners are decided elsewhere.
 fn prime_external_method_instantiations(
     image: &metadata::Image<'_>,
     body: &cildec::MethodBody<'_>,
@@ -496,7 +496,26 @@ fn prime_external_method_instantiations(
         let Ok(member) = image.md.tables().member_ref(target.rid()) else {
             continue;
         };
-        if member.class.table() != Some(cildec::TableId::TypeRef) {
+        let needs_fact = match member.class.table() {
+            Some(cildec::TableId::TypeRef) => true,
+            Some(cildec::TableId::TypeSpec) => {
+                image
+                    .type_spec(member.class)
+                    .ok()
+                    .is_some_and(|spec| match &spec.type_ {
+                        cildec::Type::GenericInst {
+                            is_value_type: true,
+                            def,
+                            ..
+                        } => image
+                            .local_type_definition(*def)
+                            .is_ok_and(|local| local.is_none()),
+                        _ => false,
+                    })
+            }
+            _ => false,
+        };
+        if !needs_fact {
             continue;
         }
         image.cache_external_method_instantiation(

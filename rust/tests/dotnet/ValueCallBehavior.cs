@@ -69,7 +69,7 @@ internal static partial class GenericReferenceRoundtrip
     static void ValueCallPlan(string[] args)
     {
         if (args.Length != 4) throw new Exception("Expected owned value-call plan/library.");
-        AssemblyLoadContext.Default.LoadFromAssemblyPath(System.IO.Path.GetFullPath(args[3]));
+        var library = AssemblyLoadContext.Default.LoadFromAssemblyPath(System.IO.Path.GetFullPath(args[3]));
         using var plan = JsonDocument.Parse(System.IO.File.ReadAllText(args[2]));
         var written = new HashSet<string>();
         foreach (var item in plan.RootElement.EnumerateArray())
@@ -125,6 +125,53 @@ internal static partial class GenericReferenceRoundtrip
                 Console.WriteLine("private static " + ValueCallType(result) + " __cil_value_call_" + hex
                     + arguments + "(" + string.Join(", ", declarations) + ")"
                     + (result == typeof(void) ? " { " + call + "; }" : " => " + call + ";"));
+            }
+            if (!item.TryGetProperty("generic_calls", out var genericCalls)) continue;
+            foreach (var operand in genericCalls.EnumerateArray())
+            {
+                string hex = operand.GetString();
+                if (!written.Add(hex)) continue;
+                int token = int.Parse(hex, System.Globalization.NumberStyles.HexNumber);
+                var target = fixture.ManifestModule.ResolveMethod(token,
+                    caller.DeclaringType.GetGenericArguments(), caller.IsGenericMethod ? caller.GetGenericArguments() : Type.EmptyTypes) as MethodInfo
+                    ?? throw new Exception("Owned generic value-call target missing.");
+                var definition = library.GetType("ValueCallLibrary.Cell`1") ?? throw new Exception("Owned foreign cell missing.");
+                var declarations = definition.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                    .Where(m => m.Name == "Exchange").ToArray();
+                if (declarations.Length != 1 || !target.IsGenericMethod || target.IsStatic || target.IsVirtual
+                    || target.DeclaringType.GetGenericTypeDefinition() != definition
+                    || target.GetGenericMethodDefinition().MetadataToken != declarations[0].MetadataToken
+                    || target.GetGenericArguments().Length != 1 || target.ReturnType.IsByRef)
+                    throw new Exception("Unproved owned generic value-call target: " + target);
+                var variables = target.DeclaringType.GetGenericArguments().Concat(target.GetGenericArguments())
+                    .Where(t => t.IsGenericParameter).Distinct().ToArray();
+                if (variables.Length > 1 || variables.Any(t => t.Name != "T"))
+                    throw new Exception("Unexpected owned generic value-call scope.");
+                var parameters = target.GetParameters();
+                var argspec = parameters.Select((p, i) => (p.ParameterType.IsByRef ? "ref " : "") + ValueCallType(p.ParameterType) + " p" + i);
+                var values = parameters.Select((p, i) => (p.ParameterType.IsByRef ? "ref " : "") + "p" + i);
+                Console.WriteLine("private static " + ValueCallType(target.ReturnType) + " __cil_methodspec_call_" + hex
+                    + (variables.Length == 0 ? "" : "<T>") + "(ref " + ValueCallType(target.DeclaringType) + " receiver, "
+                    + string.Join(", ", argspec) + ") => receiver.Exchange<" + ValueCallType(target.GetGenericArguments()[0])
+                    + ">(" + string.Join(", ", values) + ");");
+            }
+            if (!item.TryGetProperty("field_addresses", out var fieldAddresses)) continue;
+            foreach (var operand in fieldAddresses.EnumerateArray())
+            {
+                string hex = operand.GetString();
+                if (!written.Add(hex)) continue;
+                int token = int.Parse(hex, System.Globalization.NumberStyles.HexNumber);
+                var field = fixture.ManifestModule.ResolveField(token,
+                    caller.DeclaringType.GetGenericArguments(), caller.IsGenericMethod ? caller.GetGenericArguments() : Type.EmptyTypes)
+                    ?? throw new Exception("Owned field address target missing.");
+                var definition = library.GetType("ValueCallLibrary.Cell`1") ?? throw new Exception("Owned foreign cell missing.");
+                var count = definition.GetField("Count") ?? throw new Exception("Owned field missing.");
+                if (field.IsStatic || field.IsInitOnly || field.FieldType != typeof(int)
+                    || !field.DeclaringType.IsGenericType || field.DeclaringType.ContainsGenericParameters
+                    || field.DeclaringType.GetGenericTypeDefinition() != definition || field.MetadataToken != count.MetadataToken)
+                    throw new Exception("Unproved owned field address target: " + field);
+                Console.WriteLine("private static ref int __cil_ldflda_" + hex + "(ref " + ValueCallType(field.DeclaringType)
+                    + " receiver) => ref receiver.Count;");
             }
         }
     }

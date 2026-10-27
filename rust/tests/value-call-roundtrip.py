@@ -85,14 +85,19 @@ def main():
                 text = "\n".join(line if line.lstrip().startswith("//") else re.sub(r"\bthis\b", "receiver", line) for line in text.splitlines())
                 name = "Cell" + name
             calls = sorted(set(re.findall(r"__cil_value_call_([0-9A-F]{8})", text)))
+            generic_calls = sorted(set(re.findall(r"__cil_methodspec_call_([0-9A-F]{8})", text)))
+            field_addresses = sorted(set(re.findall(r"__cil_ldflda_([0-9A-F]{8})", text)))
             constructors = sorted(set(re.findall(r"__cil_value_newobj_([0-9A-F]{8})", text)))
             initializers = sorted(set(re.findall(r"__cil_value_ctor_([0-9A-F]{8})", text)))
-            plan.append({"caller": row["token"][2:], "calls": calls, "constructors": constructors, "initializers": initializers})
+            plan.append({"caller": row["token"][2:], "calls": calls, "generic_calls": generic_calls,
+                         "field_addresses": field_addresses, "constructors": constructors, "initializers": initializers})
             executable = "\n".join(line for line in text.splitlines() if not line.strip().startswith("//"))
-            executable = re.sub(r"__cil_value_(?:call|newobj|ctor)_[0-9A-F]{8}", "", executable)
+            executable = re.sub(r"__cil_(?:value_(?:call|newobj|ctor)|methodspec_call|ldflda)_[0-9A-F]{8}", "", executable)
             if "__cil_" in support.without_boolean_helpers(executable): raise ValueError("Unbound value call body: " + name)
             bodies[name] = text
-        if not bodies or not all(name in bodies for name in ["CellRead", "CellWrite", "Generic", "ForeignGeneric", "Throw"]):
+        if not bodies or not all(name in bodies for name in ["CellRead", "CellWrite", "Generic", "ForeignGeneric", "Throw",
+                                                               "ForeignExchange", "ForeignExchangeString", "ForeignExchangeCopy",
+                                                               "ForeignExchangeAliased", "ForeignExchangeOrder", "ForeignExchangeGeneric", "ForeignExchangeCross"]):
             raise ValueError("Owned value support selection incomplete")
         plan_file = OUT / f"plan-{config}.json"
         support.write_changed(plan_file, json.dumps(plan))
@@ -123,6 +128,34 @@ private static void __PlainValueStore(ref global::ValueCallCases.Plain receiver,
         print(config + ": " + result.stdout.strip(), flush=True)
         results.append({"configuration": config, "behavior": result.stdout.strip()})
         if args.mutation_control:
+            for label in ["GenericReceiverCopy", "GenericArgumentCopy", "GenericFieldAlias", "GenericOrder", "GenericException", "GenericResult"]:
+                name = "ForeignExchangeAliased" if label == "GenericFieldAlias" else "ForeignExchangeOrder" if label == "GenericOrder" else "ForeignExchange"
+                changed = dict(bodies)
+                if label == "GenericReceiverCopy":
+                    changed[name], count = re.subn(r"= ref value;", "= ref copiedReceiver;", changed[name], count=1)
+                    changed[name] = changed[name].replace("\n{", "\n{\n ValueCallLibrary.Cell<int> copiedReceiver = value;", 1)
+                elif label == "GenericArgumentCopy":
+                    changed[name], count = re.subn(r"= ref input;", "= ref copiedArgument;", changed[name], count=1)
+                    changed[name] = changed[name].replace("\n{", "\n{\n int copiedArgument = input;", 1)
+                elif label == "GenericFieldAlias":
+                    changed[name], count = re.subn(r"ref int (\w+) = ref (__cil_ldflda_[0-9A-F]{8}\(ref \w+\));",
+                        r"int copiedField = \2; ref int \1 = ref copiedField;", changed[name], count=1)
+                elif label == "GenericOrder":
+                    pattern = r"int (\w+) = (ValueCallLibrary\.Probe\.Argument\((\w+)\));\n(\s*)int (\w+) = (__cil_methodspec_call_[0-9A-F]{8}\(ref \w+, ref \w+, )\1(\));"
+                    changed[name], count = re.subn(pattern, r"int \5 = \6\3\7;\n\4\2;", changed[name], count=1)
+                elif label == "GenericException":
+                    changed[name], count = re.subn(r"int (\w+) = divisor;", r"int \1 = 1;", changed[name], count=1)
+                else:
+                    changed[name], count = re.subn(r"\breturn \w+;", "return 0;", changed[name], count=1)
+                if count != 1: raise ValueError("Generic value-call mutation missing: " + label)
+                mutant = compile_carrier("Wrong-" + label, changed)
+                negative = subprocess.run([str(x) for x in [*command[:4], mutant, library]], text=True, capture_output=True, timeout=120)
+                log = negative.stdout + negative.stderr
+                (OUT / f"Wrong-{label}-{config}.log").write_text(log)
+                if negative.returncode == 0 or "Recovered value call differs: " + name not in log:
+                    raise ValueError("Generic value-call mutant survived: " + label + "\n" + log)
+                print(config + ": rejected " + label + " mutant", flush=True)
+                results.append({"configuration": config, "mutation": label, "detected": True})
             for name, replacement in [("CellRead", "receiver.Count = 0;"), ("CellWrite", "receiver.Value = default;"),
                                        ("CellReadThrow", "receiver.Count = 0;")]:
                 changed = dict(bodies)

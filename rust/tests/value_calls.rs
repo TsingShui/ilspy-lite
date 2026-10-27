@@ -352,6 +352,142 @@ fn constructed_value_fields_require_the_requested_instantiated_signature() {
 }
 
 #[test]
+fn constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations() {
+    for (bytes, library) in IMAGES {
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .add_reference("owned value-call library", library.to_vec())
+            .unwrap();
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        for name in [
+            "ForeignExchange",
+            "ForeignExchangeString",
+            "ForeignExchangeCopy",
+            "ForeignExchangeAliased",
+            "ForeignExchangeOrder",
+            "ForeignExchangeGeneric",
+            "ForeignExchangeCross",
+        ] {
+            let method = token(bytes, "ValueCallCases.Ops", name);
+            let body = cildec::MethodBody::from_image(
+                &pe,
+                &md.tables().method_def(method & 0xffffff).unwrap(),
+            )
+            .unwrap()
+            .unwrap();
+            let operand = body
+                .instructions()
+                .map(Result::unwrap)
+                .find_map(|i| {
+                    let t = i.operand.token()?;
+                    (t.table() == Some(cildec::TableId::MethodSpec)).then_some(t)
+                })
+                .unwrap();
+            let absent = decompile_with_style(bytes, method, OutputStyle::Readable).unwrap();
+            assert_eq!(absent.status, Status::Partial, "{name}: {}", absent.text);
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                result
+                    .text
+                    .contains(&format!("__cil_methodspec_call_{:08X}", operand.0)),
+                "{name}: {}",
+                result.text
+            );
+        }
+    }
+}
+
+#[test]
+fn constructed_foreign_generic_methods_reject_unproved_targets_and_receivers() {
+    for (bytes, library) in IMAGES {
+        let method = token(bytes, "ValueCallCases.Ops", "ForeignExchange");
+        let pe = cildec::PeImage::parse(bytes).unwrap();
+        let md = pe.metadata().unwrap();
+        let body = cildec::MethodBody::from_image(
+            &pe,
+            &md.tables().method_def(method & 0xffffff).unwrap(),
+        )
+        .unwrap()
+        .unwrap();
+        let instructions = body.instructions().map(Result::unwrap).collect::<Vec<_>>();
+        let call = instructions
+            .iter()
+            .find(|i| i.opcode.name() == "call")
+            .unwrap();
+        let spec = call.operand.token().unwrap();
+        assert_eq!(spec.table(), Some(cildec::TableId::MethodSpec));
+        let blob = md
+            .blobs()
+            .get(md.tables().method_spec(spec.rid()).unwrap().instantiation)
+            .unwrap();
+        assert_eq!(blob, [0x0a, 0x01, 0x08]);
+        let blob_at = blob.as_ptr() as usize - bytes.as_ptr() as usize;
+        let code_at = body.code.as_ptr() as usize - bytes.as_ptr() as usize;
+        let mut wrong_argument = bytes.to_vec();
+        wrong_argument[blob_at + 2] = 0x0e;
+        let mut virtual_call = bytes.to_vec();
+        virtual_call[code_at + call.offset as usize] = 0x6f;
+        assert_eq!(body.code[0], 0x02);
+        let mut wrong_receiver = bytes.to_vec();
+        wrong_receiver[code_at] = 0x03;
+        for invalid in [wrong_argument, virtual_call.clone(), wrong_receiver] {
+            let mut context = DependencyContext::new(invalid).unwrap();
+            context
+                .add_reference("owned library", library.to_vec())
+                .unwrap();
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+        }
+
+        let declaration = token(library, "ValueCallLibrary.Cell`1", "Exchange");
+        let pe = cildec::PeImage::parse(library).unwrap();
+        let md = pe.metadata().unwrap();
+        let row = md.tables().method_def(declaration & 0xffffff).unwrap();
+        let raw = md
+            .tables()
+            .row_bytes(cildec::TableId::MethodDef, declaration & 0xffffff)
+            .unwrap();
+        let flags_at = raw.as_ptr() as usize - library.as_ptr() as usize + 6;
+        let name = md.strings().str(row.name).unwrap();
+        assert_eq!(name, "Exchange");
+        let name_at = name.as_ptr() as usize - library.as_ptr() as usize;
+        let mut missing = library.to_vec();
+        missing[name_at] = b'F';
+        let mut virtual_target = library.to_vec();
+        virtual_target[flags_at..flags_at + 2].copy_from_slice(&(row.flags | 0x40).to_le_bytes());
+        let mut static_target = library.to_vec();
+        static_target[flags_at..flags_at + 2].copy_from_slice(&(row.flags | 0x10).to_le_bytes());
+        for invalid_library in [missing, static_target] {
+            let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+            context
+                .add_reference("mutated library", invalid_library)
+                .unwrap();
+            let result = context.decompile(method, OutputStyle::Readable).unwrap();
+            assert_eq!(result.status, Status::Partial, "{}", result.text);
+        }
+        let mut direct = DependencyContext::new(bytes.to_vec()).unwrap();
+        direct
+            .add_reference("virtual declaration", virtual_target.clone())
+            .unwrap();
+        let result = direct.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        let mut dispatch = DependencyContext::new(virtual_call).unwrap();
+        dispatch
+            .add_reference("virtual declaration", virtual_target)
+            .unwrap();
+        let result = dispatch.decompile(method, OutputStyle::Readable).unwrap();
+        assert_eq!(result.status, Status::Partial, "{}", result.text);
+        assert!(
+            result.text.contains("generic virtual dispatch"),
+            "{}",
+            result.text
+        );
+    }
+}
+
+#[test]
 fn constructed_foreign_value_calls_keep_the_declared_owner_and_argument_scope() {
     for (bytes, library) in IMAGES {
         let mut context = DependencyContext::new(bytes.to_vec()).unwrap();

@@ -1,0 +1,44 @@
+   Compiling ilspy-lite v0.1.0 (/Users/bytedance/zhome/ilspy-lite/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.81s
+────────────
+ Nextest run ID 748ceb26-0993-4a6d-879f-7c4ac4b49689 with nextest profile: default
+    Starting 1 test across 5 binaries (497 tests skipped)
+        FAIL [   0.014s] (1/1) ilspy-lite::all value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations
+  stdout ───
+
+    running 1 test
+    test value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations ... FAILED
+
+    failures:
+
+    failures:
+        value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 459 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations' (27191776) panicked at tests/value_calls.rs:389:13:
+    assertion `left == right` failed: ForeignExchange: public static int ForeignExchange(ref ValueCallLibrary.Cell<int> value, ref int input, int divisor)
+    {
+        // IL fallback: external constructed value generic method needs dependency facts
+        // .maxstack 8
+        // .initlocals false
+        // .code-bytes IL_0000: [02, 03, 04, 28, 01, 00, 00, 2B, 2A]
+        // IL_0000: ldarg.0 0
+        // IL_0001: ldarg.1 1
+        // IL_0002: ldarg.2 2
+        // IL_0003: call 0x2B000001 valuetype [value-call-library-release]ValueCallLibrary.Cell`1<int32>::Exchange<int32>
+        // IL_0008: ret
+    }
+
+    // Dependency unresolved: System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ContentType=0x0; reference identity retained.
+
+      left: Partial
+     right: Decompiled
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.015s] 1 test run: 0 passed, 1 failed, 497 skipped
+        FAIL [   0.014s] (1/1) ilspy-lite::all value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations
+error: test run failed

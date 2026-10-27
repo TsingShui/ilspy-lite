@@ -56,3 +56,34 @@ instead of requiring a local definition. The receiver is the instantiated value
 identity. The fixed-corpus scan moved by four bodies (zero regressions), so this is
 a narrow completeness fix; the remaining cases still lack the dependency facts for
 the value definition.
+
+## External constructed value owners and the fact prefetch
+
+`Cell<int>` from another assembly reaches the external-declaration branch, but the
+body-level prefetch that fills the fact cache only looked at a MemberRef whose
+parent is a `TypeRef`. A `TypeSpec` parent with an external value definition was
+never primed, so the resolver saw no fact and every such call stayed Partial on
+`external constructed value generic method needs dependency facts` (2,269 first
+blockers).
+
+The prefetch now also admits a `TypeSpec` parent whose `GenericInst` is a value
+type with no local definition. It still requires the selected declaration to prove
+instance/virtual flags, so a missing or mutated target refuses rather than being
+guessed. The call keeps the exact `__cil_methodspec_call_<token>`, the substituted
+owner/method arguments, and the receiver as the managed location.
+
+Owned coverage (Debug and Release): `ForeignExchange`, `ForeignExchangeString`,
+`ForeignExchangeCopy` (copied receiver stays a copy), `ForeignExchangeAliased`
+(field address aliases the receiver), `ForeignExchangeOrder` (argument evaluation
+order), `ForeignExchangeGeneric`, `ForeignExchangeCross` (method argument distinct
+from the owner argument). Negatives: different method argument, `callvirt`,
+non-location receiver, renamed declaration, static declaration; a validated
+virtual declaration is admitted for the non-virtual call and still refused under
+`callvirt`. The behaviour driver executes 720 comparisons per configuration and
+rejects six added mutants (receiver copy, argument copy, field-address copy,
+evaluation order, exception path, result).
+
+Status: owned tests and behaviour are green. The targeted production scan that
+would quantify the corpus gain was started twice and aborted before writing a
+delta, so **no corpus gain is claimed** for this slice yet; the next batch scan
+measures it.

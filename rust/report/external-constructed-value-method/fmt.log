@@ -1,0 +1,92 @@
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/src/lib.rs:498:
+         };
+         let needs_fact = match member.class.table() {
+             Some(cildec::TableId::TypeRef) => true,
+[31m-            Some(cildec::TableId::TypeSpec) => image
+(B[m[31m-                .type_spec(member.class)
+(B[m[31m-                .ok()
+(B[m[31m-                .is_some_and(|spec| match &spec.type_ {
+(B[m[31m-                    cildec::Type::GenericInst {
+(B[m[31m-                        is_value_type: true,
+(B[m[31m-                        def,
+(B[m[31m-                        ..
+(B[m[31m-                    } => image.local_type_definition(*def).is_ok_and(|local| local.is_none()),
+(B[m[31m-                    _ => false,
+(B[m[31m-                }),
+(B[m[32m+            Some(cildec::TableId::TypeSpec) => {
+(B[m[32m+                image
+(B[m[32m+                    .type_spec(member.class)
+(B[m[32m+                    .ok()
+(B[m[32m+                    .is_some_and(|spec| match &spec.type_ {
+(B[m[32m+                        cildec::Type::GenericInst {
+(B[m[32m+                            is_value_type: true,
+(B[m[32m+                            def,
+(B[m[32m+                            ..
+(B[m[32m+                        } => image
+(B[m[32m+                            .local_type_definition(*def)
+(B[m[32m+                            .is_ok_and(|local| local.is_none()),
+(B[m[32m+                        _ => false,
+(B[m[32m+                    })
+(B[m[32m+            }
+(B[m             _ => false,
+         };
+         if !needs_fact {
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/tests/value_calls.rs:412:
+         .unwrap()
+         .unwrap();
+         let instructions = body.instructions().map(Result::unwrap).collect::<Vec<_>>();
+[31m-        let call = instructions.iter().find(|i| i.opcode.name() == "call").unwrap();
+(B[m[32m+        let call = instructions
+(B[m[32m+            .iter()
+(B[m[32m+            .find(|i| i.opcode.name() == "call")
+(B[m[32m+            .unwrap();
+(B[m         let spec = call.operand.token().unwrap();
+         assert_eq!(spec.table(), Some(cildec::TableId::MethodSpec));
+         let blob = md
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/tests/value_calls.rs:431:
+         wrong_receiver[code_at] = 0x03;
+         for invalid in [wrong_argument, virtual_call.clone(), wrong_receiver] {
+             let mut context = DependencyContext::new(invalid).unwrap();
+[31m-            context.add_reference("owned library", library.to_vec()).unwrap();
+(B[m[32m+            context
+(B[m[32m+                .add_reference("owned library", library.to_vec())
+(B[m[32m+                .unwrap();
+(B[m             let result = context.decompile(method, OutputStyle::Readable).unwrap();
+             assert_eq!(result.status, Status::Partial, "{}", result.text);
+         }
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/tests/value_calls.rs:456:
+         static_target[flags_at..flags_at + 2].copy_from_slice(&(row.flags | 0x10).to_le_bytes());
+         for invalid_library in [missing, static_target] {
+             let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+[31m-            context.add_reference("mutated library", invalid_library).unwrap();
+(B[m[32m+            context
+(B[m[32m+                .add_reference("mutated library", invalid_library)
+(B[m[32m+                .unwrap();
+(B[m             let result = context.decompile(method, OutputStyle::Readable).unwrap();
+             assert_eq!(result.status, Status::Partial, "{}", result.text);
+         }
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/tests/value_calls.rs:463:
+         let mut direct = DependencyContext::new(bytes.to_vec()).unwrap();
+[31m-        direct.add_reference("virtual declaration", virtual_target.clone()).unwrap();
+(B[m[32m+        direct
+(B[m[32m+            .add_reference("virtual declaration", virtual_target.clone())
+(B[m[32m+            .unwrap();
+(B[m         let result = direct.decompile(method, OutputStyle::Readable).unwrap();
+         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+         let mut dispatch = DependencyContext::new(virtual_call).unwrap();
+Diff in /Users/bytedance/zhome/ilspy-lite/rust/tests/value_calls.rs:468:
+[31m-        dispatch.add_reference("virtual declaration", virtual_target).unwrap();
+(B[m[32m+        dispatch
+(B[m[32m+            .add_reference("virtual declaration", virtual_target)
+(B[m[32m+            .unwrap();
+(B[m         let result = dispatch.decompile(method, OutputStyle::Readable).unwrap();
+         assert_eq!(result.status, Status::Partial, "{}", result.text);
+[31m-        assert!(result.text.contains("generic virtual dispatch"), "{}", result.text);
+(B[m[32m+        assert!(
+(B[m[32m+            result.text.contains("generic virtual dispatch"),
+(B[m[32m+            "{}",
+(B[m[32m+            result.text
+(B[m[32m+        );
+(B[m     }
+ }
+

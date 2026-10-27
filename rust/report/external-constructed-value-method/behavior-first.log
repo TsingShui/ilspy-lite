@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Users/bytedance/zhome/ilspy-lite/rust/tests/value-call-roundtrip.py", line 235, in <module>
+    main()
+  File "/Users/bytedance/zhome/ilspy-lite/rust/tests/value-call-roundtrip.py", line 95, in main
+    if "__cil_" in support.without_boolean_helpers(executable): raise ValueError("Unbound value call body: " + name)
+ValueError: Unbound value call body: ForeignExchangeAliased

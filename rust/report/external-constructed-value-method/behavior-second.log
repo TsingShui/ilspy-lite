@@ -1,0 +1,2 @@
+release: Value call behavior: 711 comparisons, 79 closed selections; managed receiver writes, value copies, generic/reference identity and exception writes match.
+debug: Value call behavior: 711 comparisons, 79 closed selections; managed receiver writes, value copies, generic/reference identity and exception writes match.

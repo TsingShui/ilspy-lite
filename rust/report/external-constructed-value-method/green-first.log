@@ -1,0 +1,43 @@
+   Compiling ilspy-lite v0.1.0 (/Users/bytedance/zhome/ilspy-lite/rust)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.45s
+────────────
+ Nextest run ID 174ce234-d58e-4516-ad23-bbabd05ca408 with nextest profile: default
+    Starting 2 tests across 5 binaries (496 tests skipped)
+        FAIL [   0.067s] (1/2) ilspy-lite::all value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers
+  stdout ───
+
+    running 1 test
+    test value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers ... FAILED
+
+    failures:
+
+    failures:
+        value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 459 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers' (27195939) panicked at tests/value_calls.rs:460:13:
+    assertion `left == right` failed: public static int ForeignExchange(ref ValueCallLibrary.Cell<int> value, ref int input, int divisor)
+    {
+        // structural signature __cil_value_fbd0ad900033618526df5cf50b541e3c468562a6 bytes=1511210108: valuetype [value-call-library-release]ValueCallLibrary.Cell`1<int32>; type-owner=0x00000000 method-owner=0x00000000; tokens scoped to this input image; whole constructed value snapshot/copy in the original instantiation; no boxing, construction, host layout or address inference.
+        IL_0000: ;
+        ref __cil_value_fbd0ad900033618526df5cf50b541e3c468562a6 v0 = ref value;
+        ref int v1 = ref input;
+        int v2 = divisor;
+        int v3 = __cil_methodspec_call_2B000001(ref v0, ref v1, v2);
+        return v3;
+    }
+
+    // Dependency unresolved: System.Runtime, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, ContentType=0x0; reference identity retained.
+
+      left: Decompiled
+     right: Partial
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.079s] (2/2) ilspy-lite::all value_calls::constructed_foreign_value_generic_methods_keep_exact_tokens_and_locations
+────────────
+     Summary [   0.091s] 2 tests run: 1 passed, 1 failed, 496 skipped
+        FAIL [   0.067s] (1/2) ilspy-lite::all value_calls::constructed_foreign_generic_methods_reject_unproved_targets_and_receivers
+error: test run failed
