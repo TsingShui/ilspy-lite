@@ -214,6 +214,35 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn byref_like_values_are_copied_as_values_and_never_boxed() {
+    for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
+        let configuration = if index == 0 { "release" } else { "debug" };
+        let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
+        context
+            .discover_references(
+                std::path::Path::new("tests/fixtures/reference-relation-release.bin"),
+                &ilspy_lite::ReferenceSearchOptions {
+                    automatic: false,
+                    files: vec![std::path::PathBuf::from(format!(
+                        "tests/fixtures/relation-library-{configuration}.bin"
+                    ))],
+                    version_policy: ilspy_lite::ReferenceVersionPolicy::IlSpy,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+        let result = context
+            .decompile(
+                token(bytes, "RelationCases.Ops", "ReadRefBox"),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+        assert_eq!(result.status, Status::Decompiled, "{}", result.text);
+        assert!(result.text.contains("RefBox"), "{}", result.text);
+    }
+}
+
+#[test]
 fn value_type_generic_instantiations_call_through_the_managed_location() {
     for (index, (bytes, _)) in IMAGES.into_iter().enumerate() {
         let configuration = if index == 0 { "release" } else { "debug" };

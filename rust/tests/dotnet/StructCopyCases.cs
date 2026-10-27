@@ -204,6 +204,6 @@ public static class UnsupportedOps
     public static Pair UnsupportedNew(int value) => new Pair { Number = value };
     public static object UnsupportedBox(Pair value) => value;
     public static Pair UnsupportedByRef(ref Pair value) => value;
-    public static Borrowed UnsupportedRefLike(Borrowed value) => value;
+    public static Borrowed RecoveredRefLike(Borrowed value) => value;
     public static GenericPair<T> UnsupportedConstructed<T>(GenericPair<T> value) => value;
 }

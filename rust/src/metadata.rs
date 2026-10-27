@@ -134,6 +134,7 @@ pub(crate) struct Image<'a> {
     pub(crate) reference_attempted: std::cell::RefCell<std::collections::BTreeSet<u32>>,
     location_types: std::cell::RefCell<crate::locations::LocationTypes>,
     pointer_types: std::cell::RefCell<crate::pointers::PointerTypes>,
+    byref_like_values: std::cell::RefCell<std::collections::BTreeSet<u32>>,
     struct_types: StructTypes,
     pub(crate) signature_types: std::cell::RefCell<crate::signature_types::SignatureTypes>,
     enum_types: std::cell::RefCell<
@@ -206,6 +207,7 @@ impl<'a> Image<'a> {
             reference_attempted: std::cell::RefCell::new(std::collections::BTreeSet::new()),
             location_types: std::cell::RefCell::new(crate::locations::LocationTypes::new()?),
             pointer_types: std::cell::RefCell::new(crate::pointers::PointerTypes::new()?),
+            byref_like_values: std::cell::RefCell::new(std::collections::BTreeSet::new()),
             struct_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
             signature_types: std::cell::RefCell::new(crate::signature_types::SignatureTypes::new()?),
             enum_types: std::cell::RefCell::new(std::collections::BTreeMap::new()),
@@ -2903,7 +2905,11 @@ impl<'a> Image<'a> {
             if self.md.strings().str(namespace)? == "System.Runtime.CompilerServices"
                 && self.md.strings().str(name)? == "IsByRefLikeAttribute"
             {
-                return Err("byref-like struct copies need location/lifetime semantics".into());
+                // A byref-like value may be copied (the CLI permits it); what it
+                // may not do is be boxed or stored outside a valid location. Copies
+                // stay value copies here, and `boxed_value_type` keeps boxing
+                // refused for these identities.
+                self.byref_like_values.borrow_mut().insert(token.0);
             }
         }
         for rid in tables.field_range(Rid::new(token.rid()))? {
@@ -3177,7 +3183,32 @@ impl<'a> Image<'a> {
     }
 
     /// The exact stored or caller-scoped type named by a box/unbox.any operand.
+    /// Whether the token names (an instantiation of) a byref-like definition.
+    fn byref_like_definition(&self, token: Token) -> Result<bool> {
+        let definition = if token.table() == Some(TableId::TypeSpec) {
+            match self.type_spec(token)?.type_ {
+                cildec::Type::GenericInst { def, .. } => def,
+                _ => return Ok(false),
+            }
+        } else {
+            token
+        };
+        Ok(self.byref_like_values.borrow().contains(&definition.0))
+    }
+
     pub(crate) fn boxed_value_type(
+        &self,
+        token: Token,
+        context: crate::signature_types::TypeContext,
+    ) -> Result<crate::ir::Ty> {
+        let ty = self.boxed_value_type_unchecked(token, context)?;
+        if self.byref_like_definition(token)? {
+            return Err("box/unbox of a byref-like value needs IL fallback".into());
+        }
+        Ok(ty)
+    }
+
+    fn boxed_value_type_unchecked(
         &self,
         token: Token,
         context: crate::signature_types::TypeContext,

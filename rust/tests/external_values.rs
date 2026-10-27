@@ -16,18 +16,11 @@ const IMAGES: [(&[u8], &[u8]); 2] = [
 
 /// A byref-like definition may never be copied, and a field read needs the
 /// instantiated field type; both stay gated with their own reasons.
-const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[
-    (
-        "ExternalValueCases.Ops",
-        "UnsupportedRefStruct",
-        "byref-like struct copies need location/lifetime semantics",
-    ),
-    (
-        "ExternalValueCases.Ops",
-        "UnsupportedField",
-        "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
-    ),
-];
+const EXPECTED_PARTIAL: &[(&str, &str, &str)] = &[(
+    "ExternalValueCases.Ops",
+    "UnsupportedField",
+    "external member reference needs dependency facts: owner is a value type; its fields need managed-location semantics",
+)];
 
 fn context(bytes: &[u8], library: &[u8]) -> DependencyContext {
     let mut context = DependencyContext::new(bytes.to_vec()).unwrap();
@@ -112,6 +105,12 @@ fn the_negative_surface_keeps_its_stated_blocker() {
             }
         }
         assert_eq!(seen, expected);
+        // The byref-like parameter is admitted as a value; the promoted case must
+        // stay recovered rather than fall back again.
+        let promoted = context
+            .decompile(token(bytes, "RecoveredRefStruct"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
     }
 }
 

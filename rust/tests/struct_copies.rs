@@ -137,17 +137,20 @@ const EXPECTED_PARTIAL: fixture_contract::ExpectedPartial = &[
         "UnsupportedNullable",
         "constructed value type needs a local definition; external instantiations need dependency facts",
     ),
-    (
-        "StructCopyCases.UnsupportedOps",
-        "UnsupportedRefLike",
-        "byref-like struct copies need location/lifetime semantics",
-    ),
 ];
 
 #[test]
 fn owned_fixture_contract_holds_in_both_views() {
     for bytes in IMAGES {
         fixture_contract::check(bytes, EXPECTED_PARTIAL);
+        // A byref-like value is copied as a value; the promoted case must keep
+        // that shape instead of introducing a box, field or address escape.
+        let promoted = decompile(
+            bytes,
+            method(bytes, "StructCopyCases.UnsupportedOps", "RecoveredRefLike"),
+        )
+        .unwrap();
+        assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
         fixture_contract::check_scan_parity(bytes);
     }
 }

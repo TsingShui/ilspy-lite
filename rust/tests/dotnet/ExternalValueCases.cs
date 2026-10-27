@@ -53,7 +53,7 @@ public static class Ops
     public static Nested Wrap(Nested nested) => nested;
     public static Level Level(Level level) => level;
     public static void Ignore(Measure measure) { _ = measure; }
-    public static Measure UnsupportedRefStruct(Cursor cursor) => default;
+    public static Measure RecoveredRefStruct(Cursor cursor) => default;
     public static int UnsupportedField(Measure measure) => measure.Units;
 }
 #endif

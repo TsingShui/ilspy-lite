@@ -73,6 +73,10 @@ def main():
                 # struct-receiver driver covers value receivers, and the token form
                 # is checked by the Rust test.
                 "CallValueGeneric", "CallLocalValueGeneric",
+                # A ref struct cannot be created through reflection for the
+                # candidate list; the Rust test covers the copy form, and the
+                # field-reading variant stays a documented separate gap.
+                "ReadRefBox", "CopyRefBox",
             }
             if match and not match[2].startswith(".") and match[2] not in excluded:
                 names[token] = (match[1], match[2])

@@ -26,6 +26,7 @@ namespace RelationLibrary
     public struct Seeded { public int Seed; public Seeded(int seed) { Seed = seed; } }
     public struct Holder<T> { public T Value; }
     public struct SeededBox { public int Seed; public T Echo<T>(T input) { Seed = 1; return input; } }
+    public ref struct RefBox { public int Value; public RefBox(int value) { Value = value; } public int Read() => Value; }
     public interface IItem<T> { }
     public class Base { public int Number; }
     public class Middle : Base { }
@@ -121,6 +122,8 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static int ReadRefBox(RelationLibrary.RefBox box) => box.Read();
+        public static int CopyRefBox(RelationLibrary.RefBox box) { RelationLibrary.RefBox copy = box; return copy.Value; }
         public static int CallValueGeneric(RelationLibrary.SeededBox box, int value) => box.Echo(value);
         public static string CallLocalValueGeneric(LocalBox box, string value) => box.Echo(value);
         public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);

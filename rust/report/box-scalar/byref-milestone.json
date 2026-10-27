@@ -1,0 +1,27 @@
+{
+  "group": "byref-like value copies",
+  "tests": 486,
+  "relation_driver": {
+    "comparisons": 662,
+    "selections": 64
+  },
+  "targeted": {
+    "System.Private.CoreLib": [
+      14327,
+      14830
+    ],
+    "OpenRA.Mods.Common": [
+      15951,
+      15974
+    ],
+    "OpenRA.Game": [
+      4085,
+      4092
+    ],
+    "FSharp.Core": [
+      7464,
+      7464
+    ]
+  },
+  "third_party_bodies_executed": false
+}
