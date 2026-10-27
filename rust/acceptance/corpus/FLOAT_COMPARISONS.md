@@ -27,3 +27,27 @@ ordered relation, and the branch forms use the same rule (`bgt.un`, `bge.un`,
 - Targeted static scans: System.Private.CoreLib 13,425 -> 13,431 (+6), mcs System
   14,038 -> 14,039 (+1). The group is primarily a correctness fix; a full batch
   scan is due with the next groups.
+
+## Binary64 (double) support
+
+`binary64` is now a first-class stack/storage type: signature `R8`, `ldc.r8` with
+bit-exact payloads, `ldind/stind.r8`, `conv.r8` from integers and floats,
+`conv.r4` rounding a binary64 value to binary32, and `div` with its own
+`__cil_div_F8` helper. Float operands share one stack category, so `expect` now
+accepts equal float types and refuses mixed ones instead of demanding integers;
+`neg` is allowed for floats, `not` and the `.un` division forms stay refused.
+Loads, stores, call arguments and returns of binary64 need no rounding helper,
+because the storage and evaluation widths agree.
+
+Owned red/green: `DoubleSum`, `DoubleLess`, `DoubleStore`, `DoubleFromInt`,
+`DoubleToFloat` were Partial before the change and Decompiled after it. The float
+fixture's frozen `UnsupportedDouble` negative became `RecoveredDouble`; a new
+negative `UnsupportedDoubleUnbox` keeps a double-specific boundary visible
+(`unbox.any double` still needs an admitted boxed scalar), and the
+`conv.r.un`/unsigned-source negative is unchanged. The relation driver executes
+528 comparisons / 52 closed selections per configuration with double NaN, `-0`
+and both infinities, and rejects ten mutants including `DoubleSum`.
+
+473 Rust tests, fmt, clippy and the release build pass. Targeted scans:
+FSharp.Core 7,177 -> 7,276 (+99), System.Private.CoreLib 13,431 -> 13,607 (+176).
+A full batch scan is due with the next group.

@@ -50,6 +50,8 @@ internal static partial class GenericReferenceRoundtrip
                 return new object[] { -2, 0, 1, 4, 7 };
             if (parameter == typeof(float))
                 return new object[] { 0f, -0f, 1f, -1f, 2f, float.NaN, float.PositiveInfinity, float.NegativeInfinity };
+            if (parameter == typeof(double))
+                return new object[] { 0d, -0d, 1d, -1d, 2d, double.NaN, double.PositiveInfinity, double.NegativeInfinity };
             if (parameter == typeof(object))
             {
                 Type cell = fixture.GetType("RelationCases.Cell`1").MakeGenericType(typeof(string));

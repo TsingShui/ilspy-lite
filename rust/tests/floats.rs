@@ -46,10 +46,10 @@ fn signed_integer_conversion_rounds_to_r4_then_remains_a_cli_float_value() {
             );
         }
         let class = decompile_type(bytes, "FloatCases.Cells").unwrap();
-        assert_eq!(class.summary.decompiled, 22);
+        assert_eq!(class.summary.decompiled, 23);
         assert_eq!(class.summary.partial, 2);
         assert_eq!(class.summary.failed + class.summary.metadata_failed, 0);
-        for name in ["UnsupportedUnsigned", "UnsupportedDouble"] {
+        for name in ["UnsupportedUnsigned", "UnsupportedDoubleUnbox"] {
             let result = decompile(bytes, token(bytes, name)).unwrap();
             assert_eq!(result.status, Status::Partial, "{name}: {}", result.text);
             assert!(result.text.contains("IL FALLBACK"));

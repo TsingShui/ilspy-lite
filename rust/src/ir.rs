@@ -20,6 +20,7 @@ pub(crate) enum Ty {
     Native,
     UNative,
     R4,
+    R8,
     F4,
     String,
     Object,
@@ -142,6 +143,7 @@ impl Ty {
             T::IntPtr => Self::Native,
             T::UIntPtr => Self::UNative,
             T::R4 => Self::R4,
+            T::R8 => Self::R8,
             T::String => Self::String,
             T::Object => Self::Object,
             T::Class(t) if t.table() == Some(cildec::TableId::TypeDef) => Self::Class(t.0),
@@ -253,6 +255,7 @@ impl Ty {
             Self::Native => "nint",
             Self::UNative => "nuint",
             Self::R4 => "float",
+            Self::R8 => "double",
             Self::F4 => "__cil_F",
             Self::String => "string",
             Self::Object => "object",
@@ -283,7 +286,7 @@ impl Ty {
             Self::Void => StackKind::Void,
             Self::I8 | Self::U8 => StackKind::I8,
             Self::Native | Self::UNative => StackKind::Native,
-            Self::R4 | Self::F4 => StackKind::Float,
+            Self::R4 | Self::R8 | Self::F4 => StackKind::Float,
             Self::I4Address | Self::U4Address | Self::ManagedAddress(_) => StackKind::Address,
             Self::GenericValue(_) => StackKind::GenericValue,
             Self::Value(_) => StackKind::Value,
@@ -322,6 +325,7 @@ impl Ty {
             Self::I8 | Self::U8 => Self::I8,
             Self::Native | Self::UNative => Self::Native,
             Self::R4 | Self::F4 => Self::F4,
+            Self::R8 => Self::R8,
             Self::Enum(t) => t.storage.ty().stack(),
             _ => Self::I4,
         }
@@ -337,6 +341,7 @@ impl Ty {
                 )?
             }
             Self::F4
+            | Self::R8
             | Self::Object
             | Self::StructuralRef(_)
             | Self::GenericValue(_)

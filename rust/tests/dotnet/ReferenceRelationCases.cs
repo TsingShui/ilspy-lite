@@ -111,6 +111,11 @@ namespace RelationCases
         public static RelationLibrary.Base LocalToForeign(LocalForeign input) => input;
 
         public static int ExternalGeneric(RelationLibrary.Api api, int value) => api.Echo<int>(value);
+        public static double DoubleSum(double a, double b) => a + b;
+        public static bool DoubleLess(double a, double b) => a < b;
+        public static double DoubleStore(double value) { double local = value; return local; }
+        public static double DoubleFromInt(int value) => value;
+        public static float DoubleToFloat(double value) => (float)value;
         public static bool FloatLe(float a, float b) => a <= b;
         public static bool FloatGe(float a, float b) => a >= b;
         public static bool FloatNotLe(float a, float b) => !(a <= b);

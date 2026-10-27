@@ -77,6 +77,7 @@ def main():
             bound = re.sub(r"__cil_(?:callvirt|reference_call|memberref_call|methodspec_call)_[0-9A-F]{8}", "__leaf", executable)
             bound = re.sub(r"__cil_type_[0-9A-F]{8}", "__alias", bound)
             bound = re.sub(r"__cil_(?:arg|load|store|return|call_arg|call_result)_r4|__cil_F\b", "__float_leaf", bound)
+            bound = re.sub(r"__cil_(?:conv_r8|conv_r4_float|div_F8)", "__double_leaf", bound)
             if "__cil_" in support.without_boolean_helpers(bound): raise ValueError("Unbound relation body: " + name)
             methods.append(text)
         if not methods: raise ValueError("Empty relation selection")
@@ -84,14 +85,24 @@ def main():
         aliases, helpers = leaves.plan(support, harness, fixture, OUT, methods, "RelationCases.Ops", library)
 
         float_alias = "using __cil_F = System.Single;\n" if any("__cil_F" in body for body in methods) else ""
-        float_helpers = ("static float __cil_arg_r4(float value) => value;\n"
-                         if any("__cil_arg_r4" in body for body in methods) else "")
+        float_helpers = ""
+        for leaf in ["arg", "load", "store", "call_arg", "call_result", "return"]:
+            if any(f"__cil_{leaf}_r4(" in body for body in methods):
+                float_helpers += f"static float __cil_{leaf}_r4(float value) => value;\n"
+        double_helpers = ""
+        for body in methods:
+            if "__cil_conv_r8(" in body:
+                double_helpers += "static double __cil_conv_r8(long value) => value;\n"
+            if "__cil_conv_r4_float(" in body:
+                double_helpers += "static float __cil_conv_r4_float(double value) => (float)value;\n"
+            if "__cil_div_F8(" in body:
+                double_helpers += "static double __cil_div_F8(double a, double b) => a / b;\n"
 
         def compile_carrier(label, bodies):
             source = OUT / f"{label}-{config}.cs"
             support.write_changed(source, float_alias + aliases
                                   + "namespace RelationCases { public static class Recovered {\n"
-                                  + float_helpers + helpers + "\n".join(bodies) + "\n} }\n")
+                                  + float_helpers + double_helpers + helpers + "\n".join(bodies) + "\n} }\n")
             binary = source.with_suffix(".dll")
             support.compile_cs(binary, [source], references=[fixture, library])
             return binary
@@ -108,7 +119,8 @@ def main():
                                        ("SkipInitLoop", "return 0;"),
                                        ("SkipInitAddress", "return 0;"),
                                        ("ExternalGeneric", "return 0;"),
-                                       ("FloatLe", "return false;")]:
+                                       ("FloatLe", "return false;"),
+                                       ("DoubleSum", "return 5.0;")]:
                 selected = [i for i, text in enumerate(methods) if re.search(r"\b" + name + r"(?:<[^>]+>)?\(", text)]
                 if len(selected) != 1: raise ValueError("Mutation target differs: " + name)
                 changed = list(methods)

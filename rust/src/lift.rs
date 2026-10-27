@@ -607,6 +607,15 @@ impl Writer<'_, '_> {
                     format!("__cil_ldc_r4_bits(0x{:08X}u)", value.to_bits()),
                 )?;
             }
+            "ldc.r8" => {
+                let Operand::R64(value) = i.operand else {
+                    return Err("bad r8 operand".into());
+                };
+                self.push(
+                    Ty::R8,
+                    format!("__cil_ldc_r8_bits(0x{:016X}uL)", value.to_bits()),
+                )?;
+            }
             "conv.i1" | "conv.u1" | "conv.i2" | "conv.u2" => {
                 let value = self.pop()?;
                 if !matches!(
@@ -646,8 +655,29 @@ impl Writer<'_, '_> {
                 };
                 self.push(target, expression)?;
             }
+            "conv.r8" => {
+                let value = self.pop()?;
+                match value.ty.kind() {
+                    StackKind::I4 | StackKind::I8 | StackKind::Native => {
+                        self.lines.push("// Integer widened to binary64 in CLI F; unsigned storage keeps its own sign rule in the source value.".into());
+                        self.push(Ty::R8, format!("__cil_conv_r8({})", value.name))?;
+                    }
+                    StackKind::Float => {
+                        self.lines.push(
+                            "// Widen to binary64; values already binary64 are unchanged.".into(),
+                        );
+                        self.push(Ty::R8, format!("__cil_conv_r8({})", value.name))?;
+                    }
+                    _ => return Err("conv.r8 source category needs IL fallback".into()),
+                }
+            }
             "conv.r4" => {
                 let value = self.pop()?;
+                if value.ty.kind() == StackKind::Float {
+                    self.lines.push("// Round to binary32 (nearest); NaN stays NaN and the sign of zero is preserved.".into());
+                    self.push(Ty::F4, format!("__cil_conv_r4_float({})", value.name))?;
+                    return Ok(());
+                }
                 if !matches!(
                     value.ty.kind(),
                     StackKind::I4 | StackKind::I8 | StackKind::Native
@@ -1069,6 +1099,7 @@ impl Writer<'_, '_> {
                     "ldind.i8" | "ldind.u8" if matches!(storage, Ty::I8 | Ty::U8) => Ty::I8,
                     "ldind.i" if matches!(storage, Ty::Native | Ty::UNative) => Ty::Native,
                     "ldind.r4" if storage == Ty::R4 => Ty::R4,
+                    "ldind.r8" if storage == Ty::R8 => Ty::R8,
                     "ldind.ref" if element.kind() == StackKind::Ref => element,
                     _ => {
                         return Err(
@@ -1093,7 +1124,7 @@ impl Writer<'_, '_> {
                 self.push(requested.stack(), expression)?;
             }
             "stind.i1" | "stind.i2" | "stind.i4" | "stind.i8" | "stind.i" | "stind.r4"
-            | "stind.ref" => {
+            | "stind.r8" | "stind.ref" => {
                 let value = self.pop()?;
                 let address = self.pop()?;
                 let element = self.image.address_element(address.ty)?;
@@ -1108,6 +1139,7 @@ impl Writer<'_, '_> {
                     "stind.i8" => matches!(storage, Ty::I8 | Ty::U8),
                     "stind.i" => matches!(storage, Ty::Native | Ty::UNative),
                     "stind.r4" => storage == Ty::R4,
+                    "stind.r8" => storage == Ty::R8,
                     "stind.ref" => element.kind() == StackKind::Ref,
                     _ => false,
                 };
@@ -1318,6 +1350,17 @@ impl Writer<'_, '_> {
                     self.push(Ty::F4, format!("__cil_div_F({}, {})", a.name, b.name))?;
                     return Ok(());
                 }
+                if op.ends_with(".un")
+                    && (matches!(a.ty.kind(), StackKind::Float)
+                        || matches!(b.ty.kind(), StackKind::Float))
+                {
+                    return Err("float division has no unsigned form in the CLI".into());
+                }
+                if op == "div" && a.ty == Ty::R8 && b.ty == Ty::R8 {
+                    self.lines.push("// Binary64 division in target CLI F; IEEE special values, no integer divide checks or extra storage rounding.".into());
+                    self.push(Ty::R8, format!("__cil_div_F8({}, {})", a.name, b.name))?;
+                    return Ok(());
+                }
                 expect(a.ty, b.ty)?;
                 let symbol = if op.starts_with("div") { "/" } else { "%" };
                 let (x, y) = if op.ends_with(".un") {
@@ -1340,7 +1383,13 @@ impl Writer<'_, '_> {
             }
             "neg" | "not" => {
                 let a = self.pop()?;
-                integer(a.ty)?;
+                if matches!(a.ty.kind(), StackKind::Float) {
+                    if op == "not" {
+                        return Err("bitwise not on a float needs IL fallback".into());
+                    }
+                } else {
+                    integer(a.ty)?;
+                }
                 let symbol = if op == "neg" { "-" } else { "~" };
                 self.push(a.ty, format!("unchecked({symbol}{})", a.name))?;
             }
@@ -2054,6 +2103,15 @@ fn integer(ty: Ty) -> Result<()> {
     }
 }
 fn expect(actual: Ty, expected: Ty) -> Result<()> {
+    // Float operands share one stack category; equality is exact identity, so
+    // binary32 and binary64 never mix without an explicit conversion.
+    if matches!(actual.kind(), StackKind::Float) || matches!(expected.kind(), StackKind::Float) {
+        return if actual == expected {
+            Ok(())
+        } else {
+            Err("float operation needs identical operand types".into())
+        };
+    }
     integer(actual)?;
     integer(expected)?;
     if actual == expected {

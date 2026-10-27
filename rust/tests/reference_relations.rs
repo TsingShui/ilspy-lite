@@ -214,6 +214,39 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn binary64_values_keep_their_own_type_and_semantics() {
+    for (bytes, _) in IMAGES {
+        for name in [
+            "DoubleSum",
+            "DoubleLess",
+            "DoubleStore",
+            "DoubleFromInt",
+            "DoubleToFloat",
+        ] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(
+                !result
+                    .text
+                    .contains("integer operation on non-integer value"),
+                "{name}: {}",
+                result.text
+            );
+            if name == "DoubleToFloat" {
+                assert!(result.text.contains("float "), "{name}: {}", result.text);
+            } else {
+                assert!(result.text.contains("double"), "{name}: {}", result.text);
+            }
+        }
+    }
+}
+
+#[test]
 fn unordered_float_comparisons_stay_value_based() {
     for (bytes, _) in IMAGES {
         for name in ["FloatLe", "FloatGe", "FloatNotLe"] {

@@ -64,5 +64,6 @@ public class Cells
         return System.Math.Abs(old);
     }
     public static float UnsupportedUnsigned(uint value) => value;
-    public static double UnsupportedDouble(double value) => value;
+    public static double RecoveredDouble(double value) => value;
+    public static double UnsupportedDoubleUnbox(object value) => (double)value;
 }
