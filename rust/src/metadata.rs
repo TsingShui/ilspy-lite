@@ -4852,6 +4852,23 @@ impl<'a> Image<'a> {
         }
         if name == ".ctor" && t.table() == Some(TableId::MemberRef) {
             let reference = self.md.tables().member_ref(t.rid())?;
+            // `call <constructed value>::.ctor` runs the constructor on an existing
+            // managed location: the `newobj`-less counterpart for value types.
+            if let Some((owner, args)) = value_calls::constructor(self, t, context)? {
+                return Ok(MethodRef {
+                    token: t.0,
+                    name: name.clone(),
+                    receiver: Some(owner),
+                    target: format!("__cil_ctor_call_{:08X}", t.0),
+                    args,
+                    ret: crate::ir::Ty::Void,
+                    core_object_constructor: None,
+                    tick_count: false,
+                    constructor: true,
+                    generic_virtual: false,
+                    exact_reference: false,
+                });
+            }
             // A base constructor of a constructed base (`Base<T>`) resolves against
             // the local definition and keeps the instantiation for its signature.
             if let Some(owner) = self.constructed_member_owner(reference.class, context)? {

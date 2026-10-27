@@ -33,3 +33,15 @@ last fixed scan, dominated by F#'s `AsyncActivation<'T>::WithContinuations<...>`
   `FSharp.Core` 8,608 -> 8,611 (+3), `OpenRA.Game` and `OpenRA.Mods.Common`
   unchanged. Most methods in the bucket stop at a later gate, so the measured gain
   is small.
+
+## Constructors called on existing value storage
+
+`call <constructed value>::.ctor` (the address form, without `newobj`) was routed
+through the class-only constructed-member path and refused with
+`constructed member parent is not a class instantiation`. The `.ctor` branch now
+asks `value_calls::constructor` first: a constructed value type yields the value
+identity and the substituted parameters, and the call keeps the exact MemberRef
+token as `__cil_ctor_call_<token>`, run on the managed location by the lift's
+existing value-constructor rule. `newobj` keeps its own allocation path.
+Targeted: the decompiler test image 1,175 -> 1,176 decompiled,
+`System.Private.CoreLib` +4, `OpenRA.Mods.Common` +13, `OpenRA.Game` +3; 488 tests.
