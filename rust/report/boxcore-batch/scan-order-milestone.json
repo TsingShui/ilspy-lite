@@ -1,0 +1,9 @@
+{
+  "group": "scan-order independent value facts",
+  "tests": 488,
+  "external_allocation_driver": {
+    "comparisons": 38,
+    "methods": 12
+  },
+  "third_party_bodies_executed": false
+}

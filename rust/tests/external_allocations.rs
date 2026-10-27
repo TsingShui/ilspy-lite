@@ -25,13 +25,6 @@ const EXPECTED_PARTIAL: &[(&str, &str)] = &[
         "MakeNested",
         "nested/generic/unresolved external class needs IL fallback",
     ),
-    (
-        // Value owners are admitted now; under exact-policy references this body
-        // still stops because the referenced struct's own value identity cannot be
-        // proved without the framework the library targets.
-        "UnsupportedStruct",
-        "enum storage requires an exact local definition; external/value signatures need IL fallback",
-    ),
 ];
 
 /// Positives must name the owner and its kind, keep the argument order, and report
@@ -120,6 +113,12 @@ fn foreign_static_reads_keep_exact_storage_without_allocating() {
 fn gated_external_owners_keep_their_own_reason() {
     for (bytes, library) in IMAGES {
         let context = context(bytes, library);
+        // A referenced value type's identity is primed from the member owners, so
+        // the allocation and field read are recovered independently of scan order.
+        let promoted = context
+            .decompile(token(bytes, "RecoveredStruct"), OutputStyle::Readable)
+            .unwrap();
+        assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
         // A referenced value type's field is read through its managed location.
         let promoted = context
             .decompile(token(bytes, "RecoveredStructField"), OutputStyle::Readable)

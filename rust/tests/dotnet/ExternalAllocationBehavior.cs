@@ -81,7 +81,19 @@ internal static partial class GenericReferenceRoundtrip
             if (type == typeof(int)) return new object[] { 0, 7, -3 };
             if (type == typeof(string)) return new object[] { "x", "" };
             if (!type.IsValueType) return new object[] { null };
-            throw new Exception("Unexpected owned allocation parameter type: " + type);
+            // Owned value-type parameters (for example a referenced Point) need a
+            // populated instance and a second value so the comparison covers more
+            // than the default struct.
+            object zero = Activator.CreateInstance(type)
+                ?? throw new Exception("Owned value parameter missing: " + type);
+            object populated = Activator.CreateInstance(type)
+                ?? throw new Exception("Owned value parameter missing: " + type);
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
+            {
+                field.SetValue(zero, field.FieldType == typeof(string) ? "" : 0);
+                field.SetValue(populated, field.FieldType == typeof(string) ? "x" : 7);
+            }
+            return new object[] { zero, populated };
         }
 
         FieldInfo zero = resolved.GetType("ExternalAllocations.Node").GetField("Zero") ?? throw new Exception("Owned static storage missing.");

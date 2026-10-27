@@ -2331,6 +2331,48 @@ impl<'a> Image<'a> {
     /// Value-type tokens named by a method's own signature and local slots.
     /// Callers use this to ask an explicit dependency context about exactly the
     /// types this method can load or store, rather than walking every TypeRef.
+    /// Member owner tokens whose value facts this method depends on. Collecting
+    /// them here keeps admission independent of which method happened to be
+    /// lowered first in a scan.
+    fn member_owner_tokens(&self, target: Token) -> Result<Vec<Token>> {
+        use cildec::CodedIndex;
+        let parent = match target.table() {
+            Some(TableId::MemberRef) => self.md.tables().member_ref(target.rid())?.class,
+            Some(TableId::MethodSpec) => {
+                let inner = self.metadata_coded_token(
+                    CodedIndex::MethodDefOrRef,
+                    self.md
+                        .tables()
+                        .raw_column(TableId::MethodSpec, target.rid(), 0)?,
+                )?;
+                if inner.table() != Some(TableId::MemberRef) {
+                    return Ok(Vec::new());
+                }
+                self.md.tables().member_ref(inner.rid())?.class
+            }
+            _ => return Ok(Vec::new()),
+        };
+        let mut owners = Vec::new();
+        match parent.table() {
+            Some(TableId::TypeRef) => owners.push(parent),
+            Some(TableId::TypeSpec) => {
+                if let Ok(spec) = self.type_spec(parent) {
+                    match spec.type_ {
+                        cildec::Type::GenericInst {
+                            is_value_type: true,
+                            def,
+                            ..
+                        } => owners.push(def),
+                        cildec::Type::ValueType(token) => owners.push(token),
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+        Ok(owners)
+    }
+
     pub(crate) fn value_type_tokens(
         &self,
         token: u32,
@@ -2388,9 +2430,17 @@ impl<'a> Image<'a> {
             let Ok(instruction) = instruction else {
                 break;
             };
-            let (blob, field) = match instruction.operand {
-                cildec::Operand::Method(target) => (self.member_signature(target)?, false),
-                cildec::Operand::Field(target) => (self.member_signature(target)?, true),
+            let (blob, field, owners) = match instruction.operand {
+                cildec::Operand::Method(target) => (
+                    self.member_signature(target)?,
+                    false,
+                    self.member_owner_tokens(target)?,
+                ),
+                cildec::Operand::Field(target) => (
+                    self.member_signature(target)?,
+                    true,
+                    self.member_owner_tokens(target)?,
+                ),
                 // `newarr`/`initobj`/`box` name their type directly, so a foreign
                 // element or target only gets a fact if its token is collected here.
                 cildec::Operand::Type(target)
@@ -2401,6 +2451,7 @@ impl<'a> Image<'a> {
                 }
                 _ => continue,
             };
+            tokens.operands.extend(owners);
             let Some(blob) = blob else { continue };
             if field {
                 if let Ok(signature) = crate::signature_guard::field(blob) {
