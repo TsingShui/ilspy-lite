@@ -123,12 +123,12 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     let mut entries: Vec<Option<Vec<Ty>>> = vec![None; blocks.len()];
     // Stack index carrying the constructor's original `this` into each block, so
     // a base-constructor call after a join still proves it uses that receiver.
-    let mut this_slots: Vec<Option<usize>> = vec![None; blocks.len()];
+    let mut this_slots: Vec<BTreeSet<usize>> = vec![BTreeSet::new(); blocks.len()];
     entries[0] = Some(Vec::new());
     let mut queue = VecDeque::from([0]);
     loop {
         while let Some(n) = queue.pop_front() {
-            let mut original_seed: Option<String> = None;
+            let mut original_seed: HashSet<String> = HashSet::new();
             let stack: Vec<Value> = entries[n]
                 .as_ref()
                 .unwrap()
@@ -139,13 +139,14 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                     ty,
                 })
                 .collect();
-            if let Some(index) = this_slots[n]
-                && index < stack.len()
-            {
-                original_seed = Some(format!("s{n}_{index}"));
+            for index in &this_slots[n] {
+                if *index < stack.len() {
+                    original_seed.insert(format!("s{n}_{index}"));
+                }
             }
             let mut w = Writer {
                 image,
+                analyzing: true,
                 constrained_calls: &constrained_calls,
                 volatile_accesses: &volatile_accesses,
                 tail_calls: &tail_calls,
@@ -158,7 +159,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                 ret,
                 constructor_owner,
                 static_constructor,
-                original_this: original_seed.into_iter().collect(),
+                original_this: original_seed,
                 structural_types: BTreeSet::new(),
                 enum_types: BTreeSet::new(),
             };
@@ -188,19 +189,12 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                             return Err("incompatible evaluation stacks at join".into());
                         }
                     }
-                    let exit_this = w
+                    let exit_this: BTreeSet<usize> = w
                         .original_this
                         .iter()
                         .filter_map(|name| w.stack.iter().position(|value| &value.name == name))
-                        .next();
-                    match (this_slots[s], exit_this) {
-                        (Some(existing), Some(incoming)) if existing == incoming => {}
-                        (None, incoming) if entries[s].as_ref().is_none() => {
-                            this_slots[s] = incoming;
-                        }
-                        (None, incoming) => this_slots[s] = incoming,
-                        _ => this_slots[s] = None,
-                    }
+                        .collect();
+                    this_slots[s].extend(exit_this);
                     if changed {
                         queue.push_back(s);
                     }
@@ -210,7 +204,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
                         .original_this
                         .iter()
                         .filter_map(|name| w.stack.iter().position(|value| &value.name == name))
-                        .next();
+                        .collect();
                     queue.push_back(s);
                 }
             }
@@ -226,6 +220,7 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
     }
     let mut writer = Writer {
         image,
+        analyzing: false,
         constrained_calls: &constrained_calls,
         volatile_accesses: &volatile_accesses,
         tail_calls: &tail_calls,
@@ -255,9 +250,9 @@ pub(crate) fn emit(image: &Image<'_>, token: u32, body: &MethodBody<'_>) -> Resu
             })
             .collect();
         writer.original_this = this_slots[n]
-            .filter(|index| *index < writer.stack.len())
+            .iter()
+            .filter(|index| **index < writer.stack.len())
             .map(|index| format!("s{n}_{index}"))
-            .into_iter()
             .collect();
         writer.lines.extend(regions.transition(previous, b.offset));
         previous = Some(b.offset);
@@ -485,6 +480,9 @@ struct Value {
 }
 struct Writer<'i, 'a> {
     image: &'i Image<'a>,
+    /// Fixpoint analysis pass: provenance-dependent checks run in the final
+    /// emission pass, where synthetic slot provenance has settled.
+    analyzing: bool,
     constrained_calls: &'i std::collections::BTreeMap<u32, cildec::Token>,
     volatile_accesses: &'i std::collections::BTreeSet<u32>,
     tail_calls: &'i std::collections::BTreeSet<u32>,
@@ -2058,6 +2056,7 @@ impl Writer<'_, '_> {
                 }
                 if let Some(v) = value {
                     if field.readonly
+                        && !self.analyzing
                         && (self.constructor_owner != Some(field.owner)
                             || !self.original_this.contains(&receiver.name))
                     {

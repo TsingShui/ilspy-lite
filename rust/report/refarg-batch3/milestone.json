@@ -1,0 +1,32 @@
+{
+  "groups": [
+    "01305f691 constructed value generic methods",
+    "49d02b3d1 reference argument casts",
+    "provenance sets fix"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 57558,
+      "Decompiled": 713190
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 71,
+    "unrecovered": 57558,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 6670,
+  "gained_images": 138,
+  "regressions": 0,
+  "fallback_percent": 7.467810490588364,
+  "acceptance_integer": {
+    "left": 5755800,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 488,
+  "third_party_bodies_executed": false
+}

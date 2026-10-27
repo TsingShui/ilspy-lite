@@ -35,7 +35,21 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: value fields, ctor provenance, tail prefix
+## Current verified state: reference arguments and provenance
+
+- `report/refarg-batch3/corpus-scan/baseline.json`: **713,190 Decompiled / 57,558
+  Partial of 770,748**, fallback **7.467812%**. Zero incomplete images; raw gate
+  5,755,800 > 3,853,740, so <=5% is unmet (19,021 bodies to go).
+- Against `report/tail-batch/corpus-scan/baseline.json`: **+6,670 in 138 images,
+  zero regressions**. OpenRA.Game +91, OpenRA.Mods.Common +388.
+- Groups: constructed value generic methods, reference argument casts (explicit
+  cast when the assignability proof is missing, relying on verifier-valid IL like
+  ILSpy), and the deterministic constructor-provenance sets that removed the eight
+  initial regressions (fixed log kept under `report/box-scalar/`).
+- Remaining largest first blockers are re-derived from this scan for the next
+  group.
+
+## Previous verified state: value fields, ctor provenance, tail prefix
 
 - `report/tail-batch/corpus-scan/baseline.json`: **706,520 Decompiled / 64,228
   Partial of 770,748**, fallback **8.332818%**. Zero incomplete images; raw gate

@@ -39,3 +39,26 @@ compiler-optimized constructors that branch while evaluating a base argument
 - Constructor delegation/base semantics keep their existing owned drivers
   (`constructors`, value-construction and struct-receiver suites); this group only
   preserves which value is `this`, it does not add a construction operation.
+
+## Deterministic provenance sets and pass separation
+
+The first version tracked a single stack index per block and iterated a `HashSet`
+of provenance names, so a block that both inherited `this` and loaded `ldarg.0`
+again could report either index depending on iteration order, and the analysis
+pass could reject a readonly write before propagation settled. Two changes make it
+deterministic:
+
+- provenance is a `BTreeSet` of stack indices per block; a block seeds every
+  tracked index whose slot still exists, and a successor unions the indices of its
+  predecessors' surviving names. Every slot that demonstrably held `this` on some
+  path stays marked; a value that was never loaded as `this` is never marked, so
+  the owned negatives (another receiver of the same type, a reassigned `this`
+  slot) still refuse.
+- the constructor-dependent checks run only in the final emission pass
+  (`Writer::analyzing` is false there), because the fixpoint analysis pass can
+  visit a block before its provenance is merged.
+
+Evidence: the eight constructors that the reference-argument batch had regressed
+(`readonly field write needs IL fallback`) all decompile again, the owned readonly
+negatives still pass, and the fixed-corpus rescan shows **zero regressions**:
+`713,190 / 57,558` (fallback **7.467812%**), +6,670 in 138 images. 488 tests.
