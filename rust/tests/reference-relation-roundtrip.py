@@ -61,7 +61,12 @@ def main():
             # Semantic groups with their own drivers stay out of this selection:
             # value construction (external-allocation driver) and array allocation
             # and element access (general-array driver).
-            excluded = {"SeededValue", "ForeignArray", "ForeignValueArray"}
+            excluded = {
+                "SeededValue", "ForeignArray", "ForeignValueArray",
+                # Unmanaged pointer bodies are executed by the unsafe pointer driver.
+                "ReadPointer", "ReadWrite", "SamePointer", "NullPointer", "OffsetValue",
+                "Difference",
+            }
             if match and not match[2].startswith(".") and match[2] not in excluded:
                 names[token] = (match[1], match[2])
         methods = []

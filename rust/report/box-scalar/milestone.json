@@ -1,0 +1,32 @@
+{
+  "group": "float scalar box/unbox",
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 82762,
+      "Decompiled": 687986
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 64,
+    "unrecovered": 82762,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 881,
+  "gained_images": 76,
+  "regressions": 0,
+  "fallback_percent": 10.737880604296086,
+  "acceptance_integer": {
+    "left": 8276200,
+    "right": 3853740,
+    "passes": false
+  },
+  "tests": 482,
+  "relation_driver": {
+    "comparisons": 643,
+    "selections": 61
+  },
+  "third_party_bodies_executed": false
+}

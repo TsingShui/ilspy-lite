@@ -28,6 +28,19 @@ SZ arrays). The refusal that remained was admission: `boxed_value_type` accepted
 No new runtime operation is introduced: the same identity cast and `castclass`
 were already emitted for other admitted reference types.
 
+## Float scalars
+
+`box`/`unbox.any` of `System.Single` and `System.Double` were the largest remaining
+form of the admitted-scalar refusal: the scalar table named the integer types but
+not the two CLI floats. Both are now admitted as `R4`/`R8`, with the same category
+check and the same declared-type cast the other scalars use, so a boxed float
+carries its exact runtime type and `unbox.any` keeps the unbox check.
+
+Owned cases `BoxDouble`, `BoxSingle` and `UnboxDouble` exercise the four-value
+round trip through the relation driver (643 comparisons / 61 closed selections),
+and the fixed-corpus scan measures +881 recovered bodies in 76 images with no
+regressions.
+
 ## Evidence
 
 - Red: four fixed-corpus methods (`FSharpType.IsTuple`, `FSharpType.IsModule`,

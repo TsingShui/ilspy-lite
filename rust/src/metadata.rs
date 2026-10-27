@@ -3215,6 +3215,8 @@ impl<'a> Image<'a> {
             "UInt32" => Ty::U4,
             "Int64" => Ty::I8,
             "UInt64" => Ty::U8,
+            "Single" => Ty::R4,
+            "Double" => Ty::R8,
             _ => return Err("box/unbox needs an admitted core scalar or local enum".into()),
         })
     }

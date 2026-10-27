@@ -214,6 +214,26 @@ fn foreign_exception_ancestry_needs_a_selected_class_hierarchy() {
 }
 
 #[test]
+fn boxed_float_scalars_keep_their_exact_declared_type() {
+    for (bytes, _) in IMAGES {
+        for (name, needle) in [
+            ("BoxDouble", "(double)"),
+            ("BoxSingle", "(float)"),
+            ("UnboxDouble", "(double)"),
+        ] {
+            let result = decompile_with_style(
+                bytes,
+                token(bytes, "RelationCases.Ops", name),
+                OutputStyle::Readable,
+            )
+            .unwrap();
+            assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
+            assert!(result.text.contains(needle), "{name}: {}", result.text);
+        }
+    }
+}
+
+#[test]
 fn unmanaged_pointers_keep_their_pointee_and_operation_forms() {
     for (bytes, _) in IMAGES {
         for (name, needle) in [
