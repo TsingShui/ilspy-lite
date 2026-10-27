@@ -1,0 +1,33 @@
+{
+  "groups": [
+    "6b686fe76 referenced value-type fields",
+    "94afcd799 ctor receiver provenance",
+    "0d40f3187 tail call prefix"
+  ],
+  "summary": {
+    "managed_images": 614,
+    "body_images": 319,
+    "bodies": 770748,
+    "counts": {
+      "Partial": 64228,
+      "Decompiled": 706520
+    },
+    "incomplete_images": 0,
+    "passing_body_images": 67,
+    "unrecovered": 64228,
+    "aggregate_gate_pass": false,
+    "aggregate_gate_applicable": true
+  },
+  "gained": 5902,
+  "gained_images": 120,
+  "regressions": 0,
+  "fallback_percent": 8.333203589240583,
+  "acceptance_integer": {
+    "left": 6422800,
+    "right": 3853740,
+    "passes": false
+  },
+  "review": "report/tail-batch/review/review-source.md",
+  "tests": 487,
+  "third_party_bodies_executed": false
+}

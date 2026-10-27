@@ -35,7 +35,21 @@ Goal: mvouhw7y-679jgb
   gap: the legacy `mscorlib` those images reference is not in the host framework
   and is not next to the input. Do not widen discovery policy to force them.
 
-## Current verified state: volatile and join-merge batch
+## Current verified state: value fields, ctor provenance, tail prefix
+
+- `report/tail-batch/corpus-scan/baseline.json`: **706,520 Decompiled / 64,228
+  Partial of 770,748**, fallback **8.332818%**. Zero incomplete images; raw gate
+  6,422,800 > 3,853,740, so <=5% is unmet (25,691 bodies to go).
+- Against `report/volatile-join-batch/corpus-scan/baseline.json`: **+5,902 in 120
+  images, zero regressions**. OpenRA.Game +22, OpenRA.Mods.Common +407.
+- Groups: `6b686fe76` referenced value-type fields, `94afcd799` constructor
+  receiver provenance across joins, `0d40f3187` tail-prefixed calls emitted
+  normally (ILSpy policy; CLI constant-stack guarantee recorded as a known
+  divergence). The tail group alone recovered 1,115 F# bodies.
+- Remaining largest first blockers are re-derived from this scan before the next
+  group.
+
+## Previous verified state: volatile and join-merge batch
 
 - `report/volatile-join-batch/corpus-scan/baseline.json`: **700,618 Decompiled /
   70,130 Partial of 770,748**, fallback **9.098836%**. Zero incomplete images; raw
