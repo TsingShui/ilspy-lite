@@ -1788,7 +1788,17 @@ impl Writer<'_, '_> {
                             "call argument needs a value snapshot, not a managed location".into(),
                         );
                     }
-                    self.image.assignable(v.ty, ty.stack())?;
+                    if let Err(error) = self.image.assignable(v.ty, ty.stack()) {
+                        // Two reference types whose assignability proof is missing:
+                        // the explicit cast emitted below performs the runtime check
+                        // the IL verifier already guarantees for this argument, and
+                        // keeps reference identity. Any other category keeps the
+                        // refusal.
+                        if v.ty.kind() != StackKind::Ref || ty.kind() != StackKind::Ref {
+                            return Err(error);
+                        }
+                        self.lines.push("// Reference argument: explicit cast preserves identity; on verifier-valid IL the runtime value already fits the parameter.".into());
+                    }
                     values.push(if ty.kind() == StackKind::Address {
                         format!("ref {}", v.name)
                     } else if ty.kind() == StackKind::Ref && v.ty != ty {

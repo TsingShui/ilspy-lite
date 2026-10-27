@@ -214,6 +214,8 @@ generated output remain ignored and retain their original license boundaries.
   the stated stack-depth divergence.
 - `CONSTRUCTED_VALUE_GENERIC_METHODS.md`: MethodSpec calls on instantiated value
   types.
+- `REFERENCE_ARGUMENT_CASTS.md`: explicit casts for reference arguments whose
+  assignability proof is missing.
 - `EXTERNAL_TYPE_FACTS.md`: the confirmed scope decision (option C) for capabilities
   that need facts about types defined outside the scanned image, plus the
   implementation plan.

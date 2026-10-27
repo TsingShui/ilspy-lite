@@ -135,6 +135,12 @@ namespace RelationCases
         public static int CallValueGeneric(RelationLibrary.SeededBox box, int value) => box.Echo(value);
         public static string CallLocalValueGeneric(LocalBox box, string value) => box.Echo(value);
         public static int CallConstructedValueGeneric(LocalBox2<int> box, int value) => box.Echo(value);
+        public static RelationLibrary.IRoot AsRoot(RelationLibrary.IRoot value) => value;
+        public static RelationLibrary.IRoot PassRoot(LocalForeign value) => AsRoot(value);
+        public static RelationLibrary.IItem<string> ToItem(RelationLibrary.GenericChild<string> value) => value;
+        public static RelationLibrary.IItem<string> PassItem(RelationLibrary.GenericChild<string> value) => ToItem(value);
+        public static RelationLibrary.Middle TakeMiddle(RelationLibrary.Middle value) => value;
+        public static RelationLibrary.Middle PassMiddle(RelationLibrary.Child value) => TakeMiddle(value);
         public static string ApplyLocalInterface(ITransform<string> transform, string value) => transform.Apply(value);
         public static string ReadForeignValue(RelationLibrary.GenericBase<string> box) => box.Value;
         public static int ReadForeignHolder(RelationLibrary.Holder<int> holder) => holder.Value;
