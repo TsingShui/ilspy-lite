@@ -1,0 +1,2207 @@
+[
+ {
+  "id": 895,
+  "assembly": "Microsoft.CodeAnalysis.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.dll",
+  "bodies": 37159,
+  "decompiled": 36421
+ },
+ {
+  "id": 994,
+  "assembly": "Microsoft.CodeAnalysis.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.CSharp.dll",
+  "bodies": 37158,
+  "decompiled": 36419
+ },
+ {
+  "id": 898,
+  "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.VisualBasic.dll",
+  "bodies": 33022,
+  "decompiled": 32201
+ },
+ {
+  "id": 801,
+  "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.CodeAnalysis.VisualBasic.dll",
+  "bodies": 32829,
+  "decompiled": 31997
+ },
+ {
+  "id": 785,
+  "assembly": "Microsoft.CodeAnalysis.VisualBasic",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/Microsoft.CodeAnalysis.VisualBasic.dll",
+  "bodies": 32181,
+  "decompiled": 31377
+ },
+ {
+  "id": 798,
+  "assembly": "Microsoft.CodeAnalysis.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.CodeAnalysis.CSharp.dll",
+  "bodies": 30106,
+  "decompiled": 29468
+ },
+ {
+  "id": 130,
+  "assembly": "Microsoft.CodeAnalysis.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Microsoft.CodeAnalysis.CSharp.dll",
+  "bodies": 29231,
+  "decompiled": 28633
+ },
+ {
+  "id": 4,
+  "assembly": "Microsoft.CodeAnalysis.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.CSharp.dll",
+  "bodies": 27100,
+  "decompiled": 26540
+ },
+ {
+  "id": 628,
+  "assembly": "mscorlib",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/mscorlib.dll",
+  "bodies": 23889,
+  "decompiled": 21474
+ },
+ {
+  "id": 1042,
+  "assembly": "OpenRA.Mods.Common",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Mods.Common.dll",
+  "bodies": 18407,
+  "decompiled": 17058
+ },
+ {
+  "id": 483,
+  "assembly": "System.Private.CoreLib",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.CoreLib.dll",
+  "bodies": 18904,
+  "decompiled": 17023
+ },
+ {
+  "id": 487,
+  "assembly": "System.Private.Xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.Xml.dll",
+  "bodies": 17176,
+  "decompiled": 16422
+ },
+ {
+  "id": 625,
+  "assembly": "System.Xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/System.Xml.dll",
+  "bodies": 16610,
+  "decompiled": 16012
+ },
+ {
+  "id": 626,
+  "assembly": "System",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/System.dll",
+  "bodies": 15437,
+  "decompiled": 14783
+ },
+ {
+  "id": 55,
+  "assembly": "ICSharpCode.NRefactory.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.dll",
+  "bodies": 14596,
+  "decompiled": 14208
+ },
+ {
+  "id": 894,
+  "assembly": "Microsoft.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.dll",
+  "bodies": 14608,
+  "decompiled": 13960
+ },
+ {
+  "id": 993,
+  "assembly": "Microsoft.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/Microsoft.CodeAnalysis.dll",
+  "bodies": 14564,
+  "decompiled": 13862
+ },
+ {
+  "id": 620,
+  "assembly": "mscorlib",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/mscorlib.dll",
+  "bodies": 14993,
+  "decompiled": 13755
+ },
+ {
+  "id": 796,
+  "assembly": "Microsoft.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.CodeAnalysis.dll",
+  "bodies": 12787,
+  "decompiled": 12284
+ },
+ {
+  "id": 134,
+  "assembly": "Newtonsoft.Json.Tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Newtonsoft.Json.Tests.dll",
+  "bodies": 10569,
+  "decompiled": 10299
+ },
+ {
+  "id": 627,
+  "assembly": "mcs",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/mcs.exe",
+  "bodies": 10372,
+  "decompiled": 10243
+ },
+ {
+  "id": 131,
+  "assembly": "Microsoft.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Microsoft.CodeAnalysis.dll",
+  "bodies": 10646,
+  "decompiled": 10185
+ },
+ {
+  "id": 5,
+  "assembly": "Microsoft.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Microsoft.CodeAnalysis.dll",
+  "bodies": 10136,
+  "decompiled": 9671
+ },
+ {
+  "id": 618,
+  "assembly": "System",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.dll",
+  "bodies": 10325,
+  "decompiled": 9513
+ },
+ {
+  "id": 3,
+  "assembly": "ICSharpCode.Decompiler",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.dll",
+  "bodies": 9737,
+  "decompiled": 9499
+ },
+ {
+  "id": 0,
+  "assembly": "FSharp.Core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/FSharp/FSharp.Core.dll",
+  "bodies": 9622,
+  "decompiled": 9429
+ },
+ {
+  "id": 129,
+  "assembly": "FSharp.Core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/FSharp.Core.dll",
+  "bodies": 9429,
+  "decompiled": 9246
+ },
+ {
+  "id": 158,
+  "assembly": "Newtonsoft.Json.Tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-pcl-debug/Newtonsoft.Json.Tests.dll",
+  "bodies": 9783,
+  "decompiled": 8802
+ },
+ {
+  "id": 160,
+  "assembly": "ExplicitConversions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions.exe",
+  "bodies": 14617,
+  "decompiled": 8225
+ },
+ {
+  "id": 58,
+  "assembly": "ICSharpCode.NRefactory.Tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.Tests.dll",
+  "bodies": 7234,
+  "decompiled": 7165
+ },
+ {
+  "id": 617,
+  "assembly": "System.Xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.Xml.dll",
+  "bodies": 7625,
+  "decompiled": 7071
+ },
+ {
+  "id": 624,
+  "assembly": "System.Core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/5.23/lib/mono/4.5/System.Core.dll",
+  "bodies": 6442,
+  "decompiled": 6047
+ },
+ {
+  "id": 425,
+  "assembly": "System.Data.Common",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Data.Common.dll",
+  "bodies": 6099,
+  "decompiled": 5808
+ },
+ {
+  "id": 484,
+  "assembly": "System.Private.DataContractSerialization",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.DataContractSerialization.dll",
+  "bodies": 5045,
+  "decompiled": 4931
+ },
+ {
+  "id": 458,
+  "assembly": "System.Linq.Expressions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Linq.Expressions.dll",
+  "bodies": 4599,
+  "decompiled": 4503
+ },
+ {
+  "id": 1041,
+  "assembly": "OpenRA.Game",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/openra/assemblies/OpenRA.Game.dll",
+  "bodies": 4767,
+  "decompiled": 4325
+ },
+ {
+  "id": 54,
+  "assembly": "ICSharpCode.NRefactory.CSharp.Refactoring",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.CSharp.Refactoring.dll",
+  "bodies": 4307,
+  "decompiled": 4223
+ },
+ {
+  "id": 619,
+  "assembly": "gmcs",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/gmcs.exe",
+  "bodies": 4539,
+  "decompiled": 4012
+ },
+ {
+  "id": 7,
+  "assembly": "Newtonsoft.Json",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Newtonsoft.Json.dll",
+  "bodies": 3985,
+  "decompiled": 3812
+ },
+ {
+  "id": 105,
+  "assembly": "nunit.framework.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunit.framework.tests.dll",
+  "bodies": 4015,
+  "decompiled": 3812
+ },
+ {
+  "id": 97,
+  "assembly": "nunit.framework.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunit.framework.tests.dll",
+  "bodies": 4012,
+  "decompiled": 3803
+ },
+ {
+  "id": 135,
+  "assembly": "Newtonsoft.Json",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Newtonsoft.Json.dll",
+  "bodies": 3991,
+  "decompiled": 3785
+ },
+ {
+  "id": 159,
+  "assembly": "Newtonsoft.Json",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-pcl-debug/Newtonsoft.Json.dll",
+  "bodies": 3933,
+  "decompiled": 3750
+ },
+ {
+  "id": 84,
+  "assembly": "nunit.framework.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/nunit.framework.tests.dll",
+  "bodies": 3737,
+  "decompiled": 3581
+ },
+ {
+  "id": 76,
+  "assembly": "nunit.framework.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/nunit.framework.tests.dll",
+  "bodies": 3681,
+  "decompiled": 3525
+ },
+ {
+  "id": 61,
+  "assembly": "IKVM.Reflection",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/IKVM.Reflection.dll",
+  "bodies": 3490,
+  "decompiled": 3439
+ },
+ {
+  "id": 907,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Reflection.Metadata.dll",
+  "bodies": 3393,
+  "decompiled": 3232
+ },
+ {
+  "id": 999,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/System.Reflection.Metadata.dll",
+  "bodies": 3393,
+  "decompiled": 3232
+ },
+ {
+  "id": 891,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Reflection.Metadata.dll",
+  "bodies": 3371,
+  "decompiled": 3207
+ },
+ {
+  "id": 493,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Reflection.Metadata.dll",
+  "bodies": 3346,
+  "decompiled": 3180
+ },
+ {
+  "id": 145,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Reflection.Metadata.dll",
+  "bodies": 3331,
+  "decompiled": 3155
+ },
+ {
+  "id": 119,
+  "assembly": "nunit.framework.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunit.framework.tests.dll",
+  "bodies": 3216,
+  "decompiled": 3076
+ },
+ {
+  "id": 9,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Reflection.Metadata.dll",
+  "bodies": 3212,
+  "decompiled": 3046
+ },
+ {
+  "id": 790,
+  "assembly": "System.Reflection.Metadata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Reflection.Metadata.dll",
+  "bodies": 3152,
+  "decompiled": 2989
+ },
+ {
+  "id": 126,
+  "assembly": "BenchmarkDotNet.Core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/BenchmarkDotNet.Core.dll",
+  "bodies": 3002,
+  "decompiled": 2912
+ },
+ {
+  "id": 6,
+  "assembly": "Mono.Cecil",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/Mono.Cecil.dll",
+  "bodies": 2915,
+  "decompiled": 2867
+ },
+ {
+  "id": 157,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/nunit.framework.dll",
+  "bodies": 2883,
+  "decompiled": 2782
+ },
+ {
+  "id": 60,
+  "assembly": "ICSharpCode.NRefactory",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.dll",
+  "bodies": 2820,
+  "decompiled": 2735
+ },
+ {
+  "id": 104,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunit.framework.dll",
+  "bodies": 2619,
+  "decompiled": 2530
+ },
+ {
+  "id": 96,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunit.framework.dll",
+  "bodies": 2625,
+  "decompiled": 2528
+ },
+ {
+  "id": 83,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/nunit.framework.dll",
+  "bodies": 2600,
+  "decompiled": 2512
+ },
+ {
+  "id": 71,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/tests/nunit.framework.dll",
+  "bodies": 2592,
+  "decompiled": 2504
+ },
+ {
+  "id": 62,
+  "assembly": "Mono.Cecil",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/Mono.Cecil.dll",
+  "bodies": 2481,
+  "decompiled": 2439
+ },
+ {
+  "id": 13,
+  "assembly": "Mono.Cecil",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Mono.Cecil.dll",
+  "bodies": 2453,
+  "decompiled": 2396
+ },
+ {
+  "id": 63,
+  "assembly": "Mono.Cecil",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/Mono.Cecil.dll",
+  "bodies": 2413,
+  "decompiled": 2356
+ },
+ {
+  "id": 118,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunit.framework.dll",
+  "bodies": 2408,
+  "decompiled": 2333
+ },
+ {
+  "id": 463,
+  "assembly": "System.Net.Http",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Http.dll",
+  "bodies": 2364,
+  "decompiled": 2098
+ },
+ {
+  "id": 420,
+  "assembly": "System.ComponentModel.TypeConverter",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ComponentModel.TypeConverter.dll",
+  "bodies": 1784,
+  "decompiled": 1726
+ },
+ {
+  "id": 616,
+  "assembly": "System.Core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/mcs/2.6.4/lib/mono/2.0/System.Core.dll",
+  "bodies": 1895,
+  "decompiled": 1642
+ },
+ {
+  "id": 403,
+  "assembly": "Microsoft.CSharp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/Microsoft.CSharp.dll",
+  "bodies": 1665,
+  "decompiled": 1640
+ },
+ {
+  "id": 161,
+  "assembly": "ExplicitConversions_32",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ExplicitConversions_32.exe",
+  "bodies": 4681,
+  "decompiled": 1601
+ },
+ {
+  "id": 889,
+  "assembly": "System.Net.Http",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Net.Http.dll",
+  "bodies": 1531,
+  "decompiled": 1470
+ },
+ {
+  "id": 125,
+  "assembly": "Autofac",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Autofac.dll",
+  "bodies": 1516,
+  "decompiled": 1466
+ },
+ {
+  "id": 906,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Collections.Immutable.dll",
+  "bodies": 1569,
+  "decompiled": 1439
+ },
+ {
+  "id": 998,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/System.Collections.Immutable.dll",
+  "bodies": 1569,
+  "decompiled": 1438
+ },
+ {
+  "id": 11,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/nunit.framework.dll",
+  "bodies": 1449,
+  "decompiled": 1423
+ },
+ {
+  "id": 73,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/v2-tests/nunit.framework.dll",
+  "bodies": 1451,
+  "decompiled": 1423
+ },
+ {
+  "id": 885,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Collections.Immutable.dll",
+  "bodies": 1532,
+  "decompiled": 1403
+ },
+ {
+  "id": 412,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Collections.Immutable.dll",
+  "bodies": 1527,
+  "decompiled": 1398
+ },
+ {
+  "id": 53,
+  "assembly": "nunit.framework",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/nunit.framework.dll",
+  "bodies": 1413,
+  "decompiled": 1391
+ },
+ {
+  "id": 8,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.Collections.Immutable.dll",
+  "bodies": 1499,
+  "decompiled": 1390
+ },
+ {
+  "id": 138,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Collections.Immutable.dll",
+  "bodies": 1499,
+  "decompiled": 1390
+ },
+ {
+  "id": 786,
+  "assembly": "System.Collections.Immutable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Collections.Immutable.dll",
+  "bodies": 1495,
+  "decompiled": 1387
+ },
+ {
+  "id": 459,
+  "assembly": "System.Linq.Parallel",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Linq.Parallel.dll",
+  "bodies": 1336,
+  "decompiled": 1230
+ },
+ {
+  "id": 2,
+  "assembly": "ICSharpCode.Decompiler.Tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/ICSharpCode.Decompiler.Tests.exe",
+  "bodies": 1257,
+  "decompiled": 1180
+ },
+ {
+  "id": 465,
+  "assembly": "System.Net.Mail",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Mail.dll",
+  "bodies": 1189,
+  "decompiled": 1114
+ },
+ {
+  "id": 533,
+  "assembly": "System.Threading.Tasks.Dataflow",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Threading.Tasks.Dataflow.dll",
+  "bodies": 1138,
+  "decompiled": 1105
+ },
+ {
+  "id": 541,
+  "assembly": "System.Transactions.Local",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Transactions.Local.dll",
+  "bodies": 1054,
+  "decompiled": 1047
+ },
+ {
+  "id": 501,
+  "assembly": "System.Runtime.Extensions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.Extensions.dll",
+  "bodies": 1048,
+  "decompiled": 999
+ },
+ {
+  "id": 464,
+  "assembly": "System.Net.HttpListener",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.HttpListener.dll",
+  "bodies": 1098,
+  "decompiled": 950
+ },
+ {
+  "id": 486,
+  "assembly": "System.Private.Xml.Linq",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.Xml.Linq.dll",
+  "bodies": 967,
+  "decompiled": 932
+ },
+ {
+  "id": 516,
+  "assembly": "System.Security.Cryptography.Algorithms",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.Algorithms.dll",
+  "bodies": 971,
+  "decompiled": 926
+ },
+ {
+  "id": 106,
+  "assembly": "nunit.testdata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunit.testdata.dll",
+  "bodies": 960,
+  "decompiled": 921
+ },
+ {
+  "id": 98,
+  "assembly": "nunit.testdata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunit.testdata.dll",
+  "bodies": 960,
+  "decompiled": 920
+ },
+ {
+  "id": 471,
+  "assembly": "System.Net.Security",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Security.dll",
+  "bodies": 1024,
+  "decompiled": 918
+ },
+ {
+  "id": 120,
+  "assembly": "nunit.testdata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunit.testdata.dll",
+  "bodies": 919,
+  "decompiled": 880
+ },
+ {
+  "id": 473,
+  "assembly": "System.Net.Sockets",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Sockets.dll",
+  "bodies": 1045,
+  "decompiled": 872
+ },
+ {
+  "id": 461,
+  "assembly": "System.Linq",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Linq.dll",
+  "bodies": 912,
+  "decompiled": 831
+ },
+ {
+  "id": 77,
+  "assembly": "nunit.testdata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/nunit.testdata.dll",
+  "bodies": 814,
+  "decompiled": 802
+ },
+ {
+  "id": 85,
+  "assembly": "nunit.testdata",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/nunit.testdata.dll",
+  "bodies": 814,
+  "decompiled": 802
+ },
+ {
+  "id": 470,
+  "assembly": "System.Net.Requests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Requests.dll",
+  "bodies": 837,
+  "decompiled": 790
+ },
+ {
+  "id": 66,
+  "assembly": "nunit.core",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/nunit.core.dll",
+  "bodies": 818,
+  "decompiled": 786
+ },
+ {
+  "id": 522,
+  "assembly": "System.Security.Cryptography.X509Certificates",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.X509Certificates.dll",
+  "bodies": 822,
+  "decompiled": 729
+ },
+ {
+  "id": 531,
+  "assembly": "System.Text.RegularExpressions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Text.RegularExpressions.dll",
+  "bodies": 697,
+  "decompiled": 684
+ },
+ {
+  "id": 508,
+  "assembly": "System.Runtime.Serialization.Formatters",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.Serialization.Formatters.dll",
+  "bodies": 646,
+  "decompiled": 630
+ },
+ {
+  "id": 415,
+  "assembly": "System.Collections",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Collections.dll",
+  "bodies": 670,
+  "decompiled": 623
+ },
+ {
+  "id": 405,
+  "assembly": "Microsoft.VisualBasic",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/Microsoft.VisualBasic.dll",
+  "bodies": 678,
+  "decompiled": 616
+ },
+ {
+  "id": 896,
+  "assembly": "Microsoft.CodeAnalysis.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.Scripting.dll",
+  "bodies": 643,
+  "decompiled": 610
+ },
+ {
+  "id": 446,
+  "assembly": "System.IO.Compression",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.Compression.dll",
+  "bodies": 636,
+  "decompiled": 605
+ },
+ {
+  "id": 905,
+  "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.Build.Tasks.CodeAnalysis.dll",
+  "bodies": 653,
+  "decompiled": 594
+ },
+ {
+  "id": 911,
+  "assembly": "System.Memory",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Memory.dll",
+  "bodies": 690,
+  "decompiled": 594
+ },
+ {
+  "id": 992,
+  "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/Microsoft.Build.Tasks.CodeAnalysis.dll",
+  "bodies": 640,
+  "decompiled": 582
+ },
+ {
+  "id": 517,
+  "assembly": "System.Security.Cryptography.Cng",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.Cng.dll",
+  "bodies": 634,
+  "decompiled": 581
+ },
+ {
+  "id": 12,
+  "assembly": "Mono.Cecil.Tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Mono.Cecil.Tests.dll",
+  "bodies": 579,
+  "decompiled": 576
+ },
+ {
+  "id": 799,
+  "assembly": "Microsoft.CodeAnalysis.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.CodeAnalysis.Scripting.dll",
+  "bodies": 603,
+  "decompiled": 568
+ },
+ {
+  "id": 783,
+  "assembly": "Microsoft.CodeAnalysis.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/Microsoft.CodeAnalysis.Scripting.dll",
+  "bodies": 592,
+  "decompiled": 561
+ },
+ {
+  "id": 113,
+  "assembly": "nunit.engine",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit.engine.dll",
+  "bodies": 593,
+  "decompiled": 555
+ },
+ {
+  "id": 431,
+  "assembly": "System.Diagnostics.Process",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.Process.dll",
+  "bodies": 568,
+  "decompiled": 535
+ },
+ {
+  "id": 806,
+  "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.Build.Tasks.CodeAnalysis.dll",
+  "bodies": 580,
+  "decompiled": 522
+ },
+ {
+  "id": 162,
+  "assembly": "ImplicitConversions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions.exe",
+  "bodies": 527,
+  "decompiled": 472
+ },
+ {
+  "id": 467,
+  "assembly": "System.Net.NetworkInformation",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.NetworkInformation.dll",
+  "bodies": 520,
+  "decompiled": 469
+ },
+ {
+  "id": 514,
+  "assembly": "System.Security.AccessControl",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.AccessControl.dll",
+  "bodies": 461,
+  "decompiled": 452
+ },
+ {
+  "id": 451,
+  "assembly": "System.IO.FileSystem",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.FileSystem.dll",
+  "bodies": 487,
+  "decompiled": 440
+ },
+ {
+  "id": 411,
+  "assembly": "System.Collections.Concurrent",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Collections.Concurrent.dll",
+  "bodies": 454,
+  "decompiled": 430
+ },
+ {
+  "id": 142,
+  "assembly": "System.IO.Compression",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.IO.Compression.dll",
+  "bodies": 452,
+  "decompiled": 427
+ },
+ {
+  "id": 518,
+  "assembly": "System.Security.Cryptography.Csp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.Csp.dll",
+  "bodies": 444,
+  "decompiled": 424
+ },
+ {
+  "id": 416,
+  "assembly": "System.ComponentModel.Annotations",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ComponentModel.Annotations.dll",
+  "bodies": 427,
+  "decompiled": 421
+ },
+ {
+  "id": 795,
+  "assembly": "Microsoft.Build.Tasks.CodeAnalysis",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/Microsoft.Build.Tasks.CodeAnalysis.dll",
+  "bodies": 461,
+  "decompiled": 407
+ },
+ {
+  "id": 79,
+  "assembly": "nunitlite",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/nunitlite.dll",
+  "bodies": 413,
+  "decompiled": 403
+ },
+ {
+  "id": 86,
+  "assembly": "nunitlite",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/nunitlite.dll",
+  "bodies": 413,
+  "decompiled": 403
+ },
+ {
+  "id": 108,
+  "assembly": "nunitlite",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunitlite.dll",
+  "bodies": 413,
+  "decompiled": 403
+ },
+ {
+  "id": 114,
+  "assembly": "nunit.engine.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit.engine.tests.dll",
+  "bodies": 404,
+  "decompiled": 397
+ },
+ {
+  "id": 100,
+  "assembly": "nunitlite",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunitlite.dll",
+  "bodies": 413,
+  "decompiled": 393
+ },
+ {
+  "id": 423,
+  "assembly": "System.Console",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Console.dll",
+  "bodies": 411,
+  "decompiled": 380
+ },
+ {
+  "id": 469,
+  "assembly": "System.Net.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Primitives.dll",
+  "bodies": 415,
+  "decompiled": 380
+ },
+ {
+  "id": 115,
+  "assembly": "nunit3-console",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit3-console.exe",
+  "bodies": 385,
+  "decompiled": 378
+ },
+ {
+  "id": 437,
+  "assembly": "System.Drawing.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Drawing.Primitives.dll",
+  "bodies": 386,
+  "decompiled": 377
+ },
+ {
+  "id": 912,
+  "assembly": "System.Text.Encoding.CodePages",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Text.Encoding.CodePages.dll",
+  "bodies": 421,
+  "decompiled": 370
+ },
+ {
+  "id": 150,
+  "assembly": "System.Text.Encoding.CodePages",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Text.Encoding.CodePages.dll",
+  "bodies": 417,
+  "decompiled": 366
+ },
+ {
+  "id": 67,
+  "assembly": "nunit.core.interfaces",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/nunit.core.interfaces.dll",
+  "bodies": 329,
+  "decompiled": 326
+ },
+ {
+  "id": 122,
+  "assembly": "nunitlite",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunitlite.dll",
+  "bodies": 330,
+  "decompiled": 324
+ },
+ {
+  "id": 474,
+  "assembly": "System.Net.WebClient",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.WebClient.dll",
+  "bodies": 350,
+  "decompiled": 319
+ },
+ {
+  "id": 59,
+  "assembly": "ICSharpCode.NRefactory.Xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.Xml.dll",
+  "bodies": 318,
+  "decompiled": 314
+ },
+ {
+  "id": 435,
+  "assembly": "System.Diagnostics.TraceSource",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.TraceSource.dll",
+  "bodies": 315,
+  "decompiled": 313
+ },
+ {
+  "id": 480,
+  "assembly": "System.Numerics.Vectors",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Numerics.Vectors.dll",
+  "bodies": 311,
+  "decompiled": 309
+ },
+ {
+  "id": 507,
+  "assembly": "System.Runtime.Numerics",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.Numerics.dll",
+  "bodies": 359,
+  "decompiled": 305
+ },
+ {
+  "id": 462,
+  "assembly": "System.Memory",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Memory.dll",
+  "bodies": 363,
+  "decompiled": 299
+ },
+ {
+  "id": 413,
+  "assembly": "System.Collections.NonGeneric",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Collections.NonGeneric.dll",
+  "bodies": 300,
+  "decompiled": 298
+ },
+ {
+  "id": 997,
+  "assembly": "VBCSCompiler",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/VBCSCompiler.dll",
+  "bodies": 325,
+  "decompiled": 284
+ },
+ {
+  "id": 904,
+  "assembly": "VBCSCompiler",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/VBCSCompiler.exe",
+  "bodies": 325,
+  "decompiled": 282
+ },
+ {
+  "id": 414,
+  "assembly": "System.Collections.Specialized",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Collections.Specialized.dll",
+  "bodies": 281,
+  "decompiled": 278
+ },
+ {
+  "id": 485,
+  "assembly": "System.Private.Uri",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Private.Uri.dll",
+  "bodies": 327,
+  "decompiled": 275
+ },
+ {
+  "id": 455,
+  "assembly": "System.IO.Pipes",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.Pipes.dll",
+  "bodies": 271,
+  "decompiled": 246
+ },
+ {
+  "id": 523,
+  "assembly": "System.Security.Principal.Windows",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Principal.Windows.dll",
+  "bodies": 246,
+  "decompiled": 231
+ },
+ {
+  "id": 794,
+  "assembly": "VBCSCompiler",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/VBCSCompiler.exe",
+  "bodies": 263,
+  "decompiled": 229
+ },
+ {
+  "id": 805,
+  "assembly": "VBCSCompiler",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/VBCSCompiler.exe",
+  "bodies": 270,
+  "decompiled": 229
+ },
+ {
+  "id": 10,
+  "assembly": "System.ValueTuple",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/System.ValueTuple.dll",
+  "bodies": 217,
+  "decompiled": 216
+ },
+ {
+  "id": 460,
+  "assembly": "System.Linq.Queryable",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Linq.Queryable.dll",
+  "bodies": 340,
+  "decompiled": 213
+ },
+ {
+  "id": 482,
+  "assembly": "System.ObjectModel",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ObjectModel.dll",
+  "bodies": 206,
+  "decompiled": 204
+ },
+ {
+  "id": 80,
+  "assembly": "nunitlite.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/nunitlite.tests.exe",
+  "bodies": 204,
+  "decompiled": 203
+ },
+ {
+  "id": 87,
+  "assembly": "nunitlite.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/nunitlite.tests.exe",
+  "bodies": 204,
+  "decompiled": 203
+ },
+ {
+  "id": 101,
+  "assembly": "nunitlite.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunitlite.tests.exe",
+  "bodies": 204,
+  "decompiled": 203
+ },
+ {
+  "id": 109,
+  "assembly": "nunitlite.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunitlite.tests.exe",
+  "bodies": 204,
+  "decompiled": 203
+ },
+ {
+  "id": 521,
+  "assembly": "System.Security.Cryptography.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.Primitives.dll",
+  "bodies": 204,
+  "decompiled": 197
+ },
+ {
+  "id": 515,
+  "assembly": "System.Security.Claims",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Claims.dll",
+  "bodies": 179,
+  "decompiled": 173
+ },
+ {
+  "id": 452,
+  "assembly": "System.IO.IsolatedStorage",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.IsolatedStorage.dll",
+  "bodies": 170,
+  "decompiled": 170
+ },
+ {
+  "id": 995,
+  "assembly": "csc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/csc.dll",
+  "bodies": 180,
+  "decompiled": 162
+ },
+ {
+  "id": 996,
+  "assembly": "vbc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/vbc.dll",
+  "bodies": 180,
+  "decompiled": 162
+ },
+ {
+  "id": 901,
+  "assembly": "csc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/csc.exe",
+  "bodies": 180,
+  "decompiled": 161
+ },
+ {
+  "id": 903,
+  "assembly": "vbc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/vbc.exe",
+  "bodies": 180,
+  "decompiled": 161
+ },
+ {
+  "id": 535,
+  "assembly": "System.Threading.Tasks.Parallel",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Threading.Tasks.Parallel.dll",
+  "bodies": 167,
+  "decompiled": 158
+ },
+ {
+  "id": 180,
+  "assembly": "Microsoft.VisualC.STLCLR",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/legacy/Microsoft.VisualC.STLCLR.dll",
+  "bodies": 365,
+  "decompiled": 157
+ },
+ {
+  "id": 419,
+  "assembly": "System.ComponentModel.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ComponentModel.Primitives.dll",
+  "bodies": 152,
+  "decompiled": 151
+ },
+ {
+  "id": 407,
+  "assembly": "Microsoft.Win32.Registry",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/Microsoft.Win32.Registry.dll",
+  "bodies": 174,
+  "decompiled": 148
+ },
+ {
+  "id": 478,
+  "assembly": "System.Net.WebSockets",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.WebSockets.dll",
+  "bodies": 166,
+  "decompiled": 143
+ },
+ {
+  "id": 468,
+  "assembly": "System.Net.Ping",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.Ping.dll",
+  "bodies": 152,
+  "decompiled": 140
+ },
+ {
+  "id": 116,
+  "assembly": "nunit3-console.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit3-console.tests.dll",
+  "bodies": 139,
+  "decompiled": 139
+ },
+ {
+  "id": 89,
+  "assembly": "Microsoft.Threading.Tasks.Extensions.Desktop",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/Microsoft.Threading.Tasks.Extensions.Desktop.dll",
+  "bodies": 162,
+  "decompiled": 136
+ },
+ {
+  "id": 540,
+  "assembly": "System.Threading",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Threading.dll",
+  "bodies": 141,
+  "decompiled": 136
+ },
+ {
+  "id": 913,
+  "assembly": "System.Numerics.Vectors",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Numerics.Vectors.dll",
+  "bodies": 188,
+  "decompiled": 133
+ },
+ {
+  "id": 466,
+  "assembly": "System.Net.NameResolution",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.NameResolution.dll",
+  "bodies": 153,
+  "decompiled": 128
+ },
+ {
+  "id": 537,
+  "assembly": "System.Threading.Thread",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Threading.Thread.dll",
+  "bodies": 125,
+  "decompiled": 124
+ },
+ {
+  "id": 519,
+  "assembly": "System.Security.Cryptography.Encoding",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.Encoding.dll",
+  "bodies": 123,
+  "decompiled": 122
+ },
+ {
+  "id": 450,
+  "assembly": "System.IO.FileSystem.Watcher",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.FileSystem.Watcher.dll",
+  "bodies": 121,
+  "decompiled": 118
+ },
+ {
+  "id": 429,
+  "assembly": "System.Diagnostics.DiagnosticSource",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.DiagnosticSource.dll",
+  "bodies": 121,
+  "decompiled": 116
+ },
+ {
+  "id": 802,
+  "assembly": "csc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/csc.exe",
+  "bodies": 132,
+  "decompiled": 116
+ },
+ {
+  "id": 804,
+  "assembly": "vbc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/vbc.exe",
+  "bodies": 132,
+  "decompiled": 116
+ },
+ {
+  "id": 791,
+  "assembly": "csc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/csc.exe",
+  "bodies": 127,
+  "decompiled": 113
+ },
+ {
+  "id": 793,
+  "assembly": "vbc",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/vbc.exe",
+  "bodies": 127,
+  "decompiled": 113
+ },
+ {
+  "id": 453,
+  "assembly": "System.IO.MemoryMappedFiles",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.MemoryMappedFiles.dll",
+  "bodies": 116,
+  "decompiled": 108
+ },
+ {
+  "id": 443,
+  "assembly": "System.IO.Compression.Brotli",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.Compression.Brotli.dll",
+  "bodies": 110,
+  "decompiled": 104
+ },
+ {
+  "id": 909,
+  "assembly": "System.Threading.Tasks.Extensions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Threading.Tasks.Extensions.dll",
+  "bodies": 104,
+  "decompiled": 101
+ },
+ {
+  "id": 91,
+  "assembly": "Microsoft.Threading.Tasks",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/Microsoft.Threading.Tasks.dll",
+  "bodies": 115,
+  "decompiled": 100
+ },
+ {
+  "id": 56,
+  "assembly": "ICSharpCode.NRefactory.Cecil",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.Cecil.dll",
+  "bodies": 110,
+  "decompiled": 99
+ },
+ {
+  "id": 477,
+  "assembly": "System.Net.WebSockets.Client",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.WebSockets.Client.dll",
+  "bodies": 107,
+  "decompiled": 99
+ },
+ {
+  "id": 94,
+  "assembly": "System.Threading.Tasks",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/System.Threading.Tasks.dll",
+  "bodies": 99,
+  "decompiled": 97
+ },
+ {
+  "id": 57,
+  "assembly": "ICSharpCode.NRefactory.IKVM",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NRefactory/ICSharpCode.NRefactory.IKVM.dll",
+  "bodies": 108,
+  "decompiled": 96
+ },
+ {
+  "id": 505,
+  "assembly": "System.Runtime.InteropServices",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.InteropServices.dll",
+  "bodies": 91,
+  "decompiled": 91
+ },
+ {
+  "id": 123,
+  "assembly": "nunitlite.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunitlite.tests.exe",
+  "bodies": 94,
+  "decompiled": 88
+ },
+ {
+  "id": 447,
+  "assembly": "System.IO.FileSystem.AccessControl",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.FileSystem.AccessControl.dll",
+  "bodies": 90,
+  "decompiled": 86
+ },
+ {
+  "id": 475,
+  "assembly": "System.Net.WebHeaderCollection",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.WebHeaderCollection.dll",
+  "bodies": 90,
+  "decompiled": 83
+ },
+ {
+  "id": 488,
+  "assembly": "System.Reflection.DispatchProxy",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Reflection.DispatchProxy.dll",
+  "bodies": 83,
+  "decompiled": 81
+ },
+ {
+  "id": 41,
+  "assembly": "RegularAppWithoutNotify",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/metro.exe",
+  "bodies": 89,
+  "decompiled": 80
+ },
+ {
+  "id": 1,
+  "assembly": "DiffLib",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/ICSharpCode.Decompiler/DiffLib.dll",
+  "bodies": 85,
+  "decompiled": 79
+ },
+ {
+  "id": 248,
+  "assembly": "System.EnterpriseServices.Wrapper.dll",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/legacy/System.EnterpriseServices.Wrapper.dll",
+  "bodies": 237,
+  "decompiled": 79
+ },
+ {
+  "id": 520,
+  "assembly": "System.Security.Cryptography.OpenSsl",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Security.Cryptography.OpenSsl.dll",
+  "bodies": 74,
+  "decompiled": 74
+ },
+ {
+  "id": 897,
+  "assembly": "Microsoft.CodeAnalysis.CSharp.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/Microsoft.CodeAnalysis.CSharp.Scripting.dll",
+  "bodies": 72,
+  "decompiled": 71
+ },
+ {
+  "id": 890,
+  "assembly": "System.Net.Sockets",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Net.Sockets.dll",
+  "bodies": 105,
+  "decompiled": 70
+ },
+ {
+  "id": 418,
+  "assembly": "System.ComponentModel.EventBasedAsync",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ComponentModel.EventBasedAsync.dll",
+  "bodies": 67,
+  "decompiled": 67
+ },
+ {
+  "id": 544,
+  "assembly": "System.Web.HttpUtility",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Web.HttpUtility.dll",
+  "bodies": 69,
+  "decompiled": 67
+ },
+ {
+  "id": 472,
+  "assembly": "System.Net.ServicePoint",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.ServicePoint.dll",
+  "bodies": 66,
+  "decompiled": 66
+ },
+ {
+  "id": 800,
+  "assembly": "Microsoft.CodeAnalysis.CSharp.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/Microsoft.CodeAnalysis.CSharp.Scripting.dll",
+  "bodies": 65,
+  "decompiled": 64
+ },
+ {
+  "id": 70,
+  "assembly": "nunit.engine.api",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/tests/nunit.engine.api.dll",
+  "bodies": 62,
+  "decompiled": 62
+ },
+ {
+  "id": 74,
+  "assembly": "nunit.v2.driver.tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/v2-tests/nunit.v2.driver.tests.dll",
+  "bodies": 64,
+  "decompiled": 62
+ },
+ {
+  "id": 784,
+  "assembly": "Microsoft.CodeAnalysis.CSharp.Scripting",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/Microsoft.CodeAnalysis.CSharp.Scripting.dll",
+  "bodies": 63,
+  "decompiled": 62
+ },
+ {
+  "id": 146,
+  "assembly": "System.Security.Cryptography.Algorithms",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Security.Cryptography.Algorithms.dll",
+  "bodies": 61,
+  "decompiled": 61
+ },
+ {
+  "id": 510,
+  "assembly": "System.Runtime.Serialization.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.Serialization.Primitives.dll",
+  "bodies": 61,
+  "decompiled": 61
+ },
+ {
+  "id": 886,
+  "assembly": "System.Diagnostics.DiagnosticSource",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Diagnostics.DiagnosticSource.dll",
+  "bodies": 62,
+  "decompiled": 61
+ },
+ {
+  "id": 495,
+  "assembly": "System.Reflection.TypeExtensions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Reflection.TypeExtensions.dll",
+  "bodies": 60,
+  "decompiled": 60
+ },
+ {
+  "id": 149,
+  "assembly": "System.Security.Cryptography.X509Certificates",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Security.Cryptography.X509Certificates.dll",
+  "bodies": 56,
+  "decompiled": 56
+ },
+ {
+  "id": 64,
+  "assembly": "nunit-project-loader",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/nunit-project-loader.dll",
+  "bodies": 57,
+  "decompiled": 53
+ },
+ {
+  "id": 132,
+  "assembly": "Microsoft.DotNet.InternalAbstractions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Microsoft.DotNet.InternalAbstractions.dll",
+  "bodies": 54,
+  "decompiled": 52
+ },
+ {
+  "id": 436,
+  "assembly": "System.Diagnostics.Tracing",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.Tracing.dll",
+  "bodies": 54,
+  "decompiled": 52
+ },
+ {
+  "id": 65,
+  "assembly": "nunit-v2-result-writer",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/nunit-v2-result-writer.dll",
+  "bodies": 49,
+  "decompiled": 48
+ },
+ {
+  "id": 163,
+  "assembly": "ImplicitConversions_32",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/ImplicitConversions_32.exe",
+  "bodies": 103,
+  "decompiled": 48
+ },
+ {
+  "id": 448,
+  "assembly": "System.IO.FileSystem.DriveInfo",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.FileSystem.DriveInfo.dll",
+  "bodies": 51,
+  "decompiled": 48
+ },
+ {
+  "id": 139,
+  "assembly": "System.Console",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Console.dll",
+  "bodies": 47,
+  "decompiled": 47
+ },
+ {
+  "id": 69,
+  "assembly": "addin-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/tests/addin-tests.dll",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 72,
+  "assembly": "vs-project-loader",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/tests/vs-project-loader.dll",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 75,
+  "assembly": "mock-assembly",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/mock-assembly.exe",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 82,
+  "assembly": "mock-assembly",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/mock-assembly.exe",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 95,
+  "assembly": "mock-assembly",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/mock-assembly.exe",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 103,
+  "assembly": "mock-assembly",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/mock-assembly.exe",
+  "bodies": 44,
+  "decompiled": 44
+ },
+ {
+  "id": 90,
+  "assembly": "Microsoft.Threading.Tasks.Extensions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/Microsoft.Threading.Tasks.Extensions.dll",
+  "bodies": 64,
+  "decompiled": 43
+ },
+ {
+  "id": 117,
+  "assembly": "mock-assembly",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/mock-assembly.dll",
+  "bodies": 42,
+  "decompiled": 42
+ },
+ {
+  "id": 68,
+  "assembly": "nunit.v2.driver",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/addins/nunit.v2.driver.dll",
+  "bodies": 42,
+  "decompiled": 40
+ },
+ {
+  "id": 433,
+  "assembly": "System.Diagnostics.TextWriterTraceListener",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.TextWriterTraceListener.dll",
+  "bodies": 40,
+  "decompiled": 40
+ },
+ {
+  "id": 430,
+  "assembly": "System.Diagnostics.FileVersionInfo",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.FileVersionInfo.dll",
+  "bodies": 39,
+  "decompiled": 38
+ },
+ {
+  "id": 499,
+  "assembly": "System.Resources.Writer",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Resources.Writer.dll",
+  "bodies": 38,
+  "decompiled": 37
+ },
+ {
+  "id": 151,
+  "assembly": "System.Threading.Tasks.Extensions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Threading.Tasks.Extensions.dll",
+  "bodies": 39,
+  "decompiled": 36
+ },
+ {
+  "id": 164,
+  "assembly": "TestCase-1",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Random Tests/TestCases/TestCase-1.exe",
+  "bodies": 101,
+  "decompiled": 33
+ },
+ {
+  "id": 133,
+  "assembly": "Microsoft.DotNet.PlatformAbstractions",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/Microsoft.DotNet.PlatformAbstractions.dll",
+  "bodies": 34,
+  "decompiled": 32
+ },
+ {
+  "id": 892,
+  "assembly": "System.Runtime.InteropServices.RuntimeInformation",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.Runtime.InteropServices.RuntimeInformation.dll",
+  "bodies": 31,
+  "decompiled": 31
+ },
+ {
+  "id": 476,
+  "assembly": "System.Net.WebProxy",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Net.WebProxy.dll",
+  "bodies": 32,
+  "decompiled": 30
+ },
+ {
+  "id": 445,
+  "assembly": "System.IO.Compression.ZipFile",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.IO.Compression.ZipFile.dll",
+  "bodies": 30,
+  "decompiled": 29
+ },
+ {
+  "id": 408,
+  "assembly": "SOS.NETCore",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/SOS.NETCore.dll",
+  "bodies": 33,
+  "decompiled": 28
+ },
+ {
+  "id": 910,
+  "assembly": "System.Buffers",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Buffers.dll",
+  "bodies": 32,
+  "decompiled": 27
+ },
+ {
+  "id": 20,
+  "assembly": "OutlookKolabMAPIHelper",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/cppcli.dll",
+  "bodies": 73,
+  "decompiled": 26
+ },
+ {
+  "id": 137,
+  "assembly": "System.Buffers",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Buffers.dll",
+  "bodies": 31,
+  "decompiled": 26
+ },
+ {
+  "id": 432,
+  "assembly": "System.Diagnostics.StackTrace",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.StackTrace.dll",
+  "bodies": 27,
+  "decompiled": 25
+ },
+ {
+  "id": 503,
+  "assembly": "System.Runtime.InteropServices.RuntimeInformation",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.InteropServices.RuntimeInformation.dll",
+  "bodies": 25,
+  "decompiled": 25
+ },
+ {
+  "id": 128,
+  "assembly": "BenchmarkDotNet",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/BenchmarkDotNet.dll",
+  "bodies": 26,
+  "decompiled": 23
+ },
+ {
+  "id": 127,
+  "assembly": "BenchmarkDotNet.Toolchains.Roslyn",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/BenchmarkDotNet.Toolchains.Roslyn.dll",
+  "bodies": 22,
+  "decompiled": 22
+ },
+ {
+  "id": 513,
+  "assembly": "System.Runtime",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.dll",
+  "bodies": 25,
+  "decompiled": 21
+ },
+ {
+  "id": 154,
+  "assembly": "System.Xml.XPath.XDocument",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Xml.XPath.XDocument.dll",
+  "bodies": 15,
+  "decompiled": 15
+ },
+ {
+  "id": 81,
+  "assembly": "slow-nunit-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/slow-nunit-tests.dll",
+  "bodies": 14,
+  "decompiled": 14
+ },
+ {
+  "id": 88,
+  "assembly": "slow-nunit-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-3.5/slow-nunit-tests.dll",
+  "bodies": 14,
+  "decompiled": 14
+ },
+ {
+  "id": 102,
+  "assembly": "slow-nunit-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/slow-nunit-tests.dll",
+  "bodies": 14,
+  "decompiled": 14
+ },
+ {
+  "id": 110,
+  "assembly": "slow-nunit-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/slow-nunit-tests.dll",
+  "bodies": 14,
+  "decompiled": 14
+ },
+ {
+  "id": 124,
+  "assembly": "slow-nunit-tests",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/slow-nunit-tests.dll",
+  "bodies": 14,
+  "decompiled": 14
+ },
+ {
+  "id": 37,
+  "assembly": "iterator",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/iterator.exe",
+  "bodies": 11,
+  "decompiled": 11
+ },
+ {
+  "id": 181,
+  "assembly": "Microsoft.VisualC",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/legacy/Microsoft.VisualC.dll",
+  "bodies": 11,
+  "decompiled": 11
+ },
+ {
+  "id": 28,
+  "assembly": "test",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/gifaceref.exe",
+  "bodies": 10,
+  "decompiled": 10
+ },
+ {
+  "id": 52,
+  "assembly": "PhoneApp2",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/wp7.dll",
+  "bodies": 14,
+  "decompiled": 10
+ },
+ {
+  "id": 121,
+  "assembly": "nunitlite-runner",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/portable/nunitlite-runner.exe",
+  "bodies": 14,
+  "decompiled": 10
+ },
+ {
+  "id": 406,
+  "assembly": "Microsoft.Win32.Primitives",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/Microsoft.Win32.Primitives.dll",
+  "bodies": 13,
+  "decompiled": 10
+ },
+ {
+  "id": 888,
+  "assembly": "System.IO.Compression.ZipFile",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/854d162cbe3c90100922c970ba593631f2d106f7b757a99425d50dc5cdafbdc0/tools/System.IO.Compression.ZipFile.dll",
+  "bodies": 10,
+  "decompiled": 10
+ },
+ {
+  "id": 16,
+  "assembly": "System.Runtime",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/System.Runtime.dll",
+  "bodies": 9,
+  "decompiled": 9
+ },
+ {
+  "id": 93,
+  "assembly": "System.Runtime",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/System.Runtime.dll",
+  "bodies": 9,
+  "decompiled": 9
+ },
+ {
+  "id": 500,
+  "assembly": "System.Runtime.CompilerServices.VisualC",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Runtime.CompilerServices.VisualC.dll",
+  "bodies": 9,
+  "decompiled": 9
+ },
+ {
+  "id": 18,
+  "assembly": "bug-185",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/bug-185.dll",
+  "bodies": 8,
+  "decompiled": 7
+ },
+ {
+  "id": 141,
+  "assembly": "System.Diagnostics.StackTrace",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Newtonsoft.Json-net45/System.Diagnostics.StackTrace.dll",
+  "bodies": 6,
+  "decompiled": 6
+ },
+ {
+  "id": 787,
+  "assembly": "System.Diagnostics.StackTrace",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/37aaedd86f96df0ccfef1ada743d6fefd36135b31b75f5305140b84da98918d7/tools/System.Diagnostics.StackTrace.dll",
+  "bodies": 6,
+  "decompiled": 6
+ },
+ {
+  "id": 19,
+  "assembly": "catch",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/catch.exe",
+  "bodies": 5,
+  "decompiled": 5
+ },
+ {
+  "id": 21,
+  "assembly": "test",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/cscgpbug.dll",
+  "bodies": 8,
+  "decompiled": 5
+ },
+ {
+  "id": 22,
+  "assembly": "decsec-att",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/decsec-att.dll",
+  "bodies": 4,
+  "decompiled": 4
+ },
+ {
+  "id": 23,
+  "assembly": "decsec-xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/decsec-xml.dll",
+  "bodies": 4,
+  "decompiled": 4
+ },
+ {
+  "id": 24,
+  "assembly": "decsec1-xml",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/decsec1-xml.dll",
+  "bodies": 4,
+  "decompiled": 4
+ },
+ {
+  "id": 421,
+  "assembly": "System.ComponentModel",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.ComponentModel.dll",
+  "bodies": 4,
+  "decompiled": 4
+ },
+ {
+  "id": 434,
+  "assembly": "System.Diagnostics.Tools",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Diagnostics.Tools.dll",
+  "bodies": 4,
+  "decompiled": 4
+ },
+ {
+  "id": 14,
+  "assembly": "PortableClassLibrary",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/PortableClassLibrary.dll",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 46,
+  "assembly": "test",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/nullable-constant.exe",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 51,
+  "assembly": "winrtcomp",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/winrtcomp.winmd",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 111,
+  "assembly": "nunit-agent-x86",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit-agent-x86.exe",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 112,
+  "assembly": "nunit-agent",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/nunit-agent.exe",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 551,
+  "assembly": "System.Xml.XPath.XDocument",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/netcore-2.2/System.Xml.XPath.XDocument.dll",
+  "bodies": 3,
+  "decompiled": 3
+ },
+ {
+  "id": 908,
+  "assembly": "System.Runtime.CompilerServices.Unsafe",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/net472/System.Runtime.CompilerServices.Unsafe.dll",
+  "bodies": 40,
+  "decompiled": 3
+ },
+ {
+  "id": 15,
+  "assembly": "RetargetableExample",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/RetargetableExample.dll",
+  "bodies": 3,
+  "decompiled": 2
+ },
+ {
+  "id": 17,
+  "assembly": "boxedoptarg",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/boxedoptarg.dll",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 25,
+  "assembly": "delay-signed",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/delay-signed.dll",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 27,
+  "assembly": "Test",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/fptr.exe",
+  "bodies": 4,
+  "decompiled": 2
+ },
+ {
+  "id": 29,
+  "assembly": "hello.anycpu",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.anycpu.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 30,
+  "assembly": "hello",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 31,
+  "assembly": "hello.Itanium",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.ia64.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 32,
+  "assembly": "hello.x64",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.textonly.x64.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 33,
+  "assembly": "hello.x64",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.x64.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 34,
+  "assembly": "hello.x86",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello.x86.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 35,
+  "assembly": "hello1",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hello1.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 36,
+  "assembly": "hellow",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/hellow.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 38,
+  "assembly": "libhello",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/libhello.dll",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 42,
+  "assembly": "mma",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/mma.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 43,
+  "assembly": "moda.netmodule",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/moda.netmodule",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 44,
+  "assembly": "modb.netmodule",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/modb.netmodule",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 47,
+  "assembly": "nullable-parameter",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/nullable-parameter.dll",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 48,
+  "assembly": "pinvoke",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/pinvoke.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 49,
+  "assembly": "switch",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/switch.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 78,
+  "assembly": "nunitlite-runner",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-2.0/nunitlite-runner.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 99,
+  "assembly": "nunitlite-runner",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/nunitlite-runner.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 107,
+  "assembly": "nunitlite-runner",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.5/nunitlite-runner.exe",
+  "bodies": 2,
+  "decompiled": 2
+ },
+ {
+  "id": 1000,
+  "assembly": "System.Runtime.CompilerServices.Unsafe",
+  "path": "/Users/bytedance/zhome/ilspy-lite/rust/report/fallback-corpus/frozen/extracted/6c0511bae4f9baf9265bf0edd0147ff303185c0ad750023a154ec9bbd2e5c12b/tasks/netcoreapp3.1/bincore/System.Runtime.CompilerServices.Unsafe.dll",
+  "bodies": 39,
+  "decompiled": 2
+ },
+ {
+  "id": 26,
+  "assembly": "cs20-SecurityAction",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/empty-decsec-att.dll",
+  "bodies": 2,
+  "decompiled": 1
+ },
+ {
+  "id": 39,
+  "assembly": "libres",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/libres.dll",
+  "bodies": 1,
+  "decompiled": 1
+ },
+ {
+  "id": 40,
+  "assembly": "marshal",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/Mono.Cecil-net45/Resources/assemblies/marshal.dll",
+  "bodies": 1,
+  "decompiled": 1
+ },
+ {
+  "id": 92,
+  "assembly": "System.IO",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/NUnit/net-4.0/System.IO.dll",
+  "bodies": 1,
+  "decompiled": 1
+ },
+ {
+  "id": 304,
+  "assembly": "System.Runtime.CompilerServices.Unsafe",
+  "path": "/Users/bytedance/zhome/ilspy-lite/ILSpy-tests/dotnet/legacy/System.Runtime.CompilerServices.Unsafe.dll",
+  "bodies": 36,
+  "decompiled": 1
+ }
+]
