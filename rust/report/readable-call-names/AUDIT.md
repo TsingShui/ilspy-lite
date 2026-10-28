@@ -66,3 +66,27 @@ prints while still failing on any remaining unexecutable helper. Neither change
 weakens a check; the allocation adapter still refuses a skipped selection.
 
 No input code was executed; only owned fixtures were.
+
+## Follow-up: constructor owner spelling
+
+Reviewing a real NUnit fixture exposed two defects in the first version of this
+change, both now fixed and covered:
+
+1. A `newobj` records its member as `.ctor`, which the identifier filter rejected,
+   so constructor calls kept the helper form. The filter now accepts `.ctor` for a
+   constructor and still rejects a generic-argument member spelling such as
+   `OwnerEcho<!0>`.
+2. The recorded owner carries metadata notation (`class [mscorlib]...`,
+   ``List`1``, `/` for nesting). `short_owner` now drops the `class`/`valuetype`
+   prefix, the `[Assembly]` qualifiers and the arity marker, and spells nesting
+   with `.`, so the output is `new System.Collections.Generic.List<string>()`
+   instead of `new class [mscorlib]System.Collections.Generic.List`1<string>()`.
+
+`classes::readable_constructor_calls_spell_the_owner_without_metadata_qualifiers`
+asserts that no `new class `, `new valuetype `, `new [` or `` `1< `` spelling
+survives. A whole-image scan of `nunit.testdata.dll` reports the same
+802 Decompiled / 12 Partial / 1 Declaration before and after the change, so the
+fix is presentation-only.
+
+Rust: 502 tests, `cargo fmt --check` and clippy `-D warnings` pass; the six owned
+behaviour drivers pass unchanged.

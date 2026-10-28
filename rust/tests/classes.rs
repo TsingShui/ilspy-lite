@@ -456,3 +456,20 @@ fn readable_calls_name_members_from_the_evidence_token_and_keep_the_helper_in_de
         );
     }
 }
+
+#[test]
+fn readable_constructor_calls_spell_the_owner_without_metadata_qualifiers() {
+    for bytes in IMAGES {
+        let readable =
+            decompile_with_style(bytes, token(bytes, "Unsupported"), OutputStyle::Readable)
+                .unwrap();
+        assert!(!readable.text.contains("new class "), "{}", readable.text);
+        assert!(
+            !readable.text.contains("new valuetype "),
+            "{}",
+            readable.text
+        );
+        assert!(!readable.text.contains("new ["), "{}", readable.text);
+        assert!(!readable.text.contains("`1<"), "{}", readable.text);
+    }
+}

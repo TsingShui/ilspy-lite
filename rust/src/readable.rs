@@ -856,12 +856,15 @@ fn name_calls(line: &str, names: &BTreeMap<u32, (String, String, bool)>) -> Stri
             // The exact token stays inline so the call target is still auditable
             // from the readable view alone.
             let token_note = format!(" /* __cil_{kind}_{token:08X} */");
-            // A member whose spelling carries generic arguments or scope
-            // variables (`OwnerEcho<!0>`) cannot be written as a plain call, so it
-            // keeps its helper form instead of producing invalid output.
-            if !member
-                .bytes()
-                .all(|b| b == b'_' || b.is_ascii_alphanumeric() || b == b'@')
+            // A constructor is spelled `new Owner(...)`, so its recorded member
+            // `.ctor` is expected. Any other member carrying generic arguments or
+            // scope variables (`OwnerEcho<!0>`) cannot be written as a plain call
+            // and keeps its helper form instead of producing invalid output.
+            let constructor_member = *constructor || member == ".ctor";
+            if !constructor_member
+                && !member
+                    .bytes()
+                    .all(|b| b == b'_' || b.is_ascii_alphanumeric() || b == b'@')
             {
                 return None;
             }
@@ -902,16 +905,40 @@ fn name_calls(line: &str, names: &BTreeMap<u32, (String, String, bool)>) -> Stri
 /// A short name would be wrong when the type is not in scope, so the whole
 /// metadata name is kept. The `[Assembly]` qualifier only records which
 /// reference supplied the identity and is not part of the type name.
+/// C# spelling of a metadata owner recorded in the evidence comments.
+///
+/// The recorded name carries `class`/`valuetype`, `[Assembly]` qualifiers and
+/// arity markers; none of them belong in a type reference, and nested types use
+/// `/` where C# needs `.`.
 fn short_owner(owner: &str) -> String {
-    let owner = owner.trim();
-    match owner.strip_prefix('[') {
-        Some(rest) => rest
-            .split_once(']')
-            .map_or(owner, |(_, name)| name)
-            .trim()
-            .to_owned(),
-        None => owner.to_owned(),
+    let mut owner = owner.trim();
+    for prefix in ["class ", "valuetype "] {
+        if let Some(rest) = owner.strip_prefix(prefix) {
+            owner = rest.trim();
+            break;
+        }
     }
+    let mut out = String::with_capacity(owner.len());
+    let mut chars = owner.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '[' => {
+                for ch in chars.by_ref() {
+                    if ch == ']' {
+                        break;
+                    }
+                }
+            }
+            '`' => {
+                while chars.peek().is_some_and(|ch| ch.is_ascii_digit()) {
+                    chars.next();
+                }
+            }
+            '/' => out.push('.'),
+            _ => out.push(c),
+        }
+    }
+    out
 }
 
 fn generated_value(name: &str) -> bool {
