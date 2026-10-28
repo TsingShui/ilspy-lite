@@ -100,7 +100,7 @@ def main():
             # token as a trailing comment, so the comment is dropped and the
             # constructor call itself is the executable form.
             body = re.sub(
-                r"(?m)^(\s*)(.+?) (\w+) = new (.+?)\(([^()]*)\) /\* __cil_newobj_([0-9A-F]{8}) \*/;$",
+                r"(?m)^(\s*)(.+?) (\w+) = new (.+?)\(([^()]*)\) /\* newobj 0x([0-9A-F]{8}) \*/;$",
                 allocate_named,
                 body,
             )

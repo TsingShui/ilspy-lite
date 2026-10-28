@@ -50,7 +50,7 @@ fn callvirt_retains_null_check_and_target_runtime_dispatch() {
         .unwrap();
         assert_eq!(readable.status, details.status);
         assert!(
-            readable.text.contains("__cil_callvirt_"),
+            readable.text.contains("/* callvirt 0x"),
             "{}",
             readable.text
         );

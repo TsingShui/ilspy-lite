@@ -44,7 +44,7 @@ fn abstract_interface_dispatch_uses_the_constructed_interface_token() {
         .unwrap();
         assert_eq!(interface.status, Status::Decompiled, "{}", interface.text);
         assert!(
-            interface.text.contains("__cil_callvirt_"),
+            interface.text.contains("/* callvirt 0x"),
             "{}",
             interface.text
         );

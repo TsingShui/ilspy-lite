@@ -79,9 +79,15 @@ fn declared_reference_constructors_allocate_one_fresh_identity() {
                         result.text
                     );
                 }
+                // The readable view spells the allocation; the details view keeps
+                // the exact helper, so the "exactly once" count is per style.
+                let allocations = if style == OutputStyle::Details {
+                    result.text.matches("__cil_newobj_").count()
+                } else {
+                    result.text.matches("new ExternalAllocations.").count()
+                };
                 assert_eq!(
-                    result.text.matches("__cil_newobj_").count(),
-                    1,
+                    allocations, 1,
                     "{name} must allocate exactly once: {}",
                     result.text
                 );
@@ -99,7 +105,11 @@ fn foreign_static_reads_keep_exact_storage_without_allocating() {
             .unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
         assert!(result.text.contains("__cil_ldsfld_"), "{}", result.text);
-        assert!(!result.text.contains("__cil_newobj_"), "{}", result.text);
+        assert!(
+            !result.text.contains(" new ExternalAllocations."),
+            "{}",
+            result.text
+        );
     }
 }
 
@@ -114,7 +124,11 @@ fn gated_external_owners_keep_their_own_reason() {
             .decompile(token(bytes, "MakeBox"), OutputStyle::Readable)
             .unwrap();
         assert_eq!(promoted.status, Status::Decompiled, "{}", promoted.text);
-        assert!(promoted.text.contains("__cil_newobj_"), "{}", promoted.text);
+        assert!(
+            promoted.text.contains("new ExternalAllocations.Box<int>("),
+            "{}",
+            promoted.text
+        );
         // A referenced value type's identity is primed from the member owners, so
         // the allocation and field read are recovered independently of scan order.
         let promoted = context

@@ -441,9 +441,7 @@ fn readable_calls_name_members_from_the_evidence_token_and_keep_the_helper_in_de
         // The exact token stays inline as a comment, so the call target is still
         // auditable from the readable view; the configuration decides its value.
         assert!(
-            readable
-                .text
-                .contains("ToUpperInvariant() /* __cil_callvirt_"),
+            readable.text.contains("ToUpperInvariant() /* callvirt 0x"),
             "{}",
             readable.text
         );

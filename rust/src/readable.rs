@@ -117,9 +117,17 @@ fn render_type(
             out.push('\n');
         }
     };
+    // Every body in this view is scanned, not only the declaring type's: a call
+    // from a sibling type would otherwise reference an accessor that is no longer
+    // declared.
+    let every_body = bodies
+        .values()
+        .map(|body| body.text.as_str())
+        .collect::<Vec<_>>()
+        .join("\n");
     let mut methods = String::new();
     render_methods(&mut methods, &accessor_tokens);
-    // An accessor whose name survives in the rendered methods is still called.
+    // An accessor whose name survives in any body is still called.
     let mut keep: BTreeSet<u32> = BTreeSet::new();
     for &(token, event) in &declared {
         if let Ok(rows) = image.md.tables().semantics_for(Token(token)) {
@@ -134,7 +142,8 @@ fn render_type(
                     continue;
                 };
                 let rendered = format!("{}(", ident(name));
-                if methods.contains(&rendered) {
+                let exact = format!("_{:08X}", 0x06000000 | row.method.get());
+                if methods.contains(&rendered) || every_body.contains(&exact) {
                     keep.insert(0x06000000 | row.method.get());
                 }
             }
@@ -1011,11 +1020,24 @@ fn name_calls(line: &str, names: &BTreeMap<u32, (String, String, bool)>) -> Stri
             // `methodspec` also needs the instantiation spelled out.
             // The exact token stays inline so the call target is still auditable
             // from the readable view alone.
-            let token_note = format!(" /* __cil_{kind}_{token:08X} */");
+            // The note names the operation and its exact token, so the call target
+            // stays auditable from the readable view. It deliberately does not
+            // repeat the helper vocabulary, which belongs to `--details`.
+            let token_note = format!(" /* {kind} 0x{token:08X} */");
             // A constructor is spelled `new Owner(...)`, so its recorded member
             // `.ctor` is expected. Any other member carrying generic arguments or
             // scope variables (`OwnerEcho<!0>`) cannot be written as a plain call
             // and keeps its helper form instead of producing invalid output.
+            // An accessor name only means a property when its association was
+            // proven; C# cannot call `get_X` explicitly, so an unproven accessor
+            // keeps the exact helper form.
+            if kind != "newobj"
+                && ["get_", "set_", "add_", "remove_"]
+                    .iter()
+                    .any(|prefix| member.starts_with(prefix))
+            {
+                return None;
+            }
             let constructor_member = *constructor || member == ".ctor";
             if !constructor_member
                 && !member
@@ -1093,6 +1115,22 @@ fn short_owner(owner: &str) -> String {
             '/' => out.push('.'),
             _ => out.push(c),
         }
+    }
+    // The recorded name is metadata notation; a constructed owner still has to
+    // name its arguments with C# primitive keywords.
+    for (metadata, keyword) in [
+        ("int32", "int"),
+        ("int64", "long"),
+        ("uint32", "uint"),
+        ("uint64", "ulong"),
+        ("int16", "short"),
+        ("uint16", "ushort"),
+        ("int8", "sbyte"),
+        ("uint8", "byte"),
+        ("float32", "float"),
+        ("float64", "double"),
+    ] {
+        out = out.replace(metadata, keyword);
     }
     out
 }

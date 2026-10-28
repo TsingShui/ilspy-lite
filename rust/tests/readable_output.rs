@@ -33,7 +33,11 @@ fn readable_class_view_uses_declarations_without_dumping_diagnostic_records() {
     );
     assert!(!readable.text.contains("// IL fallback:"));
     assert!(!readable.text.contains("see --details"));
-    assert!(readable.text.contains("__cil_callvirt_"));
+    assert!(
+        readable.text.contains("/* callvirt 0x"),
+        "{}",
+        readable.text
+    );
     let good = readable
         .text
         .split("Good(int value)")
@@ -618,7 +622,7 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
     let text = String::from_utf8(default.stdout).unwrap();
     assert!(text.contains("public static class Mixed"));
     let body = text.split("Unsupported(string value)").nth(1).unwrap();
-    assert!(body.contains("__cil_callvirt_"), "{body}");
+    assert!(body.contains("/* callvirt 0x"), "{body}");
     assert!(!body.contains("// IL fallback:") && !body.contains("see --details"));
     assert_eq!(
         String::from_utf8(details.stdout).unwrap(),

@@ -19,7 +19,7 @@ fn core_exception_constructors_keep_their_exact_overload_and_arguments() {
                 .unwrap();
             let result = decompile_with_style(bytes, method.token, OutputStyle::Readable).unwrap();
             assert_eq!(result.status, Status::Decompiled, "{name}: {}", result.text);
-            assert!(result.text.contains("__cil_newobj_"), "{}", result.text);
+            assert!(result.text.contains("new "), "{}", result.text);
         }
     }
 }

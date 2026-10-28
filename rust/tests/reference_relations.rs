@@ -800,7 +800,7 @@ fn local_constructed_interface_dispatch_uses_the_exact_token() {
         )
         .unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
-        assert!(result.text.contains("__cil_callvirt_"), "{}", result.text);
+        assert!(result.text.contains("/* callvirt 0x"), "{}", result.text);
         assert!(result.text.contains("ITransform"), "{}", result.text);
     }
 }
@@ -953,7 +953,7 @@ fn referenced_value_type_construction_keeps_value_identity() {
             )
             .unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
-        assert!(result.text.contains("__cil_newobj_"), "{}", result.text);
+        assert!(result.text.contains("new "), "{}", result.text);
         assert!(
             result.text.contains("RelationLibrary.Seeded"),
             "{}",
@@ -1262,7 +1262,8 @@ fn external_generic_instance_calls_need_the_selected_definition_flags() {
         let present = context.decompile(method, OutputStyle::Readable).unwrap();
         assert_eq!(present.status, Status::Decompiled, "{}", present.text);
         assert!(
-            present.text.contains("__cil_callvirt_")
+            present.text.contains("/* callvirt 0x")
+                || present.text.contains("__cil_callvirt_")
                 || present.text.contains("__cil_methodspec_call_"),
             "{}",
             present.text
