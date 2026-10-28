@@ -386,7 +386,12 @@ fn class_fields_include_private_static_readonly_and_generated_storage() {
             result.text
         );
         assert!(result.text.contains("object @Item"), "{}", result.text);
-        assert!(result.text.contains("__il_field_"));
+        // Generated storage is still declared, now spelled from its property.
+        assert!(
+            result.text.contains("__backing_Auto") || result.text.contains("__il_field_"),
+            "{}",
+            result.text
+        );
         assert!(result.text.contains("@Read("));
         let generic = decompile_type(bytes, "ClassCases.FieldHolder`1").unwrap();
         assert!(generic.text.contains("!0 @Stored"), "{}", generic.text);

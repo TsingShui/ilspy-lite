@@ -162,11 +162,15 @@ fn direct_instance_calls_and_backing_fields_preserve_identity() {
                 .unwrap();
             let result = decompile(bytes, method.token).unwrap();
             assert_eq!(result.status, Status::Decompiled, "{}", result.text);
-            assert!(result.text.contains(if name == "get_Count" {
-                "__il_field_"
-            } else {
-                "__cil_direct_"
-            }));
+            assert!(
+                result.text.contains(if name == "get_Count" {
+                    "__backing_Count"
+                } else {
+                    "__cil_direct_"
+                }),
+                "{name}: {}",
+                result.text
+            );
         }
     }
 }

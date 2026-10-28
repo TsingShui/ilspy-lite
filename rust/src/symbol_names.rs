@@ -172,6 +172,12 @@ fn scoped_lambda_name(image: &Image<'_>, token: Token, candidate: &str) -> Resul
 }
 
 fn bare(raw: &str) -> String {
+    // An explicit interface implementation is named `Namespace.Interface.Member`.
+    // Every part is an identifier, so the dotted spelling is already the C#
+    // source form and needs no encoding.
+    if let Some(dotted) = dotted_identifiers(raw) {
+        return dotted;
+    }
     if simple(raw) && !reserved(raw) {
         raw.into()
     } else {
@@ -180,6 +186,21 @@ fn bare(raw: &str) -> String {
             raw.bytes().map(|b| format!("{b:02X}")).collect::<String>()
         )
     }
+}
+
+fn dotted_identifiers(raw: &str) -> Option<String> {
+    let parts = raw.split('.').collect::<Vec<_>>();
+    if parts.len() < 2 {
+        return None;
+    }
+    let mut spelled = Vec::with_capacity(parts.len());
+    for part in parts {
+        if part.is_empty() || !simple(part) || reserved(part) {
+            return None;
+        }
+        spelled.push(ident(part));
+    }
+    Some(spelled.join("."))
 }
 
 fn simple(raw: &str) -> bool {
@@ -196,7 +217,16 @@ fn reserved(raw: &str) -> bool {
         .any(|prefix| raw.starts_with(prefix))
 }
 
+/// Readable spelling of a field name.
+///
+/// A compiler-generated backing field is `<Property>k__BackingField`; the C#
+/// property already carries that name, so the field is spelled from it instead
+/// of from an opaque token. Anything else unusual keeps the token alias, which
+/// stays unique and traceable.
 pub(crate) fn field(token: u32, raw: &str, escaped: bool) -> String {
+    if let Some(property) = backing_field_property(raw) {
+        return format!("__backing_{property}");
+    }
     if aliased(raw) {
         format!("__il_field_{token:08X}")
     } else if escaped {
@@ -204,6 +234,12 @@ pub(crate) fn field(token: u32, raw: &str, escaped: bool) -> String {
     } else {
         ident(raw)
     }
+}
+
+fn backing_field_property(raw: &str) -> Option<String> {
+    let property = raw.strip_prefix('<')?.strip_suffix(">k__BackingField")?;
+    let property = property.rsplit('.').next().unwrap_or(property);
+    (!property.is_empty() && simple(property)).then(|| property.to_owned())
 }
 
 pub(crate) fn namespace(raw: &str) -> String {

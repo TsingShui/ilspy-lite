@@ -14,13 +14,23 @@ impl DependencyContext {
         &self,
         caller: u32,
         target: u32,
-    ) -> Result<Option<(PropertyAccessor, &'static str)>> {
+    ) -> Result<Option<(PropertyAccessor, String)>> {
         let Some(property) = self.resolve_property_accessor(target)? else {
             return Ok(None);
         };
         let main = self.binding_image(0)?;
         let caller_row = main.row(caller)?;
-        if caller_row.is_static() || !property.owner.exact_identity {
+        if !property.owner.exact_identity {
+            return Err("property syntax needs an exact instance lookup".into());
+        }
+        // A static property has no receiver and no dispatch, so a static caller is
+        // admissible as long as the accessor is static too; the instance rules
+        // below stay in force for every other case.
+        let static_accessor = match self.resolve_method(target) {
+            Ok(method) => method.flags & 0x10 != 0,
+            Err(_) => false,
+        };
+        if caller_row.is_static() && !static_accessor {
             return Err("property syntax needs an exact instance lookup".into());
         }
         let caller_owner = main
@@ -43,9 +53,21 @@ impl DependencyContext {
             .iter()
             .filter(|i| matches!(i.operand, Operand::Method(t) if t.0 == target))
             .collect::<Vec<_>>();
-        if calls.is_empty() || calls.iter().any(|i| i.opcode.canonical().name() != "call") {
-            return Err("property syntax needs exact direct call dispatch".into());
+        // ILSpy writes an accessor whose parameters fit member-access syntax as a
+        // property access and never looks at the opcode for that decision; only the
+        // qualifier depends on dispatch (CSharp/ExpressionBuilder.cs
+        // RequiresQualifier + TranslateTarget's ShouldUseBaseReference).
+        if calls.is_empty()
+            || calls
+                .iter()
+                .any(|i| !matches!(i.opcode.canonical().name(), "call" | "callvirt"))
+        {
+            return Err("property syntax needs an exact accessor call".into());
         }
+        // `call` on `this` against a member declared outside the current type becomes
+        // a base reference; ILSpy only spells `base.` when that call is non-virtual
+        // and the member is overridable.
+        let non_virtual = calls.iter().all(|i| i.opcode.canonical().name() == "call");
         if main.md.strings().str(caller_row.name)? == ".ctor" {
             let initialized = instructions.first().is_some_and(|i| {
                 i.opcode.canonical().name() == "ldarg" && matches!(i.operand, Operand::Var(0))
@@ -101,24 +123,39 @@ impl DependencyContext {
             }
         }
         let caller_type = self.resolve_type(caller_owner)?;
-        let qualifier = if method.module == 0 && property.owner.definition.token == caller_owner {
-            if method.flags & 0x40 != 0 {
-                return Err("direct virtual this accessor needs exact call notation".into());
+        // Qualifier rules, in ILSpy's order: a static member is written bare only in
+        // its own or a containing type; an instance accessor reached through `this`
+        // is bare unless a non-virtual call on an overridable member needs `base.`.
+        let declared_here = method.module == 0 && property.owner.definition.token == caller_owner;
+        let qualifier: String = if static_accessor {
+            if declared_here {
+                String::new()
+            } else {
+                property.owner.name.replace('/', ".")
             }
-            "this"
+        } else if declared_here {
+            String::new()
+        } else if property.owner.flags & 0x20 != 0 {
+            // An interface accessor reached on `this` has no C# spelling here; an
+            // explicit-implementation name is not an instance access.
+            return Err("interface property access needs an explicit interface target".into());
         } else {
             let extends = main.md.tables().type_def(caller_owner & 0xffffff)?.extends;
             let base = self.resolve_type(extends.0)?;
             if !base.exact_identity || base.definition != property.owner.definition {
                 return Err("property syntax target is not the immediate base definition".into());
             }
-            "base"
+            if non_virtual && method.flags & 0x40 != 0 {
+                "base".to_owned()
+            } else {
+                String::new()
+            }
         };
         let same_assembly = caller_type.definition.assembly == property.owner.definition.assembly;
         let accessible = match method.flags & 7 {
             4..=6 => true,
             2 | 3 => same_assembly,
-            1 => qualifier == "this",
+            1 => qualifier.is_empty() || qualifier == "base",
             _ => false,
         };
         if !accessible {

@@ -82,23 +82,104 @@ fn render_type(
     if !ty.fields.is_empty() && !ty.methods.is_empty() {
         out.push('\n');
     }
-    for (index, &token) in ty.methods.iter().enumerate() {
-        let result = &bodies[&token];
-        render_method(view, token, ty.token, result, indent + 1, out);
-        if index + 1 != ty.methods.len() {
-            out.push('\n');
-        }
-    }
-    // Accessors remain methods; no automatic-property or event semantics are invented.
-    for (&token, kind) in ty
+    // Accessor methods are represented by their property or event declaration, so
+    // their bodies are not repeated as methods. A declaration is only emitted when
+    // no body of this type still calls the accessor as a method; otherwise the
+    // accessor methods stay and the exact relationship comment names the property.
+    let mut accessor_tokens: BTreeSet<u32> = BTreeSet::new();
+    let mut declared: Vec<(u32, bool)> = Vec::new();
+    for (&token, event) in ty
         .properties
         .iter()
-        .map(|t| (t, "property"))
-        .chain(ty.events.iter().map(|t| (t, "event")))
+        .map(|t| (t, false))
+        .chain(ty.events.iter().map(|t| (t, true)))
     {
-        let relationship = accessor_summary(image, token, ty.token)
-            .unwrap_or_else(|_| format!("// Unreadable {kind} relationship; see --details."));
-        line(out, indent + 1, &relationship);
+        let mut accessors = BTreeSet::new();
+        if let Ok(rows) = image.md.tables().semantics_for(Token(token)) {
+            for rid in rows {
+                if let Ok(row) = image.md.tables().method_semantics(rid) {
+                    accessors.insert(0x06000000 | row.method.get());
+                }
+            }
+        }
+        if accessors.is_empty() {
+            continue;
+        }
+        accessor_tokens.extend(accessors);
+        declared.push((token, event));
+    }
+    let render_methods = |out: &mut String, skip: &BTreeSet<u32>| {
+        for &token in &ty.methods {
+            if skip.contains(&token) {
+                continue;
+            }
+            render_method(view, token, ty.token, &bodies[&token], indent + 1, out);
+            out.push('\n');
+        }
+    };
+    let mut methods = String::new();
+    render_methods(&mut methods, &accessor_tokens);
+    // An accessor whose name survives in the rendered methods is still called.
+    let mut keep: BTreeSet<u32> = BTreeSet::new();
+    for &(token, event) in &declared {
+        if let Ok(rows) = image.md.tables().semantics_for(Token(token)) {
+            for rid in rows {
+                let Ok(row) = image.md.tables().method_semantics(rid) else {
+                    continue;
+                };
+                let Ok(method_row) = image.row(0x06000000 | row.method.get()) else {
+                    continue;
+                };
+                let Ok(name) = image.md.strings().str(method_row.name) else {
+                    continue;
+                };
+                let rendered = format!("{}(", ident(name));
+                if methods.contains(&rendered) {
+                    keep.insert(0x06000000 | row.method.get());
+                }
+            }
+        }
+        let _ = event;
+    }
+    if !keep.is_empty() {
+        methods.clear();
+        let mut skip = accessor_tokens.clone();
+        skip.retain(|token| !keep.contains(token));
+        render_methods(&mut methods, &skip);
+    }
+    out.push_str(&methods);
+    for &(token, _) in &declared {
+        let folded_away = image
+            .md
+            .tables()
+            .semantics_for(Token(token))
+            .map(|rows| {
+                rows.into_iter().all(|rid| {
+                    image
+                        .md
+                        .tables()
+                        .method_semantics(rid)
+                        .is_ok_and(|row| !keep.contains(&(0x06000000 | row.method.get())))
+                })
+            })
+            .unwrap_or(false);
+        match accessor_declaration(image, token, ty.token) {
+            Ok(Some(declaration)) if folded_away => {
+                line(out, indent + 1, &declaration);
+                out.push('\n');
+            }
+            _ => {
+                let kind = if token >> 24 == 0x14 {
+                    "event"
+                } else {
+                    "property"
+                };
+                let relationship = accessor_summary(image, token, ty.token).unwrap_or_else(|_| {
+                    format!("// Unreadable {kind} relationship; see --details.")
+                });
+                line(out, indent + 1, &relationship);
+            }
+        }
     }
     for nested in types {
         if image
@@ -169,6 +250,73 @@ fn accessor_summary(image: &Image<'_>, token: u32, owner: u32) -> Result<String>
         ));
     }
     Ok(format!("// {kind} {signature} {{ {} }}", methods.join(" ")))
+}
+
+/// Which property or event an accessor belongs to, and in which role.
+///
+/// Returns `None` for an ordinary method. `Some((true, role))` means the accessor
+/// is a plain `get`/`set`/`add`/`remove` of a property or event declared on
+/// `owner`; `Some((false, _))` means it is associated but not representable as a
+/// declaration.
+/// Render one property or event as a declaration, or `None` when it cannot be.
+fn accessor_declaration(image: &Image<'_>, token: u32, owner: u32) -> Result<Option<String>> {
+    let tables = image.md.tables();
+    let event = token >> 24 == 0x14;
+    let name = if event {
+        ident(
+            image
+                .md
+                .strings()
+                .str(tables.event(token & 0xffffff)?.name)?,
+        )
+    } else {
+        ident(
+            image
+                .md
+                .strings()
+                .str(tables.property(token & 0xffffff)?.name)?,
+        )
+    };
+    let mut get = false;
+    let mut set = false;
+    let mut add = false;
+    let mut remove = false;
+    let mut kind = None;
+    for rid in tables.semantics_for(Token(token))? {
+        let row = tables.method_semantics(rid)?;
+        match (event, row.semantics) {
+            (false, 1) => set = true,
+            (false, 2) => get = true,
+            (true, 8) => add = true,
+            (true, 16) => remove = true,
+            _ => kind = Some(()),
+        }
+    }
+    if kind.is_some() {
+        return Ok(None);
+    }
+    if event {
+        if !(add && remove) {
+            return Ok(None);
+        }
+        let row = tables.event(token & 0xffffff)?;
+        return Ok(Some(format!(
+            "public event {} {name};",
+            named_type_with_owners(image, row.event_type, owner, 0)?
+        )));
+    }
+    let row = tables.property(token & 0xffffff)?;
+    let sig = cildec::PropertySig::parse(image.md.blobs().get(row.type_signature)?)?;
+    if !sig.params.is_empty() || !get && !set {
+        return Ok(None);
+    }
+    let ty = cs_param(image, &sig.return_type, owner, 0)?;
+    let accessors = match (get, set) {
+        (true, true) => "get; set;",
+        (true, false) => "get;",
+        _ => "set;",
+    };
+    Ok(Some(format!("public {ty} {name} {{ {accessors} }}")))
 }
 
 fn type_header(image: &Image<'_>, ty: &SelectedType) -> Result<String> {
@@ -469,6 +617,15 @@ fn render_method(
         header.push_str(&initializer);
         body = remaining.to_string();
     }
+    // Names come last so the earlier folds still see the exact call tokens they
+    // resolve; only the display of the remaining calls changes here.
+    if result.status == Status::Decompiled {
+        let calls = call_names(&result.text);
+        body = body
+            .lines()
+            .map(|line| name_calls(line, &calls) + "\n")
+            .collect();
+    }
     if let Ok(row) = image.row(token) {
         if let Ok(raw) = image.md.strings().str(row.name) {
             if let Some(comment) = crate::symbol_names::method_comment(raw) {
@@ -649,7 +806,6 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         return "// Unreadable rendered body; see --details.".into();
     };
     let body = body.strip_suffix("}\n").unwrap_or(body);
-    let calls = call_names(text);
     let lines: Vec<String> = body
         .lines()
         .map(str::trim)
@@ -670,7 +826,7 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
     };
     lines
         .into_iter()
-        .map(|line| name_calls(&inline_literals(&rewrite(&line, names)), &calls) + "\n")
+        .map(|line| inline_literals(&rewrite(&line, names)) + "\n")
         .collect()
 }
 

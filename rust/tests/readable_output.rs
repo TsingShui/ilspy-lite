@@ -498,52 +498,56 @@ fn backing_field_declarations_and_accessors_use_the_same_token_alias() {
             md.strings().str(row.as_ref().unwrap().name).unwrap() == "<Auto>k__BackingField"
         })
         .unwrap();
-    let alias = format!("__il_field_{:08X}", 0x04000000 | rid);
+    // The backing field is spelled from the property it belongs to; the opaque
+    // token and the hex-encoded metadata name must both be gone.
+    let _ = rid;
     assert!(
-        result.text.contains(&format!("private int {alias};")),
+        result.text.contains("private int __backing_Auto;"),
         "{}",
         result.text
     );
-    assert!(
-        result.text.contains(&format!("this.{alias}")),
-        "{}",
-        result.text
-    );
+    assert!(!result.text.contains("__il_field_"), "{}", result.text);
     assert!(!result.text.contains("__name_3C4175746F"));
 }
 
 #[test]
 fn property_and_event_relationships_show_names_types_and_accessors_not_tokens() {
+    // A get-only property is declared directly; the accessor method is folded
+    // into it, so the name and type stay visible without any token.
     let properties =
         decompile_type_with_style(IMAGE, "ClassCases.Properties", OutputStyle::Readable).unwrap();
     assert!(
-        properties
-            .text
-            .contains("// property int Only { get: get_Only; }"),
+        properties.text.contains("public int Only { get; }"),
         "{}",
         properties.text
     );
+    assert!(!properties.text.contains("get_Only"), "{}", properties.text);
+    assert!(!properties.text.contains("relationship 0x"));
+    // An indexer has parameters, so it keeps the exact relationship comment
+    // instead of a declaration that would have to invent a syntax.
     assert!(
         properties.text.contains("// property int this[int index0]"),
         "{}",
         properties.text
     );
-    assert!(!properties.text.contains("relationship 0x"));
     let events =
         decompile_type_with_style(IMAGE, "ClassCases.Events", OutputStyle::Readable).unwrap();
     assert!(
-        events.text.contains(
-            "// event System.EventHandler External { add: add_External; remove: remove_External; }"
-        ),
+        events
+            .text
+            .contains("public event System.EventHandler External;"),
         "{}",
         events.text
     );
+    assert!(!events.text.contains("add_External"), "{}", events.text);
     assert!(!events.text.contains("relationship 0x"));
     let generic =
         decompile_type_with_style(IMAGE, "ClassCases.GenericEvents`1", OutputStyle::Readable)
             .unwrap();
     assert!(
-        generic.text.contains("// event System.Action<T> Updated"),
+        generic
+            .text
+            .contains("public event System.Action<T> Updated;"),
         "{}",
         generic.text
     );
@@ -620,4 +624,21 @@ fn cli_defaults_to_readable_and_details_preserves_the_complete_analysis() {
         String::from_utf8(details.stdout).unwrap(),
         decompile_type(IMAGE, "ClassCases.Mixed").unwrap().text
     );
+}
+
+#[test]
+fn readable_view_renders_properties_and_names_backing_fields() {
+    {
+        let bytes = IMAGE;
+        let readable =
+            decompile_type_with_style(bytes, "ClassCases.Fields", OutputStyle::Readable).unwrap();
+        assert!(
+            readable.text.contains("public int Auto { get; set; }"),
+            "{}",
+            readable.text
+        );
+        assert!(!readable.text.contains("get_Auto"), "{}", readable.text);
+        assert!(!readable.text.contains("__il_field_"), "{}", readable.text);
+        assert!(!readable.text.contains("// property "), "{}", readable.text);
+    }
 }

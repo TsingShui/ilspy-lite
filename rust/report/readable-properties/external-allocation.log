@@ -1,0 +1,3 @@
+release: External allocation behavior: 41 comparisons, 13 recovered methods; owner type, field contents, argument order, identity and exceptions match. [skipped []]
+debug: External allocation behavior: 41 comparisons, 13 recovered methods; owner type, field contents, argument order, identity and exceptions match. [skipped []]
+{"compile_ms": 486, "rows": [{"configuration": "release", "behavior": "External allocation behavior: 41 comparisons, 13 recovered methods; owner type, field contents, argument order, identity and exceptions match.", "skipped": []}, {"configuration": "debug", "behavior": "External allocation behavior: 41 comparisons, 13 recovered methods; owner type, field contents, argument order, identity and exceptions match.", "skipped": []}]}

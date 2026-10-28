@@ -21,9 +21,14 @@ pub(super) fn rewrite(context: &DependencyContext, caller: u32, body: &str) -> S
                 position = end;
                 continue;
             }
-            let prefix = ["__cil_memberref_call_", "__cil_direct_"]
-                .into_iter()
-                .find(|prefix| rest.starts_with(prefix) && helper_slot(statement, position));
+            let prefix = [
+                "__cil_memberref_call_",
+                "__cil_direct_",
+                "__cil_callvirt_",
+                "__cil_static_call_",
+            ]
+            .into_iter()
+            .find(|prefix| rest.starts_with(prefix) && helper_slot(statement, position));
             if let Some(prefix) = prefix {
                 let token_start = position + prefix.len();
                 if let Some(hex) = statement.get(token_start..token_start + 8) {
@@ -31,34 +36,42 @@ pub(super) fn rewrite(context: &DependencyContext, caller: u32, body: &str) -> S
                         u32::from_str_radix(hex, 16),
                         call_arguments(statement, token_start + 8),
                     ) {
-                        if arguments.first() == Some(&"this") {
-                            match context.property_presentation(caller, target) {
-                                Ok(Some((property, qualifier))) => {
-                                    let access =
-                                        format!("{qualifier}.{}", super::ident(&property.name));
-                                    if property.role == "get" && arguments.len() == 1 {
-                                        rendered.push_str(&access);
-                                        changed = true;
-                                        position = end;
-                                        continue;
-                                    }
-                                    if property.role == "set"
-                                        && arguments.len() == 2
-                                        && position == 0
-                                        && &statement[end..] == ";"
-                                    {
-                                        rendered.push_str(&format!("{access} = {};", arguments[1]));
-                                        position = statement.len();
-                                        continue;
-                                    }
+                        // `this.Get()` and `this.get_X()` both name the same accessor.
+                        // A static accessor is called without a receiver, so its
+                        // arguments are empty and C# spells the bare name.
+                        let receiver_this = arguments.first() == Some(&"this")
+                            || prefix == "__cil_static_call_" && arguments.len() <= 1;
+                        match context.property_presentation(caller, target) {
+                            Ok(Some((property, qualifier))) if receiver_this => {
+                                let name = super::ident(&property.name);
+                                let access =
+                                    if qualifier.is_empty() || prefix == "__cil_static_call_" {
+                                        name
+                                    } else {
+                                        format!("{qualifier}.{name}")
+                                    };
+                                if property.role == "get" && arguments.len() == 1 {
+                                    rendered.push_str(&access);
+                                    changed = true;
+                                    position = end;
+                                    continue;
                                 }
-                                Ok(None) => {}
-                                Err(error) if reported.insert(target) => notes.push(format!(
-                                    "// Exact call 0x{target:08X} kept: {}.",
-                                    escape_line(&error.to_string())
-                                )),
-                                Err(_) => {}
+                                if property.role == "set"
+                                    && arguments.len() == 2
+                                    && position == 0
+                                    && &statement[end..] == ";"
+                                {
+                                    rendered.push_str(&format!("{access} = {};", arguments[1]));
+                                    position = statement.len();
+                                    continue;
+                                }
                             }
+                            Ok(Some(_)) | Ok(None) => {}
+                            Err(error) if reported.insert(target) => notes.push(format!(
+                                "// Exact call 0x{target:08X} kept: {}.",
+                                escape_line(&error.to_string())
+                            )),
+                            Err(_) => {}
                         }
                     }
                 }

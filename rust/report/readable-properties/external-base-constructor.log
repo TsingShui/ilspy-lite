@@ -1,0 +1,4 @@
+release call: 12 comparisons; exact base constructor, arguments, receiver state, trace and exceptions match
+release callvirt: 12 comparisons; exact base constructor, arguments, receiver state, trace and exceptions match
+debug call: 12 comparisons; exact base constructor, arguments, receiver state, trace and exceptions match
+debug callvirt: 12 comparisons; exact base constructor, arguments, receiver state, trace and exceptions match
