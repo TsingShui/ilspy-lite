@@ -45,7 +45,8 @@ def main():
     rows = []
     for config in ("release", "debug"):
         fixture = ROOT / f"tests/fixtures/constrained-{config}.bin"
-        methods, support_bodies = {}, {}
+        methods, support_bodies, support_evidence, evidence = {}, {}, {}, {}
+        gated = []
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             match = re.search(r"(ConstrainedCases\.(?:Ops|Ledger|Host\S*))::([^\s(<]+)", signature)
@@ -53,15 +54,29 @@ def main():
             body = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"])
             if body.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("Owned constrained body not recovered: " + match[2] + body.stdout)
+            if re.search(r"<\d+>\(", signature) or re.search(r"![0-9]", body.stdout):
+                # The carrier is not generic, so a scope variable cannot be spelled.
+                gated.append(match[2] + ": generic scope variable")
+                continue
             (OUT / f"{config}-{token}.readable.txt").write_text(body.stdout)
+            details = support.run([args.cli, "decompile", fixture, "--method", token, "--details"])
+            if details.stderr != body.stderr:
+                raise ValueError("view changed admission for " + token)
+            (OUT / f"{config}-{token}.details.txt").write_text(details.stdout)
+            evidence[int(token, 16)] = details.stdout
             if not match[1].endswith("Ledger"): methods[int(token, 16)] = body.stdout
-            else: support_bodies[match[2]] = body.stdout
-        if len(methods) != 11 or set(support_bodies) != {"Argument", "Replace"}:
+            else:
+                support_bodies[match[2]] = body.stdout
+                support_evidence[match[2]] = details.stdout
+        # The carrier is non-generic, so a method whose body still names a scope
+        # variable is gated instead of silently dropped.
+        expected = 11 - len([g for g in gated if not g.startswith(("Argument", "Replace"))])
+        if len(methods) != expected or set(support_bodies) != {"Argument", "Replace"}:
             raise ValueError("Owned constrained selection drift")
         directives = []
         for token, body in methods.items():
             combined = body + support_bodies["Argument"]
-            if "__cil_methodspec_call_" in body: combined += support_bodies["Replace"]
+            if "__cil_methodspec_call_" in body: combined += support_evidence["Replace"]
             directives.append({"token": token, "aliases": list({entry["alias"]: entry for entry in aliases(combined)}.values()),
                                "calls": [{"constraint": int(c, 16), "method": int(m, 16)} for c, m in
                                          sorted(set(re.findall(r"__cil_constrained_([0-9A-F]{8})_([0-9A-F]{8})", body)))],

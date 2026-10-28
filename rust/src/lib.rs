@@ -211,7 +211,8 @@ pub(crate) fn decompile_with_context(
     let image = metadata::Image::parse(bytes)?;
     let mut result = decompile_method(&image, token, context)?;
     if style == OutputStyle::Readable {
-        result.text = readable::method_view(&image, token, &result, context);
+        result.text =
+            readable::strip_report(readable::method_view(&image, token, &result, context));
     }
     Ok(result)
 }
@@ -872,7 +873,7 @@ pub(crate) fn decompile_type_with_context(
         }
     }
     if style == OutputStyle::Readable {
-        text = readable::type_view(&image, &types, &bodies, context);
+        text = readable::strip_report(readable::type_view(&image, &types, &bodies, context));
         if summary.metadata_failed != 0 {
             text.push_str(
                 "\n// Metadata could not be fully read; use --details for retained evidence.\n",

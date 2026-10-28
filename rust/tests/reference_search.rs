@@ -189,10 +189,12 @@ fn exact_identity_beats_version_alternatives_and_substitution_requires_explicit_
                     .decompile_type("ExternalCases.Cells", ilspy_lite::OutputStyle::Readable)
                     .unwrap()
                     .text;
-                assert!(
-                    output.contains("Dependency identity substituted"),
-                    "{output}"
-                );
+                assert!(!output.contains("// Dependency"), "{output}");
+                let details = context
+                    .decompile_type("ExternalCases.Cells", ilspy_lite::OutputStyle::Details)
+                    .unwrap()
+                    .text;
+                assert!(details.contains("status=substituted"), "{details}");
             }
             AssemblyResolution::Resolved { identity, source } => {
                 assert!(exact_available);

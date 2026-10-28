@@ -17,6 +17,18 @@ struct View<'a, 'b> {
     dependencies: Option<&'a crate::DependencyContext>,
 }
 
+/// Drop whole-text dependency report lines from the readable view.
+///
+/// These report which reference supplied an identity; they belong to `--details`.
+/// Bodies are untouched: a fallback body keeps its IL, and its lines never start
+/// with this prefix.
+pub(crate) fn strip_report(text: String) -> String {
+    text.lines()
+        .filter(|line| !line.starts_with("// Dependency "))
+        .map(|line| format!("{line}\n"))
+        .collect()
+}
+
 pub(crate) fn type_view(
     image: &Image<'_>,
     types: &[SelectedType],
@@ -113,7 +125,15 @@ fn render_type(
             if skip.contains(&token) {
                 continue;
             }
-            render_method(view, token, ty.token, &bodies[&token], indent + 1, out);
+            render_method(
+                view,
+                token,
+                ty.token,
+                &bodies[&token],
+                indent + 1,
+                true,
+                out,
+            );
             out.push('\n');
         }
     };
@@ -604,11 +624,22 @@ fn render_method(
     owner: u32,
     result: &DecompiledMethod,
     indent: usize,
+    spell_scope: bool,
     out: &mut String,
 ) {
     let image = view.image;
     let (mut header, names) = method_header(image, token, owner)
         .unwrap_or_else(|_| (format!("void __method_{token:08X}()"), BTreeMap::new()));
+    let mut names = names;
+    if result.status == Status::Decompiled {
+        for (alias, spelling) in alias_types(&result.text) {
+            names.entry(alias).or_insert(spelling);
+        }
+    }
+    // Generic scope variables keep the position-based identity in the lift; the
+    // declared parameter names are what C# needs.
+    let type_parameters = generic_names(image, owner).unwrap_or_default();
+    let method_parameters = generic_names(image, token).unwrap_or_default();
     let mut body = if result.status == Status::Decompiled {
         method_body(&result.text, &names)
     } else {
@@ -634,6 +665,14 @@ fn render_method(
             .lines()
             .map(|line| name_calls(line, &calls) + "\n")
             .collect();
+        // Only a view that also declares the scope can use its names; a standalone
+        // method keeps the positional `!N` / `!!N` identity.
+        if spell_scope
+            && header.contains('<')
+            && (!type_parameters.is_empty() || !method_parameters.is_empty())
+        {
+            body = spell_generic_parameters(&body, &type_parameters, &method_parameters);
+        }
     }
     if let Ok(row) = image.row(token) {
         if let Ok(raw) = image.md.strings().str(row.name) {
@@ -648,13 +687,6 @@ fn render_method(
     }
     line(out, indent, &header);
     line(out, indent, "{");
-    for evidence in result.text.lines().filter(|l| {
-        l.starts_with("// structural signature ")
-            || l.starts_with("// generic body context ")
-            || l.starts_with("// enum storage ")
-    }) {
-        line(out, indent + 1, evidence);
-    }
     if result.status != Status::Decompiled {
         let mut evidence = result
             .text
@@ -784,6 +816,7 @@ pub(crate) fn method_view(
         owner,
         result,
         0,
+        false,
         &mut out,
     );
     out
@@ -815,11 +848,25 @@ fn method_body(text: &str, names: &BTreeMap<String, String>) -> String {
         return "// Unreadable rendered body; see --details.".into();
     };
     let body = body.strip_suffix("}\n").unwrap_or(body);
+    // An alias stands for a type, so it is replaced before compaction.
+    let aliases = names
+        .iter()
+        .filter(|(slot, _)| slot.starts_with("__cil_"))
+        .map(|(slot, name)| (slot.clone(), name.clone()))
+        .collect::<Vec<_>>();
     let lines: Vec<String> = body
         .lines()
         .map(str::trim)
         .filter(|line| !line.starts_with("//"))
-        .map(str::to_owned)
+        .map(|line| {
+            let mut line = line.to_owned();
+            for (alias, spelling) in &aliases {
+                if line.contains(alias.as_str()) {
+                    line = line.replace(alias.as_str(), spelling);
+                }
+            }
+            line
+        })
         .collect();
     // Runtime regions and acquired locations keep explicit snapshot lifetimes.
     // A ref binding is a mutable location, not an immutable value that can be
@@ -893,6 +940,83 @@ fn inline_literals(line: &str) -> String {
 /// `// newobj token 0x...: Owner::.ctor` for every call site, so the readable
 /// view can name the member without resolving anything again. Only the display
 /// changes: the exact token and its note stay in `--details`.
+/// Replace `!N` / `!!N` scope variables with the declared parameter names.
+fn spell_generic_parameters(
+    body: &str,
+    type_parameters: &[String],
+    method_parameters: &[String],
+) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(at) = rest.find('!') {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at + 1..];
+        let (method_scope, tail) = match tail.strip_prefix('!') {
+            Some(tail) => (true, tail),
+            None => (false, tail),
+        };
+        let digits = tail.bytes().take_while(u8::is_ascii_digit).count();
+        if digits == 0 {
+            out.push('!');
+            rest = tail;
+            continue;
+        }
+        let position = tail[..digits].parse::<usize>().unwrap_or(usize::MAX);
+        let table = if method_scope {
+            method_parameters
+        } else {
+            type_parameters
+        };
+        match table.get(position) {
+            Some(name) => out.push_str(name),
+            None => {
+                out.push('!');
+                if method_scope {
+                    out.push('!');
+                }
+                out.push_str(&tail[..digits]);
+            }
+        }
+        rest = &tail[digits..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Alias-to-type map from the evidence rows of one member.
+///
+/// Structural and enum aliases are opaque in the lift; the evidence row states the
+/// exact metadata type, so the readable view prints the C# spelling instead.
+fn alias_types(evidence: &str) -> BTreeMap<String, String> {
+    let mut map = BTreeMap::new();
+    for line in evidence.lines() {
+        let line = line.trim_start();
+        if let Some(rest) = line.strip_prefix("// structural signature ") {
+            if let Some((alias, tail)) = rest.split_once(" bytes=") {
+                if let Some((_, description)) = tail.split_once(": ") {
+                    let description = description.split(';').next().unwrap_or(description).trim();
+                    if alias.starts_with("__cil_") && !description.is_empty() {
+                        map.insert(alias.to_owned(), type_spelling(description));
+                    }
+                }
+            }
+        } else if let Some(rest) = line.strip_prefix("// enum storage ") {
+            let alias = rest
+                .split_whitespace()
+                .find_map(|field| field.strip_prefix("alias="));
+            let declared = rest
+                .split_once(": ")
+                .map(|(_, tail)| tail.split(';').next().unwrap_or(tail).trim());
+            if let (Some(alias), Some(declared)) = (alias, declared) {
+                if alias.starts_with("__cil_") && !declared.is_empty() {
+                    map.insert(alias.to_owned(), type_spelling(declared));
+                }
+            }
+        }
+    }
+    map
+}
+
 fn call_names(evidence: &str) -> BTreeMap<u32, (String, String, bool)> {
     let mut map = BTreeMap::new();
     for line in evidence.lines() {
@@ -1077,48 +1201,77 @@ fn name_calls(line: &str, names: &BTreeMap<u32, (String, String, bool)>) -> Stri
     out.push_str(rest);
     out
 }
-
-/// Owner spelling for a constructor or static call.
+/// C# spelling of a metadata type description taken from an evidence row.
 ///
-/// A short name would be wrong when the type is not in scope, so the whole
-/// metadata name is kept. The `[Assembly]` qualifier only records which
-/// reference supplied the identity and is not part of the type name.
-/// C# spelling of a metadata owner recorded in the evidence comments.
-///
-/// The recorded name carries `class`/`valuetype`, `[Assembly]` qualifiers and
-/// arity markers; none of them belong in a type reference, and nested types use
-/// `/` where C# needs `.`.
-fn short_owner(owner: &str) -> String {
-    let mut owner = owner.trim();
+/// The description uses metadata notation: a `class`/`valuetype` prefix, an
+/// `[Assembly]` qualifier, an arity marker, `/` for nesting, primitive names and
+/// array bounds such as `[0...,0...]`. None of that is C#.
+pub(crate) fn type_spelling(description: &str) -> String {
+    let description = description.trim();
+    let mut out = description;
     for prefix in ["class ", "valuetype "] {
-        if let Some(rest) = owner.strip_prefix(prefix) {
-            owner = rest.trim();
+        if let Some(rest) = out.strip_prefix(prefix) {
+            out = rest.trim();
             break;
         }
     }
-    let mut out = String::with_capacity(owner.len());
-    let mut chars = owner.chars().peekable();
+    // Brackets carry either an assembly qualifier (`[mscorlib]`) or array bounds
+    // (`[0...]`, `[0...,0...]`). Only the bounds belong in C#.
+    let source = out;
+    let mut out = String::with_capacity(source.len());
+    let mut rest = source;
+    while let Some(at) = rest.find('[') {
+        let Some(close) = rest[at..].find(']') else {
+            break;
+        };
+        let bounds = &rest[at + 1..at + close];
+        out.push_str(&rest[..at]);
+        if bounds.split(',').all(|dim| dim.trim() == "0...") {
+            out.push('[');
+            out.push_str(&",".repeat(bounds.matches(',').count()));
+            out.push(']');
+        }
+        rest = &rest[at + close + 1..];
+    }
+    out.push_str(rest);
+
+    // Arity markers and nesting separators are not part of the type name.
+    let mut cleaned = String::with_capacity(out.len());
+    let mut chars = out.chars().peekable();
     while let Some(c) = chars.next() {
         match c {
-            '[' => {
-                for ch in chars.by_ref() {
-                    if ch == ']' {
-                        break;
-                    }
-                }
-            }
             '`' => {
                 while chars.peek().is_some_and(|ch| ch.is_ascii_digit()) {
                     chars.next();
                 }
             }
-            '/' => out.push('.'),
-            _ => out.push(c),
+            '/' => cleaned.push('.'),
+            _ => cleaned.push(c),
         }
     }
-    // The recorded name is metadata notation; a constructed owner still has to
-    // name its arguments with C# primitive keywords.
+    let mut out = cleaned;
+
     for (metadata, keyword) in [
+        ("System.Boolean", "bool"),
+        ("System.Char", "char"),
+        ("System.SByte", "sbyte"),
+        ("System.Byte", "byte"),
+        ("System.Int16", "short"),
+        ("System.UInt16", "ushort"),
+        ("System.Int32", "int"),
+        ("System.UInt32", "uint"),
+        ("System.Int64", "long"),
+        ("System.UInt64", "ulong"),
+        ("System.Single", "float"),
+        ("System.Double", "double"),
+        ("System.String", "string"),
+        ("System.Object", "object"),
+        ("System.IntPtr", "nint"),
+        ("System.UIntPtr", "nuint"),
+        ("native int", "nint"),
+        ("native uint", "nuint"),
+        ("float32", "float"),
+        ("float64", "double"),
         ("int32", "int"),
         ("int64", "long"),
         ("uint32", "uint"),
@@ -1127,12 +1280,42 @@ fn short_owner(owner: &str) -> String {
         ("uint16", "ushort"),
         ("int8", "sbyte"),
         ("uint8", "byte"),
-        ("float32", "float"),
-        ("float64", "double"),
     ] {
-        out = out.replace(metadata, keyword);
+        out = replace_word(&out, metadata, keyword);
     }
     out
+}
+
+/// Replace whole-word occurrences only, so `int32` cannot corrupt `int320u`.
+fn replace_word(text: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find(from) {
+        let before_ok = at == 0
+            || !rest[..at]
+                .chars()
+                .next_back()
+                .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        let after = &rest[at + from.len()..];
+        let after_ok = !after
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_alphanumeric() || c == '_');
+        out.push_str(&rest[..at]);
+        if before_ok && after_ok {
+            out.push_str(to);
+        } else {
+            out.push_str(from);
+        }
+        rest = after;
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Owner spelling for a constructor or static call.
+fn short_owner(owner: &str) -> String {
+    type_spelling(owner)
 }
 
 fn generated_value(name: &str) -> bool {

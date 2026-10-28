@@ -33,11 +33,16 @@ def main():
         fixture = ROOT / f"tests/fixtures/static-field-{config}.bin"
         library = ROOT / f"tests/fixtures/static-field-library-{config}.bin"
         bodies, names, arguments_body = {}, {}, None
-        directives = []
+        directives, gated = [], []
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             found = re.search(r"StaticFieldCases\.(?:Ops|Slots\S*|MixedHost\S*)::([^\s(<]+)", signature)
             if not found or found[1].startswith(".") or found[1] == "ClosedInitializerAnchor": continue
+            if re.search(r"<\d+>\(", signature):
+                # The carrier is a non-generic static class, so a generic method
+                # cannot be carried.
+                gated.append(found[1])
+                continue
             result = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references", "--reference", library])
             if result.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("Owned static field method not recovered: " + result.stdout)
@@ -51,7 +56,8 @@ def main():
                 "aliases": [{"alias": a, "bytes": b} for a, b in re.findall(r"// structural signature (__cil_\w+) bytes=([0-9A-F]+):", result.stdout)],
                 "fields": [{"op": op, "token": int(t, 16)} for op, t in sorted(set(
                     re.findall(r"__cil_(ldsfld|stsfld|ldsflda)_([0-9A-F]{8})", result.stdout)))]})
-        if len(bodies) != 24 or arguments_body is None: raise ValueError("Static field selection drift")
+        if len(bodies) != 24 - len(gated) or arguments_body is None:
+            raise ValueError("Static field selection drift: gated=" + repr(gated))
         directive_path = OUT / f"directives-{config}.json"
         support.write_changed(directive_path, json.dumps(directives, indent=2))
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--static-field-plan", directive_path]).stdout)

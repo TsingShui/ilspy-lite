@@ -361,7 +361,12 @@ fn context_decompilation_keeps_bodies_and_reports_dependency_provenance_separate
         .unwrap();
     assert_eq!(readable.summary, details.summary);
     assert!(readable.text.contains("public class Cells"));
-    assert!(readable.text.contains("Dependency unresolved:"));
+    // Provenance moved to the details view.
+    assert!(
+        !readable.text.contains("Dependency unresolved:"),
+        "{}",
+        readable.text
+    );
     assert!(!readable.text.contains(".dependency "));
 }
 

@@ -220,7 +220,8 @@ fn substituted_signature_types_cannot_prove_property_source_binding_for_an_exact
         assert_eq!(actual.status, ilspy_lite::Status::Decompiled);
         assert!(!actual.text.contains("base.Value"), "{}", actual.text);
         assert!(actual.text.contains("__cil_memberref_call_"));
-        assert!(actual.text.contains("metadata only"));
+        // Dependency provenance is not part of the readable view; the property
+        // refusal above is the invariant this test guards.
     }
 }
 

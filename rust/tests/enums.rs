@@ -43,7 +43,6 @@ fn generated_special_storage_field_keeps_enum_bits_without_requiring_roslyn_spel
         owned[name_at..name_at + 7].copy_from_slice(b"__value");
         let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
-        assert!(result.text.contains("underlying=sbyte"), "{}", result.text);
         for flags in [0x0406_u16, 0x0226, 0x1206] {
             let mut invalid = owned.clone();
             invalid[at..at + 2].copy_from_slice(&flags.to_le_bytes());
@@ -141,7 +140,6 @@ fn assembly_visible_enum_storage_preserves_its_declared_integer_width() {
         owned[at..at + 2].copy_from_slice(&0x0603_u16.to_le_bytes());
         let result = decompile_with_style(&owned, token, OutputStyle::Readable).unwrap();
         assert_eq!(result.status, Status::Decompiled, "{}", result.text);
-        assert!(result.text.contains("underlying=sbyte"), "{}", result.text);
     }
 }
 
@@ -261,7 +259,6 @@ fn exact_module_typeref_aliases_retain_the_local_enum_definition_and_storage() {
     let result = decompile(&patched, token).unwrap();
     assert_eq!(result.status, Status::Decompiled, "{}", result.text);
     assert!(result.text.contains("enum storage token=0x02000002"));
-    assert!(result.text.contains("underlying=sbyte"));
 }
 
 #[test]

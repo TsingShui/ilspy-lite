@@ -36,12 +36,16 @@ def main():
     rows = []
     for config in ("release", "debug"):
         fixture = ROOT / f"tests/fixtures/{family}-{config}.bin"
-        bodies, directives = {}, []
+        bodies, directives, gated = {}, [], []
         for line in support.run([args.cli, "list", fixture]).stdout.splitlines():
             token, signature = line.split(" ", 1)
             pattern = r"EnumCases\.[SU](?:8|16|32|64)Ops::(UnsupportedArray)\(" if args.legacy_enums else r"TypedArrayCases\.(?:Ops|Owner[^:]*)::([A-Za-z][A-Za-z0-9_]*)"
             match = re.search(pattern, signature)
             if not match: continue
+            if re.search(r"<\d+>\(", signature):
+                # A generic method cannot be carried by the non-generic carrier.
+                gated.append(match[1] + " <" + "generic" + ">")
+                continue
             result = support.run([args.cli, "decompile", fixture, "--method", token, "--no-auto-references"])
             if result.stderr.strip() != "decompiled=1 declarations=0 partial=0 failed=0":
                 raise ValueError("Owned vector method not recovered: " + result.stdout)
@@ -52,7 +56,8 @@ def main():
                 "aliases": [{"alias": a, "bytes": b} for a, b in re.findall(r"// structural signature (__cil_\w+) bytes=([0-9A-F]+):", result.stdout)],
                 "allocations": [int(t, 16) for t in sorted(set(re.findall(r"__cil_newarr_([0-9A-F]{8})", result.stdout)))],
                 "elements": [{"op": op, "token": int(t, 16)} for op, t in sorted(set(re.findall(r"__cil_(ldelem|ldelema|stelem)_([0-9A-F]{8})", result.stdout)))]})
-        if len(bodies) != (8 if args.legacy_enums else 42): raise ValueError("Typed vector selection drift")
+        expected = (8 if args.legacy_enums else 42) - len(gated)
+        if len(bodies) != expected: raise ValueError("Typed vector selection drift: gated=" + repr(gated))
         path = OUT / f"directives-{config}.json"
         support.write_changed(path, json.dumps(directives, indent=2))
         plan = json.loads(support.run([support.DOTNET / "dotnet", harness, fixture, "--typed-array-plan", path]).stdout)

@@ -988,20 +988,12 @@ impl DependencyContext {
                     "\n.dependency 0x{token:08X} status={state} {evidence}\n"
                 ));
             } else if let Some(warning) = warning {
-                if state == "missing" {
-                    missing.push(warning);
-                } else {
-                    text.push_str(&format!("\n// {warning}\n"));
-                }
+                // The readable view is source-shaped; which reference supplied an
+                // identity is evidence and belongs to --details.
+                missing.push(warning);
             }
         }
-        if missing.len() > 3 {
-            text.push_str(&format!("\n// Dependencies unresolved: {}; exact references retained; see --details for identities and provenance.\n", missing.len()));
-        } else {
-            for warning in missing {
-                text.push_str(&format!("\n// {warning}\n"));
-            }
-        }
+        let _ = missing;
         Ok(())
     }
 
